@@ -1,15 +1,11 @@
-import { Julian } from '@/features/lib/calendar';
-
 const DEG2RAD = Math.PI / 180;
 
 /**
  * @description 태양의 황경을 계산하는 함수입니다.
  * @FIXME 제발 magic number 좀 없애주세요.
- * @param {Julian} julian - Julian 날짜 객체
- * @see {@link Julian}
  */
-export const getEclipticLongitude = (julian: Julian) => {
-  const T = (julian.timestamp - 2451545.0) / 36525.0;         // Julian centuries (TT 근사)
+export const getEclipticLongitude = (julian: number) => {
+  const T = (julian - 2451545.0) / 36525.0;         // Julian centuries (TT 근사)
   const L0 = getNormalDegree(280.46646 + 36000.76983 * T + 0.0003032 * T * T); // Mean longitude
   const M  = getNormalDegree(357.52911 + 35999.05029 * T - 0.0001537 * T * T); // Mean anomaly
 
