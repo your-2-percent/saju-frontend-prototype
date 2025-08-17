@@ -4,6 +4,18 @@ import { sub, add } from 'date-fns';
 export class Julian extends Calendar {
   static 윤년보정 = 13;
 
+  get dateObj(): Date {
+    return new Date(
+      this.year,
+      this.month,
+      this.date
+    );
+  }
+
+  get timestamp(): number {
+    return this.dateObj.getTime();
+  }
+
   toSolarCalendar(): number {
     const date = new Date(
       this.year,
