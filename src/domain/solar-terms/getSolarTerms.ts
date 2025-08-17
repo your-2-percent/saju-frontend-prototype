@@ -1,4 +1,4 @@
-import { getEclipticLongitude } from '@/features/lib/astronomy';
+import { getEclipticLongitude } from '@/domain/astronomy';
 import { DAY_MS, JD_UNIX_EPOCH } from './const';
 
 /**
