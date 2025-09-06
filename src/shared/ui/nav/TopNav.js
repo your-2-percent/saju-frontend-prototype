@@ -1,7 +1,0 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-// components/TopNav.tsx
-import { Menu, UserPlus } from "lucide-react";
-export default function TopNav({ onOpenSidebar, onAddNew, // ✅ 명식 추가 콜백 prop
- }) {
-    return (_jsx("header", { className: "fixed top-0 left-0 right-0 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 z-55 px-2 desk:px-3 transition-colors", children: _jsxs("div", { className: "max-w-[640px] w-full mx-auto h-12 sm:h-14 flex items-center", children: [_jsx("button", { type: "button", onClick: onOpenSidebar, "aria-label": "\uBA85\uC2DD\uB9AC\uC2A4\uD2B8 \uC5F4\uAE30", className: "p-2 rounded-full text-neutral-700 dark:text-neutral-200 hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-purple-600 dark:hover:text-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer transition-colors", children: _jsx(Menu, { size: 22 }) }), _jsx("h1", { className: "mx-auto text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100", children: "\uD654\uB9BC\uB9CC\uC138\uB825" }), _jsx("button", { type: "button", onClick: onAddNew, "aria-label": "\uBA85\uC2DD \uCD94\uAC00", className: "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer transition-colors", children: _jsx(UserPlus, { size: 18 }) })] }) }));
-}

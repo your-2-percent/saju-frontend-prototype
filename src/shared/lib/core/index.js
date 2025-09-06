@@ -1,1 +1,0 @@
-export { getCorrectedDate } from '@/shared/lib/core/timeCorrection';

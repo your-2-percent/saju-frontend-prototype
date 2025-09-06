@@ -1,5 +1,4 @@
 // features/AnalysisReport/HarmonyTagPanel.tsx
-import React from "react";
 import { buildHarmonyTags, buildAllRelationTags, Pillars4 } from "./logic/relations";
 import type { BlendTab } from "./logic/blend";
 
@@ -100,9 +99,9 @@ export default function HarmonyTagPanel({
   tab,
 }: {
   pillars: Pillars4;
-  daewoon?: string | null;
-  sewoon?: string | null;
-  wolwoon?: string | null;
+  daewoon?: string;
+  sewoon?: string;
+  wolwoon?: string;
   tab: BlendTab;
 }) {
   const natalRaw = buildHarmonyTags(pillars) as HarmonyLike;
