@@ -6,6 +6,7 @@
         "*"
       ]
     },
+    "skipLibCheck": true,
     "jsx": "react-jsx",
     "moduleResolution": "bundler",   // ← 기존 "node"에서 바꿔줘
     "module": "esnext",              // ESM 대응
