@@ -1,13 +1,15 @@
 {
-  "files": [],
   "compilerOptions": {
+    "baseUrl": "src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": [
+        "*"
+      ]
     },
-    "baseUrl": ".",
-  },
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" }
-  ]
+    "jsx": "react-jsx",
+    "moduleResolution": "bundler",   // ← 기존 "node"에서 바꿔줘
+    "module": "esnext",              // ESM 대응
+    "target": "esnext",
+    "types": ["tailwindcss"]         // 추가해주면 인식됨
+  }
 }

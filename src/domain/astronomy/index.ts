@@ -1,1 +1,0 @@
-export { getEclipticLongitude } from './ecliptic-Longitude';

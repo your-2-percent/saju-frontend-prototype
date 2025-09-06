@@ -1,12 +1,194 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
-* {
-  margin: 0;
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid #f59e0b; /* amber-500 느낌 */
+  outline-offset: 2px;
+}
+
+.kbd-wrap:focus-within {
+  box-shadow: 0 0 0 3px #f59e0b;
+  border-radius: 0.5rem;
+}
+
+body {
+  font-family: 'Noto Sans', sans-serif;
+  min-width: 320px;
+  overflow-x: hidden;
+  @apply bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100;
+}
+
+ol, ul, li {
+  list-style: none;
+}
+
+li {
+  display: block !important;
+}
+
+.btn_style {
+  height: 40px;
+  padding: 0 24px;
+  background-color: #000;
+  color: #fff;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn_style.p-0 {
   padding: 0;
-  box-sizing: border-box;
+}
+
+/* ——— Dark mode에서 네이티브 select/option을 어둡게 ——— */
+.dark select {
+  color-scheme: dark; /* 네이티브 UI도 다크 톤 사용(사파리/모바일에 도움) */
+  background-color: rgb(23 23 23);      /* = neutral-900 */
+  color: rgb(245 245 245);               /* = neutral-100 */
+  border-color: rgb(64 64 64);           /* = neutral-700 */
+}
+
+/* 드롭다운이 열렸을 때 옵션 배경/글자색 (대부분의 브라우저) */
+.dark select option,
+.dark optgroup {
+  background-color: rgb(10 10 10) !important;  /* 거의 검정 */
+  color: rgb(245 245 245) !important;
+}
+
+/* 선택된 옵션 하이라이트 색 (Firefox/Chromium에서 잘 작동) */
+.dark select option:checked {
+  background-color: rgb(39 39 42) !important;  /* = zinc-800 */
+  color: rgb(250 250 250) !important;          /* = neutral-50 */
+}
+
+/* 포커스 시 테두리 */
+.dark select:focus {
+  outline: none;
+  border-color: rgb(82 82 91); /* = zinc-700 */
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.35); /* amber-500 비슷한 포커스 링 */
+}
+
+
+input[type='text'],
+input[type='tel'],
+input[type='number'],
+input[type='mail'],
+select {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid oklch(87.2% 0.01 258.338);
+  border-radius: 10px;
+  outline: none;
+}
+
+input[type='text'].h-30,
+input[type='tel'].h-30,
+input[type='number'].h-30,
+input[type='mail'].h-30,
+input[type='datetime-local'].h-30,
+select.h-30,
+button.h-30 {
+  height: 30px;
+  border-radius: 8px;
+}
+
+input[type='text']:focus,
+input[type='tel']:focus,
+input[type='number']:focus,
+input[type='mail']:focus,
+select:focus {
+  border-color: oklch(70.7% 0.022 261.325);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0);
+  white-space: nowrap; border: 0;
+}
+
+/* input[type='checkbox'],
+input[type='radio'] {
+  display: none;
+} */
+
+input[type='checkbox'] + label,
+input[type='radio'] + label {
+  display: flex;
+  position: relative;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* input[type='checkbox'] + label::before,
+input[type='radio'] + label::before {
+  content: '';
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  border: 1px solid oklch(70.7% 0.022 261.325);
+  border-radius: 50%;
+}
+
+input[type='checkbox'] + label::after,
+input[type='radio'] + label::after {
+  content: '';
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 3px;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  background-color: #000;
+  border-radius: 50%;
+} */
+
+#suggestions [role="option"][aria-selected="true"] {
+  background-color: #f59e0b; /* Tailwind amber-200 같은 색 */
+  color: #fff;
+}
+#suggestions [role="option"]:focus {
+  outline: none;
+  background-color: #f59e0b; /* Tailwind amber-300 */
+  color: #fff;
+}
+
+.setting input[type='checkbox'] + label::after,
+.setting input[type='radio'] + label::after {
+  left: 11px;
+  background-color: #fff;
+}
+
+input[type='checkbox']:checked + label::after,
+input[type='radio']:checked + label::after {
+  display: block;
+}
+
+.rel_set input,
+.rel_set select {
+  width: 75%;
+}
+
+.rel_set button {
+  width: calc(25% - 8px);
+}
+
+@theme {
+  /* rem 단위 권장: 991px / 16 = 61.9375rem  */
+  --breakpoint-desk: 61.9375rem;
 }
 
 @theme inline {
@@ -122,5 +304,17 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media screen and (max-width: 991px) {
+  .rel_set input,
+  .rel_set select {
+    width: 65%;
+  }
+
+  .rel_set button {
+    padding: 0;
+    width: calc(35% - 8px);
   }
 }

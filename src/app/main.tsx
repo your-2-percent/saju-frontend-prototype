@@ -1,10 +1,12 @@
-import { StrictMode } from 'react';
-import { createRoot } from 'react-dom/client';
-import { App } from './App';
-import './main.css';
+import "@/shared/lib/themeBoot";   // ✅ 가장 먼저
+import "@/app/main.css";           // ✅ 그 다음
 
-createRoot(document.getElementById('root')!).render(
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import Page from "@/app/layout/Page";
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Page />
   </StrictMode>,
 );
