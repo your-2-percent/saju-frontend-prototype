@@ -1,5 +1,5 @@
 // features/AnalysisReport/ShinsalTagPanel.tsx
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Pillars4 } from "./logic/relations";
 import { buildShinsalTags, type ShinsalBasis } from "./logic/shinsal";
 

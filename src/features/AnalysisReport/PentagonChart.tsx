@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { PowerData, TenGod } from "./utils/types";
 
-type SubEntry = { a: string; b: string; aVal: number | string; bVal: number | string };
+type SubEntry = {
+  a?: string | number;
+  b?: string | number;
+  aVal?: number | string;
+  bVal?: number | string;
+} & Record<string, unknown>;
+
 type PerTenGod = Record<TenGod, SubEntry>;
 
 const TEN_GOD_KEYS: TenGod[] = ["비겁", "식상", "재성", "관성", "인성"];
@@ -70,20 +76,25 @@ function readSubFor(
   return { aLabel: lLabel, bLabel: rLabel, aVal: 0, bVal: 0 };
 }
 
-/** 안정적 stringify (키 정렬) */
-function stableStringify(obj): string {
+function stableStringify(obj: unknown): string {
   const seen = new WeakSet();
-  const sorter = (k: string, v) => {
-    if (v && typeof v === "object") {
-      if (seen.has(v)) return;
-      seen.add(v);
-      if (Array.isArray(v)) return v;
-      const out: Record<string, string> = {};
-      for (const key of Object.keys(v).sort()) out[key] = (v)[key];
+
+  const sorter = (_key: string, value: unknown): unknown => {
+    if (value && typeof value === "object") {
+      if (seen.has(value as object)) return;
+      seen.add(value as object);
+
+      if (Array.isArray(value)) return value;
+
+      const out: Record<string, unknown> = {};
+      for (const key of Object.keys(value as object).sort()) {
+        out[key] = (value as Record<string, unknown>)[key];
+      }
       return out;
     }
-    return v;
+    return value;
   };
+
   try {
     return JSON.stringify(obj, sorter);
   } catch {

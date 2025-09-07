@@ -53,7 +53,7 @@ export function ensureSolarBirthDay(ms: MyeongSik): MyeongSik {
   const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
   let isLeap = false;
   for (const k of leapFlags) {
-    const v = any[k];
+    const v = (any as Record<string, unknown>)[k]; // 안전하게 string 인덱싱
     if (typeof v === "boolean") { isLeap = v; break; }
     if (typeof v === "number")  { isLeap = v === 1; break; }
     if (typeof v === "string")  { isLeap = v === "1" || v.toLowerCase() === "true"; break; }

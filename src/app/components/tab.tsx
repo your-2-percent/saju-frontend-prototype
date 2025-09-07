@@ -131,10 +131,10 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   // 2) 양력 간지(연/월/일/시) 계산
   const pillars = useMemo<string[]>(() => {
     try {
-      const y = getYearGanZhi(correctedSolar, data?.birthPlace?.lon);
-      const m = getMonthGanZhi(correctedSolar, data?.birthPlace?.lon);
-      const d = getDayGanZhi(correctedSolar, data?.mingSikType);
-      const h = getHourGanZhi(correctedSolar, data?.mingSikType);
+      const y = getYearGanZhi(correctedSolar, data.birthPlace?.lon);
+      const m = getMonthGanZhi(correctedSolar, data.birthPlace?.lon);
+      const d = getDayGanZhi(correctedSolar, data.mingSikType);
+      const h = getHourGanZhi(correctedSolar, data.mingSikType);
       const arr = [y, m, d, h];
       if (DEBUG) console.debug("[UnMyounTabs] pillars:", arr);
       return isValidPillars(arr) ? arr : [];
@@ -179,7 +179,7 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
       {tab === "myoun" && <MyoUnViewer data={data} />}
       {tab === "report" && (
         // pillars(양력)만 확실히 전달 — lunarPillars는 생략
-        <AnalysisReport data={data} pillars={isValidPillars(pillars) ? pillars : undefined} />
+        <AnalysisReport data={data} pillars={isValidPillars(pillars) ? pillars : []} />
       )}
     </div>
   );

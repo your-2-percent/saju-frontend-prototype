@@ -14,35 +14,36 @@ import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
 
 export default function Page() {
-  // ✅ 선택은 id만 보관
   const { list } = useMyeongSikStore();
   const [currentId, setCurrentId] = useState<string | null>(null);
 
-  // UI 상태
+  // ▼ 추가: Wizard 전용 스위치
+  const [wizardOpen, setWizardOpen] = useState(false);
+
+  // 기존 UI 상태
   const [showSidebar, setShowSidebar] = useState(false);
   const [editing, setEditing] = useState<MyeongSik | null>(null);
   const [showToday, setShowToday] = useState(false);
-  const [showCouple, setShowCouple] = useState(false); // ← 추가
+  const [showCouple, setShowCouple] = useState(false);
 
-  // 선택된 명식 객체는 파생값으로 계산
   const current = useMemo(
     () => list.find((m) => m.id === currentId) ?? null,
     [list, currentId]
   );
 
   useEffect(() => {
-    // 첫 로드시 '오늘의 사주'
     setShowToday(true);
     setShowCouple(false);
   }, []);
 
-  // ✅ 새 명식 추가로 진입
+  // 새 명식 추가
   const openAdd = () => {
     setShowSidebar(false);
     setEditing(null);
-    setCurrentId(null);     // 추가 폼 보이도록 현재 선택 해제
-    setShowToday(false);    // Today 숨김
-    setShowCouple(false);   // 궁합 숨김
+    setCurrentId(null);
+    setShowToday(false);
+    setShowCouple(false);
+    setWizardOpen(true);      // ← Wizard만 키기
   };
 
   return (
@@ -78,20 +79,32 @@ export default function Page() {
       {/* 오늘의 사주 */}
       {showToday && <TodaySaju />}
 
-      {/* 추가 폼: 현재 선택 없고, Today/Couple이 아닐 때만 */}
-      {!current && !showToday && !showCouple ? (
-        <div className="py-6">
-          <InputWizard
-            onSave={(m) => {
-              // 저장 즉시 그 명식을 선택해서 원국 화면으로
-              setCurrentId(m.id);
-              setShowToday(false);
-              setShowCouple(false);
-              setShowSidebar(false);
-            }}
-          />
+      {/* Wizard — 항상 overlay 로 띄움(absolute) */}
+      {(
+        <div
+          className={`absolute inset-0 transition-opacity duration-150 ${
+            wizardOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+        >
+          {/* 배경 스크롤 방지/암막 원하면 래핑 div 추가 */}
+          <div className="py-6">
+            {wizardOpen && (
+              <InputWizard
+                onSave={(m) => {
+                  // 1) 먼저 currentId를 세팅해서 Detail을 백그라운드에 마운트
+                  setCurrentId(m.id);
+                  setShowToday(false);
+                  setShowCouple(false);
+                  setShowSidebar(false);
+
+                  // 2) 다음 프레임에서 Wizard를 끄면(겹침 해제) 깜빡임 없음
+                  requestAnimationFrame(() => setWizardOpen(false));
+                }}
+              />
+            )}
+          </div>
         </div>
-      ) : null}
+      )}
 
       {/* 원국 UI: 선택이 있고, Today/Couple이 아닐 때 */}
       {current && !showToday && !showCouple && (

@@ -451,11 +451,12 @@ function PersonSlot({
 
   const current = useMemo(() => {
     if (mode !== "묘운" || !birthLocal) return null;
+    if (!data) return null;
     try {
-      const siju  = buildSijuSchedule(birthLocal, natalHour, data?.dir, 120, data?.mingSikType);
-      const ilju  = buildIljuFromSiju(siju, natalDay, data?.dir, data?.DayChangeRule);
-      const wolju = buildWolju(birthLocal, natalMonth, data?.dir, 120, data?.birthPlace?.lon);
-      const yeonju = buildYeonjuFromWolju(wolju, natalYear, data?.dir, data?.DayChangeRule, birthLocal);
+      const siju  = buildSijuSchedule(birthLocal, natalHour, data.dir, 120, data.mingSikType);
+      const ilju  = buildIljuFromSiju(siju, natalDay, data.dir, data.DayChangeRule);
+      const wolju = buildWolju(birthLocal, natalMonth, data.dir, 120, data?.birthPlace?.lon ?? 127.5);
+      const yeonju = buildYeonjuFromWolju(wolju, natalYear, data.dir, data.DayChangeRule, birthLocal);
 
       const t = effectiveDate;
       return {
@@ -467,7 +468,7 @@ function PersonSlot({
     } catch {
       return null;
     }
-  }, [mode, birthLocal, natalHour, natalDay, natalMonth, natalYear, data?.dir, data?.DayChangeRule, data?.mingSikType, data?.birthPlace?.lon, effectiveDate]);
+  }, [mode, birthLocal, natalHour, natalDay, natalMonth, natalYear, effectiveDate, data]);
 
   const live = useMemo(() => {
     if (mode !== "실시간") return null;

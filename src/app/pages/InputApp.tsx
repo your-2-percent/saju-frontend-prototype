@@ -347,7 +347,7 @@ export default function InputWizard({ onSave }: InputWizardProps) {
     }
 
     const yearStem = yGZ.charAt(0); // 출생 연간
-    const dir = calcDaewoonDir(yearStem, form.gender);
+    const dir = calcDaewoonDir(yearStem, form.gender ?? "남자");
 
     const payload: MyeongSik = {
       id: uuidv4(),
@@ -367,7 +367,10 @@ export default function InputWizard({ onSave }: InputWizardProps) {
       ganji: ganjiText,
       calendarType: form.calendarType ?? "solar",
       dir,
-      corrected: corr
+      corrected: corr,
+      dateObj: form.dateObj || new Date(),
+      dayStem: form.dayStem ||"갑",
+      ganjiText: form.ganjiText || "갑자년 갑자월 갑자일 갑자시"
     };
 
     add(payload);

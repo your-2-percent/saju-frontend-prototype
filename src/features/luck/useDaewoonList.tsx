@@ -27,7 +27,7 @@ export function useDaewoonList(
   };
 
   return useMemo(() => {
-    const wolju = buildWolju(birth, natal.month, base.dir, untilYears, base.birthPlace?.lon);
+    const wolju = buildWolju(birth, natal.month, base.dir, untilYears, base.birthPlace?.lon ?? 127.5);
     // 🔧 Daewoon 타입을 만족하도록 age 필드 주입
     return wolju.events.map((e) => ({
       ...e,

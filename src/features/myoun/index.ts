@@ -408,7 +408,7 @@ export function parseBirthLocal(ms: MyeongSik): Date {
 
 /** 원국 4기둥 */
 export function computeNatalPillars(ms: MyeongSik, hourTable: DayBoundaryRule) {
-  const lon = ms.birthPlace?.lon ?? null;
+  const lon = ms.birthPlace?.lon ?? 127.5;
   const birth = parseBirthLocal(ms);
   const dayGZ = getDayGanZhi(birth, hourTable);
   const hourGZ = getHourGanZhi(birth, hourTable, dayGZ.charAt(0));

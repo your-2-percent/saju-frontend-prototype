@@ -15,19 +15,19 @@ export type MyeongSik = {
   relationship?: string;
   memo?: string;
   folder?: string;
-  mingSikType?: "자시" | "야자시" | "인시";
+  mingSikType: "자시" | "야자시" | "인시";
   DayChangeRule: "자시일수론" | "인시일수론";
   favorite?: boolean;
 
   // 계산/보정 필드
-  dateObj?: Date;          // 원본 Date 객체
-  corrected?: Date;        // 보정된 Date
-  correctedLocal?: string; // 보정시 "HH:MM"
+  dateObj: Date;          // 원본 Date 객체
+  corrected: Date;        // 보정된 Date
+  correctedLocal: string; // 보정시 "HH:MM"
   // 간지 관련
-  dayStem?: string;        // 일간
-  ganjiText?: string;      // 간지 전체 문자열
-  ganji?: string;          // (호환용) 간지 전체 문자열
-  calendarType?: "solar" | "lunar";
+  dayStem: string;        // 일간
+  ganjiText: string;      // 간지 전체 문자열
+  ganji: string;          // (호환용) 간지 전체 문자열
+  calendarType: "solar" | "lunar";
   dir: "forward" | "backward";
 };
 
@@ -68,10 +68,14 @@ export function makeEmptyMyeongSik(): MyeongSik {
     favorite: false,
 
     // 선택 필드
-    corrected: undefined,
+    corrected: new Date(),
     correctedLocal: "",
     ganjiText: "",
     ganji: "",
-    dir: "forward"
+    dir: "forward",
+
+    dateObj: new Date(),
+    dayStem: "갑",
+    calendarType: "solar",
   };
 }

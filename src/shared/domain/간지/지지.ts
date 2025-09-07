@@ -2,13 +2,13 @@ import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from '@/sh
 import type { DayBoundaryRule } from "@/shared/type";
 
 // 연간 구하는 함수
-export function getYearBranch(dateObj: Date, year: number, lon = 127.5) {
+export function getYearBranch(dateObj: Date, lon = 127.5) {
   return getYearGanZhi(dateObj, lon).charAt(1);
 }
 
 // ================================================================= 월주 시작 //
 
-export function getMonthBranch(dateObj: Date, year: number, lon = 127.5) {
+export function getMonthBranch(dateObj: Date, lon = 127.5) {
   return getMonthGanZhi(dateObj, lon).charAt(1);
 }
 

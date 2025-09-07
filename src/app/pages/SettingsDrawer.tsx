@@ -497,7 +497,7 @@ function Switch({
         onChange={(e) => onChange(e.target.checked)}
         className="peer hidden"
       />
-      <span className="w-10 h-5 bg-neutral-300 rounded-full relative after:content-[''] after:w-4 after:h-4 after:bg-white after:rounded-full after:absolute after:top-0.5 after:left-0.5 after:transition-all peer-checked:bg-green-600 peer-checked:after:translate-x-5 dark:bg-neutral-700"></span>
+      <span className="w-10 h-5 bg-neutral-300 rounded-full relative after:content-[''] after:w-4 after:h-4 after:bg-white after:rounded-full after:absolute after:top-0.5 after:left-0.5 after:transition-all peer-checked:bg-green-600 peer-checked:after:translate-x-5 dark:bg-neutral-700 dark:peer-checked:bg-green-600"></span>
     </label>
   );
 }

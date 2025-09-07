@@ -137,7 +137,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, dir, 120, hourTable), [birth, natal.hour, dir, hourTable]);
   const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, dir, rule), [siju, natal.day, dir, rule]);
   const wolju = useMemo(
-   () => buildWolju(birth, natal.month, dir, 120, solarized.birthPlace?.lon),
+   () => buildWolju(birth, natal.month, dir, 120, solarized.birthPlace?.lon ?? 127.5),
     [birth, natal.month, dir , solarized.birthPlace?.lon]
   );
   const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, dir, rule, birth), [wolju, natal.year, dir, rule, birth]);

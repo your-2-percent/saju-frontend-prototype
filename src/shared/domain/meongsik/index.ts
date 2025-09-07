@@ -21,7 +21,7 @@ export function toCorrected(ms: MyeongSik): Date {
   const raw = new Date(y, m, d, hh, mi, 0, 0);
   if (isNaN(raw.getTime())) throw new Error(`Invalid date: ${ms.birthDay} ${ms.birthTime}`);
 
-  return getCorrectedDate(raw, ms.birthPlace?.lon);
+  return getCorrectedDate(raw, ms.birthPlace?.lon ?? 127.5);
 }
 
 export function toDayStem(ms: MyeongSik): Stem10sin {

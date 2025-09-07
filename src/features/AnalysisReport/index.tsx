@@ -6,7 +6,7 @@ import PentagonChart from "./PentagonChart";
 import StrengthBar from "./StrengthBar";
 import HarmonyTagPanel from "./HarmonyTagPanel";
 import { getTenGodColors } from "./utils/colors";
-import type { PowerData, TenGod, Element } from "./utils/types";
+import type { PowerData, Element, TenGod } from "./utils/types";
 import * as YongshinMod from "./utils/yongshin";
 import LuckDatePicker from "./ui/LuckDatePicker";
 import { normalizeGZ } from "./logic/relations";
@@ -59,24 +59,39 @@ function isValidPillars(p: string[]): p is [string,string,string,string] {
 }
 type Basis = "solar" | "lunar";
 
+//type Element = "목" | "화" | "토" | "금" | "수";
+
+interface YongshinItem {
+  element: string;
+  elNorm: Element | null;
+  score: number;
+  reasons: string[];
+}
+
+
 // 존재(부재) 판단 — 기본: 천간만, 옵션으로 지지 포함 가능
 function elementPresenceFromPillars(
-  p: [string,string,string,string],
+  p: [string, string, string, string],
   opts?: { includeBranches?: boolean }
 ): Record<Element, boolean> {
   const includeBranches = !!opts?.includeBranches;
-  const present: Record<Element, boolean> = { 목:false, 화:false, 토:false, 금:false, 수:false };
+  const present: Record<Element, boolean> = { 목: false, 화: false, 토: false, 금: false, 수: false };
+
   for (const gz of p) {
     if (!gz) continue;
+
     const se = STEM_TO_ELEMENT[gz.charAt(0)];
     if (se) present[se] = true;
+
     if (includeBranches) {
       const be = BRANCH_MAIN_ELEMENT[gz.charAt(1)];
       if (be) present[be] = true;
     }
   }
+
   return present;
 }
+
 function lightElementScoreFromPillars(p: [string,string,string,string]): Record<Element, number> {
   const acc: Record<Element, number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
   for (const gz of p) {
@@ -105,6 +120,22 @@ function pickYongshinFn(mod: unknown): YongshinCall3 | null {
   return null;
 }
 
+function toNum(v: unknown, d = 0): number {
+  if (v == null) return d;
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string") {
+    const n = Number(v.trim());
+    return Number.isFinite(n) ? n : d;
+  }
+  if (typeof v === "object") {
+    const any = v as Record<string, unknown>;
+    for (const k of ["value", "val", "score", "amount"]) {
+      if (k in any) return toNum(any[k], d);
+    }
+  }
+  return d;
+}
+
 export default function AnalysisReport({
   data,
   pillars,
@@ -112,7 +143,7 @@ export default function AnalysisReport({
   daewoonGz: daewoonGzProp,
 }: {
   data: MyeongSik,
-  pillars?: string[] | null;
+  pillars: string[];
   lunarPillars?: string[] | null;
   daewoonGz?: string | null;
 }) {
@@ -319,7 +350,7 @@ const yongshinList = useMemo(() => {
     isRecord(yongshin) && Array.isArray((yongshin).ordered)
       ? ((yongshin).ordered as Array<Record<string, unknown>>)
       : [];
-  let list = raw.map((rec) => {
+  let list: YongshinItem[] = raw.map((rec) => {
     const elementU = rec["element"];
     const scoreU = rec["score"];
     const reasonsU = rec["reasons"];
@@ -406,41 +437,62 @@ const chartData = useMemo(() => {
 // detailed.perTenGod을 chartData 값에 맞춰 재스케일
 const round1 = (n: number) => Math.round((n + Number.EPSILON) * 10) / 10;
 
-const perTenGodForChart = useMemo(() => {
-  if (!detailed?.perTenGod) return undefined;
-  const cloned = JSON.parse(JSON.stringify(detailed.perTenGod)) as typeof detailed.perTenGod;
+//type TenGod = "비겁" | "식상" | "재성" | "관성" | "인성";
 
-  (["비겁","식상","재성","관성","인성"] as TenGod[]).forEach(name => {
-    const target = chartData.find(d => d.name === name)?.value ?? 0;
+interface ChartEntry {
+  a?: string | number;        // 라벨
+  b?: string | number;        // 라벨
+  aVal?: number | string;     // 값
+  bVal?: number | string;     // 값
+  비견?: number;
+  겁재?: number;
+  정재?: number;
+  편재?: number;
+  [key: string]: unknown;     // ★ 인덱스 시그니처 (핵심)
+}
+
+type PerTenGod = Record<TenGod, ChartEntry>;
+
+const perTenGodForChart = useMemo<PerTenGod | undefined>(() => {
+  if (!detailed?.perTenGod) return undefined;
+
+  // JSON.parse 쓸 거면 as PerTenGod
+  const cloned: PerTenGod = JSON.parse(JSON.stringify(detailed.perTenGod));
+
+  (["비겁","식상","재성","관성","인성"] as TenGod[]).forEach((name) => {
+    const target = chartData.find((d) => d.name === name)?.value ?? 0;
     const p = cloned[name];
-    const sum = (p?.aVal ?? 0) + (p?.bVal ?? 0);
+    const sum = toNum(p?.aVal, 0) + toNum(p?.bVal, 0);
 
     if (sum > 0) {
-      const aRaw = (target * (p.aVal ?? 0)) / sum;
+      const aRaw = (target * toNum(p.aVal, 0)) / sum;
       const a = round1(aRaw);
-      const b = round1(target - a);  // 합 보정
-      p.aVal = a; p.bVal = b;
+      const b = round1(target - a); // 합 보정
+      p.aVal = a;
+      p.bVal = b;
     } else {
       const a = round1(target / 2);
       const b = round1(target - a);
-      p.aVal = a; p.bVal = b;
+      p.aVal = a;
+      p.bVal = b;
     }
   });
+
   return cloned;
 }, [detailed, chartData]);
 
 // 운/기둥/값이 바뀌면 달라지는 키
 const revKey = useMemo(() => {
   const subsSig = perTenGodForChart
-    ? ["비겁", "식상", "재성", "관성", "인성"]
-        .map((k) => {
-          const s = (perTenGodForChart)[k];
-          const a = s?.aVal ?? s?.비견 ?? s?.정재 ?? 0;
-          const b = s?.bVal ?? s?.겁재 ?? s?.편재 ?? 0;
-          return `${k}:${Number(a)}|${Number(b)}`;
-        })
-        .join(",")
-    : "none";
+  ? (["비겁", "식상", "재성", "관성", "인성"] as const)
+      .map((k) => {
+        const s = perTenGodForChart[k];
+        const a = s?.aVal ?? s?.비견 ?? s?.정재 ?? 0;
+        const b = s?.bVal ?? s?.겁재 ?? s?.편재 ?? 0;
+        return `${k}:${Number(a)}|${Number(b)}`;
+      })
+      .join(",")
+  : "none";
   const dataSig = chartData.map((d) => `${d.name}:${d.value}`).join(",");
   return `${luckKey}||${activePillars.join("")}||${dataSig}||${subsSig}`;
 }, [luckKey, activePillars, chartData, perTenGodForChart]);

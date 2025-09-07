@@ -1,5 +1,5 @@
 // features/AnalysisReport/StrengthBar.tsx
-import React, { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "react";
 
 type Category =
   | "극약"

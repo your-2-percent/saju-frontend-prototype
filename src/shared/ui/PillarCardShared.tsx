@@ -59,12 +59,13 @@ function toDisplayChar(
 function toHanjaStemKey(ch: string): Stem10sin {
   const h = (STEM_K2H as Record<string, string>)[ch] ?? ch; // 한글→한자 시도
   if (isHanjaStem(h)) return h;
-  //return "甲"; // fallback
+  return "갑"; // fallback (기본값 지정)
 }
+
 function toHanjaBranchKey(ch: string): Branch10sin {
   const h = (BR_K2H as Record<string, string>)[ch] ?? ch; // 한글→한자 시도
   if (isHanjaBranch(h)) return h;
-  //return "子"; // fallback
+  return "자"; // fallback (기본값 지정)
 }
 
 /* ── HiddenStems용: 항상 ‘한글’로 정규화 ── */

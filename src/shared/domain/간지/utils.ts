@@ -70,14 +70,16 @@ export function getSipSin(
   if (!ds) throw new Error(`getSipSin: invalid dayStem ${dayStem}`);
 
   if (target.stem) {
-    const st = normalizeStem(target.stem);
+    const st = normalizeStem(target.stem) as Stem10sin | null;
     if (!st) throw new Error(`getSipSin: invalid stem ${target.stem}`);
     return 십신_천간[ds][st];
   }
+
   if (target.branch) {
-    const br = normalizeBranch(target.branch);
+    const br = normalizeBranch(target.branch) as Branch10sin | null;
     if (!br) throw new Error(`getSipSin: invalid branch ${target.branch}`);
     return 십신_지지[ds][br];
   }
+
   throw new Error("getSipSin: stem or branch required");
 }

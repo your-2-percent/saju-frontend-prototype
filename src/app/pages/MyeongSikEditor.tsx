@@ -202,7 +202,7 @@ export default function MyeongSikEditor({
     }
 
     const yearStem = yGZ.charAt(0);
-    const dir = calcDaewoonDir(yearStem, form.gender);
+    const dir = calcDaewoonDir(yearStem, form.gender ?? "남자");
 
     const base: MyeongSik = {
       ...item,
@@ -223,7 +223,10 @@ export default function MyeongSikEditor({
       correctedLocal: item.correctedLocal ?? "",
       ganji: item.ganji ?? "",
       dir,
-      corrected: corrected
+      corrected: corrected,
+      dateObj: form.dateObj || new Date(),
+      dayStem: form.dayStem ||"갑",
+      ganjiText: form.ganjiText || "갑자년 갑자월 갑자일 갑자시"
     };
 
     const { correctedLocal, ganji } = recalcGanjiSnapshot(base);

@@ -77,7 +77,7 @@ function normalizeTo100(values: number[]): number[] {
 }
 
 /* =========================
- * 2-2 투출 규칙(지지 주오행 == 천간 오행만 기여)
+ * 2-2 투출 규칙
  * ========================= */
 function projectionPercent(dist: 0 | 1 | 2, samePol: boolean): number {
   if (dist === 0) return samePol ? 1.0 : 0.8;
@@ -86,7 +86,7 @@ function projectionPercent(dist: 0 | 1 | 2, samePol: boolean): number {
 }
 
 /* =========================
- * 3단계 왕상휴수사(관계 기반)
+ * 왕상휴수사
  * ========================= */
 type StrengthLevel = "왕" | "상" | "휴" | "수" | "사";
 const LV_ADJ: Record<StrengthLevel, number> = { 왕:+0.15, 상:+0.10, 휴:-0.15, 수:-0.20, 사:-0.25 };
@@ -96,10 +96,10 @@ const KE:         Record<Element, Element> = { 목:"토", 화:"금", 토:"수", 
 
 function relationLevel(me: Element, nb: Element): StrengthLevel {
   if (me === nb) return "왕";
-  if (SHENG_NEXT[nb] === me) return "상"; // 이웃이 나를 生
-  if (SHENG_NEXT[me] === nb) return "휴"; // 내가 이웃을 生
-  if (KE[me] === nb)        return "수"; // 내가 이웃을 克
-  if (KE[nb] === me)        return "사"; // 이웃이 나를 克
+  if (SHENG_NEXT[nb] === me) return "상";
+  if (SHENG_NEXT[me] === nb) return "휴";
+  if (KE[me] === nb)        return "수";
+  if (KE[nb] === me)        return "사";
   return "휴";
 }
 
@@ -110,23 +110,8 @@ const gzStem = (gz: string) => (gz && gz.length >= 1 ? gz[0]! : "");
 const gzBranch = (gz: string) => (gz && gz.length >= 2 ? gz[1]! : "");
 
 /* =========================
- * 공개 API
+ * 타입들
  * ========================= */
-export function computePowerData(
-  pillars: string[],
-  hiddenMode: "hgc" | "classic" = "hgc",
-  hiddenStemSetting: "all" | "regular" = "all",
-  debug = false,
-  useHarmonyOverlay = false,
-  /** ✨ 추가: 현대/고전 가중치 모드 */
-  criteriaMode: CriteriaMode = "modern"
-): PowerData[] {
-  const out = computePowerDataDetailed(
-    pillars, hiddenMode, hiddenStemSetting, debug, useHarmonyOverlay, criteriaMode
-  );
-  return out.totals;
-}
-
 export type TenGodSubtype =
   | "비견" | "겁재"
   | "식신" | "상관"
@@ -134,92 +119,37 @@ export type TenGodSubtype =
   | "정관" | "편관"
   | "정인" | "편인";
 
-// 오버로드 시그니처 ①: 새로운 옵션 객체 방식 (운 반영)
-export function computePowerDataDetailed(opts: {
-  pillars: string[];                     // 연월일시
-  dayStem?: string;                      // 없으면 pillars[2][0]에서 추출
-  mode?: "hgc" | "classic";              // hiddenStemMode
-  hidden?: "all" | "regular";            // hiddenStemSetting
+export interface ComputeOptions {
+  pillars: string[];
+  dayStem?: string;
+  mode?: "hgc" | "classic";
+  hidden?: "all" | "regular";
   debug?: boolean;
   useHarmonyOverlay?: boolean;
-  criteriaMode?: CriteriaMode;           // "modern" | "classic"
+  criteriaMode?: CriteriaMode;
   luck?: {
     tab: "원국" | "대운" | "세운" | "월운";
     dae?: string | null;
-    se?:  string | null;
+    se?: string | null;
     wol?: string | null;
-  } | undefined;
-}): {
+  };
+}
+
+export interface ComputeResult {
   totals: PowerData[];
   perTenGod: Record<TenGod, { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number }>;
   elementScoreRaw: Record<Element, number>;
   deukFlags: DeukFlags;
-};
-
-// 오버로드 시그니처 ②: 기존 방식(호환용)
-export function computePowerDataDetailed(
-  pillars: string[],
-  hiddenMode?: "hgc" | "classic",
-  hiddenStemSetting?: "all" | "regular",
-  debug?: boolean,
-  useHarmonyOverlay?: boolean,
-  criteriaMode?: CriteriaMode
-): {
-  totals: PowerData[];
-  perTenGod: Record<TenGod, { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number }>;
-  elementScoreRaw: Record<Element, number>;
-  deukFlags: DeukFlags;
-};
-
+}
 // ─────────────────────────────────────────────────────────────
-// 구현부 (두 시그니처 공용)
-export function computePowerDataDetailed(...args) {
-  // 0) 인자 정규화 (옵션형/구형 모두 지원)
-  const isOptions = args.length === 1 && typeof args[0] === "object" && Array.isArray(args[0].pillars);
-  const opt = ((): {
-    pillars: string[];
-    dayStem?: string;
-    mode: "hgc" | "classic";
-    hidden: "all" | "regular";
-    debug: boolean;
-    useHarmonyOverlay: boolean;
-    criteriaMode: CriteriaMode;
-    luck?: { tab: "원국" | "대운" | "세운" | "월운"; dae?: string|null; se?: string|null; wol?: string|null; };
-  } => {
-    if (isOptions) {
-      const o = args[0];
-      return {
-        pillars: o.pillars ?? [],
-        dayStem: o.dayStem,
-        mode: o.mode ?? "hgc",
-        hidden: o.hidden ?? "all",
-        debug: !!o.debug,
-        useHarmonyOverlay: !!o.useHarmonyOverlay,
-        criteriaMode: o.criteriaMode ?? "modern",
-        luck: o.luck,
-      };
-    } else {
-      const [pillars, hiddenMode="hgc", hiddenStemSetting="all", debug=false, useHarmonyOverlay=false, criteriaMode="modern"] = args as [
-        string[], "hgc"|"classic", "all"|"regular", boolean?, boolean?, CriteriaMode?
-      ];
-      return {
-        pillars,
-        dayStem: undefined,
-        mode: hiddenMode,
-        hidden: hiddenStemSetting,
-        debug,
-        useHarmonyOverlay,
-        criteriaMode: criteriaMode ?? "modern",
-        luck: undefined,
-      };
-    }
-  })();
+
+export function computePowerDataDetailed(opts: ComputeOptions) {
 
   const {
     pillars, dayStem: dayStemOverride,
     mode: hiddenMode, hidden: hiddenStemSetting,
     debug, useHarmonyOverlay, criteriaMode, luck
-  } = opt;
+  } = opts;
 
   void hiddenStemSetting; // (기존 시그니처 호환: 사용 안 하는 경우)
 
@@ -526,4 +456,3 @@ export function computePowerDataDetailed(...args) {
 
   return { totals, perTenGod, elementScoreRaw: elementScore, deukFlags };
 }
-

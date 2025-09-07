@@ -29,7 +29,7 @@ export function useCurrentUnCards(
   const natal = useMemo(() => computeNatalPillars(base, hourTable), [base, hourTable]);
 
   return useMemo(() => {
-    const wolju = buildWolju(birth, natal.month, base.dir, 120, base.birthPlace?.lon);
+    const wolju = buildWolju(birth, natal.month, base.dir, 120, base?.birthPlace?.lon ?? 127.5);
     const now = new Date(); // 오늘 시각 (보정 안한 UTC가 아닌 로컬)
 
     function lastAtOrNull<T extends { at: Date }>(arr: T[], t: Date): T | null {
@@ -62,5 +62,5 @@ export function useCurrentUnCards(
     if (curSeun) cards.push({ key: "seun", label: "세운", data: curSeun });
     if (curDaeun) cards.push({ key: "daeun", label: "대운", data: curDaeun });
     return cards;
-  }, [birth, base.dir, natal.month]);
+  }, [birth, base.dir, natal.month, base.birthPlace?.lon]);
 }
