@@ -36,8 +36,6 @@ jobs:
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,10 +60,14 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Publish to GitHub Pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npx gh-pages@5 \
+           npx gh-pages@5 \
             -d dist \
             -b gh-pages \
+            -u "github-actions[bot] <github-actions[bot]@users.noreply.github.com>" \
+            -r "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
             -m "deploy: ${GITHUB_SHA} [skip ci]"
       
 
