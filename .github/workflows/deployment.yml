@@ -66,8 +66,7 @@ jobs:
            npx gh-pages@5 \
             -d dist \
             -b gh-pages \
-            -u "github-actions[bot] <github-actions[bot]@users.noreply.github.com>" \
-            -r "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" \
+            -r "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" \
             -m "deploy: ${GITHUB_SHA} [skip ci]"
       
 
