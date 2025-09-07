@@ -55,7 +55,7 @@ jobs:
           path: ./dist
 
       - name: Create CNAME file
-        run: echo 'myowoon96.com' > ./dist/CNAME
+        run: echo 'hwarim.myowoon96.com' > ./dist/CNAME
 
       - name: Git identity
         run: |
