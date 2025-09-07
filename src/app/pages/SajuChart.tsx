@@ -525,8 +525,8 @@ function Cell({
   const weight = thinEum && isYin ? "font-thin" : "font-bold";
 
   return (
-    <div className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-md ${color} flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}>
-      <span className={`text-lg sm:text-xl md:text-2xl ${weight} text-white`}>
+    <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-14 md:h-14 rounded-md ${color} flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}>
+      <span className={`text-[24px] md:text-2xl ${weight} text-white`}>
         {display}
       </span>
     </div>
