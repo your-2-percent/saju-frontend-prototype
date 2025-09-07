@@ -175,24 +175,24 @@ export default function WolwoonList({
 
                 {/* 천간 */}
                 <div
-                  className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
+                  className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     stem,
                     "stem"
                   )}`}
                 >
-                  <span className={`text-xs sm:text-lg md:text-xl text-white ${stemFont}`}>
+                  <span className={`text-[12px] sm:text-lg md:text-xl text-white ${stemFont}`}>
                     {stemDisp}
                   </span>
                 </div>
 
                 {/* 지지 */}
                 <div
-                  className={`w-6 h-6 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
+                  className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     branch,
                     "branch"
                   )}`}
                 >
-                  <span className={`text-xs sm:text-lg md:text-xl text-white ${branchFont}`}>
+                  <span className={`text-[12px] sm:text-lg md:text-xl text-white ${branchFont}`}>
                     {branchDisp}
                   </span>
                 </div>

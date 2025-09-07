@@ -12,6 +12,7 @@ import MyeongSikEditor from "@/app/pages/MyeongSikEditor";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
+import Footer from "@/app/pages/Footer";
 
 export default function Page() {
   const { list } = useMyeongSikStore();
@@ -149,6 +150,9 @@ export default function Page() {
           // setEditing(null);
         }}
       />
+
+      {/* 푸터 */}
+      <Footer />
     </div>
   );
 }
