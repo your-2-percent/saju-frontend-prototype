@@ -124,115 +124,117 @@ export default function TodaySaju() {
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
   return (
-    <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[96%] max-w-[640px] mx-auto p-4
-                    bg-white dark:bg-neutral-950
-                    text-neutral-900 dark:text-neutral-100
-                    rounded-xl shadow border border-neutral-200 dark:border-neutral-800 transition-colors">
-      {/* 헤더 */}
-      <header className="flex flex-col desk:flex-row items-center justify-center desk:justify-between mb-4 gap-2">
-        <div className="font-semibold text-sm desk:text-base">
-          오늘의 사주{" "}
-          <span className="text-neutral-500 dark:text-neutral-400">
-            ({isLive ? "실시간" : "수동선택"}) {toLocalClock(pick)}
-          </span>
-        </div>
-        <div className="flex gap-2 items-center">
-          {/* 일주 경계 */}
-          <select
-            value={dayBoundaryRule}
-            onChange={(e) => setDayBoundaryRule(e.target.value as DayBoundaryRule)}
-            className="text-xs rounded px-2 py-1 h-30 cursor-pointer
-                       bg-white dark:bg-neutral-900
-                       border border-neutral-300 dark:border-neutral-700
-                       text-neutral-900 dark:text-neutral-100
-                       focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-          >
-            <option value="자시">자시 (전날 23시)</option>
-            <option value="야자시">야자시 (자정)</option>
-            <option value="인시">인시 (새벽 3시)</option>
-          </select>
+    <div className="flex justify-center items-center mt-12 w-full h-[calc(100dvh_-_112px)] ">
+      <div className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
+                      bg-white dark:bg-neutral-950
+                      text-neutral-900 dark:text-neutral-100
+                      rounded-xl shadow border border-neutral-200 dark:border-neutral-800 transition-colors">
+        {/* 헤더 */}
+        <header className="flex flex-col desk:flex-row items-center justify-center desk:justify-between mb-4 gap-2">
+          <div className="font-semibold text-sm desk:text-base">
+            오늘의 사주{" "}
+            <span className="text-neutral-500 dark:text-neutral-400">
+              ({isLive ? "실시간" : "수동선택"}) {toLocalClock(pick)}
+            </span>
+          </div>
+          <div className="flex gap-2 items-center">
+            {/* 일주 경계 */}
+            <select
+              value={dayBoundaryRule}
+              onChange={(e) => setDayBoundaryRule(e.target.value as DayBoundaryRule)}
+              className="text-xs rounded px-2 py-1 h-30 cursor-pointer
+                        bg-white dark:bg-neutral-900
+                        border border-neutral-300 dark:border-neutral-700
+                        text-neutral-900 dark:text-neutral-100
+                        focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+            >
+              <option value="자시">자시 (전날 23시)</option>
+              <option value="야자시">야자시 (자정)</option>
+              <option value="인시">인시 (새벽 3시)</option>
+            </select>
 
-          <button
-            onClick={() => setIsLive(!isLive)}
-            className="text-xs px-3 py-1 rounded transition-colors cursor-pointer
-                       bg-neutral-100 hover:bg-neutral-200
-                       dark:bg-neutral-800 dark:hover:bg-neutral-700
-                       text-neutral-900 dark:text-neutral-100
-                       border border-neutral-200 dark:border-neutral-700"
-          >
-            {isLive ? "피커 사용" : "타이머 사용"}
-          </button>
-        </div>
-      </header>
+            <button
+              onClick={() => setIsLive(!isLive)}
+              className="text-xs px-3 py-1 rounded transition-colors cursor-pointer
+                        bg-neutral-100 hover:bg-neutral-200
+                        dark:bg-neutral-800 dark:hover:bg-neutral-700
+                        text-neutral-900 dark:text-neutral-100
+                        border border-neutral-200 dark:border-neutral-700"
+            >
+              {isLive ? "피커 사용" : "타이머 사용"}
+            </button>
+          </div>
+        </header>
 
-      {/* 4기둥 */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {blankHour ? (
-          <BlankCard label="시주" size="sm" settings={settings} hideBranchSipSin />
-        ) : (
+        {/* 4기둥 */}
+        <div className="grid grid-cols-4 gap-3 mb-6">
+          {blankHour ? (
+            <BlankCard label="시주" size="sm" settings={settings} hideBranchSipSin />
+          ) : (
+            <PillarCardShared
+              label="시주"
+              gz={hour}
+              dayStem={dayStem}
+              settings={settings}
+              hideBranchSipSin={true}
+            />
+          )}
+
           <PillarCardShared
-            label="시주"
-            gz={hour}
+            label="일주"
+            gz={day}
             dayStem={dayStem}
             settings={settings}
             hideBranchSipSin={true}
           />
-        )}
+          <PillarCardShared
+            label="월주"
+            gz={month}
+            dayStem={dayStem}
+            settings={settings}
+            hideBranchSipSin={true}
+          />
+          <PillarCardShared
+            label="연주"
+            gz={year}
+            dayStem={dayStem}
+            settings={settings}
+            hideBranchSipSin={true}
+          />
+        </div>
 
-        <PillarCardShared
-          label="일주"
-          gz={day}
-          dayStem={dayStem}
-          settings={settings}
-          hideBranchSipSin={true}
-        />
-        <PillarCardShared
-          label="월주"
-          gz={month}
-          dayStem={dayStem}
-          settings={settings}
-          hideBranchSipSin={true}
-        />
-        <PillarCardShared
-          label="연주"
-          gz={year}
-          dayStem={dayStem}
-          settings={settings}
-          hideBranchSipSin={true}
-        />
-      </div>
+        {/* 피커 + 시주 비우기 토글 */}
+        <div className="flex flex-col desk:flex-row gap-2 desk:gap-3 items-center">
+          <label className="text-sm text-neutral-600 dark:text-neutral-300">날짜/시간 선택</label>
+          <input
+            type="datetime-local"
+            value={toLocalInput(pick)}
+            disabled={isLive}
+            onChange={(e) => {
+              const d = fromLocalInput(e.target.value);
+              if (d) setPick(d);
+            }}
+            className={`rounded px-3 py-1 text-sm transition-colors
+                        bg-white dark:bg-neutral-900
+                        border border-neutral-300 dark:border-neutral-700
+                        text-neutral-900 dark:text-neutral-100
+                        focus:outline-none focus:ring-2 focus:ring-amber-500/40
+                        ${isLive ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            min="1900-01-01T00:00"
+            max="2100-12-31T23:59"
+          />
 
-      {/* 피커 + 시주 비우기 토글 */}
-      <div className="flex flex-col desk:flex-row gap-2 desk:gap-3 items-center">
-        <label className="text-sm text-neutral-600 dark:text-neutral-300">날짜/시간 선택</label>
-        <input
-          type="datetime-local"
-          value={toLocalInput(pick)}
-          disabled={isLive}
-          onChange={(e) => {
-            const d = fromLocalInput(e.target.value);
-            if (d) setPick(d);
-          }}
-          className={`rounded px-3 py-1 text-sm transition-colors
-                      bg-white dark:bg-neutral-900
-                      border border-neutral-300 dark:border-neutral-700
-                      text-neutral-900 dark:text-neutral-100
-                      focus:outline-none focus:ring-2 focus:ring-amber-500/40
-                      ${isLive ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-          min="1900-01-01T00:00"
-          max="2100-12-31T23:59"
-        />
-
-        <button
-          onClick={() => setBlankHour((v) => !v)}
-          className={`text-xs px-3 py-1 rounded border transition-colors cursor-pointer
-                      ${blankHour
-                        ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
-                        : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"}`}
-          title="시주 글자를 비우고 박스를 흰색으로 표시합니다"
-        >
-          {blankHour ? "시주 표시" : "시주 비우기"}
-        </button>
+          <button
+            onClick={() => setBlankHour((v) => !v)}
+            className={`text-xs px-3 py-1 rounded border transition-colors cursor-pointer
+                        ${blankHour
+                          ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
+                          : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"}`}
+            title="시주 글자를 비우고 박스를 흰색으로 표시합니다"
+          >
+            {blankHour ? "시주 표시" : "시주 비우기"}
+          </button>
+        </div>
       </div>
     </div>
   );
