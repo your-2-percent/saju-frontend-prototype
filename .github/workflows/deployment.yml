@@ -1,0 +1,72 @@
+name: Continuously Deployment
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: 'yarn'
+
+      - name: Install
+        run: yarn install
+
+      - name: Build
+        run: yarn build
+      
+      - name: Upload artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref == '/refs/heads/main'
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.16.0
+          cache: 'yarn'
+
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ./dist
+
+      - name: Git identity
+        run: |
+          git config user.name "github.actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish to GitHub Pages
+        run: |
+          npx gh-pages@5 \
+            -d dist \
+            -b gh-pages \
+            -m "deploy: ${GITHUB_SHA} [skip ci]"
+      
+
