@@ -253,7 +253,7 @@ export default function IlwoonCalendar({
 
                 {/* 천간 */}
                 <div
-                  className={`w-6 h-6 rounded flex items-center justify-center text-white text-sm ${getElementColor(
+                  className={`w-8 h-8 rounded flex items-center justify-center text-white text-base ${getElementColor(
                     stem, "stem"
                   )}`}
                 >
@@ -262,7 +262,7 @@ export default function IlwoonCalendar({
 
                 {/* 지지 */}
                 <div
-                  className={`w-6 h-6 rounded flex items-center justify-center text-white text-sm ${getElementColor(
+                  className={`w-8 h-8 rounded flex items-center justify-center text-white text-base ${getElementColor(
                     branch, "branch"
                   )}`}
                 >

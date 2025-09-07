@@ -206,7 +206,7 @@ export default function SewoonList({
                     "stem"
                   )}`}
                 >
-                  <span className={`text-[16px] sm:text-lg md:text-xl text-white ${stemFont}`}>
+                  <span className={`text-[20px] md:text-xl text-white ${stemFont}`}>
                     {stemDisp}
                   </span>
                 </div>
@@ -218,7 +218,7 @@ export default function SewoonList({
                     "branch"
                   )}`}
                 >
-                  <span className={`text-[16px] sm:text-lg md:text-xl text-white ${branchFont}`}>
+                  <span className={`text-[20px] md:text-xl text-white ${branchFont}`}>
                     {branchDisp}
                   </span>
                 </div>

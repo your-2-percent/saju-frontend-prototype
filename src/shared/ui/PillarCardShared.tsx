@@ -141,7 +141,7 @@ export function PillarCardShared({
   const thinBranchClass = settings.thinEum && isYinBranch(branch) ? "font-thin" : "font-bold";
 
   const sizeMap = {
-    sm: "w-8 h-8 sm:w-12 sm:h-12",
+    sm: "w-10 h-10 sm:w-12 sm:h-12",
     md: "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16",
     lg: "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20",
   } as const;
@@ -201,7 +201,7 @@ export function PillarCardShared({
         <div
           className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${stemBoxCls}`}
         >
-          <span className={`text-xl sm:text-2xl md:text-3xl ${stemTextCls} ${thinStemClass}`}>
+          <span className={`text-2xl md:text-3xl ${stemTextCls} ${thinStemClass}`}>
             {stemDisp}
           </span>
         </div>
@@ -210,7 +210,7 @@ export function PillarCardShared({
         <div
           className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${branchBoxCls}`}
         >
-          <span className={`text-xl sm:text-2xl md:text-3xl ${branchTextCls} ${thinBranchClass}`}>
+          <span className={`text-2xl md:text-3xl ${branchTextCls} ${thinBranchClass}`}>
             {branchDisp}
           </span>
         </div>
