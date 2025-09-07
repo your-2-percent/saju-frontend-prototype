@@ -26,7 +26,13 @@ export function computePowerDataDetailed(
   useHarmonyOverlay = false,
   criteriaMode: CriteriaMode = "modern"
 ): PowerDetailed {
-  const base = coreCompute(pillars, mode, hiddenStemSetting, debug, useHarmonyOverlay);
+  const base = coreCompute({
+    pillars,
+    mode,
+    hidden: hiddenStemSetting,
+    debug,
+    useHarmonyOverlay,
+  });
 
   const ko: [string,string,string,string] = (pillars ?? [])
     .slice(0, 4)
