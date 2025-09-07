@@ -95,7 +95,7 @@ const steps = [
 ] as const;
 
 type StepKey = (typeof steps)[number]["key"];
-type InputWizardProps = { onSave: (data: MyeongSik) => void; };
+type InputWizardProps = { onSave: (data: MyeongSik) => void, onClose: VoidFunction };
 
 type FormState = Partial<MyeongSik> & { calendarType: CalendarType; };
 
@@ -125,7 +125,7 @@ function focusById(id: string) {
 
 /* ===== 컴포넌트 ===== */
 
-export default function InputWizard({ onSave }: InputWizardProps) {
+export default function InputWizard({ onSave, onClose }: InputWizardProps) {
   const { add } = useMyeongSikStore();
 
   const [stepIndex, setStepIndex] = useState(0);
@@ -776,12 +776,20 @@ export default function InputWizard({ onSave }: InputWizardProps) {
             />
           )}
 
-          <button
-            type="submit"
-            className="mt-4 w-full btn_style dark:focus:ring-amber-500"
-          >
-            {stepIndex === steps.length - 1 ? "저장하기" : "확인"}
-          </button>
+          <div className="flex justify-between gap-2">
+            <button
+              className="mt-4 w-full btn_style btn_secondary dark:focus:ring-amber-500"
+              onClick={onClose}
+            >
+              닫기
+            </button>
+            <button
+              type="submit"
+              className="mt-4 w-full btn_style dark:focus:ring-amber-500"
+            >
+              {stepIndex === steps.length - 1 ? "저장하기" : "확인"}
+            </button>
+          </div>
         </form>
       </div>
     </div>
