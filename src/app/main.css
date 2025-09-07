@@ -46,6 +46,10 @@ li {
   cursor: pointer;
 }
 
+.btn_style.btn_secondary {
+  background-color: oklch(27.4% 0.006 286.033);
+}
+
 .btn_style.p-0 {
   padding: 0;
 }

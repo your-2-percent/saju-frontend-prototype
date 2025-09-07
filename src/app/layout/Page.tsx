@@ -38,11 +38,6 @@ export default function Page() {
 
   // 새 명식 추가
   const openAdd = () => {
-    setShowSidebar(false);
-    setEditing(null);
-    setCurrentId(null);
-    setShowToday(false);
-    setShowCouple(false);
     setWizardOpen(true);      // ← Wizard만 키기
   };
 
@@ -80,15 +75,11 @@ export default function Page() {
       {showToday && <TodaySaju />}
 
       {/* Wizard — 항상 overlay 로 띄움(absolute) */}
-      {(
-        <div
-          className={`absolute inset-0 transition-opacity duration-150 ${
-            wizardOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-          }`}
-        >
-          {/* 배경 스크롤 방지/암막 원하면 래핑 div 추가 */}
-          <div className="py-6">
-            {wizardOpen && (
+      {wizardOpen && (
+        <>
+          <div id="wizard-dim" className="bg-black opacity-80 absolute inset-0 w-full h-full z-99" />
+          <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-100">
+            <div className="py-6">
               <InputWizard
                 onSave={(m) => {
                   // 1) 먼저 currentId를 세팅해서 Detail을 백그라운드에 마운트
@@ -100,10 +91,11 @@ export default function Page() {
                   // 2) 다음 프레임에서 Wizard를 끄면(겹침 해제) 깜빡임 없음
                   requestAnimationFrame(() => setWizardOpen(false));
                 }}
+                onClose={() => setWizardOpen(false)}
               />
-            )}
+            </div>
           </div>
-        </div>
+        </>
       )}
 
       {/* 원국 UI: 선택이 있고, Today/Couple이 아닐 때 */}
