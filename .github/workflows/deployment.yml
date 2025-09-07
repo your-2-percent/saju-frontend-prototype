@@ -54,6 +54,9 @@ jobs:
           name: dist
           path: ./dist
 
+      - name: Create CNAME file
+        run: echo 'myowoon96.com' > ./dist/CNAME
+
       - name: Git identity
         run: |
           git config user.name "github.actions[bot]"
@@ -63,10 +66,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-           npx gh-pages@5 \
+          npx gh-pages@5 \
             -d dist \
             -b gh-pages \
-            -c myowoon96.com \
             -r "https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git" \
             -m "deploy: ${GITHUB_SHA} [skip ci]"
       
