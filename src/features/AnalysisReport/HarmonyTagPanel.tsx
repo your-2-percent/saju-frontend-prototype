@@ -2,6 +2,9 @@
 import { buildHarmonyTags, buildAllRelationTags, Pillars4 } from "./logic/relations";
 import type { BlendTab } from "./logic/blend";
 
+/* ========================
+ * 색상 유틸
+ * ======================== */
 function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
   if (t === "#없음") {
     return "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700";
@@ -20,18 +23,25 @@ function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
   }
 }
 
+/* ========================
+ * Row
+ * ======================== */
 function Row({
   label,
   natal,
-  luck,
+  dae,
+  se,
+  wol,
 }: {
   label: string;
   natal: string[];
-  luck: string[];
+  dae: string[];
+  se: string[];
+  wol: string[];
 }) {
+  const hasLuck = (dae.length + se.length + wol.length) > 0;
   const shownNatal = natal.length > 0 ? natal : ["#없음"];
-  const displayNatal =
-    luck.length > 0 ? shownNatal.filter((t) => t !== "#없음") : shownNatal;
+  const displayNatal = hasLuck ? shownNatal.filter((t) => t !== "#없음") : shownNatal;
 
   return (
     <div className="flex items-start gap-3">
@@ -50,22 +60,39 @@ function Row({
             {t}
           </span>
         ))}
-        {luck.map((t, i) => {
-          let src: "dae" | "se" | "wol" = "dae";
-          if (t.startsWith("세운")) src = "se";
-          else if (t.startsWith("월운")) src = "wol";
-          return (
-            <span
-              key={`luck-${i}`}
-              className={
-                "text-xs px-2 py-1 rounded-full border whitespace-nowrap " +
-                getClass(t, src)
-              }
-            >
-              {t}
-            </span>
-          );
-        })}
+        {dae.map((t, i) => (
+          <span
+            key={`dae-${i}`}
+            className={
+              "text-xs px-2 py-1 rounded-full border whitespace-nowrap " +
+              getClass(t, "dae")
+            }
+          >
+            {t}
+          </span>
+        ))}
+        {se.map((t, i) => (
+          <span
+            key={`se-${i}`}
+            className={
+              "text-xs px-2 py-1 rounded-full border whitespace-nowrap " +
+              getClass(t, "se")
+            }
+          >
+            {t}
+          </span>
+        ))}
+        {wol.map((t, i) => (
+          <span
+            key={`wol-${i}`}
+            className={
+              "text-xs px-2 py-1 rounded-full border whitespace-nowrap " +
+              getClass(t, "wol")
+            }
+          >
+            {t}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -87,8 +114,17 @@ type HarmonyLike = {
   jijiHae?: string[];
 };
 
+type LuckLike = Omit<HarmonyLike, "title">;
+
 function arr(v: unknown): string[] {
   return Array.isArray(v) ? (v as string[]) : [];
+}
+
+/* 집합 차집합: next에만 있는 항목 */
+function diff(fromArr: unknown, toArr: unknown): string[] {
+  const a = new Set(arr(fromArr));
+  const b = arr(toArr);
+  return b.filter((x) => !a.has(x));
 }
 
 export default function HarmonyTagPanel({
@@ -104,8 +140,23 @@ export default function HarmonyTagPanel({
   wolwoon?: string;
   tab: BlendTab;
 }) {
+  /* 원국 태그 */
   const natalRaw = buildHarmonyTags(pillars) as HarmonyLike;
-  const luckTags = buildAllRelationTags({ natal: pillars, daewoon, sewoon, wolwoon });
+
+  /* 단계별 luck 태그 (함수는 그대로, 호출만 4단계) */
+  const base = buildAllRelationTags({ natal: pillars }) as LuckLike;
+
+  const stepA = daewoon
+    ? (buildAllRelationTags({ natal: pillars, daewoon }) as LuckLike)
+    : base;
+
+  const stepB = sewoon
+    ? (buildAllRelationTags({ natal: pillars, daewoon, sewoon }) as LuckLike)
+    : stepA;
+
+  const stepC = wolwoon
+    ? (buildAllRelationTags({ natal: pillars, daewoon, sewoon, wolwoon }) as LuckLike)
+    : stepB;
 
   // 원국 타이틀
   let fullTitle = natalRaw.title;
@@ -113,33 +164,38 @@ export default function HarmonyTagPanel({
   // 운 타이틀 붙이기
   if (tab !== "원국") {
     const extra: string[] = [];
-    if (tab === "대운" && daewoon) extra.push(`${daewoon}대운`);
-    if (tab === "세운") {
-      if (daewoon) extra.push(`${daewoon}대운`);
+    if (daewoon) extra.push(`${daewoon}대운`);
+    if (tab === "세운" || tab === "월운") {
       if (sewoon) extra.push(`${sewoon}세운`);
     }
-    if (tab === "월운") {
-      if (daewoon) extra.push(`${daewoon}대운`);
-      if (sewoon) extra.push(`${sewoon}세운`);
-      if (wolwoon) extra.push(`${wolwoon}월운`);
+    if (tab === "월운" && wolwoon) {
+      extra.push(`${wolwoon}월운`);
     }
     if (extra.length > 0) {
       fullTitle += " + " + extra.join(" ");
     }
   }
 
-  const natal = {
-    cheonganHap: arr(natalRaw.cheonganHap),
-    cheonganChung: arr(natalRaw.cheonganChung),
-    jijiSamhap: arr(natalRaw.jijiSamhap),
-    jijiBanghap: arr(natalRaw.jijiBanghap),
-    jijiYukhap: arr(natalRaw.jijiYukhap),
-    amhap: arr(natalRaw.amhap),
-    ganjiAmhap: arr(natalRaw.ganjiAmhap),
-    jijiChung: arr(natalRaw.jijiChung),
-    jijiHyeong: arr(natalRaw.jijiHyeong),
-    jijiPa: arr(natalRaw.jijiPa),
-    jijiHae: arr(natalRaw.jijiHae),
+  /* 카테고리별로 증분 분리 */
+  const mk = (key: keyof LuckLike) => ({
+    natal: arr((natalRaw as LuckLike)[key]),
+    dae: diff(base[key], stepA[key]),
+    se: diff(stepA[key], stepB[key]),
+    wol: diff(stepB[key], stepC[key]),
+  });
+
+  const K = {
+    cheonganHap: mk("cheonganHap"),
+    cheonganChung: mk("cheonganChung"),
+    jijiSamhap: mk("jijiSamhap"),
+    jijiBanghap: mk("jijiBanghap"),
+    jijiYukhap: mk("jijiYukhap"),
+    amhap: mk("amhap"),
+    ganjiAmhap: mk("ganjiAmhap"),
+    jijiChung: mk("jijiChung"),
+    jijiHyeong: mk("jijiHyeong"),
+    jijiPa: mk("jijiPa"),
+    jijiHae: mk("jijiHae"),
   };
 
   return (
@@ -149,18 +205,18 @@ export default function HarmonyTagPanel({
         {fullTitle}
       </div>
 
-      <Row label="천간합" natal={natal.cheonganHap} luck={luckTags.cheonganHap} />
-      <Row label="천간충" natal={natal.cheonganChung} luck={luckTags.cheonganChung} />
+      <Row label="천간합" natal={K.cheonganHap.natal} dae={K.cheonganHap.dae} se={K.cheonganHap.se} wol={K.cheonganHap.wol} />
+      <Row label="천간충" natal={K.cheonganChung.natal} dae={K.cheonganChung.dae} se={K.cheonganChung.se} wol={K.cheonganChung.wol} />
       <div className="border-t border-neutral-200 dark:border-neutral-800 my-2" />
-      <Row label="지지삼합" natal={natal.jijiSamhap} luck={luckTags.jijiSamhap} />
-      <Row label="지지방합" natal={natal.jijiBanghap} luck={luckTags.jijiBanghap} />
-      <Row label="지지육합" natal={natal.jijiYukhap} luck={luckTags.jijiYukhap} />
-      <Row label="암합" natal={natal.amhap} luck={luckTags.amhap} />
-      <Row label="간지암합" natal={natal.ganjiAmhap} luck={luckTags.ganjiAmhap} />
-      <Row label="지지충" natal={natal.jijiChung} luck={luckTags.jijiChung} />
-      <Row label="지지형" natal={natal.jijiHyeong} luck={luckTags.jijiHyeong} />
-      <Row label="지지파" natal={natal.jijiPa} luck={luckTags.jijiPa} />
-      <Row label="지지해" natal={natal.jijiHae} luck={luckTags.jijiHae} />
+      <Row label="지지삼합" natal={K.jijiSamhap.natal} dae={K.jijiSamhap.dae} se={K.jijiSamhap.se} wol={K.jijiSamhap.wol} />
+      <Row label="지지방합" natal={K.jijiBanghap.natal} dae={K.jijiBanghap.dae} se={K.jijiBanghap.se} wol={K.jijiBanghap.wol} />
+      <Row label="지지육합" natal={K.jijiYukhap.natal} dae={K.jijiYukhap.dae} se={K.jijiYukhap.se} wol={K.jijiYukhap.wol} />
+      <Row label="암합" natal={K.amhap.natal} dae={K.amhap.dae} se={K.amhap.se} wol={K.amhap.wol} />
+      <Row label="간지암합" natal={K.ganjiAmhap.natal} dae={K.ganjiAmhap.dae} se={K.ganjiAmhap.se} wol={K.ganjiAmhap.wol} />
+      <Row label="지지충" natal={K.jijiChung.natal} dae={K.jijiChung.dae} se={K.jijiChung.se} wol={K.jijiChung.wol} />
+      <Row label="지지형" natal={K.jijiHyeong.natal} dae={K.jijiHyeong.dae} se={K.jijiHyeong.se} wol={K.jijiHyeong.wol} />
+      <Row label="지지파" natal={K.jijiPa.natal} dae={K.jijiPa.dae} se={K.jijiPa.se} wol={K.jijiPa.wol} />
+      <Row label="지지해" natal={K.jijiHae.natal} dae={K.jijiHae.dae} se={K.jijiHae.se} wol={K.jijiHae.wol} />
     </div>
   );
 }
