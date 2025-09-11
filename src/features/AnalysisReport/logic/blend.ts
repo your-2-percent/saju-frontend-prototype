@@ -54,35 +54,51 @@ function mixPercent(
   return toPercent(out);
 }
 
-export type BlendTab = "원국" | "대운" | "세운" | "월운";
-export const BLEND_TABS: BlendTab[] = ["원국", "대운", "세운", "월운"];
-export const BLEND_WEIGHTS: Record<BlendTab, { natal: number; dae?: number; se?: number; wol?: number }> = {
-  "원국":   { natal: 1.00 },
+export type BlendTab = "전체" | "원국" | "대운" | "세운" | "월운";
+export const BLEND_TABS: BlendTab[] = ["전체", "원국", "대운", "세운", "월운"];
+
+export const BLEND_WEIGHTS: Record<Exclude<BlendTab, "전체">, { natal: number; dae?: number; se?: number; wol?: number }> = {
+  "원국": { natal: 1.00 },
   "대운": { natal: 0.60, dae: 0.40 },
   "세운": { natal: 0.50, dae: 0.30, se: 0.20 },
   "월운": { natal: 0.40, dae: 0.30, se: 0.20, wol: 0.10 },
 };
 
+
 export function blendElementStrength(params: {
-  /** 원국 오행 ‘절대’ 점수(정규화 전) */
   natalElementScore: Record<Element, number>;
-  /** 대운/세운/월운 간지(없으면 null/undefined) */
   daewoonGz?: string | null;
   sewoonGz?: string | null;
   wolwoonGz?: string | null;
-  /** 탭 */
   tab: BlendTab;
 }): Record<Element, number> {
   const { natalElementScore, daewoonGz, sewoonGz, wolwoonGz, tab } = params;
-  const w = BLEND_WEIGHTS[tab];
 
-  // 1) 각 소스별 '퍼센트' 분포로 변환
   const natalPct = toPercent(natalElementScore);
   const daePct   = daewoonGz ? toPercent(elementScoreFromGZ(daewoonGz)) : null;
   const sePct    = sewoonGz  ? toPercent(elementScoreFromGZ(sewoonGz))  : null;
   const wolPct   = wolwoonGz ? toPercent(elementScoreFromGZ(wolwoonGz)) : null;
 
-  // 2) (존재하는) 소스끼리 가중합 → 100%로 다시 정규화
+  if (tab === "전체") {
+    // ✅ 전체: 존재하는 모든 소스를 균등 합산
+    const sources: Array<Record<Element, number>> = [natalPct];
+    if (daePct) sources.push(daePct);
+    if (sePct) sources.push(sePct);
+    if (wolPct) sources.push(wolPct);
+
+    const n = sources.length;
+    const w = 1 / n;
+
+    return mixPercent(
+      sources[0], w,
+      sources[1] ?? null, sources[1] ? w : 0,
+      sources[2] ?? null, sources[2] ? w : 0,
+      sources[3] ?? null, sources[3] ? w : 0,
+    );
+  }
+
+  // ✅ 나머지 탭: 기존 로직
+  const w = BLEND_WEIGHTS[tab];
   return mixPercent(
     natalPct, (w.natal ?? 0),
     daePct,   (w.dae ?? 0),

@@ -501,7 +501,7 @@ export default function AnalysisReport({
           daewoon={daewoonGz || undefined}
           sewoon={seGz || undefined}
           wolwoon={wolGz || undefined}
-          //tab={blendTab}
+          tab={blendTab}
         />
       )}
 
@@ -620,6 +620,7 @@ export default function AnalysisReport({
           daewoon={daewoonGz || undefined}
           sewoon={seGz || undefined}
           wolwoon={wolGz || undefined}
+          tab={blendTab}
         />
       )}
     </div>
