@@ -4,7 +4,6 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 //import type { DayBoundaryRule } from "@/shared/type";
-import { BLEND_TABS, type BlendTab } from "@/features/AnalysisReport/logic/blend";
 
 export default function LuckGlobalPicker({
   pillars,
@@ -16,7 +15,6 @@ export default function LuckGlobalPicker({
   //hourTable?: DayBoundaryRule;
 }) {
   const { date, setDate } = useLuckPickerStore();
-  const [blendTab, setBlendTab] = useState<BlendTab>("원국");
 
   // ✅ dae/se/wol은 여기서 계산
   const luck = useGlobalLuck(ms);
@@ -68,23 +66,6 @@ export default function LuckGlobalPicker({
 
   return (
     <div className="max-w-[640px] mx-auto mb-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-3 space-y-3">
-      {/* 🔽 탭 버튼 */}
-      <div className="flex gap-2 justify-center flex-wrap">
-        {BLEND_TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setBlendTab(t)}
-            className={
-              "px-2 py-1 text-xs rounded border cursor-pointer " +
-              (blendTab === t
-                ? "bg-yellow-500 text-black border-yellow-600"
-                : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
-            }
-          >
-            {t}
-          </button>
-        ))}
-      </div>
 
       {/* 상단: 원국 + 운 */}
       {titleLine && (
