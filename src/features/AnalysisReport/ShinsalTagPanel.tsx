@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import type { Pillars4 } from "./logic/relations";
 import { buildShinsalTags, type ShinsalBasis } from "./logic/shinsal";
 
+type StageTab = "전체" | "원국" | "대운" | "세운" | "월운";
+
 function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
   if (t === "#없음") {
     return "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700";
@@ -59,30 +61,18 @@ function Section({
   );
 }
 
-/** 운 간지 추출(한글/한자 + 접미사 허용) → "경자" */
-// const STEMS = "갑을병정무기경신임계甲乙丙丁戊己庚辛壬癸";
-// const BRANCHES = "자축인묘진사오미신유술해子丑寅卯辰巳午未申酉戌亥";
-// function extractGZ(raw?: string | null): string | null {
-//   if (!raw) return null;
-//   const chars = Array.from(String(raw));
-//   let s: string | null = null, b: string | null = null;
-//   for (const ch of chars) {
-//     if (!s && STEMS.includes(ch)) s = ch;
-//     if (BRANCHES.includes(ch)) b = ch;
-//   }
-//   return s && b ? s + b : null;
-// }
-
 export default function ShinsalTagPanel({
   pillars,
   daewoon,
   sewoon,
   wolwoon,
+  tab = "전체",
 }: {
   pillars: Pillars4;
   daewoon?: string | null;
   sewoon?: string | null;
   wolwoon?: string | null;
+  tab?: StageTab;
 }) {
   // ▼ 셀렉트 상태: 공망/삼재 기준
   const [voidSel, setVoidSel] = useState<"일공망" | "연공망">("일공망");
@@ -103,23 +93,17 @@ export default function ShinsalTagPanel({
 
   const { /*title: _ignored,*/ good, bad, meta } = data;
 
-  // UI 타이틀: "을해년 기묘월 무신일 병진시 + 병자대운 을사세운 갑신월운"
-  //const natalUI = `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`;
-  // const daeLbl = extractGZ(daewoon);
-  // const seLbl  = extractGZ(sewoon);
-  // const wolLbl = extractGZ(wolwoon);
-  // const extras = [
-  //   daeLbl ? `${daeLbl}대운` : null,
-  //   seLbl  ? `${seLbl}세운`  : null,
-  //   wolLbl ? `${wolLbl}월운` : null,
-  // ].filter(Boolean) as string[];
-  //const uiTitle = extras.length > 0 ? `${natalUI} + ${extras.join(" ")}` : natalUI;
-
   // 원국 칩 접두어 "원국 " 부여
   const withNatalPrefix = (items: string[]) => items.map((t) => (t === "#없음" ? t : `원국 ${t}`));
 
+  const applyTab = <T extends Array<{ label: string; items: string[]; source: "natal" | "dae" | "se" | "wol" }>>(rows: T, tb: StageTab): T => {
+    if (tb === "전체") return rows;
+    const want = tb === "원국" ? "natal" : tb === "대운" ? "dae" : tb === "세운" ? "se" : "wol";
+    return rows.filter((r) => r.source === want) as T;
+  };
+
   // 표시는 요구 순서: 시주, 일주, 연주, 월주, 대운, 세운, 월운
-  const goodRows = [
+  const goodRowsAll = [
     { label: "시주", items: withNatalPrefix(good.si),   source: "natal" as const },
     { label: "일주", items: withNatalPrefix(good.il),   source: "natal" as const },
     { label: "월주", items: withNatalPrefix(good.wol),  source: "natal" as const },
@@ -128,8 +112,7 @@ export default function ShinsalTagPanel({
     { label: "세운", items: good.se,                    source: "se"    as const },
     { label: "월운", items: good.wolun,                 source: "wol"   as const },
   ];
-
-  const badRows = [
+  const badRowsAll = [
     { label: "시주", items: withNatalPrefix(bad.si),   source: "natal" as const },
     { label: "일주", items: withNatalPrefix(bad.il),   source: "natal" as const },
     { label: "월주", items: withNatalPrefix(bad.wol),  source: "natal" as const },
@@ -138,6 +121,10 @@ export default function ShinsalTagPanel({
     { label: "세운", items: bad.se,                    source: "se"    as const },
     { label: "월운", items: bad.wolun,                 source: "wol"   as const },
   ];
+
+  // ✅ 여기서 탭 적용
+  const goodRows = applyTab(goodRowsAll, tab);
+  const badRows  = applyTab(badRowsAll,  tab);
 
   // 셀렉트 아래 안내문구: 양쪽 값 같이 보여주기
   const voidLeft  = meta.voidPair.day  ? `일공망(${meta.voidPair.day.join("")})`   : "일공망(—)";

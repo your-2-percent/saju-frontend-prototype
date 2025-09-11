@@ -5,6 +5,8 @@ import { buildHarmonyTags, buildAllRelationTags, Pillars4 } from "./logic/relati
 /* ========================
  * 색상 유틸
  * ======================== */
+type StageTab = "전체" | "원국" | "대운" | "세운" | "월운";
+
 function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
   if (t === "#없음") {
     return "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700";
@@ -132,12 +134,13 @@ export default function HarmonyTagPanel({
   daewoon,
   sewoon,
   wolwoon,
-  //tab,
+  tab = "전체", 
 }: {
   pillars: Pillars4;
   daewoon?: string;
   sewoon?: string;
   wolwoon?: string;
+  tab?: StageTab;
   //tab: BlendTab;
 }) {
   /* 원국 태그 */
@@ -157,24 +160,6 @@ export default function HarmonyTagPanel({
   const stepC = wolwoon
     ? (buildAllRelationTags({ natal: pillars, daewoon, sewoon, wolwoon }) as LuckLike)
     : stepB;
-
-  // 원국 타이틀
-  // let fullTitle = natalRaw.title;
-
-  // // 운 타이틀 붙이기
-  // if (tab !== "원국") {
-  //   const extra: string[] = [];
-  //   if (daewoon) extra.push(`${daewoon}대운`);
-  //   if (tab === "세운" || tab === "월운") {
-  //     if (sewoon) extra.push(`${sewoon}세운`);
-  //   }
-  //   if (tab === "월운" && wolwoon) {
-  //     extra.push(`${wolwoon}월운`);
-  //   }
-  //   if (extra.length > 0) {
-  //     fullTitle += " + " + extra.join(" ");
-  //   }
-  // }
 
   /* 카테고리별로 증분 분리 */
   const mk = (key: keyof LuckLike) => ({
@@ -198,25 +183,33 @@ export default function HarmonyTagPanel({
     jijiHae: mk("jijiHae"),
   };
 
+  const pick = (v: {natal:string[]; dae:string[]; se:string[]; wol:string[]}) => {
+    if (tab === "전체") return v;
+    return {
+      natal: tab === "원국" ? v.natal : [],
+      dae:   tab === "대운" ? v.dae   : [],
+      se:    tab === "세운" ? v.se    : [],
+      wol:   tab === "월운" ? v.wol   : [],
+    };
+  };
+
   return (
     <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-3">
       <div className="text-base font-bold mb-1">형충회합</div>
-      {/* <div className="text-sm text-neutral-700 dark:text-neutral-300 mb-3">
-        {fullTitle}
-      </div> */}
 
-      <Row label="천간합" natal={K.cheonganHap.natal} dae={K.cheonganHap.dae} se={K.cheonganHap.se} wol={K.cheonganHap.wol} />
-      <Row label="천간충" natal={K.cheonganChung.natal} dae={K.cheonganChung.dae} se={K.cheonganChung.se} wol={K.cheonganChung.wol} />
+      {/* 각 Row에 pick() 적용 */}
+      <Row label="천간합" {...pick(K.cheonganHap)} />
+      <Row label="천간충" {...pick(K.cheonganChung)} />
       <div className="border-t border-neutral-200 dark:border-neutral-800 my-2" />
-      <Row label="지지삼합" natal={K.jijiSamhap.natal} dae={K.jijiSamhap.dae} se={K.jijiSamhap.se} wol={K.jijiSamhap.wol} />
-      <Row label="지지방합" natal={K.jijiBanghap.natal} dae={K.jijiBanghap.dae} se={K.jijiBanghap.se} wol={K.jijiBanghap.wol} />
-      <Row label="지지육합" natal={K.jijiYukhap.natal} dae={K.jijiYukhap.dae} se={K.jijiYukhap.se} wol={K.jijiYukhap.wol} />
-      <Row label="암합" natal={K.amhap.natal} dae={K.amhap.dae} se={K.amhap.se} wol={K.amhap.wol} />
-      <Row label="간지암합" natal={K.ganjiAmhap.natal} dae={K.ganjiAmhap.dae} se={K.ganjiAmhap.se} wol={K.ganjiAmhap.wol} />
-      <Row label="지지충" natal={K.jijiChung.natal} dae={K.jijiChung.dae} se={K.jijiChung.se} wol={K.jijiChung.wol} />
-      <Row label="지지형" natal={K.jijiHyeong.natal} dae={K.jijiHyeong.dae} se={K.jijiHyeong.se} wol={K.jijiHyeong.wol} />
-      <Row label="지지파" natal={K.jijiPa.natal} dae={K.jijiPa.dae} se={K.jijiPa.se} wol={K.jijiPa.wol} />
-      <Row label="지지해" natal={K.jijiHae.natal} dae={K.jijiHae.dae} se={K.jijiHae.se} wol={K.jijiHae.wol} />
+      <Row label="지지삼합" {...pick(K.jijiSamhap)} />
+      <Row label="지지방합" {...pick(K.jijiBanghap)} />
+      <Row label="지지육합" {...pick(K.jijiYukhap)} />
+      <Row label="암합" {...pick(K.amhap)} />
+      <Row label="간지암합" {...pick(K.ganjiAmhap)} />
+      <Row label="지지충" {...pick(K.jijiChung)} />
+      <Row label="지지형" {...pick(K.jijiHyeong)} />
+      <Row label="지지파" {...pick(K.jijiPa)} />
+      <Row label="지지해" {...pick(K.jijiHae)} />
     </div>
   );
 }
