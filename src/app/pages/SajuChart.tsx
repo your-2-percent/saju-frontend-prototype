@@ -28,6 +28,8 @@ import type { EraType } from "@/shared/domain/간지/twelve";
 // ✅ 전역 설정 스토어 (Zustand)
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
+import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
+
 type Props = {
   data: MyeongSik;
   /** 부모가 강제로 테이블을 지정하고 싶을 때만 넘김. 기본은 data.mingSikType */
@@ -243,6 +245,14 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   const handleDSTToggle = () => setUseDST((prev) => !prev);
 
+  const ms: MyeongSik | null = data ?? null;
+  const luck = useGlobalLuck(ms, hourTable);
+
+  // 예시: 차트에 표기할 운 간지(대/세/월/일)
+  const daeGz = luck.dae.gz;
+  const seGz  = luck.se.gz;
+  const wolGz = luck.wol.gz;
+
   return (
     <div className="w-full max-w-[640px] mx-auto">
       {/* 헤더 */}
@@ -307,8 +317,24 @@ export default function SajuChart({ data, hourTable }: Props) {
                   }`}
                 >
                   {filteredCards.map((c) => {
-                    const stem = c.data.stem as Stem10sin;
-                    const branch = c.data.branch as Branch10sin;
+                    let stem = c.data.stem as Stem10sin;
+                    let branch = c.data.branch as Branch10sin;
+
+                    // ✅ 피커 전역 간지로 덮어쓰기
+                    if (c.label.includes("대운") && daeGz) {
+                      stem = daeGz.charAt(0) as Stem10sin;
+                      branch = daeGz.charAt(1) as Branch10sin;
+                    }
+                    if (c.label.includes("세운") && seGz) {
+                      stem = seGz.charAt(0) as Stem10sin;
+                      branch = seGz.charAt(1) as Branch10sin;
+                    }
+                    if (c.label.includes("월운") && wolGz) {
+                      stem = wolGz.charAt(0) as Stem10sin;
+                      branch = wolGz.charAt(1) as Branch10sin;
+                    }
+                    // 일운 카드도 따로 있다면 동일하게 ilGz 적용
+
                     const unseong = calcUnseong(branch);
                     const shinsal = calcShinsal(branch);
                     return (

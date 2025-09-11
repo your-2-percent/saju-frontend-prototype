@@ -60,18 +60,18 @@ function Section({
 }
 
 /** 운 간지 추출(한글/한자 + 접미사 허용) → "경자" */
-const STEMS = "갑을병정무기경신임계甲乙丙丁戊己庚辛壬癸";
-const BRANCHES = "자축인묘진사오미신유술해子丑寅卯辰巳午未申酉戌亥";
-function extractGZ(raw?: string | null): string | null {
-  if (!raw) return null;
-  const chars = Array.from(String(raw));
-  let s: string | null = null, b: string | null = null;
-  for (const ch of chars) {
-    if (!s && STEMS.includes(ch)) s = ch;
-    if (BRANCHES.includes(ch)) b = ch;
-  }
-  return s && b ? s + b : null;
-}
+// const STEMS = "갑을병정무기경신임계甲乙丙丁戊己庚辛壬癸";
+// const BRANCHES = "자축인묘진사오미신유술해子丑寅卯辰巳午未申酉戌亥";
+// function extractGZ(raw?: string | null): string | null {
+//   if (!raw) return null;
+//   const chars = Array.from(String(raw));
+//   let s: string | null = null, b: string | null = null;
+//   for (const ch of chars) {
+//     if (!s && STEMS.includes(ch)) s = ch;
+//     if (BRANCHES.includes(ch)) b = ch;
+//   }
+//   return s && b ? s + b : null;
+// }
 
 export default function ShinsalTagPanel({
   pillars,
@@ -104,16 +104,16 @@ export default function ShinsalTagPanel({
   const { /*title: _ignored,*/ good, bad, meta } = data;
 
   // UI 타이틀: "을해년 기묘월 무신일 병진시 + 병자대운 을사세운 갑신월운"
-  const natalUI = `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`;
-  const daeLbl = extractGZ(daewoon);
-  const seLbl  = extractGZ(sewoon);
-  const wolLbl = extractGZ(wolwoon);
-  const extras = [
-    daeLbl ? `${daeLbl}대운` : null,
-    seLbl  ? `${seLbl}세운`  : null,
-    wolLbl ? `${wolLbl}월운` : null,
-  ].filter(Boolean) as string[];
-  const uiTitle = extras.length > 0 ? `${natalUI} + ${extras.join(" ")}` : natalUI;
+  //const natalUI = `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`;
+  // const daeLbl = extractGZ(daewoon);
+  // const seLbl  = extractGZ(sewoon);
+  // const wolLbl = extractGZ(wolwoon);
+  // const extras = [
+  //   daeLbl ? `${daeLbl}대운` : null,
+  //   seLbl  ? `${seLbl}세운`  : null,
+  //   wolLbl ? `${wolLbl}월운` : null,
+  // ].filter(Boolean) as string[];
+  //const uiTitle = extras.length > 0 ? `${natalUI} + ${extras.join(" ")}` : natalUI;
 
   // 원국 칩 접두어 "원국 " 부여
   const withNatalPrefix = (items: string[]) => items.map((t) => (t === "#없음" ? t : `원국 ${t}`));
@@ -148,7 +148,7 @@ export default function ShinsalTagPanel({
   return (
     <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-2">
       <div className="text-base font-bold mb-1">신살(길신/흉살)</div>
-      <div className="text-sm text-neutral-700 dark:text-neutral-300">{uiTitle}</div>
+      {/* <div className="text-sm text-neutral-700 dark:text-neutral-300">{uiTitle}</div> */}
 
       {/* 기준 선택 UI */}
       <div className="flex flex-wrap items-center gap-3 text-xs">

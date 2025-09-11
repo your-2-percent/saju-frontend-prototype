@@ -1,4 +1,5 @@
 // features/luck/DaewoonList.tsx
+import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getElementColor, getSipSin } from "@/shared/domain/간지/utils";
@@ -14,6 +15,9 @@ import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/�
 
 // ✅ 전역 설정 스토어 (SajuChart와 동일)
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { findActiveIndexByDate } from "@/features/luck/utils/active";
 
 /* ===== 한자/한글 변환 + 음간/음지 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -64,8 +68,8 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
 /* ===== 컴포넌트 ===== */
 export default function DaewoonList({
   data,
-  activeIndex,
-  onSelect,
+  //activeIndex,
+  //onSelect,
 }: {
   data: MyeongSik;
   activeIndex: number | null;
@@ -73,6 +77,9 @@ export default function DaewoonList({
 }) {
   const list = useDaewoonList(data); // [{ at: Date, gz: "갑자" }, ...]
   const dayStem = toDayStem(data) as Stem10sin;
+
+  const { date, setFromEvent } = useLuckPickerStore();
+  const activeIndex = useMemo(() => findActiveIndexByDate(list, date), [list, date]);
 
   // ✅ 전역 설정 (SajuChart와 동일한 소스)
   const settings = useSettingsStore((s) => s.settings);
@@ -113,6 +120,8 @@ export default function DaewoonList({
         })
       : null;
 
+  
+
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       <div className="px-3 py-2 text-sm font-semibold tracking-wider bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300">
@@ -120,10 +129,10 @@ export default function DaewoonList({
       </div>
 
       <div className="flex gap-0.5 desk:gap-1 py-2 desk:p-2 flex-row-reverse">
-        {list.map((it, i) => {
-          const stem = it.gz.charAt(0) as Stem10sin;
-          const branch = it.gz.charAt(1) as Branch10sin;
-          const age = getAge(birth, it.at);
+        {list.map((ev, i) => {
+          const stem = ev.gz.charAt(0) as Stem10sin;
+          const branch = ev.gz.charAt(1) as Branch10sin;
+          const age = getAge(birth, ev.at);
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", charType);
@@ -139,14 +148,15 @@ export default function DaewoonList({
 
           return (
             <div
-              key={`${it.gz}-${i}`}
-              onClick={() => onSelect(i)}
+              key={ev.gz}
+              //className={i === activeIndex ? "is-active ..." : "..."}
+              onClick={() => setFromEvent(ev, "대운")}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive
                   ? "border border-yellow-500"
                   : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
               }`}
-              title={`${it.gz} · ${it.at.toLocaleDateString()}`}
+              title={`${ev.gz} · ${ev.at.toLocaleDateString()}`}
             >
               <div className="desk:px-2 py-1 text-center text-[10px] bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300">
                 {age}

@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
-import DaewoonList from "@/features/luck/layout/DaewoonList";
-import SewoonList from "@/features/luck/layout/SewoonList";
-import WolwoonList from "@/features/luck/layout/WolwoonList";
-import IlwoonCalendar from "@/features/luck/layout/IlwoonCalendar";
+import DaewoonList from "@/features/luck/ui/DaewoonList";
+import SewoonList from "@/features/luck/ui/SewoonList";
+import WolwoonList from "@/features/luck/ui/WolwoonList";
+import IlwoonCalendar from "@/features/luck/ui/IlwoonCalendar";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getSewoonListInDaewoon } from "@/features/luck/useSewoonList";
-import type { DayBoundaryRule } from "@/shared/type"
+import type { DayBoundaryRule } from "@/shared/type";
+import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
 export default function UnViewer({ data }: { data: MyeongSik }) {
   const daeList = useDaewoonList(data);
 
   const [activeDaeIndex, setActiveDaeIndex] = useState<number | null>(null);
-  const [activeYear, setActiveYear] = useState<number | null>(null);
+  //const [/*activeYear,*/ setActiveYear] = useState<number | null>(null);
   const [ilwoonTarget, setIlwoonTarget] = useState<{ year: number; month: number } | null>(null);
 
   // 처음에는 일운까지 전부 보이게
@@ -44,11 +46,31 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
     });
 
     if (idx !== -1) {
-      const y = sewoonList[idx].at.getFullYear();
-      setActiveYear(y);
+      //const y = sewoonList[idx].at.getFullYear();
+      //setActiveYear(y);
       setIlwoonTarget({ year: now.getFullYear(), month: now.getMonth() + 1 });
     }
   }, [activeDaeIndex, daeList]);
+
+  const luck = useGlobalLuck(data);
+  const { date } = useLuckPickerStore();
+  const activeYear = date.getMonth() + 1 === 1
+    ? date.getFullYear() - 1
+    : date.getFullYear();
+  //const activeMonth = date.getMonth() + 1;
+
+  const seList = useMemo(() => {
+    if (!luck?.dae?.gz) return [];
+    const idx = daeList.findIndex((d, i) => {
+      const next = daeList[i + 1]?.at;
+      return luck.dae.at >= d.at && (!next || luck.dae.at < next);
+    });
+    if (idx === -1) return [];
+
+    const currDae = daeList[idx];
+    const nextDae = daeList[idx + 1];
+    return getSewoonListInDaewoon(currDae, nextDae);
+  }, [daeList, luck?.dae]);
 
   return (
     <div className="w-full space-y-4">
@@ -66,10 +88,9 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       {visibleLevel === "se" || visibleLevel === "wol" || visibleLevel === "il" ? (
         <SewoonList
           data={data}
-          activeDaeIndex={activeDaeIndex}
-          onSelect={(year) => {
-            setActiveYear(year);
-            setVisibleLevel("wol"); // 세운 클릭 → 월운까지 보임
+          list={seList}
+          onSelect={() => {
+            setVisibleLevel("wol");
           }}
         />
       ) : null}
@@ -88,7 +109,12 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
 
       {/* 일운 */}
       {visibleLevel === "il" && ilwoonTarget && (
-        <IlwoonCalendar data={data} year={ilwoonTarget.year} month={ilwoonTarget.month} hourTable={data?.mingSikType as DayBoundaryRule} />
+        <IlwoonCalendar
+          data={data}
+          year={date.getFullYear()}
+          month={date.getMonth() + 1}
+          hourTable={data?.mingSikType as DayBoundaryRule}
+        />
       )}
     </div>
   );

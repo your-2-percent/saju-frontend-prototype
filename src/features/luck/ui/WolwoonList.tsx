@@ -14,6 +14,9 @@ import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/�
 // ✅ 전역 설정 (SajuChart와 동일 소스)
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { findActiveIndexByDate } from "@/features/luck/utils/active";
+
 /* ===== 한자/한글 변환 + 음간/음지 ===== */
 const STEM_H2K: Record<string, string> = {
   "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
@@ -70,7 +73,7 @@ export default function WolwoonList({
   onSelect?: (year: number, month: number) => void;
 }) {
   const settings = useSettingsStore((s) => s.settings);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [/*activeIndex*/, setActiveIndex] = useState<number | null>(null);
 
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
@@ -116,6 +119,9 @@ export default function WolwoonList({
     }
   }, [list, activeYear]);
 
+  const { date, setFromEvent } = useLuckPickerStore();
+  const activeIndex = findActiveIndexByDate(list, date);
+
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       <div className="px-3 py-2 text-sm font-semibold tracking-wider bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300">
@@ -123,10 +129,10 @@ export default function WolwoonList({
       </div>
 
       <div className="flex gap-0.5 desk:gap-1 py-2 desk:p-2 flex-row-reverse">
-        {list.map((it, i) => {
-          const stem = it.gz.charAt(0) as Stem10sin;
-          const branch = it.gz.charAt(1) as Branch10sin;
-          const label = `${it.at.getMonth() + 1}월`;
+        {list.map((ev, i) => {
+          const stem = ev.gz.charAt(0) as Stem10sin;
+          const branch = ev.gz.charAt(1) as Branch10sin;
+          const label = `${ev.at.getMonth() + 1}월`;
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", settings.charType);
@@ -149,17 +155,18 @@ export default function WolwoonList({
 
           return (
             <div
-              key={i}
+              key={ev.gz}
               onClick={() => {
                 setActiveIndex(i);
-                onSelect?.(it.at.getFullYear(), it.at.getMonth() + 1);
+                onSelect?.(ev.at.getFullYear(), ev.at.getMonth() + 1);
+                setFromEvent(ev, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive
                   ? "border border-yellow-500"
                   : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
               }`}
-              title={`${it.gz} · ${it.at.toLocaleDateString()}`}
+              title={`${ev.gz} · ${ev.at.toLocaleDateString()}`}
             >
               <div className="desk:px-2 py-1 text-center text-[10px] bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300">
                 {label}

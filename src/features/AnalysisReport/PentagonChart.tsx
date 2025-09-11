@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { PowerData, TenGod } from "./utils/types";
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
 type SubEntry = {
   a?: string | number;
@@ -137,35 +138,36 @@ function extractGZ(raw?: string | null): string | null {
   }
   return s && b ? s + b : null;
 }
-function buildTitleLine(
-  pillars?: string[] | null,
-  dae?: string | null,
-  se?: string | null,
-  wol?: string | null
-) {
-  const natal =
-    Array.isArray(pillars) && pillars.length >= 4
-      ? `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`
-      : "";
 
-  const d = extractGZ(dae);
-  const s = extractGZ(se);
-  const w = extractGZ(wol);
-  const extras = [d ? `${d}대운` : null, s ? `${s}세운` : null, w ? `${w}월운` : null].filter(
-    Boolean
-  ) as string[];
+// function buildTitleLine(
+//   pillars?: string[] | null,
+//   dae?: string | null,
+//   se?: string | null,
+//   wol?: string | null
+// ) {
+//   const natal =
+//     Array.isArray(pillars) && pillars.length >= 4
+//       ? `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`
+//       : "";
 
-  if (!natal && extras.length === 0) return "";
-  return extras.length > 0 ? `${natal} + ${extras.join(" ")}` : natal;
-}
+//   const d = extractGZ(dae);
+//   const s = extractGZ(se);
+//   const w = extractGZ(wol);
+//   const extras = [d ? `${d}대운` : null, s ? `${s}세운` : null, w ? `${w}월운` : null].filter(
+//     Boolean
+//   ) as string[];
+
+//   if (!natal && extras.length === 0) return "";
+//   return extras.length > 0 ? `${natal} + ${extras.join(" ")}` : natal;
+// }
 
 export default function PentagonChart({
   data,
   perTenGod,
   width = 280,
   height = 280,
-  revKey, // 선택: 부모에서 넘기면 그대로 사용
-  // ▼ 추가: 타이틀용 원국/운
+  revKey, // 부모에서 운/데이터 변경 시 함께 바꿔주면 리마운트 됨
+  // ▼ 타이틀용 원국/운 (없으면 전역 피커로 보완)
   pillars,
   daewoonGz,
   sewoonGz,
@@ -185,24 +187,33 @@ export default function PentagonChart({
   /** 예: '갑신' */
   wolwoonGz?: string | null;
 }) {
+  // ▼ 전역 피커 구독 — props에 운이 없을 때 타이틀 보완 + 시그니처에 반영
+  const { date, yearGZ, monthGZ } = useLuckPickerStore();
+  const fallbackSe = useMemo(() => extractGZ(yearGZ) ?? undefined, [yearGZ]);   // 세운 = 연간지
+  const fallbackWol = useMemo(() => extractGZ(monthGZ) ?? undefined, [monthGZ]); // 월운 = 월간지
+  const pickerSig = useMemo(
+    () => [date?.toISOString?.() ?? "", yearGZ ?? "", monthGZ ?? ""].join("|"),
+    [date, yearGZ, monthGZ]
+  );
+
   const sizeW = width,
     sizeH = height;
   const cx = sizeW / 2,
     cy = sizeH / 2;
   const r = Math.min(sizeW, sizeH) * 0.37;
 
-  const defaultSubs = React.useMemo<
-    Readonly<Record<TenGod, readonly [string, string]>>
-  >(
-    () => ({
-      비겁: ["비견", "겁재"],
-      식상: ["식신", "상관"],
-      재성: ["정재", "편재"],
-      관성: ["정관", "편관"],
-      인성: ["정인", "편인"],
-    }),
-    []
-  );
+  // const defaultSubs = React.useMemo<
+  //   Readonly<Record<TenGod, readonly [string, string]>>
+  // >(
+  //   () => ({
+  //     비겁: ["비견", "겁재"],
+  //     식상: ["식신", "상관"],
+  //     재성: ["정재", "편재"],
+  //     관성: ["정관", "편관"],
+  //     인성: ["정인", "편인"],
+  //   }),
+  //   []
+  // );
 
   // 1) 매 렌더마다 최신 맵 재구성 (in-place 업데이트 반영)
   const subsMap = coercePerTenGodMap(perTenGod);
@@ -215,19 +226,25 @@ export default function PentagonChart({
     })
   );
   const dataSig = stableStringify(data.map((d) => [d.name, d.value]));
-  const titleLine = buildTitleLine(pillars, daewoonGz, sewoonGz, wolwoonGz);
-  const titleSig = stableStringify([pillars ?? [], extractGZ(daewoonGz), extractGZ(sewoonGz), extractGZ(wolwoonGz)]);
+
+  // 운: props 우선, 없으면 전역 피커 보완
+  const daeUI = daewoonGz ?? undefined;
+  const seUI = sewoonGz ?? fallbackSe ?? undefined;
+  const wolUI = wolwoonGz ?? fallbackWol ?? undefined;
+
+  //const titleLine = buildTitleLine(pillars, daeUI ?? null, seUI ?? null, wolUI ?? null);
+  const titleSig = stableStringify([pillars ?? [], extractGZ(daeUI), extractGZ(seUI), extractGZ(wolUI)]);
 
   // 3) 시그니처 변경 시 version 증가 → <svg key={version}>로 리마운트
   const [version, setVersion] = useState(0);
   const lastSigRef = useRef<string>("");
   useEffect(() => {
-    const sig = `${revKey ?? ""}||${dataSig}||${perSig}||${titleSig}`;
+    const sig = `${revKey ?? ""}||${dataSig}||${perSig}||${titleSig}||${pickerSig}`;
     if (sig !== lastSigRef.current) {
       lastSigRef.current = sig;
       setVersion((v) => v + 1);
     }
-  }, [revKey, dataSig, perSig, titleSig]);
+  }, [revKey, dataSig, perSig, titleSig, pickerSig]);
 
   const angle = (i: number) => Math.PI / 2 + (2 * -Math.PI * i) / 5;
 
@@ -244,11 +261,11 @@ export default function PentagonChart({
   return (
     <div className="w-full">
       {/* ▲ 타이틀 */}
-      {titleLine && (
+      {/* {titleLine && (
         <div className="text-xs text-center text-neutral-700 dark:text-neutral-300 mb-1">
           {titleLine}
         </div>
-      )}
+      )} */}
 
       <svg key={version} width={sizeW} height={sizeH} className="mx-auto pt-2">
         {/* 상극(별) */}
@@ -298,13 +315,19 @@ export default function PentagonChart({
         {/* 노드 */}
         {points.map((p) => {
           const name = p.name as TenGod;
+          const defaultSubs: Readonly<Record<TenGod, readonly [string, string]>> = {
+            비겁: ["비견", "겁재"],
+            식상: ["식신", "상관"],
+            재성: ["정재", "편재"],
+            관성: ["정관", "편관"],
+            인성: ["정인", "편인"],
+          };
           const [leftLabel, rightLabel] = defaultSubs[name];
 
-          // ★ 여기서 안전하게 a/b와 값 읽기 (여러 모양 지원)
           const { aLabel, bLabel, aVal, bVal } = readSubFor(
             name,
-            subsMap, // coercePerTenGodMap(perTenGod) 결과
-            perTenGod, // 원본 그대로도 넘겨서 평면/그룹 내 라벨 키까지 커버
+            subsMap,   // 정규화된 perTenGod
+            perTenGod, // 원본(평면/라벨키 포함 케이스)
             [leftLabel, rightLabel]
           );
 
