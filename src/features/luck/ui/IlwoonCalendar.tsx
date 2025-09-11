@@ -10,6 +10,9 @@ import { toDayStem, toCorrected } from "@/shared/domain/meongsik";
 import * as Twelve from "@/shared/domain/간지/twelve";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { findActiveIndexByDate } from "@/features/luck/utils/active";
+
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -144,6 +147,12 @@ export default function IlwoonCalendar({
     return rows;
   }, [days, year, month]);
 
+  const { date, setFromEvent } = useLuckPickerStore();
+  const activeIndex = useMemo(() => {
+    const events = days.map(d => ({ at: d }));
+    return findActiveIndexByDate(events, date);
+  }, [days, date]);
+
   return (
     <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       {/* 헤더 */}
@@ -177,6 +186,9 @@ export default function IlwoonCalendar({
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
             const dayLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // 표시용
 
+            const idx = days.findIndex(x => x.getTime() === d.getTime());
+            const isActive = idx === activeIndex;
+
             const gz = getDayGanZhi(dayLocal, rule);
             const stem = gz.charAt(0) as Stem10sin;
             const branch = gz.charAt(1) as Branch10sin;
@@ -209,9 +221,10 @@ export default function IlwoonCalendar({
 
             return (
               <div
-                key={dayLocal.toISOString()}
+                key={d.toISOString()}
+                onClick={() => setFromEvent({ at: d }, "일운")}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border ${
-                  isToday(dayLocal) ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
+                  isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}
                 title={`${gz} (${dayLocal.toLocaleDateString()})`}
               >
@@ -272,11 +285,11 @@ function formatStartKST(d?: Date): string | null {
   return `${month}/${day} ${hour}:${minute}`;
 }
 
-function isToday(date: Date) {
+/*function isToday(date: Date) {
   const today = new Date();
   return (
     date.getFullYear() === today.getFullYear() &&
     date.getMonth() === today.getMonth() &&
     date.getDate() === today.getDate()
   );
-}
+}*/

@@ -1,5 +1,5 @@
 // features/myoun/MyoUnViewer.tsx
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, /*useState, useEffect, useRef*/ } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import {
   computeNatalPillars,
@@ -10,7 +10,7 @@ import {
   parseBirthLocal,
 } from "@/features/myoun";
 import { formatDate24 } from "@/shared/utils";
-import type { Direction, DayChangeRule, DayBoundaryRule } from "@/shared/type";
+//import type { Direction, DayChangeRule, DayBoundaryRule } from "@/shared/type";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
 
@@ -21,6 +21,8 @@ import { ensureSolarBirthDay } from "@/shared/domain/meongsik/ensureSolarBirthDa
 
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
 import * as Twelve from "@/shared/domain/간지/twelve";
+
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
 /* ===== 간단 유틸 ===== */
 
@@ -81,18 +83,18 @@ function lastAtOrNull<T extends { at: Date }>(arr: T[], t: Date): T | null {
 }
 
 // datetime-local 헬퍼
-function toLocalInput(d: Date) {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-function fromLocalInput(s?: string): Date | null {
-  if (!s) return null;
-  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s);
-  if (!m) return null;
-  const [, y, mo, d, hh, mm] = m;
-  const dt = new Date(+y, +mo-1, +d, +hh, +mm);
-  return isNaN(dt.getTime()) ? null : dt;
-}
+// function toLocalInput(d: Date) {
+//   const pad = (n: number) => String(n).padStart(2, "0");
+//   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+// }
+// function fromLocalInput(s?: string): Date | null {
+//   if (!s) return null;
+//   const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(s);
+//   if (!m) return null;
+//   const [, y, mo, d, hh, mm] = m;
+//   const dt = new Date(+y, +mo-1, +d, +hh, +mm);
+//   return isNaN(dt.getTime()) ? null : dt;
+// }
 
 /* ===== 메인 ===== */
 export default function MyoUnViewer({ data }: { data: MyeongSik }) {
@@ -101,48 +103,85 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const { showSibiUnseong, showSibiSinsal, sinsalBase, sinsalMode, sinsalBloom } = settings;
 
   // 고정 옵션
-  const [dir] = useState<Direction>(data.dir ?? "forward");
-  const [rule] = useState<DayChangeRule>("인시일수론");
-  const [hourTable] = useState<DayBoundaryRule>("자시");
+  // const [dir] = useState<Direction>(data.dir ?? "forward");
+  // const [rule] = useState<DayChangeRule>("인시일수론");
+  // const [hourTable] = useState<DayBoundaryRule>("자시");
+
+  // 출생/원국
+  // const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
+  // const birth = useMemo(() => parseBirthLocal(solarized), [solarized]);
+  // const natal = useMemo(() => computeNatalPillars(solarized, hourTable), [solarized, hourTable]);
+
+  // // 일간(한글 키로 강제 정규화)
+  // const natalDayStem = useMemo<Stem10sin>(
+  //   () => toKoStemStrict(natal.day?.charAt(0) ?? "갑"),
+  //   [natal.day]
+  // );
+
+  // 피커 (1분 갱신)
+  // const nowRef = useRef<Date>(new Date());
+  // const [pick, setPick] = useState<string>(() => toLocalInput(nowRef.current));
+  // const lastValidRef = useRef<Date>(fromLocalInput(pick) ?? nowRef.current);
+  // useEffect(() => {
+  //   const timer = setInterval(() => {
+  //     const next = toLocalInput(new Date());
+  //     setPick(prev => (prev === next ? prev : next));
+  //   }, 60_000);
+  //   return () => clearInterval(timer);
+  // }, []);
+  // const effectiveDate = useMemo(() => {
+  //   const d = fromLocalInput(pick);
+  //   if (d) lastValidRef.current = d;
+  //   return lastValidRef.current;
+  // }, [pick]);
+
+  const { date } = useLuckPickerStore();
 
   // 출생/원국
   const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
   const birth = useMemo(() => parseBirthLocal(solarized), [solarized]);
-  const natal = useMemo(() => computeNatalPillars(solarized, hourTable), [solarized, hourTable]);
+  const natal = useMemo(() => computeNatalPillars(solarized, "자시"), [solarized]);
 
-  // 일간(한글 키로 강제 정규화)
+  // 일간
   const natalDayStem = useMemo<Stem10sin>(
     () => toKoStemStrict(natal.day?.charAt(0) ?? "갑"),
     [natal.day]
   );
 
-  // 피커 (1분 갱신)
-  const nowRef = useRef<Date>(new Date());
-  const [pick, setPick] = useState<string>(() => toLocalInput(nowRef.current));
-  const lastValidRef = useRef<Date>(fromLocalInput(pick) ?? nowRef.current);
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const next = toLocalInput(new Date());
-      setPick(prev => (prev === next ? prev : next));
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, []);
-  const effectiveDate = useMemo(() => {
-    const d = fromLocalInput(pick);
-    if (d) lastValidRef.current = d;
-    return lastValidRef.current;
-  }, [pick]);
+  // 묘운/세운/월운/일운 계산
+  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "자시"), [birth, natal.hour, data.dir]);
+  const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", "인시일수론"), [siju, natal.day, data.dir]);
+  const wolju = useMemo(() => buildWolju(birth, natal.month, data.dir ?? "forward", 120, solarized.birthPlace?.lon ?? 127.5), [birth, natal.month, data.dir, solarized.birthPlace?.lon]);
+  const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, data.dir ?? "forward", "인시일수론", birth), [wolju, natal.year, data.dir, birth]);
+
+  // 현재 운 (전역 피커 날짜 기반)
+  const current = useMemo(() => {
+    return {
+      si: ensureGZ(lastAtOrNull(siju.events, date)?.gz, natal.hour),
+      il: ensureGZ(lastAtOrNull(ilju.events, date)?.gz, natal.day),
+      wl: ensureGZ(lastAtOrNull(wolju.events, date)?.gz, natal.month),
+      yn: ensureGZ(lastAtOrNull(yeonju.events, date)?.gz, natal.year),
+    };
+  }, [date, siju.events, ilju.events, wolju.events, yeonju.events, natal]);
+
+  // 실시간 운 (전역 피커 날짜 기반)
+  const live = useMemo(() => ({
+    si: ensureGZ(getHourGanZhi(date, "자시")),
+    il: ensureGZ(getDayGanZhi(date, "자시")),
+    wl: ensureGZ(getMonthGanZhi(date)),
+    yn: ensureGZ(getYearGanZhi(date)),
+  }), [date]);
 
   // 묘운 스케줄
-  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, dir, 120, hourTable), [birth, natal.hour, dir, hourTable]);
-  const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, dir, rule), [siju, natal.day, dir, rule]);
-  const wolju = useMemo(
-   () => buildWolju(birth, natal.month, dir, 120, solarized.birthPlace?.lon ?? 127.5),
-    [birth, natal.month, dir , solarized.birthPlace?.lon]
-  );
-  const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, dir, rule, birth), [wolju, natal.year, dir, rule, birth]);
+  // const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, dir, 120, hourTable), [birth, natal.hour, dir, hourTable]);
+  // const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, dir, rule), [siju, natal.day, dir, rule]);
+  // const wolju = useMemo(
+  //  () => buildWolju(birth, natal.month, dir, 120, solarized.birthPlace?.lon ?? 127.5),
+  //   [birth, natal.month, dir , solarized.birthPlace?.lon]
+  // );
+  // const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, dir, rule, birth), [wolju, natal.year, dir, rule, birth]);
 
-  // ▼▼ 추가: "첫 전환" 요약 (시주/월주)
+  // // ▼▼ 추가: "첫 전환" 요약 (시주/월주)
   const firstSijuChange = useMemo(() => {
     const e0 = siju?.events?.[0];
     return e0
@@ -158,23 +197,23 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   }, [wolju?.firstChange, wolju?.events, natal.month]);
   
   // 현재 묘운 간지
-  const current = useMemo(() => {
-    const t = effectiveDate;
-    return {
-      si: ensureGZ(lastAtOrNull(siju.events, t)?.gz, natal.hour),
-      il: ensureGZ(lastAtOrNull(ilju.events, t)?.gz, natal.day),
-      wl: ensureGZ(lastAtOrNull(wolju.events, t)?.gz, natal.month),
-      yn: ensureGZ(lastAtOrNull(yeonju.events, t)?.gz, natal.year),
-    };
-  }, [effectiveDate, siju.events, ilju.events, wolju.events, yeonju.events, natal.hour, natal.day, natal.month, natal.year]);
+  // const current = useMemo(() => {
+  //   const t = effectiveDate;
+  //   return {
+  //     si: ensureGZ(lastAtOrNull(siju.events, t)?.gz, natal.hour),
+  //     il: ensureGZ(lastAtOrNull(ilju.events, t)?.gz, natal.day),
+  //     wl: ensureGZ(lastAtOrNull(wolju.events, t)?.gz, natal.month),
+  //     yn: ensureGZ(lastAtOrNull(yeonju.events, t)?.gz, natal.year),
+  //   };
+  // }, [effectiveDate, siju.events, ilju.events, wolju.events, yeonju.events, natal.hour, natal.day, natal.month, natal.year]);
 
-  // 실시간 간지
-  const live = useMemo(() => ({
-    si: ensureGZ(getHourGanZhi(effectiveDate, "자시")),
-    il: ensureGZ(getDayGanZhi(effectiveDate, "자시")),
-    wl: ensureGZ(getMonthGanZhi(effectiveDate)),
-    yn: ensureGZ(getYearGanZhi(effectiveDate)),
-  }), [effectiveDate]);
+  // // 실시간 간지
+  // const live = useMemo(() => ({
+  //   si: ensureGZ(getHourGanZhi(effectiveDate, "자시")),
+  //   il: ensureGZ(getDayGanZhi(effectiveDate, "자시")),
+  //   wl: ensureGZ(getMonthGanZhi(effectiveDate)),
+  //   yn: ensureGZ(getYearGanZhi(effectiveDate)),
+  // }), [effectiveDate]);
 
   // 신살 기준 지지
   const baseBranch: Branch10sin = useMemo(() => (
@@ -264,7 +303,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
       </div>
 
       {/* 피커 */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
+      {/* <div className="flex flex-col sm:flex-row gap-3 items-center">
         <label className="text-sm text-neutral-600 dark:text-neutral-400">날짜/시간 선택</label>
         <input
           type="datetime-local"
@@ -274,7 +313,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
           min="1900-01-01T00:00"
           max="2100-12-31T23:59"
         />
-      </div>
+      </div> */}
       <div className="mt-4 text-xs text-neutral-700 dark:text-neutral-300 space-y-1">
         <div className="font-semibold">첫 전환 시각</div>
         <div>

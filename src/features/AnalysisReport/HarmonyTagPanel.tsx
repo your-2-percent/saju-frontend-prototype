@@ -1,6 +1,6 @@
 // features/AnalysisReport/HarmonyTagPanel.tsx
 import { buildHarmonyTags, buildAllRelationTags, Pillars4 } from "./logic/relations";
-import type { BlendTab } from "./logic/blend";
+//import type { BlendTab } from "./logic/blend";
 
 /* ========================
  * 색상 유틸
@@ -132,13 +132,13 @@ export default function HarmonyTagPanel({
   daewoon,
   sewoon,
   wolwoon,
-  tab,
+  //tab,
 }: {
   pillars: Pillars4;
   daewoon?: string;
   sewoon?: string;
   wolwoon?: string;
-  tab: BlendTab;
+  //tab: BlendTab;
 }) {
   /* 원국 태그 */
   const natalRaw = buildHarmonyTags(pillars) as HarmonyLike;
@@ -159,22 +159,22 @@ export default function HarmonyTagPanel({
     : stepB;
 
   // 원국 타이틀
-  let fullTitle = natalRaw.title;
+  // let fullTitle = natalRaw.title;
 
-  // 운 타이틀 붙이기
-  if (tab !== "원국") {
-    const extra: string[] = [];
-    if (daewoon) extra.push(`${daewoon}대운`);
-    if (tab === "세운" || tab === "월운") {
-      if (sewoon) extra.push(`${sewoon}세운`);
-    }
-    if (tab === "월운" && wolwoon) {
-      extra.push(`${wolwoon}월운`);
-    }
-    if (extra.length > 0) {
-      fullTitle += " + " + extra.join(" ");
-    }
-  }
+  // // 운 타이틀 붙이기
+  // if (tab !== "원국") {
+  //   const extra: string[] = [];
+  //   if (daewoon) extra.push(`${daewoon}대운`);
+  //   if (tab === "세운" || tab === "월운") {
+  //     if (sewoon) extra.push(`${sewoon}세운`);
+  //   }
+  //   if (tab === "월운" && wolwoon) {
+  //     extra.push(`${wolwoon}월운`);
+  //   }
+  //   if (extra.length > 0) {
+  //     fullTitle += " + " + extra.join(" ");
+  //   }
+  // }
 
   /* 카테고리별로 증분 분리 */
   const mk = (key: keyof LuckLike) => ({
@@ -200,10 +200,10 @@ export default function HarmonyTagPanel({
 
   return (
     <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-3">
-      <div className="text-base font-bold mb-1">합/충/형/파/해</div>
-      <div className="text-sm text-neutral-700 dark:text-neutral-300 mb-3">
+      <div className="text-base font-bold mb-1">형충회합</div>
+      {/* <div className="text-sm text-neutral-700 dark:text-neutral-300 mb-3">
         {fullTitle}
-      </div>
+      </div> */}
 
       <Row label="천간합" natal={K.cheonganHap.natal} dae={K.cheonganHap.dae} se={K.cheonganHap.se} wol={K.cheonganHap.wol} />
       <Row label="천간충" natal={K.cheonganChung.natal} dae={K.cheonganChung.dae} se={K.cheonganChung.se} wol={K.cheonganChung.wol} />
