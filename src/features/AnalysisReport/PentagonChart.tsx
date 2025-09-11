@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { PowerData, TenGod } from "./utils/types";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
