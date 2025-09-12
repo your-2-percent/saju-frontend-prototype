@@ -537,10 +537,25 @@ export function buildShinsalTags({
   // 양인/괴강/백호
   applyDayStemRules(natal, MAP_D_YANGIN,   "양인살",  natalBadPos, "ALL");
   //applyDayStemRules(natal, MAP_D_GWAEGANG, "괴강살",  natalBadPos, "DAY");
-  if (괴강_일주세트.has(natal[idx.day])) {
+  const isGwaegangIlju = 괴강_일주세트.has(natal[idx.day]);
+  if (isGwaegangIlju) {
     natalBadPos.push({ name: labelIlju("괴강살"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    // 같은 기둥(동림) 다른 자리에도 적용
+    for (const p of [idx.year, idx.month, idx.hour]) {
+      if (natal[p] === natal[idx.day]) {
+        natalBadPos.push({ name: labelPair_at("괴강살", idx.day, p), weight: POS_WEIGHT[p], pos: p });
+      }
+    }
   }
-  applyDayStemRules(natal, MAP_D_BAEKHO,   "백호대살", natalBadPos, "ALL");
+  //applyDayStemRules(natal, MAP_D_BAEKHO,   "백호대살", natalBadPos, "ALL");
+  const targets = MAP_D_BAEKHO[dStem];
+  if (targets) {
+    for (const p of [idx.year, idx.month, idx.day, idx.hour]) {
+      if (natal[p] === dStem + targets.find(b => b === last(natal[p]))) {
+        natalBadPos.push({ name: labelPair_at("백호대살", idx.day, p), weight: POS_WEIGHT[p], pos: p });
+      }
+    }
+  }
 
   /* ── 공통 악살: 천라지망/현침/원진/귀문 ── */
   // 천라지망: 두 지지 동시 존재 → 양쪽 주 모두 표기
