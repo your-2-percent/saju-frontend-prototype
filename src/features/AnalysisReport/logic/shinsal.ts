@@ -17,6 +17,13 @@ export type ShinsalBasis = {
   samjaeBasis?: "day" | "year";
 };
 
+const POS_PRIORITY: Record<PosIndex, number> = {
+  1: 4, // 월지
+  2: 3, // 일지
+  0: 2, // 연지
+  3: 1, // 시지
+};
+
 const first = (s: string) => s.slice(0, 1);
 const last = (s: string) => s.slice(-1);
 
@@ -588,9 +595,9 @@ export function buildShinsalTags({
     for (const [p1, p2] of pairs) {
       const b1 = last(natal[p1]), b2 = last(natal[p2]);
       if (isInPairList(원진_pairs, b1, b2)) {
+        const higher = POS_PRIORITY[p1] >= POS_PRIORITY[p2] ? p1 : p2;
         const label = labelPair_at("원진", p1, p2);
-        natalBadPos.push({ name: label, weight: POS_WEIGHT[p1], pos: p1 });
-        natalBadPos.push({ name: label, weight: POS_WEIGHT[p2], pos: p2 });
+        natalBadPos.push({ name: label, weight: POS_WEIGHT[higher], pos: higher });
       }
     }
   }
@@ -604,9 +611,9 @@ export function buildShinsalTags({
       const b1 = last(natal[p1]), b2 = last(natal[p2]);
       if (isInPairList(귀문_pairs, b1, b2)) {
         const bonus = (kind === "월일" ? 1 : 0) + (귀문_strong_set.has(b1 + b2) ? 1 : 0);
+        const higher = POS_PRIORITY[p1] >= POS_PRIORITY[p2] ? p1 : p2;
         const label = labelPair_at("귀문", p1, p2);
-        natalBadPos.push({ name: label, weight: POS_WEIGHT[p1] + bonus, pos: p1 });
-        natalBadPos.push({ name: label, weight: POS_WEIGHT[p2] + bonus, pos: p2 });
+        natalBadPos.push({ name: label, weight: POS_WEIGHT[higher] + bonus, pos: higher });
       }
     }
   }
