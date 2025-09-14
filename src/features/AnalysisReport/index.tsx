@@ -296,19 +296,17 @@ export default function AnalysisReport({
   const elemForFallback = elementScoreNatal ?? lightElementScoreFromPillars(activePillars);
 
   // ── 운 반영 혼합 점수 (펜타곤) ──
-  const mixed = useMemo(
-    () =>
-      blendElementStrength({
-        natalElementScore: elementScoreNatal,
-        daewoonGz: blendTab !== "원국" ? daewoonGz ?? undefined : undefined,
-        sewoonGz: blendTab === "세운" || blendTab === "월운" ? seGz ?? undefined : undefined,
-        wolwoonGz: blendTab === "월운" ? wolGz ?? undefined : undefined,
-        tab: blendTab,
-      }),
-    [elementScoreNatal, daewoonGz, seGz, wolGz, blendTab]
-  );
+  const effectiveTab = blendTab === "전체" ? "월운" : blendTab;
 
-  // ── PentagonChart 데이터 ──
+  const mixed = blendElementStrength({
+    natalElementScore: elementScoreNatal,
+    daewoonGz: effectiveTab !== "원국" ? daewoonGz ?? undefined : undefined,
+    sewoonGz: effectiveTab === "세운" || effectiveTab === "월운" ? seGz ?? undefined : undefined,
+    wolwoonGz: effectiveTab === "월운" ? wolGz ?? undefined : undefined,
+    tab: blendTab, // 오행 합산은 원래대로 "전체"
+  });
+
+  // ── PentagonChart 데이터 ─
   const chartData = useMemo(() => {
     const colors = getTenGodColors(activePillars[2]?.charAt(0));
     return (["비겁", "식상", "재성", "관성", "인성"] as TenGod[]).map((god) => {
@@ -318,6 +316,28 @@ export default function AnalysisReport({
       return { name: god, value, color: colors[god] };
     });
   }, [mixed, activePillars]);
+
+
+  // ── 세부 오행 (갑목·을목 …) ──
+  // const perStemElement = useMemo(() => {
+  //   const acc: Record<string, number> = {};
+  //   for (const gz of activePillars) {
+  //     if (!gz) continue;
+  //     const stem = gz.charAt(0);   // 예: "갑"
+  //     const el = STEM_TO_ELEMENT[stem]; // 예: "목"
+  //     if (el) {
+  //       const label = `${stem}${el}`; // "갑목"
+  //       acc[label] = (acc[label] ?? 0) + 50; // 천간 50점
+  //     }
+  //     const branch = gz.charAt(1);
+  //     const be = BRANCH_MAIN_ELEMENT[branch];
+  //     if (be) {
+  //       const label = `${branch}${be}`; // "자수"
+  //       acc[label] = (acc[label] ?? 0) + 50; // 지지 50점
+  //     }
+  //   }
+  //   return acc;
+  // }, [activePillars]);
 
   // perTenGod: detailedLuck 기준으로 재스케일
   type ChartEntry = {
@@ -360,14 +380,15 @@ export default function AnalysisReport({
   // 그래프 리마운트 키
   const luckKey = useMemo(
     () =>
-      [
-        blendTab,
-        daewoonGz ?? "",
-        seGz ?? "",
-        wolGz ?? "",
-        date?.toISOString?.() ?? "",
+    [
+      blendTab,
+      daewoonGz ?? "",
+      seGz ?? "",
+      wolGz ?? "",
+      date?.toISOString?.() ?? "",
+      JSON.stringify(detailedLuck?.perStemElementScaled ?? {}), // ✅ 추가
       ].join("|"),
-    [blendTab, daewoonGz, seGz, wolGz, date]
+    [blendTab, daewoonGz, seGz, wolGz, date, detailedLuck?.perStemElementScaled]
   );
   const revKey = useMemo(() => {
     const subsSig = perTenGodForChart
@@ -447,6 +468,7 @@ export default function AnalysisReport({
     [yongshinList]
   );
 
+
   // 유효성 체크
   if (!solarValid && !lunarValid) {
     return (
@@ -508,7 +530,7 @@ export default function AnalysisReport({
       {/* 일간강약(원국 기준) */}
       {bigTab === "일간 · 오행 강약" && (
         <div className="space-y-4">
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex justify-end items-center gap-1">
             <button
               type="button"
               aria-pressed={criteriaMode === "classic"}
@@ -537,17 +559,18 @@ export default function AnalysisReport({
             </button>
           </div>
 
-          <StrengthBar value={strengthPct} />
-
           <PentagonChart
             data={chartData}
-            perTenGod={perTenGodForChart}
             revKey={revKey}
             pillars={activePillars}
             daewoonGz={daewoonGz}
             sewoonGz={seGz}
             wolwoonGz={wolGz}
+            perStemElement={detailedLuck?.perStemElementScaled}  // ✅ 전달
+            dayStem={activePillars?.[2]?.charAt(0) ?? null}      // ✅ 일간 천간
           />
+
+          <StrengthBar value={strengthPct} />
 
           <div className="w-full p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 space-y-3">
             <div className="flex items-center justify-between">
