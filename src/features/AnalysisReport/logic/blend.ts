@@ -50,18 +50,20 @@ function mixPercent(
     out.금 += v.금 * w;
     out.수 += v.수 * w;
   }
-  // 마지막도 100%로 정규화(반올림 오차 수습)
-  return toPercent(out);
+  return out;
 }
 
 export type BlendTab = "전체" | "원국" | "대운" | "세운" | "월운";
 export const BLEND_TABS: BlendTab[] = ["전체", "원국", "대운", "세운", "월운"];
 
-export const BLEND_WEIGHTS: Record<Exclude<BlendTab, "전체">, { natal: number; dae?: number; se?: number; wol?: number }> = {
-  "원국": { natal: 1.00 },
-  "대운": { natal: 0.60, dae: 0.40 },
-  "세운": { natal: 0.50, dae: 0.30, se: 0.20 },
-  "월운": { natal: 0.40, dae: 0.30, se: 0.20, wol: 0.10 },
+type BlendWeight = { natal: number; dae?: number; se?: number; wol?: number };
+
+export const BLEND_WEIGHTS: Record<BlendTab, BlendWeight> = {
+  전체: { natal: 0.40, dae: 0.30, se: 0.20, wol: 0.10 },
+  원국: { natal: 1.00 },
+  대운: { natal: 0.60, dae: 0.40 },
+  세운: { natal: 0.50, dae: 0.30, se: 0.20 },
+  월운: { natal: 0.40, dae: 0.30, se: 0.20, wol: 0.10 },
 };
 
 
@@ -80,29 +82,25 @@ export function blendElementStrength(params: {
   const wolPct   = wolwoonGz ? toPercent(elementScoreFromGZ(wolwoonGz)) : null;
 
   if (tab === "전체") {
-    // ✅ 전체: 존재하는 모든 소스를 균등 합산
-    const sources: Array<Record<Element, number>> = [natalPct];
-    if (daePct) sources.push(daePct);
-    if (sePct) sources.push(sePct);
-    if (wolPct) sources.push(wolPct);
-
-    const n = sources.length;
-    const w = 1 / n;
-
-    return mixPercent(
-      sources[0], w,
-      sources[1] ?? null, sources[1] ? w : 0,
-      sources[2] ?? null, sources[2] ? w : 0,
-      sources[3] ?? null, sources[3] ? w : 0,
+    const w = BLEND_WEIGHTS["전체"];
+    return toPercent(
+      mixPercent(
+        natalPct, (w.natal ?? 0),
+        daePct,   (w.dae ?? 0),
+        sePct,    (w.se  ?? 0),
+        wolPct,   (w.wol ?? 0),
+      )
     );
   }
 
-  // ✅ 나머지 탭: 기존 로직
+  // 🔽 다른 탭들 처리
   const w = BLEND_WEIGHTS[tab];
-  return mixPercent(
-    natalPct, (w.natal ?? 0),
-    daePct,   (w.dae ?? 0),
-    sePct,    (w.se  ?? 0),
-    wolPct,   (w.wol ?? 0),
+  return toPercent(
+    mixPercent(
+      natalPct, (w.natal ?? 0),
+      daePct,   (w.dae ?? 0),
+      sePct,    (w.se  ?? 0),
+      wolPct,   (w.wol ?? 0),
+    )
   );
 }
