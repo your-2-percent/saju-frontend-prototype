@@ -138,7 +138,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   const settings = useSettingsStore((s) => s.settings);
 
   // ✅ 명식 기준 (data > prop > 기본)
-  const rule: DayBoundaryRule = (mingSikType as DayBoundaryRule) ?? hourTable ?? "자시";
+  const rule: DayBoundaryRule = (mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
 
   const lon =
     !birthPlace || birthPlace.name === "모름" || !birthPlace.lon
@@ -194,7 +194,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       corrected = new Date(corrected.getTime() - 60 * 60 * 1000);
     }
 
-    const hourRule: DayBoundaryRule = (data.mingSikType ?? "자시") as DayBoundaryRule;
+    const hourRule: DayBoundaryRule = (data.mingSikType ?? "야자시") as DayBoundaryRule;
 
     const yearGZ = getYearGanZhi(corrected, lonVal);
     const monthGZ = getMonthGanZhi(corrected, lonVal);

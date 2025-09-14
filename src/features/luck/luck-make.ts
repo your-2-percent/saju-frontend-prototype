@@ -21,7 +21,7 @@ export type UnCard = {
 // 현재 대운/세운/월운 하나씩만 뽑기
 export function useCurrentUnCards(
   ms: MyeongSik,
-  hourTable: DayBoundaryRule = "자시",
+  hourTable: DayBoundaryRule = "야자시",
 ): UnCard[] {
 
   const base  = useMemo(() => ensureSolarBirthDay(ms), [ms]);

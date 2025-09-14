@@ -61,7 +61,7 @@ export default function SewoonList({
   const dayStem = toDayStem(data) as Stem10sin;
   const birth = toCorrected(data);
   const lon = !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0 ? 127.5 : data.birthPlace.lon;
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
   const baseBranch: Branch10sin = (
     settings.sinsalBase === "일지" ? getDayGanZhi(birth, rule).charAt(1) : getYearGanZhi(birth, lon).charAt(1)
   ) as Branch10sin;

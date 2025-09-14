@@ -168,7 +168,7 @@ export default function PentagonChart({
             <g key={`${p.name}-${p.value}`} transform={`translate(${p.x},${p.y})`}>
               <circle r={33} fill={p.color as string} opacity={p.value === 0 ? 0.7 : 1} />
               <text textAnchor="middle" dy="-6" fontSize="14" className="fill-white font-semibold">
-                {p.name} {Math.round(p.value)}
+                {p.name} {Math.round(p.value) }
               </text>
 
               {items.map(([label, val], idx) => (

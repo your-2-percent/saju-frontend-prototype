@@ -35,7 +35,7 @@ export const useLuckPickerStore = create<LuckPickerState>()(
   persist(
     (set, get) => {
       const initialDate = new Date();
-      const initialRule: DayBoundaryRule = "자시";
+      const initialRule: DayBoundaryRule = "야자시";
       const initialLon: number | null = 127.5;
       const init = computeAll(initialDate, initialRule, initialLon);
 

@@ -215,7 +215,7 @@ export default function MyeongSikEditor({
         : form.birthPlace ?? { name: "", lat: 0, lon: 127.5 },
       relationship: form.relationship ?? "",
       memo: form.memo ?? "",
-      mingSikType: form.mingSikType ?? "자시",
+      mingSikType: form.mingSikType ?? "야자시",
       DayChangeRule: form.mingSikType === "인시" ? "인시일수론" : "자시일수론",
       folder: normalizedFolder,
       calendarType: form.calendarType ?? "solar",
@@ -413,7 +413,7 @@ export default function MyeongSikEditor({
         <div>
           <label className={labelBase}>명식 기준</label>
           <div className="flex gap-4 text-sm">
-            {(["자시", "야자시", "인시"] as const).map((v) => {
+            {(["야자시", "조자시", "인시"] as const).map((v) => {
               const id = `editor_ming_${v}`;
               return (
                 <span key={v} className="inline-flex items-center gap-1">
@@ -421,7 +421,7 @@ export default function MyeongSikEditor({
                     type="radio"
                     className={radioAccent}
                     name="mingSikType"
-                    checked={(form.mingSikType ?? "자시") === v}
+                    checked={(form.mingSikType ?? "조자시") === v}
                     onChange={() => setForm({ ...form, mingSikType: v })}
                     id={id}
                   />

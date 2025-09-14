@@ -80,7 +80,7 @@ export function findNextJie(birth: Date): Date {
 function firstSijuOffsetMs(birth: Date, dir: Direction, table: DayBoundaryRule): number {
   const h = birth.getHours();
   const startHour =
-    table === "자시"
+    table === "야자시"
       ? (Math.floor((h + 1) / 2) * 2 - 1 + 24) % 24
       : (Math.floor(h / 2) * 2 + 1) % 24;
   const start = new Date(birth); start.setHours(startHour, 0, 0, 0);
@@ -96,7 +96,7 @@ export function buildSijuSchedule(
   natalHourGZ: string,
   dir: Direction,
   untilYears = 120,
-  hourTable: DayBoundaryRule = "자시",
+  hourTable: DayBoundaryRule = "야자시",
 ) {
   const ref = roundToMinute(natal); // 보정시(분 고정)
   const usedMs = firstSijuOffsetMs(ref, dir, hourTable); // 0..2h

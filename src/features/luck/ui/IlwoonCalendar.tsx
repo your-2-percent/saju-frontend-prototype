@@ -88,7 +88,7 @@ export default function IlwoonCalendar({
   const settings = useSettingsStore((s) => s.settings);
 
   const rule: DayBoundaryRule =
-    hourTable ?? ((data?.mingSikType as DayBoundaryRule | undefined) ?? "자시");
+    hourTable ?? ((data?.mingSikType as DayBoundaryRule | undefined) ?? "야자시");
 
   const dayStem = data ? (toDayStem(data) as Stem10sin) : undefined;
   const birth = data ? toCorrected(data) : null;

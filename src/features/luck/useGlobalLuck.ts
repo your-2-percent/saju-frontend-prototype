@@ -71,7 +71,7 @@ export function useGlobalLuck(
       //const now = new Date();
       const lon = storeLon ?? ms?.birthPlace?.lon ?? 127.5;
       const rule: DayBoundaryRule =
-        storeRule ?? (ms?.mingSikType as DayBoundaryRule) ?? hourTable ?? "자시";
+        storeRule ?? (ms?.mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
 
       return {
         dae: { gz: daeGz, at: date }, // 진짜 대운

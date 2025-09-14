@@ -157,8 +157,8 @@ export default function Page() {
     try {
       const y = getYearGanZhi(correctedSolar, current.birthPlace?.lon);
       const m = getMonthGanZhi(correctedSolar, current.birthPlace?.lon);
-      const d = getDayGanZhi(correctedSolar, current.mingSikType ?? "자시");
-      const h = getHourGanZhi(correctedSolar, current.mingSikType ?? "자시");
+      const d = getDayGanZhi(correctedSolar, current.mingSikType ?? "야자시");
+      const h = getHourGanZhi(correctedSolar, current.mingSikType ?? "야자시");
       const arr = [y, m, d, h];
       if (DEBUG) console.debug("[UnMyounTabs] pillars:", arr);
       return isValidPillars(arr) ? arr : [];
@@ -232,14 +232,14 @@ export default function Page() {
           <div className="pt-18 pb-4">
             <SajuChart
               data={current}
-              hourTable={current.mingSikType ?? "자시"}
+              hourTable={current.mingSikType ?? "야자시"}
             />
           </div>
 
           <LuckGlobalPicker
             pillars={pillars}
             ms={current}
-            //hourTable={current.mingSikType ?? "자시"}
+            //hourTable={current.mingSikType ?? "야자시"}
           />
 
           <div>
