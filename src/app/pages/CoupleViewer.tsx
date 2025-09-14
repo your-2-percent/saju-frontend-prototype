@@ -440,7 +440,7 @@ function PersonSlot({
     return data.birthPlace.lon;
   }, [data]);
 
-  const ruleForBase: DayBoundaryRule = (data?.mingSikType as DayBoundaryRule) ?? "자시";
+  const ruleForBase: DayBoundaryRule = (data?.mingSikType as DayBoundaryRule) ?? "야자시";
 
   const sinsalBaseBranch = useMemo<Branch10sin>(() => {
     const byDay  = birthCorrected ? getDayGanZhi(birthCorrected, ruleForBase).charAt(1)  : (natalDay.charAt(1)  || "子");
@@ -474,8 +474,8 @@ function PersonSlot({
     if (mode !== "실시간") return null;
     const t = effectiveDate;
     return {
-      si: ensureGZ(getHourGanZhi(t, "자시")),
-      il: ensureGZ(getDayGanZhi(t, "자시")),
+      si: ensureGZ(getHourGanZhi(t, "야자시")),
+      il: ensureGZ(getDayGanZhi(t, "야자시")),
       wl: ensureGZ(getMonthGanZhi(t)),
       yn: ensureGZ(getYearGanZhi(t)),
     };

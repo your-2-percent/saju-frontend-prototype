@@ -84,7 +84,7 @@ export default function WolwoonList({
 
   // 신살 기준 지지(일지/연지)
   const birth = toCorrected(data);
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
   const baseBranch: Branch10sin = (
     settings.sinsalBase === "일지"
       ? getDayGanZhi(birth, rule).charAt(1)

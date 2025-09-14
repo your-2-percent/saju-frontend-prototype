@@ -106,7 +106,7 @@ export default function TodaySaju() {
 
   const [pick, setPick] = useState<Date>(new Date());
   const [isLive, setIsLive] = useState(true);
-  const [dayBoundaryRule, setDayBoundaryRule] = useState<DayBoundaryRule>("야자시");
+  const [dayBoundaryRule, setDayBoundaryRule] = useState<DayBoundaryRule>("조자시");
 
   const [blankHour, setBlankHour] = useState(false);
 
@@ -119,7 +119,7 @@ export default function TodaySaju() {
   const year  = getYearGanZhi(pick);
   const month = getMonthGanZhi(pick);
   const day   = getDayGanZhi(pick, dayBoundaryRule);
-  const hour  = getHourGanZhi(pick, "자시"); // 필요시 dayBoundaryRule로 교체 가능
+  const hour  = getHourGanZhi(pick, "조자시"); // 필요시 dayBoundaryRule로 교체 가능
 
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
@@ -148,8 +148,8 @@ export default function TodaySaju() {
                         text-neutral-900 dark:text-neutral-100
                         focus:outline-none focus:ring-2 focus:ring-amber-500/40"
             >
-              <option value="자시">자시 (전날 23시)</option>
-              <option value="야자시">야자시 (자정)</option>
+              <option value="야자시">야자시 (전날 23시)</option>
+              <option value="조자시">조자시 (자정)</option>
               <option value="인시">인시 (새벽 3시)</option>
             </select>
 

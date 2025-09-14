@@ -211,8 +211,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
               value={localSettings.ilunRule}
               onChange={(v) => update("ilunRule", v)}
               options={[
-                { label: "자시", value: "자시" },
                 { label: "야자시", value: "야자시" },
+                { label: "조자시", value: "조자시" },
                 { label: "인시", value: "인시" },
               ]}
             />

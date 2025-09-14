@@ -105,7 +105,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   // 고정 옵션
   // const [dir] = useState<Direction>(data.dir ?? "forward");
   // const [rule] = useState<DayChangeRule>("인시일수론");
-  // const [hourTable] = useState<DayBoundaryRule>("자시");
+  // const [hourTable] = useState<DayBoundaryRule>("야자시");
 
   // 출생/원국
   // const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
@@ -140,7 +140,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   // 출생/원국
   const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
   const birth = useMemo(() => parseBirthLocal(solarized), [solarized]);
-  const natal = useMemo(() => computeNatalPillars(solarized, "자시"), [solarized]);
+  const natal = useMemo(() => computeNatalPillars(solarized, "야자시"), [solarized]);
 
   // 일간
   const natalDayStem = useMemo<Stem10sin>(
@@ -149,7 +149,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   );
 
   // 묘운/세운/월운/일운 계산
-  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "자시"), [birth, natal.hour, data.dir]);
+  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "야자시"), [birth, natal.hour, data.dir]);
   const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", "인시일수론"), [siju, natal.day, data.dir]);
   const wolju = useMemo(() => buildWolju(birth, natal.month, data.dir ?? "forward", 120, solarized.birthPlace?.lon ?? 127.5), [birth, natal.month, data.dir, solarized.birthPlace?.lon]);
   const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, data.dir ?? "forward", "인시일수론", birth), [wolju, natal.year, data.dir, birth]);
@@ -166,8 +166,8 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   // 실시간 운 (전역 피커 날짜 기반)
   const live = useMemo(() => ({
-    si: ensureGZ(getHourGanZhi(date, "자시")),
-    il: ensureGZ(getDayGanZhi(date, "자시")),
+    si: ensureGZ(getHourGanZhi(date, "야자시")),
+    il: ensureGZ(getDayGanZhi(date, "야자시")),
     wl: ensureGZ(getMonthGanZhi(date)),
     yn: ensureGZ(getYearGanZhi(date)),
   }), [date]);
@@ -209,8 +209,8 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   // // 실시간 간지
   // const live = useMemo(() => ({
-  //   si: ensureGZ(getHourGanZhi(effectiveDate, "자시")),
-  //   il: ensureGZ(getDayGanZhi(effectiveDate, "자시")),
+  //   si: ensureGZ(getHourGanZhi(effectiveDate, "야자시")),
+  //   il: ensureGZ(getDayGanZhi(effectiveDate, "야자시")),
   //   wl: ensureGZ(getMonthGanZhi(effectiveDate)),
   //   yn: ensureGZ(getYearGanZhi(effectiveDate)),
   // }), [effectiveDate]);

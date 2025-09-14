@@ -26,7 +26,7 @@ export function toCorrected(ms: MyeongSik): Date {
 
 export function toDayStem(ms: MyeongSik): Stem10sin {
   const d = toCorrected(ms);
-  const gz = getDayGanZhi(d, ms.mingSikType ?? "자시");
+  const gz = getDayGanZhi(d, ms.mingSikType ?? "야자시");
   if (!gz) throw new Error(`getDayGanZhi returned undefined for ${d.toISOString()}`);
 
   const stem = normalizeStem(gz);

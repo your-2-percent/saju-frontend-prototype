@@ -100,7 +100,7 @@ export default function DaewoonList({
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
       : data.birthPlace.lon;
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
   const baseBranchForShinsal: Branch10sin = (
     sinsalBase === "일지"
       ? getDayGanZhi(birth, rule).charAt(1)

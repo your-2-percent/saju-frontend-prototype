@@ -4,7 +4,7 @@ import { useLocalStorageState } from "@/shared/lib/hooks/useLocalStorageState";
 export type Settings = {
   hiddenStem: "all" | "regular";       // 지장간
   hiddenStemMode: "classic" | "hgc";   // 지장간 표시방식
-  ilunRule: "자시" | "야자시" | "인시";
+  ilunRule: "야자시" | "조자시" | "인시";
   sinsalMode: "classic" | "modern";
   sinsalBase: "일지" | "연지";
   sinsalBloom: boolean;
@@ -19,7 +19,7 @@ export type Settings = {
 const defaultSettings: Settings = {
   hiddenStem: "all",
   hiddenStemMode: "classic",
-  ilunRule: "자시",
+  ilunRule: "야자시",
   sinsalMode: "classic",
   sinsalBase: "일지",
   sinsalBloom: false,

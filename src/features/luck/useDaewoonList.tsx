@@ -10,7 +10,7 @@ export type Daewoon = { at: Date; gz: string, age: number };
 /** 대운 리스트 생성 (기존 그대로) */
 export function useDaewoonList(
   ms: MyeongSik,
-  hourTable: DayBoundaryRule = "자시",
+  hourTable: DayBoundaryRule = "야자시",
   untilYears = 100
 ): Daewoon[] {
   const base  = useMemo(() => ensureSolarBirthDay(ms), [ms]);
@@ -66,7 +66,7 @@ export function activeIndexAtOrFirst(arr: Daewoon[], ref: Date): number {
 export function useDaewoonActive(
   ms: MyeongSik,
   ref: Date,
-  hourTable: DayBoundaryRule = "자시",
+  hourTable: DayBoundaryRule = "야자시",
   untilYears = 100
 ) {
   const list = useDaewoonList(ms, hourTable, untilYears);
