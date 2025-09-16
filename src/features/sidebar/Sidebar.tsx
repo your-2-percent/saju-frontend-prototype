@@ -1,12 +1,12 @@
 // components/Sidebar.tsx
-import { X, Plus, ChevronDown, ChevronUp, Star } from "lucide-react";
+import { X, Plus, ChevronDown, ChevronUp, Star, GripVertical } from "lucide-react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
@@ -23,6 +23,7 @@ import type { DayBoundaryRule } from "@/shared/type";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 import { formatLocalHM } from "@/shared/utils";
 import { isDST } from "@/shared/lib/core/timeCorrection";
+import type { CSSProperties } from "react";
 
 type MemoOpenMap = Record<string, boolean>;
 type OrderMap = Record<string, string[]>; // droppableId -> itemId[]
@@ -56,7 +57,7 @@ function useDragPortal() {
       try {
         document.body.removeChild(portalEl);
       } catch {
-        console.log("에러");
+        // noop
       }
     };
   }, [portalEl]);
@@ -105,6 +106,9 @@ export default function Sidebar({
   // 리스트별 아이템 순서(로컬 전용)
   const [orderMap, setOrderMap] = useLocalStorageState<OrderMap>("ms_order_map", {});
   const [folderOrder, setFolderOrder] = useLocalStorageState<string[]>("folder_order", []);
+
+  // 전역 드래그 상태 (모바일 최적화용)
+  const [isDraggingAny, setIsDraggingAny] = useState(false);
 
   // 포털
   const portalize = useDragPortal();
@@ -174,7 +178,15 @@ export default function Sidebar({
     return orderItems(droppableId, baseArr).map((it) => it.id);
   };
 
-  // 카드(아이템) Draggable (포털 적용)
+  // 드래그 아이템 스타일: 드롭 애니메이션 약간 더 짧게
+  const getDragStyle = (base: CSSProperties | undefined, isDropAnimating: boolean): CSSProperties => {
+    if (!base) return {};
+    return isDropAnimating
+      ? { ...base, transition: "transform 160ms cubic-bezier(0.2, 0, 0.2, 1)" }
+      : base;
+  };
+
+  // 카드(아이템) Draggable (포털 적용) — 전용 핸들 사용
   const renderCard = (m: MyeongSik, index: number) => {
     const memoOpen = !!memoOpenMap[m.id];
     const ganji = getGanjiString(m);
@@ -200,15 +212,15 @@ export default function Sidebar({
             <li
               ref={drag.innerRef}
               {...drag.draggableProps}
-              {...drag.dragHandleProps}
-              style={drag.draggableProps.style}
+              // 핸들 분리: dragHandleProps 는 아래 Grip 버튼에만 붙임
+              style={getDragStyle(drag.draggableProps.style, snapshot.isDropAnimating)}
               className="list-none select-none rounded-xl border
                          bg-white dark:bg-neutral-900
                          border-neutral-200 dark:border-neutral-800
                          text-neutral-900 dark:text-neutral-100"
             >
               <div className="p-3">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2">
                   <div className="font-semibold text-sm desk:text-base">
                     {m.name} ({calcAgeFromBirthDay(m.birthDay)}세, {m.gender})
                   </div>
@@ -216,6 +228,15 @@ export default function Sidebar({
                   <div className="text-sm text-neutral-600 dark:text-neutral-300">
                     {m.relationship ? m.relationship : "관계 미지정"}
                   </div>
+                  {/* 전용 드래그 핸들 (모바일 스크롤 충돌 방지) */}
+                  <button
+                    aria-label="드래그"
+                    {...drag.dragHandleProps}
+                    className="ml-auto p-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    style={{ touchAction: "none" }}
+                  >
+                    <GripVertical size={16} />
+                  </button>
                 </div>
 
                 <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
@@ -238,7 +259,7 @@ export default function Sidebar({
                 )}
 
                 {m.memo && m.memo.trim() !== "" && (
-                  <div className="">
+                  <div>
                     <button
                       type="button"
                       className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 inline-flex items-center gap-1 cursor-pointer"
@@ -392,7 +413,7 @@ export default function Sidebar({
   };
 
   // onDragEnd: 화면에 보이는 순서를 기준으로 재배열
-  const onDragEnd = (r: DropResult) => {
+  const handleDrop = (r: DropResult) => {
     const { source, destination, draggableId, type } = r;
     if (!destination) return;
 
@@ -464,13 +485,14 @@ export default function Sidebar({
         onClick={onClose}
       />
 
-      {/* Sidebar (transform 유지) */}
+      {/* Sidebar (모바일 드래그 중에는 transform 제거) */}
       <div
         className={`fixed top-0 left-0 h-[calc(100dvh_-_0px)] w-full sm:w-1/3
                     bg-white dark:bg-neutral-950
                     text-neutral-900 dark:text-white
-                    shadow-lg transform transition-transform duration-300 z-99
-                    ${open ? "translate-x-0" : "-translate-x-full"}`}
+                    shadow-lg z-99
+                    ${isDraggingAny ? "transform-none" : "transform transition-transform duration-300"}
+                    ${open ? (isDraggingAny ? "" : "translate-x-0") : "-translate-x-full"}`}
       >
         {/* Header */}
         <div className="flex justify-between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
@@ -496,8 +518,17 @@ export default function Sidebar({
           </div>
         </div>
 
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="p-4 overflow-y-auto h-[calc(100%-56px)]">
+        <DragDropContext
+          onDragStart={() => setIsDraggingAny(true)}
+          onDragEnd={(r) => {
+            setIsDraggingAny(false);
+            handleDrop(r);
+          }}
+        >
+          <div
+            className="p-4 overflow-y-auto h-[calc(100%-56px)] overscroll-contain"
+            style={{ touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+          >
             {/* 새 폴더 생성 */}
             <div className="flex items-center mb-2 gap-2">
               <input
@@ -528,7 +559,7 @@ export default function Sidebar({
             </p>
 
             {/* 바깥(미지정) 드롭 영역 */}
-            <Droppable droppableId={DROPPABLE_UNASSIGNED} type="ITEM">
+            <Droppable droppableId={DROPPABLE_UNASSIGNED} type="ITEM" direction="vertical" ignoreContainerClipping>
               {(prov) => {
                 const outItems = orderItems(DROPPABLE_UNASSIGNED, unassignedItems);
                 return (
@@ -543,7 +574,7 @@ export default function Sidebar({
             </Droppable>
 
             {/* 폴더 섹션들 */}
-            <Droppable droppableId="folders:root" type="FOLDER">
+            <Droppable droppableId="folders:root" type="FOLDER" direction="vertical" ignoreContainerClipping>
               {(foldersProv) => (
                 <div ref={foldersProv.innerRef} {...foldersProv.droppableProps}>
                   {foldersToRender.map((folderName, folderIndex) => {
@@ -563,13 +594,12 @@ export default function Sidebar({
                             <div
                               ref={folderDrag.innerRef}
                               {...folderDrag.draggableProps}
-                              style={folderDrag.draggableProps.style}
+                              style={getDragStyle(folderDrag.draggableProps.style, folderSnap.isDropAnimating)}
                               className="mb-4"
                             >
-                              {/* 헤더 = drag handle */}
+                              {/* 헤더 */}
                               <div
-                                {...folderDrag.dragHandleProps}
-                                className="flex items-center justify-between px-2 py-2 rounded cursor-grab
+                                className="flex items-center justify-between px-2 py-2 rounded
                                            bg-neutral-50 dark:bg-neutral-900/70
                                            border border-neutral-200 dark:border-neutral-800
                                            text-neutral-800 dark:text-neutral-200"
@@ -589,6 +619,17 @@ export default function Sidebar({
                                     {openF ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                                     <span className="text-sm font-semibold">{folderName}</span>
                                   </button>
+
+                                  {/* 폴더 전용 드래그 핸들 */}
+                                  <button
+                                    aria-label="폴더 드래그"
+                                    {...folderDrag.dragHandleProps}
+                                    className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                                    style={{ touchAction: "none" }}
+                                  >
+                                    <GripVertical size={16} />
+                                  </button>
+
                                   <button
                                     type="button"
                                     onClick={(e) => {
@@ -636,7 +677,7 @@ export default function Sidebar({
 
                               {/* 폴더 내부 아이템 드롭 영역 */}
                               {openF && (
-                                <Droppable droppableId={listId} type="ITEM">
+                                <Droppable droppableId={listId} type="ITEM" direction="vertical" ignoreContainerClipping>
                                   {(prov) => (
                                     <div ref={prov.innerRef} {...prov.droppableProps} className="mt-2">
                                       <ul className="space-y-3">
