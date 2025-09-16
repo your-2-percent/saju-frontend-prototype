@@ -232,7 +232,7 @@ export default function Sidebar({
                   <button
                     aria-label="드래그"
                     {...drag.dragHandleProps}
-                    className="ml-auto p-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                    className="ml-auto py-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
                     style={{ touchAction: "none" }}
                   >
                     <GripVertical size={16} />
@@ -487,7 +487,7 @@ export default function Sidebar({
 
       {/* Sidebar (모바일 드래그 중에는 transform 제거) */}
       <div
-        className={`fixed top-0 left-0 h-[calc(100dvh_-_0px)] w-full sm:w-1/3
+        className={`fixed top-0 left-0 h-[calc(100dvh_-_0px)] min-w-[320px] w-full desk:w-1/3
                     bg-white dark:bg-neutral-950
                     text-neutral-900 dark:text-white
                     shadow-lg z-99
@@ -497,7 +497,7 @@ export default function Sidebar({
         {/* Header */}
         <div className="flex justify-between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
           <h2 className="text-lg font-bold">명식 리스트</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 desk:gap-2">
             <button
               type="button"
               onClick={() => {
