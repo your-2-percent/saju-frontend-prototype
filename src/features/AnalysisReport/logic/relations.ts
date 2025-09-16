@@ -578,6 +578,62 @@ export function buildAllRelationTags(input: {
     }
   }
 
+  // ── 운끼리 상호작용 ──
+  const luckPairs: Array<[LuckKind, string, LuckKind, string]> = [];
+  if (input.daewoon && input.sewoon) luckPairs.push(["대운", input.daewoon, "세운", input.sewoon]);
+  if (input.sewoon && input.wolwoon) luckPairs.push(["세운", input.sewoon, "월운", input.wolwoon]);
+  if (input.daewoon && input.wolwoon) luckPairs.push(["대운", input.daewoon, "월운", input.wolwoon]);
+
+  for (const [k1, raw1, k2, raw2] of luckPairs) {
+    const g1 = normalizeGZ(raw1);
+    const g2 = normalizeGZ(raw2);
+    if (g1.length < 2 || g2.length < 2) continue;
+
+    const s1 = gzStem(g1), b1 = gzBranch(g1);
+    const s2 = gzStem(g2), b2 = gzBranch(g2);
+
+    // 천간 합/충
+    const hap = labelForPair(STEM_HAP_LABELS, s1, s2);
+    if (hap) pushUnique(out.cheonganHap, `#${k1}X${k2}_${hap}`);
+    const chung = labelForPair(STEM_CHUNG_LABELS, s1, s2);
+    if (chung) pushUnique(out.cheonganChung, `#${k1}X${k2}_${chung}`);
+
+    // 지지 육합/충/파/해/원진/귀문
+    const yukhap = labelForPair(BR_YUKHAP_LABELS, b1, b2);
+    if (yukhap) pushUnique(out.jijiYukhap, `#${k1}X${k2}_${yukhap}`);
+    const brChung = labelForPair(BR_CHUNG_LABELS, b1, b2);
+    if (brChung) pushUnique(out.jijiChung, `#${k1}X${k2}_${brChung}`);
+    const pa = labelForPair(BR_PA_LABELS, b1, b2);
+    if (pa) pushUnique(out.jijiPa, `#${k1}X${k2}_${pa}`);
+    const hae = labelForPair(BR_HAE_LABELS, b1, b2);
+    if (hae) pushUnique(out.jijiHae, `#${k1}X${k2}_${hae}`);
+    const wonjin = labelForPair(BR_WONJIN_LABELS, b1, b2);
+    if (wonjin) pushUnique(out.jijiWonjin, `#${k1}X${k2}_${wonjin}`);
+    const gwimun = labelForPair(BR_GWIMUN_LABELS, b1, b2);
+    if (gwimun) pushUnique(out.jijiGwimun, `#${k1}X${k2}_${gwimun}`);
+
+    // 형
+    const sang = labelForPair(BR_SANGHYEONG_LABELS, b1, b2);
+    if (sang) pushUnique(out.jijiHyeong, `#${k1}X${k2}_${sang}`);
+    else {
+      const zamyo = labelForPair(BR_ZAMYO_HYEONG_LABELS, b1, b2);
+      if (zamyo) pushUnique(out.jijiHyeong, `#${k1}X${k2}_${zamyo}`);
+      else if (b1 === b2 && BR_SELF_HYEONG_ALLOWED.has(b1)) {
+        pushUnique(out.jijiHyeong, `#${k1}X${k2}_${b1}${b2}자형`);
+      }
+    }
+
+    // 지지 암합
+    const amhap = labelForPair([
+      { pair:["자","술"], label:"자술암합" },
+      { pair:["축","인"], label:"축인암합" },
+      { pair:["묘","신"], label:"묘신암합" },
+      { pair:["인","미"], label:"인미암합" },
+      { pair:["오","해"], label:"오해암합" },
+    ], b1, b2);
+    if (amhap) pushUnique(out.amhap, `#${k1}X${k2}_${amhap}`);
+  }
+
   return finalizeBuckets(out);
 }
 
