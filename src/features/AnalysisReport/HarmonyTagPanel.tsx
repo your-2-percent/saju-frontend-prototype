@@ -45,11 +45,20 @@ function Row({
   const shownNatal = natal.length > 0 ? natal : ["#없음"];
   const displayNatal = hasLuck ? shownNatal.filter((t) => t !== "#없음") : shownNatal;
 
+  // ✅ 태그 유무 판단
+  const hasTag =
+    displayNatal.some((t) => t !== "#없음") ||
+    dae.length > 0 ||
+    se.length > 0 ||
+    wol.length > 0;
+
+  const labelClass = hasTag
+    ? "shrink-0 w-20 text-xs font-semibold text-orange-700 dark:text-orange-300 mt-1"
+    : "shrink-0 w-20 text-xs font-semibold text-neutral-700 dark:text-neutral-400 mt-1";
+
   return (
-    <div className="flex items-start gap-3">
-      <div className="shrink-0 w-20 text-xs font-semibold text-neutral-700 dark:text-neutral-300 mt-1">
-        {label}
-      </div>
+    <div className="flex items-start gap-3 border border-gray-700 dark:border-gray-200 p-2 rounded-sm">
+      <div className={labelClass}>{label}</div>
       <div className="flex flex-wrap gap-2">
         {displayNatal.map((t, i) => (
           <span

@@ -49,14 +49,22 @@ function Section({
   return (
     <div className="space-y-2 desk:flex-1 desk:px-1">
       <div className="text-md font-bold text-neutral-800 dark:text-neutral-200 mt-2">{title}</div>
-      {rows.map((row) => (
-        <div className="flex items-start gap-3" key={`${title}-${row.label}`}>
-          <div className="shrink-0 w-12 text-xs font-semibold text-neutral-700 dark:text-neutral-300 mt-1">
-            {row.label}
+      {rows.map((row) => {
+        const hasTag = row.items.some((t) => t !== "#없음");
+        const labelClass = hasTag
+          ? "shrink-0 w-12 text-xs font-semibold text-orange-700 dark:text-orange-300 mt-1"
+          : "shrink-0 w-12 text-xs font-semibold text-neutral-700 dark:text-neutral-300 mt-1";
+
+        return (
+          <div
+            className="flex items-start gap-3 border border-gray-700 dark:border-gray-400 p-2 rounded-sm"
+            key={`${title}-${row.label}`}
+          >
+            <div className={labelClass}>{row.label}</div>
+            <Chips items={row.items.length > 0 ? row.items : ["#없음"]} source={row.source} />
           </div>
-          <Chips items={row.items.length > 0 ? row.items : ["#없음"]} source={row.source} />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -91,7 +99,7 @@ export default function ShinsalTagPanel({
     [pillars, daewoon, sewoon, wolwoon, basis]
   );
 
-  const { /*title: _ignored,*/ good, bad, meta } = data;
+  const { good, bad, meta } = data;
 
   // 원국 칩 접두어 "원국 " 부여
   const withNatalPrefix = (items: string[]) => items.map((t) => (t === "#없음" ? t : `원국 ${t}`));
@@ -102,7 +110,7 @@ export default function ShinsalTagPanel({
     return rows.filter((r) => r.source === want) as T;
   };
 
-  // 표시는 요구 순서: 시주, 일주, 연주, 월주, 대운, 세운, 월운
+  // 표시는 요구 순서: 시주, 일주, 월주, 연주, 대운, 세운, 월운
   const goodRowsAll = [
     { label: "시주", items: withNatalPrefix(good.si),   source: "natal" as const },
     { label: "일주", items: withNatalPrefix(good.il),   source: "natal" as const },
@@ -126,7 +134,7 @@ export default function ShinsalTagPanel({
   const goodRows = applyTab(goodRowsAll, tab);
   const badRows  = applyTab(badRowsAll,  tab);
 
-  // 셀렉트 아래 안내문구: 양쪽 값 같이 보여주기
+  // 셀렉트 아래 안내문구
   const voidLeft  = meta.voidPair.day  ? `일공망(${meta.voidPair.day.join("")})`   : "일공망(—)";
   const voidRight = meta.voidPair.year ? `연공망(${meta.voidPair.year.join("")})` : "연공망(—)";
   const sjLeft    = meta.samjaeYears.day  ? `일삼재(${meta.samjaeYears.day.join("·")})`   : "일삼재(—)";
@@ -135,7 +143,6 @@ export default function ShinsalTagPanel({
   return (
     <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-2">
       <div className="text-base font-bold mb-1">신살(길신/흉살)</div>
-      {/* <div className="text-sm text-neutral-700 dark:text-neutral-300">{uiTitle}</div> */}
 
       {/* 기준 선택 UI */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
