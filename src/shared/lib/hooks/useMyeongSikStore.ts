@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 import type { MyeongSik } from "@/shared/lib/storage";
 
 type MyeongSikStore = {
+  setCurrent: (id: string) => void;
+  currentId: string | null;
   list: MyeongSik[];
   add: (m: MyeongSik) => void;
   remove: (id: string) => void;
@@ -14,6 +16,8 @@ type MyeongSikStore = {
 export const useMyeongSikStore = create<MyeongSikStore>()(
   persist(
     (set, get) => ({
+      currentId: null,
+      setCurrent: (id: string) => set({ currentId: id }),
       list: [],
       add: (m) => set({ list: [m, ...get().list] }),
       remove: (id) => set({ list: get().list.filter((x) => x.id !== id) }),
