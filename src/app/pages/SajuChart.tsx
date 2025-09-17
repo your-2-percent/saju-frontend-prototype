@@ -144,12 +144,6 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
   }
 
-  const safeDate = ms?.dateObj instanceof Date && !isNaN(ms.dateObj.getTime())
-  ? ms.dateObj
-  : null;
-
-console.log("🟡 safeDate:", safeDate, ms?.dateObj);
-
   const { name, birthDay, birthTime, birthPlace, gender, calendarType, mingSikType } = data;
 
   // ✅ 전역 설정 구독
