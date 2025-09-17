@@ -132,6 +132,24 @@ function getCardLevel(label: string): number {
 }
 
 export default function SajuChart({ data, hourTable }: Props) {
+  // ✅ 진입 즉시 안전 변환
+  const ms: MyeongSik | null = data ?? null;
+
+  if (ms) {
+    if (!(ms.dateObj instanceof Date)) {
+      ms.dateObj = ms.dateObj ? new Date(ms.dateObj) : new Date();
+    }
+    if (!(ms.corrected instanceof Date)) {
+      ms.corrected = ms.corrected ? new Date(ms.corrected) : new Date();
+    }
+  }
+
+  const safeDate = ms?.dateObj instanceof Date && !isNaN(ms.dateObj.getTime())
+  ? ms.dateObj
+  : null;
+
+console.log("🟡 safeDate:", safeDate, ms?.dateObj);
+
   const { name, birthDay, birthTime, birthPlace, gender, calendarType, mingSikType } = data;
 
   // ✅ 전역 설정 구독
@@ -147,6 +165,7 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   // 1) 출생 ‘양력’ 날짜를 먼저 구해서 DST 기본값 판단
   const { solarY, solarM, solarD } = useMemo(() => {
+    
     let y = Number(birthDay?.slice(0, 4) ?? 2000);
     let m = Number(birthDay?.slice(4, 6) ?? 1);
     let d = Number(birthDay?.slice(6, 8) ?? 1);
@@ -168,6 +187,7 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   // 3) 원국 계산
   const parsed = useMemo(() => {
+
     const isUnknownTime = !data.birthTime || data.birthTime === "모름";
     const isUnknownPlace = !data.birthPlace;
     let y = Number(data.birthDay!.slice(0, 4));
@@ -188,7 +208,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       ? 127.5
       : data.birthPlace.lon;
 
-    let corrected = getCorrectedDate(rawBirth, lonVal);
+    let corrected = data.corrected ?? getCorrectedDate(rawBirth, lonVal);
 
     if (useDST) {
       corrected = new Date(corrected.getTime() - 60 * 60 * 1000);
@@ -196,10 +216,10 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     const hourRule: DayBoundaryRule = (data.mingSikType ?? "야자시") as DayBoundaryRule;
 
-    const yearGZ = getYearGanZhi(corrected, lonVal);
-    const monthGZ = getMonthGanZhi(corrected, lonVal);
-    const dayGZ = getDayGanZhi(corrected, hourRule);
-    const hourGZ = isUnknownTime ? null : getHourGanZhi(corrected, hourRule);
+    const yearGZ = getYearGanZhi(corrected as Date, lonVal);
+    const monthGZ = getMonthGanZhi(corrected as Date, lonVal);
+    const dayGZ = getDayGanZhi(corrected as Date, hourRule);
+    const hourGZ = isUnknownTime ? null : getHourGanZhi(corrected as Date, hourRule);
 
     return {
       corrected, // 보정시 표기도 이 값 사용
@@ -208,7 +228,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       day:   { stem: dayGZ.charAt(0),   branch: dayGZ.charAt(1) },
       hour:  hourGZ ? { stem: hourGZ.charAt(0), branch: hourGZ.charAt(1) } : null,
     };
-  }, [useDST, data.birthDay, data.birthPlace, data.birthTime, data.calendarType, data.mingSikType]);
+  }, [useDST, data.birthDay, data.birthPlace, data.birthTime, data.calendarType, data.mingSikType, data.corrected]);
 
   const showDSTButton = isDST(solarY, solarM, solarD);
 
@@ -245,7 +265,14 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   const handleDSTToggle = () => setUseDST((prev) => !prev);
 
-  const ms: MyeongSik | null = data ?? null;
+  //const ms: MyeongSik | null = data ?? null;
+
+  const dateObj = ms?.dateObj instanceof Date ? ms.dateObj : new Date(ms?.dateObj ?? "");
+  //const corrected = ms?.corrected instanceof Date ? ms.corrected : new Date(ms?.corrected ?? "");
+
+  if (!dateObj || isNaN(dateObj.getTime())) {
+    console.error("⚠ Invalid dateObj in SajuChart:", ms?.dateObj);
+  }
   const luck = useGlobalLuck(ms, hourTable);
 
   // 예시: 차트에 표기할 운 간지(대/세/월/일)
@@ -568,3 +595,4 @@ function formatBirthDisplay(yyyymmdd?: string, hhmm?: string) {
   if (!hhmm || hhmm === "모름" || !/^\d{4}$/.test(hhmm)) return date;
   return `${date} ${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
 }
+

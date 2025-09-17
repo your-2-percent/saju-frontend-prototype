@@ -591,12 +591,47 @@ export function buildShinsalTags({
     const pb = findBestPosForBranch(b, natal);
     if (pa && pb) pushPairTag(natalBadPos, "천라지망", pa.pos, pb.pos);
   }
-  // 현침: 일간이 갑/신일 때 해당 지지 전부
-  if (new Set(["갑","신"]).has(dStem)) {
-    const positions: PosIndex[] = [idx.year, idx.month, idx.day, idx.hour];
-    const badSet = new Set(["묘","오","미","신"]);
-    for (const p of positions) {
-      if (badSet.has(last(natal[p]))) natalBadPos.push({ name: labelSB_at("현침살", p), weight: POS_WEIGHT[p], pos: p });
+  // (NEW) 현침살: 원국 전체에 천간(갑,신) 또는 지지(묘,오,미,신) 하나라도 있으면 성립
+  {
+    const badStems = new Set(["갑", "신"]);
+    const badBranches = new Set(["묘", "오", "미", "신"]);
+
+    for (let p = 0 as PosIndex; p <= 3; p++) {
+      const st = first(natal[p]);
+      const br = last(natal[p]);
+      if (badStems.has(st) || badBranches.has(br)) {
+        natalBadPos.push({
+          name: labelPos_at("현침살", p),
+          weight: POS_WEIGHT[p],
+          pos: p,
+        });
+      }
+    }
+  }
+
+  // (NEW) 십악대패살: 특정 일주일 때 성립
+  {
+    const 십악대패세트 = new Set(["갑진","을사","임신","병신","정해","경진","무술","계해","신사","기축"]);
+    if (십악대패세트.has(natal[idx.day])) {
+      natalBadPos.push({ name: labelIlju("십악대패살"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    }
+  }
+
+  // (NEW) 곡각살: 원국 각 기둥에서 을·기 천간 또는 축·사 지지가 있으면 해당 기둥에만 성립
+  {
+    const needStem = new Set(["을", "기"]);
+    const needBranch = new Set(["축", "사"]);
+
+    for (let p = 0 as PosIndex; p <= 3; p++) {
+      const st = first(natal[p]);
+      const br = last(natal[p]);
+      if (needStem.has(st) || needBranch.has(br)) {
+        natalBadPos.push({
+          name: labelPos_at("곡각살", p),
+          weight: POS_WEIGHT[p],
+          pos: p,
+        });
+      }
     }
   }
   // 원진 (연-시 제외) — 우선순위 높은 자리 하나만
@@ -628,26 +663,35 @@ export function buildShinsalTags({
     }
   }
 
-function extractTagName(label: string): string {
-  const idx = label.lastIndexOf("_");
-  return idx >= 0 ? label.slice(idx + 1) : label;
-}
+  function extractTagName(label: string): string {
+    const idx = label.lastIndexOf("_");
+    return idx >= 0 ? label.slice(idx + 1) : label;
+  }
+
+  const MULTI_POS_ALLOWED = new Set(["현침살", "곡각살"]);
 
   function uniqKeepMaxPerTag(items: TagBucketPos[]): TagBucketPos[] {
     const grouped = new Map<string, TagBucketPos[]>();
     for (const it of items) {
-      const tagName = extractTagName(it.name); // 신살 이름만 추출
+      const tagName = extractTagName(it.name);
       if (!grouped.has(tagName)) grouped.set(tagName, []);
       grouped.get(tagName)!.push(it);
     }
+
     const result: TagBucketPos[] = [];
-    for (const [, arr] of grouped) {
-      const chosen = arr.sort((a,b) =>
-        POS_PRIORITY[a.pos] !== POS_PRIORITY[b.pos]
-          ? POS_PRIORITY[b.pos] - POS_PRIORITY[a.pos] // pos 우선순위
-          : b.weight - a.weight                       // 그다음 weight
-      )[0];
-      result.push(chosen);
+    for (const [tagName, arr] of grouped) {
+      if (MULTI_POS_ALLOWED.has(tagName)) {
+        // 여러 기둥에서 전부 허용 → 다 살림
+        result.push(...arr);
+      } else {
+        // 기존처럼 pos 우선순위/weight으로 하나만 선택
+        const chosen = arr.sort((a, b) =>
+          POS_PRIORITY[a.pos] !== POS_PRIORITY[b.pos]
+            ? POS_PRIORITY[b.pos] - POS_PRIORITY[a.pos]
+            : b.weight - a.weight
+        )[0];
+        result.push(chosen);
+      }
     }
     return result;
   }

@@ -122,21 +122,21 @@ select:focus {
   white-space: nowrap; border: 0;
 }
 
-/* input[type='checkbox'],
-input[type='radio'] {
+.chkContainer input[type='checkbox'],
+.chkContainer input[type='radio'] {
   display: none;
-} */
+}
 
-input[type='checkbox'] + label,
-input[type='radio'] + label {
-  display: flex;
+.chkContainer input[type='checkbox'] + label,
+.chkContainer input[type='radio'] + label {
+  display: inline-flex;
   position: relative;
   align-items: center;
   cursor: pointer;
 }
 
-/* input[type='checkbox'] + label::before,
-input[type='radio'] + label::before {
+.chkContainer input[type='checkbox'] + label::before,
+.chkContainer input[type='radio'] + label::before {
   content: '';
   display: block;
   width: 16px;
@@ -146,8 +146,8 @@ input[type='radio'] + label::before {
   border-radius: 50%;
 }
 
-input[type='checkbox'] + label::after,
-input[type='radio'] + label::after {
+.chkContainer input[type='checkbox'] + label::after,
+.chkContainer input[type='radio'] + label::after {
   content: '';
   display: none;
   position: absolute;
@@ -156,9 +156,9 @@ input[type='radio'] + label::after {
   transform: translateY(-50%);
   width: 10px;
   height: 10px;
-  background-color: #000;
+  background-color: #f59e0b;
   border-radius: 50%;
-} */
+}
 
 #suggestions [role="option"][aria-selected="true"] {
   background-color: #f59e0b; /* Tailwind amber-200 같은 색 */

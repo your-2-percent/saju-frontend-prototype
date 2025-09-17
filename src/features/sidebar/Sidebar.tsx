@@ -95,7 +95,6 @@ export default function Sidebar({
     orderedFolders,
     grouped,
     unassignedItems,
-    confirmThrottled,
     handleDragEnd: handleFolderDragEnd, // 폴더 재정렬용
     createFolder,
     deleteFolder,
@@ -383,10 +382,15 @@ export default function Sidebar({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      confirmThrottled(`'${m.name}' 명식을 삭제할까요?`, () => remove(m.id));
+
+                      if (confirm(`'${m.name}' 명식을 삭제할까요?`)) {
+                        remove(m.id); // 확인 눌렀을 때만 실행
+                      } else {
+                        console.log("취소됨"); // 취소 눌렀을 때
+                      }
                     }}
                     className="px-3 py-1 rounded text-white text-sm cursor-pointer
-                               bg-red-600 hover:bg-red-500"
+                              bg-red-600 hover:bg-red-500"
                   >
                     삭제
                   </button>
@@ -474,6 +478,10 @@ export default function Sidebar({
     ...folderOrder.filter((f) => orderedFolders.includes(f)),
     ...orderedFolders.filter((f) => !folderOrder.includes(f)),
   ];
+
+  const list4 = useMyeongSikStore(s => s.list);
+  const currentId = useMyeongSikStore(s => s.currentId);
+  const setCurrent = useMyeongSikStore(s => s.setCurrent);
 
   return (
     <>
@@ -653,22 +661,20 @@ export default function Sidebar({
                                     type="button"
                                     onClick={(e) => {
                                       e.stopPropagation();
+
                                       if (folderFavMap[folderName]) {
-                                        confirmThrottled(
-                                          `'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`,
-                                          () => {}
-                                        );
+                                        alert(`'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`);
                                         return;
                                       }
-                                      confirmThrottled(
-                                        `'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`,
-                                        () => deleteFolder(folderName)
-                                      );
+
+                                      if (confirm(`'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`)) {
+                                        deleteFolder(folderName);
+                                      }
                                     }}
                                     className="px-2 py-1 rounded text-xs cursor-pointer
-                                               border border-red-300 dark:border-red-700
-                                               text-red-700 dark:text-red-300
-                                               hover:bg-red-50 dark:hover:bg-red-900/30"
+                                              border border-red-300 dark:border-red-700
+                                              text-red-700 dark:text-red-300
+                                              hover:bg-red-50 dark:hover:bg-red-900/30"
                                   >
                                     삭제
                                   </button>
@@ -698,8 +704,23 @@ export default function Sidebar({
                   {foldersProv.placeholder}
                 </div>
               )}
+              
             </Droppable>
           </div>
+          {list4.map(ms => (
+            <li
+              key={ms.id}
+              onClick={() => setCurrent(ms.id)}
+              className={[
+                "cursor-pointer p-2 rounded",
+                currentId === ms.id
+                  ? "bg-purple-100 dark:bg-purple-800" // ✅ 선택 스타일
+                  : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              ].join(" ")}
+            >
+              {ms.name || "이름없음"} ({ms.birthDay})
+            </li>
+          ))}
         </DragDropContext>
       </div>
     </>

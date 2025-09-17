@@ -66,7 +66,7 @@ function getMonthBoundaries(useYear: number, lon = 127.5): Date[] {
   return out;
 }
 
-function getMonthIndex(dateObj: Date, lon = 127.5) {
+export function getMonthIndex(dateObj: Date, lon = 127.5) {
   const { useYear } = resolveYearIndex(dateObj, lon);
   const bounds = getMonthBoundaries(useYear, lon);
   let k = 0;
@@ -85,7 +85,7 @@ function resolveFirstMonthStemIdx(dateObj: Date, lon = 127.5): number {
   return FIRST_MONTH_STEM_BY_YEAR_STEM[yStemIdx];
 }
 
-function calcMonthStemIdx(dateObj: Date, monthIndex: number, lon = 127.5): number {
+export function calcMonthStemIdx(dateObj: Date, monthIndex: number, lon = 127.5): number {
   const firstIdx = resolveFirstMonthStemIdx(dateObj, lon);
   return (firstIdx + (monthIndex - 1)) % 10;
 }

@@ -75,6 +75,7 @@ export default function DaewoonList({
   activeIndex: number | null;
   onSelect: (i: number) => void;
 }) {
+  console.log("🟡 DaewoonList data:", data);
   const list = useDaewoonList(data); // [{ at: Date, gz: "갑자" }, ...]
   const dayStem = toDayStem(data) as Stem10sin;
 
@@ -95,6 +96,7 @@ export default function DaewoonList({
   } = settings;
 
   // 기준 지지 계산: 일지/연지
+  
   const birth = toCorrected(data);
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0

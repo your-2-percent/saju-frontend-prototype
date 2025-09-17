@@ -9,7 +9,7 @@ export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: 
   return (
     <>
       {/* 네비게이션 바 */}
-      <div className="fixed h-[64px] bottom-0 left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800">
+      <div className="fixed min-w-[320px] h-[64px] bottom-0 left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800">
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
           <NavItem icon={<Home size={22} />} label="오늘의 사주" onClick={onShowToday} />
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />

@@ -23,6 +23,7 @@ import {
 } from "@/shared/domain/간지/공통";
 import { toCorrected } from "@/shared/domain/meongsik";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 
 /* ────────────────────────────────────────────────────────────────────────────
  * solarlunar interop(ESM/CJS 모두 안전)
@@ -168,11 +169,26 @@ export default function Page() {
     }
   }, [correctedSolar, current]);
 
+  const [openCustom, setOpenCustom] = useState(false);
+
   return (
     <div className="min-h-screen pb-16">
       <TopNav
         onOpenSidebar={() => setShowSidebar(true)}
         onAddNew={openAdd}
+        onOpenCustom={() => setOpenCustom(true)}
+      />
+
+      <CustomSajuModal
+        open={openCustom}
+        onClose={() => setOpenCustom(false)}
+        onSave={(m) => {
+        // 1) 먼저 currentId를 세팅해서 Detail을 백그라운드에 마운트
+        setCurrentId(m.id);
+        setShowToday(false);
+        setShowCouple(false);
+        setShowSidebar(false);
+        }}
       />
 
       <Toaster position="top-center" />
