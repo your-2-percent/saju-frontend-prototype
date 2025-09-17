@@ -128,8 +128,7 @@ export default function CustomSajuModal({
   const [results, setResults] = useState<MatchRow[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({
     gender: "남자",
     mingSikType: "야자시",
@@ -163,7 +162,9 @@ export default function CustomSajuModal({
   }, [searchToast]);
 
   const handleSave = () => {
-  const chosen = results?.filter((_, i) => selectedRows.has(i)) ?? [];
+  const chosen =
+    selectedRow !== null ? results?.filter((_, i) => i === selectedRow) ?? [] : [];
+
   if (chosen.length === 0) {
     alert("선택된 항목이 없습니다.");
     return;
@@ -202,7 +203,6 @@ export default function CustomSajuModal({
     }
   }
   const dateObj = new Date(yy, mm - 1, dd, hh, mi);
-  console.log("birthTime", dateObj);
   const corrected = new Date(dateObj.getTime() - 30 * 60000);
   const correctedLocal = corrected.toLocaleTimeString("ko-KR", {
     hour: "2-digit",
@@ -282,15 +282,6 @@ export default function CustomSajuModal({
 
   onClose();
 };
-
-  const toggleRow = (idx: number) => {
-    setSelectedRows(prev => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx);
-      else next.add(idx);
-      return next;
-    });
-  };
 
   // 월두/시두 사용 시: 연주 또는 일주부터
   const needStartFromYearOrDay = useWoldu || useSiju;
@@ -842,7 +833,8 @@ export default function CustomSajuModal({
             <button
             type="button"
             onClick={() => {
-              const chosen = results?.filter((_, i) => selectedRows.has(i)) ?? [];
+              const chosen =
+                selectedRow !== null ? results?.filter((_, i) => i === selectedRow) ?? [] : [];
               if (chosen.length === 0) {
                 //alert("선택된 항목이 없습니다. 검색버튼 먼저 눌러주세요.");
                 setSearchToast(true);
@@ -883,10 +875,11 @@ export default function CustomSajuModal({
                     <td className="p-1 text-center">
                       <span className="chkContainer">
                         <input
-                          type="checkbox"
+                          type="radio"
+                          name="selectRow"
                           id={`selectRow-${idx}`}
-                          checked={selectedRows.has(idx)}
-                          onChange={() => toggleRow(idx)}
+                          checked={selectedRow === idx}
+                          onChange={() => setSelectedRow(idx)}
                         />
                         <label htmlFor={`selectRow-${idx}`}>ON</label>
                       </span>

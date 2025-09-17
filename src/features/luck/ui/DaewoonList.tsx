@@ -75,7 +75,6 @@ export default function DaewoonList({
   activeIndex: number | null;
   onSelect: (i: number) => void;
 }) {
-  console.log("🟡 DaewoonList data:", data);
   const list = useDaewoonList(data); // [{ at: Date, gz: "갑자" }, ...]
   const dayStem = toDayStem(data) as Stem10sin;
 
