@@ -127,7 +127,7 @@ export default function CustomSajuModal({
 
   const [results, setResults] = useState<MatchRow[] | null>(null);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [/*error*/, setError] = useState<string | null>(null);
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({
     gender: "남자",
@@ -846,8 +846,8 @@ export default function CustomSajuModal({
           >
             저장하기
           </button>
+          {/*error && <span className="text-sm text-red-600 dark:text-red-400"></span>*/}
           </span>
-          {error && <span className="text-sm text-red-600 dark:text-red-400"></span>}
         </div>
 
         {/* 결과 */}
