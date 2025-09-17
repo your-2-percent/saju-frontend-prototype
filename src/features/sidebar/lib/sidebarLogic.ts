@@ -48,12 +48,20 @@ export function useSidebarLogic(
 
   // Confirm 쓰로틀
   const lastConfirmAtRef = useRef(0);
-  function confirmThrottled(message: string, onOk: () => void) {
-    const now = Date.now();
-    if (now - lastConfirmAtRef.current < 450) return;
-    lastConfirmAtRef.current = now;
-    confirmToast(message, { onConfirm: onOk, duration: Number.POSITIVE_INFINITY });
-  }
+  function confirmThrottled(
+  message: string,
+  onOk: () => void,
+  onCancel?: () => void
+) {
+  const now = Date.now();
+  if (now - lastConfirmAtRef.current < 450) return;
+  lastConfirmAtRef.current = now;
+  confirmToast(message, {
+    onConfirm: onOk,
+    onCancel,  // 👈 추가
+    duration: Number.POSITIVE_INFINITY,
+  });
+}
 
   // ===== 폴더 레지스트리(등록된 폴더만): 파생 제거, 숨김 제외
   const presetsEffective = useMemo(
