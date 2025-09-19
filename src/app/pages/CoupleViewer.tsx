@@ -837,7 +837,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
             type="datetime-local"
             value={pick}
             onChange={(e) => setPick(e.target.value)}
-            className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-3 py-1 text-xs w-full text-neutral-900 dark:text-neutral-100 h-30"
+            className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-3 py-1 text-xs w-full max-w-[100%] text-neutral-900 dark:text-neutral-100 h-30"
             min="1900-01-01T00:00"
             max="2100-12-31T23:59"
           />
