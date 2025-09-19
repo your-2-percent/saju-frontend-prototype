@@ -17,6 +17,7 @@ export type Settings = {
   showSibiUnseong: boolean;             // 십이운성
   theme: "dark" | "light";
   sectionOrder?: string[];
+  difficultyMode?: boolean;
 };
 
 export const defaultSettings: Settings = {
