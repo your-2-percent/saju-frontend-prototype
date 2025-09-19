@@ -69,7 +69,9 @@ export function getCorrectedLocal(m: MyeongSik) {
   const mi = Number(m.birthTime.slice(2, 4));
   
   const raw = new Date(y, mo, d, hh, mi, 0, 0);
-  const corr = getCorrectedDate(raw, m.birthPlace?.lon ?? null);
+  //const isUnknownTime = !m.birthTime || m.birthTime === "모름";
+  const isUnknownPlace = !m.birthPlace || (typeof m.birthPlace === "object" && m.birthPlace.name === "모름");
+  const corr = getCorrectedDate(raw, m.birthPlace?.lon ?? null, isUnknownPlace);
   
   // ✅ 직접 포매팅으로 24시간제 보장 (16:30 형식)
   const hours = corr.getHours().toString().padStart(2, '0');

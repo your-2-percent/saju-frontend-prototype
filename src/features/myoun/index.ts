@@ -402,7 +402,8 @@ export function rawBirthLocal(ms: MyeongSik): Date {
 // myoun.ts
 export function parseBirthLocal(ms: MyeongSik): Date {
   const raw = rawBirthLocal(ms);
-  const corrected = getCorrectedDate(raw, ms.birthPlace?.lon ?? null);
+  const isUnknownPlace = !ms.birthPlace || (typeof ms.birthPlace === "object" && ms.birthPlace.name === "모름");
+  const corrected = getCorrectedDate(raw, ms.birthPlace?.lon ?? null, isUnknownPlace);
   return roundToMinute(corrected); // ⬅️ 반드시 분 고정으로 반환
 }
 

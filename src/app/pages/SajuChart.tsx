@@ -202,7 +202,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       ? 127.5
       : data.birthPlace.lon;
 
-    let corrected = data.corrected ?? getCorrectedDate(rawBirth, lonVal);
+    let corrected = data.corrected ?? getCorrectedDate(rawBirth, lonVal, isUnknownTime);
 
     if (useDST) {
       corrected = new Date(corrected.getTime() - 60 * 60 * 1000);

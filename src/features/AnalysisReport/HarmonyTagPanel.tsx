@@ -203,7 +203,7 @@ export default function HarmonyTagPanel({
   };
 
   return (
-    <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-3">
+    <div className="rounded-xl p-4 bg-neutral-100 dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 space-y-2">
       <div className="text-base font-bold mb-1">형충회합</div>
 
       {/* 각 Row에 pick() 적용 */}

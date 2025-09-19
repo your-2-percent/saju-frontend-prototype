@@ -20,8 +20,9 @@ export function toCorrected(ms: MyeongSik): Date {
 
   const raw = new Date(y, m, d, hh, mi, 0, 0);
   if (isNaN(raw.getTime())) throw new Error(`Invalid date: ${ms.birthDay} ${ms.birthTime}`);
-
-  return getCorrectedDate(raw, ms.birthPlace?.lon ?? 127.5);
+  //const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
+  const isUnknownPlace = !ms.birthPlace || (typeof ms.birthPlace === "object" && ms.birthPlace.name === "모름");
+  return getCorrectedDate(raw, ms.birthPlace?.lon ?? 127.5, isUnknownPlace);
 }
 
 export function toDayStem(ms: MyeongSik): Stem10sin {

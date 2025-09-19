@@ -299,6 +299,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
     const folderVal = normalizeFolderValue(form.folder);
 
     const isUnknownTime = !form.birthTime || form.birthTime === "모름";
+    const isUnknownPlace = !form.birthPlace || (typeof form.birthPlace === "object" && form.birthPlace.name === "모름");
     let y = Number(form.birthDay!.slice(0, 4));
     let mo = Number(form.birthDay!.slice(4, 6));
     let d = Number(form.birthDay!.slice(6, 8));
@@ -317,7 +318,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
       ? 127.5
       : form.birthPlace.lon;
 
-    const corr = getCorrectedDate(rawBirth, lon);
+    const corr = getCorrectedDate(rawBirth, lon, isUnknownPlace);
     const hourRule: DayBoundaryRule = (form.mingSikType ?? "야자시") as DayBoundaryRule;
 
     const correctedLocal =
