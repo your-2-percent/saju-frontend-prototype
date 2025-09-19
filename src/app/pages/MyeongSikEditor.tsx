@@ -163,80 +163,75 @@ export default function MyeongSikEditor({
       return;
     }
 
-    const isUnknownTime = !item.birthTime || item.birthTime === "모름";
-    const isUnknownPlace = !item.birthPlace;
-    let y = Number(item.birthDay!.slice(0, 4));
-    let mo = Number(item.birthDay!.slice(4, 6));
-    let d = Number(item.birthDay!.slice(6, 8));
+    // 1) 입력값(편집중 값)으로 Y/M/D 결정
+    const y0 = Number(form.birthDay!.slice(0, 4));
+    const mo0 = Number(form.birthDay!.slice(4, 6));
+    const d0 = Number(form.birthDay!.slice(6, 8));
 
-    if (item.calendarType === "lunar") {
-      const solar = lunarToSolarStrict(y, mo, d);
+    let y = y0, mo = mo0, d = d0;
+    if (form.calendarType === "lunar") {
+      const solar = lunarToSolarStrict(y0, mo0, d0); // 필요시 윤달 플래그 추가 가능
       y = solar.y; mo = solar.m; d = solar.d;
     }
 
-    const hh = isUnknownTime ? 0 : Number(item.birthTime!.slice(0, 2) || "0");
-    const mi = isUnknownTime ? 0 : Number(item.birthTime!.slice(2, 4) || "0");
+    // 2) 시간/분
+    const hh = unknownTime ? 0 : Number((form.birthTime ?? "0000").slice(0, 2));
+    const mi = unknownTime ? 0 : Number((form.birthTime ?? "0000").slice(2, 4));
 
+    // 3) 장소/경도
+    const lon =
+      unknownPlace || !form.birthPlace || form.birthPlace.lon === 0
+        ? 127.5
+        : form.birthPlace.lon;
+
+    // 4) 원시 Date 및 보정
     const rawBirth = new Date(y, mo - 1, d, hh, mi, 0, 0);
+    const isUnknownPlace = !form.birthPlace || (typeof form.birthPlace === "object" && form.birthPlace.name === "모름");
+    const corrected = getCorrectedDate(rawBirth, lon, isUnknownPlace);
 
-    const lon = isUnknownPlace || !item.birthPlace || item.birthPlace.lon === 0
-      ? 127.5
-      : item.birthPlace.lon;
+    // 5) 연간지로 대운방향 결정
+    const yGZ = getYearGanZhi(corrected, lon); // 기존 시그니처 유지
+    const yearStem = yGZ.charAt(0);
+    const calcDaewoonDir = (stem: string, gender: string): "forward" | "backward" => {
+      const yangStems = ["甲","丙","戊","庚","壬","갑","병","무","경","임"];
+      const isYang = yangStems.includes(stem);
+      const isMale = (gender ?? "남자") === "남자";
+      return isYang ? (isMale ? "forward" : "backward") : (isMale ? "backward" : "forward");
+    };
+    const dir = calcDaewoonDir(yearStem, form.gender ?? "남자");
 
-    const corrected = getCorrectedDate(rawBirth, lon);
-    const yGZ = getYearGanZhi(corrected, lon);
-
+    // 6) 저장 payload 구성(편집값 기준)
     const normalizedFolder = normalizeFolderValue(
       form.folder === UNASSIGNED_LABEL ? undefined : form.folder
     );
 
-    function calcDaewoonDir(yearStem: string, gender: string): "forward" | "backward" {
-      const yangStems = ["甲","丙","戊","庚","壬", "갑","병", "무", "경", "임"];
-      const isYang = yangStems.includes(yearStem);
-      const isMale = gender === "남자";
-      if (isYang) {
-        return isMale ? "forward" : "backward";
-      } else {
-        return isMale ? "backward" : "forward";
-      }
-    }
-
-    const yearStem = yGZ.charAt(0);
-    const dir = calcDaewoonDir(yearStem, form.gender ?? "남자");
-
     const base: MyeongSik = {
-      ...item,
-      name: form.name?.trim() || "이름없음",
-      birthDay: form.birthDay!,
-      birthTime: unknownTime ? "모름" : form.birthTime!,
+      ...item, // id 등 고정 필드 유지
+      name: (form.name ?? "").trim() || "이름없음",
+      birthDay: form.birthDay!,                    // 원본 입력(YYYYMMDD, lunar일 수도 있음)
+      birthTime: unknownTime ? "모름" : (form.birthTime ?? "0000"),
       gender: form.gender ?? "남자",
       birthPlace: unknownPlace
         ? { name: "모름", lat: 0, lon: 127.5 }
-        : form.birthPlace ?? { name: "", lat: 0, lon: 127.5 },
+        : (form.birthPlace ?? { name: "모름", lat: 0, lon: 127.5 }),
       relationship: form.relationship ?? "",
       memo: form.memo ?? "",
-      mingSikType: form.mingSikType ?? "야자시",
-      DayChangeRule: form.mingSikType === "인시" ? "인시일수론" : "자시일수론",
       folder: normalizedFolder,
       calendarType: form.calendarType ?? "solar",
-      id: item.id,
-      correctedLocal: item.correctedLocal ?? "",
-      ganji: item.ganji ?? "",
+      mingSikType: form.mingSikType ?? "야자시",
+      DayChangeRule: (form.mingSikType ?? "야자시") === "인시" ? "인시일수론" : "자시일수론",
       dir,
-      corrected: corrected,
-      dateObj: form.dateObj || new Date(),
-      dayStem: form.dayStem ||"갑",
-      ganjiText: form.ganjiText || "갑자년 갑자월 갑자일 갑자시"
+      corrected,                 // ✅ 새로 계산한 보정 Date 반영
+      // 아래 필드는 recalcGanjiSnapshot가 다시 채움
+      correctedLocal: "",
+      ganji: "",
     };
 
+    // 7) 간지 스냅샷/보정시 문자열 재계산
     const { correctedLocal, ganji } = recalcGanjiSnapshot(base);
-    const payload: Partial<MyeongSik> = {
-      ...base,
-      correctedLocal,
-      ganji,
-    };
+    const payload: Partial<MyeongSik> = { ...base, correctedLocal, ganji };
 
-    // 새 폴더면 저장
+    // 8) 사용자 폴더 신규면 저장
     if (
       payload.folder &&
       !FOLDER_PRESETS.includes(payload.folder) &&
@@ -247,10 +242,12 @@ export default function MyeongSikEditor({
       localStorage.setItem(LS_KEY, JSON.stringify(next));
     }
 
+    // 9) 저장
     update(item.id, payload);
     setIsEditing(false);
     if (onClose) onClose();
   };
+
 
   const removeThis = () => {
     if (confirm(`'${item.name}' 명식을 삭제할까요?`)) remove(item.id);

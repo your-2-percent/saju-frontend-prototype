@@ -2,7 +2,8 @@ import { findSolarTermUTC } from '@/shared/domain/solar-terms';
 import { 천간, 지지, 간지_MAP, 육십갑자_자시, 시주매핑_자시, timeRanges } from '@/shared/domain/간지/const';
 import { getYearStem } from '@/shared/domain/간지/천간';
 import type { DayBoundaryRule } from "@/shared/type";
-
+//import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
+import { format } from "date-fns";
 
 // export const toHourTable = (ming: DayBoundaryRule): DayBoundaryRule => {
 //   return ming;
@@ -50,21 +51,42 @@ export function getYearGanZhi(dateObj: Date, lon = 127.5) {
 const FIRST_MONTH_STEM_BY_YEAR_STEM = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0] as const;
 
 function getMonthBoundaries(useYear: number, lon = 127.5): Date[] {
-  const out: Date[] = new Array(12);
-  out[0]  = getIpChunCached(useYear, lon);
-  out[1]  = findSolarTermUTC(useYear,     345, lon);
-  out[2]  = findSolarTermUTC(useYear,      15, lon);
-  out[3]  = findSolarTermUTC(useYear,      45, lon);
-  out[4]  = findSolarTermUTC(useYear,      75, lon);
-  out[5]  = findSolarTermUTC(useYear,     105, lon);
-  out[6]  = findSolarTermUTC(useYear,     135, lon);
-  out[7]  = findSolarTermUTC(useYear,     165, lon);
-  out[8]  = findSolarTermUTC(useYear,     195, lon);
-  out[9]  = findSolarTermUTC(useYear,     225, lon);
-  out[10] = findSolarTermUTC(useYear,     255, lon);
-  out[11] = findSolarTermUTC(useYear + 1, 285, lon);
-  return out;
+  const raw: Date[] = new Array(12);
+  raw[0]  = getIpChunCached(useYear, lon);
+  raw[1]  = findSolarTermUTC(useYear,     345, lon);
+  raw[2]  = findSolarTermUTC(useYear,      15, lon);
+  raw[3]  = findSolarTermUTC(useYear,      45, lon);
+  raw[4]  = findSolarTermUTC(useYear,      75, lon);
+  raw[5]  = findSolarTermUTC(useYear,     105, lon);
+  raw[6]  = findSolarTermUTC(useYear,     135, lon);
+  raw[7]  = findSolarTermUTC(useYear,     165, lon);
+  raw[8]  = findSolarTermUTC(useYear,     195, lon);
+  raw[9]  = findSolarTermUTC(useYear,     225, lon);
+  raw[10] = findSolarTermUTC(useYear,     255, lon);
+  raw[11] = findSolarTermUTC(useYear + 1, 285, lon);
+
+  // ✅ UTC → 보정시 변환
+  return raw.map(d => new Date(d.getTime() + 30 * 60 * 1000));
 }
+
+function printSolarTerms(year: number, lon = 127.5) {
+  const bounds = getMonthBoundaries(year, lon);
+
+  console.log(`==== ${year}년 절기 (lon=${lon}) ====`);
+  bounds.forEach((d, i) => {
+    // 월 인덱스: 0=입춘, 1=경칩, 2=청명 … 11=대한 직전 동지
+    const names = [
+      "입춘", "경칩", "청명", "입하", "망종", "소서",
+      "입추", "백로", "한로", "입동", "대설", "소한"
+    ];
+    const name = names[i] ?? `절기${i + 1}`;
+    const s = format(d, "yyyy-MM-dd HH:mm");
+    console.log(`${name}: ${s}`);
+  });
+}
+
+// 예시 실행
+printSolarTerms(1991);
 
 export function getMonthIndex(dateObj: Date, lon = 127.5) {
   const { useYear } = resolveYearIndex(dateObj, lon);

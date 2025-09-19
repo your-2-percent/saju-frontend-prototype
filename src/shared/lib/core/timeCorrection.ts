@@ -86,17 +86,22 @@ export function getStandardMeridian(lon: number): number {
   return Math.round(lon / 15) * 15;
 }
 
-
 export function getCorrectedDate(
   raw: Date,
-  lonInput: number | null
+  lonInput: number | null,
+  isUnknownPlace = false   // ✅ 출생지 모름 여부 플래그 추가
 ): Date {
-  // 벽시계 고정
+  // 벽시계 고정 (초, ms 제거)
   const base = new Date(
     raw.getFullYear(), raw.getMonth(), raw.getDate(),
     raw.getHours(), raw.getMinutes(), 0, 0
   );
-  
+
+  // 출생지 모름 → -30분 고정
+  if (isUnknownPlace) {
+    return new Date(base.getTime() - 30 * 60 * 1000);
+  }
+
   if (lonInput == null || !isFinite(lonInput)) return base;
 
   // 경도 정규화 (라디안 → 도)

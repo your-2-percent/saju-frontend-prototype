@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 
 import {
-  computeNatalPillars,
   buildSijuSchedule,
   buildIljuFromSiju,
   buildWolju,
@@ -13,17 +12,38 @@ import {
 
 import type { DayBoundaryRule } from "@/shared/type";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
+import {
+  getYearGanZhi,
+  getMonthGanZhi,
+  getDayGanZhi,
+  getHourGanZhi,
+} from "@/shared/domain/간지/공통";
 import { toCorrected } from "@/shared/domain/meongsik";
 
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import { formatDate24 } from "@/shared/utils";
 
-import { useSettingsStore, type Settings as CardSettings } from "@/shared/lib/hooks/useSettingsStore";
+import {
+  useSettingsStore,
+  type Settings as CardSettings,
+} from "@/shared/lib/hooks/useSettingsStore";
+import CoupleHarmonyPanel from "@/app/pages/CoupleHarmonyPanel";
+import { type Pillars4 } from "@/features/AnalysisReport/logic/relations";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
+import {
+  getTwelveUnseong,
+  getTwelveShinsalBySettings,
+} from "@/shared/domain/간지/twelve";
+
+// 음력 → 양력 변환 유틸
+import {
+  parseYMD,
+  isLunarCalendar,
+  getLeapFlag,
+  lunarToSolar,
+} from "@/shared/lib/calendar/lunar";
 
 // dnd + icon
 import {
@@ -35,13 +55,64 @@ import {
 import { GripVertical } from "lucide-react";
 
 /* =============== 유틸 =============== */
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
 
 // 2글자 간지 보장
-const STEMS_ALL = ["갑","을","병","정","무","기","경","신","임","계","甲","乙","丙","丁","戊","己","庚","辛","壬","癸"] as const;
-const BR_ALL    = ["자","축","인","묘","진","사","오","미","신","유","술","해","子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"] as const;
-const STEM_SET  = new Set<string>(STEMS_ALL as readonly string[]);
-const BR_SET    = new Set<string>(BR_ALL as readonly string[]);
-function isGZ(x: unknown): x is string { return typeof x === "string" && x.length >= 2 && STEM_SET.has(x[0]) && BR_SET.has(x[1]); }
+const STEMS_ALL = [
+  "갑",
+  "을",
+  "병",
+  "정",
+  "무",
+  "기",
+  "경",
+  "신",
+  "임",
+  "계",
+  "甲",
+  "乙",
+  "丙",
+  "丁",
+  "戊",
+  "己",
+  "庚",
+  "辛",
+  "壬",
+  "癸",
+] as const;
+const BR_ALL = [
+  "자",
+  "축",
+  "인",
+  "묘",
+  "진",
+  "사",
+  "오",
+  "미",
+  "신",
+  "유",
+  "술",
+  "해",
+  "子",
+  "丑",
+  "寅",
+  "卯",
+  "辰",
+  "巳",
+  "午",
+  "未",
+  "申",
+  "酉",
+  "戌",
+  "亥",
+] as const;
+const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
+const BR_SET = new Set<string>(BR_ALL as readonly string[]);
+function isGZ(x: unknown): x is string {
+  return typeof x === "string" && x.length >= 2 && STEM_SET.has(x[0]) && BR_SET.has(x[1]);
+}
 function ensureGZ(maybe: unknown, ...fallbacks: unknown[]): string {
   if (isGZ(maybe)) return maybe;
   for (const f of fallbacks) if (isGZ(f)) return f as string;
@@ -51,13 +122,18 @@ function ensureGZ(maybe: unknown, ...fallbacks: unknown[]): string {
 function lastAtOrNull<T extends { at: Date }>(arr: T[], t: Date): T | null {
   let ans: T | null = null;
   const x = t.getTime();
-  for (const e of arr) { if (e.at.getTime() <= x) ans = e; else break; }
+  for (const e of arr) {
+    if (e.at.getTime() <= x) ans = e;
+    else break;
+  }
   return ans;
 }
 
 function toLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 function fromLocalInput(s?: string): Date | null {
   if (!s) return null;
@@ -76,19 +152,21 @@ function nameOf(ms: MyeongSik): string {
   return "이름 없음";
 }
 function keyOf(ms: MyeongSik): string {
-  const birth = parseBirthLocal(ms);
+  const birth = parseBirthFixed(ms);
   return `${nameOf(ms)}-${birth.toISOString()}`;
 }
 function idOf(ms: MyeongSik): string {
   const r = ms as unknown as Record<string, unknown>;
-  return (typeof r.id === "string" && r.id) ? r.id : keyOf(ms);
+  return typeof r.id === "string" && r.id ? r.id : keyOf(ms);
 }
 
-/* ===== EraType 안전 매핑 ===== */
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-type EraRuntime = { Classic?: Twelve.EraType; Modern?: Twelve.EraType; classic?: Twelve.EraType; modern?: Twelve.EraType };
+// EraType 안전 매핑
+type EraRuntime = {
+  Classic?: Twelve.EraType;
+  Modern?: Twelve.EraType;
+  classic?: Twelve.EraType;
+  modern?: Twelve.EraType;
+};
 function isEraRuntime(v: unknown): v is EraRuntime {
   return isRecord(v) && ("Classic" in v || "Modern" in v || "classic" in v || "modern" in v);
 }
@@ -100,6 +178,22 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
       : (exported.Modern ?? exported.modern)!;
   }
   return mode as unknown as Twelve.EraType;
+}
+
+/* ===== 음력 → 양력: 고정 파서 ===== */
+function parseBirthFixed(ms: MyeongSik): Date {
+  // 시간/분은 기존 로직 유지
+  const raw = parseBirthLocal(ms);
+
+  if (!isLunarCalendar(ms)) return raw;
+
+  // 가능한 키에서 날짜 추출 (여기서는 birthDay 사용)
+  const ymd = parseYMD((ms as unknown as { birthDay?: unknown }).birthDay);
+  if (!ymd) return raw;
+
+  const leap = getLeapFlag(ms);
+  const solar = lunarToSolar(ymd.y, ymd.m, ymd.d, leap);
+  return new Date(solar.y, solar.m - 1, solar.d, raw.getHours(), raw.getMinutes());
 }
 
 /* =============== 명식 선택 모달 (드래그 정렬 + 로컬스토리지 저장) =============== */
@@ -124,7 +218,9 @@ function PeoplePickerModal({
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
-  useEffect(() => { if (!open) setQ(""); }, [open]);
+  useEffect(() => {
+    if (!open) setQ("");
+  }, [open]);
 
   // 현재 들어온 명식들의 ID
   const incomingIds = useMemo(() => list.map(idOf), [list]);
@@ -163,7 +259,9 @@ function PeoplePickerModal({
       if (it) result.push(it);
     }
     // 혹시 모를 누락 보강
-    map.forEach((ms, id) => { if (!orderIds.includes(id)) result.push(ms); });
+    map.forEach((ms, id) => {
+      if (!orderIds.includes(id)) result.push(ms);
+    });
     return result;
   }, [list, orderIds]);
 
@@ -183,22 +281,21 @@ function PeoplePickerModal({
 
     // allowDrag = true ⇒ filtered === ordered ⇒ visibleIds === orderIds
     const visibleIds = ordered.map(idOf);
-    const nextVisible = arrayMove(visibleIds, source.index, destination.index);
-
-    // visibleIds가 곧 저장 순서이므로 그대로 저장
-    persist(nextVisible);
+    return persist(arrayMove(visibleIds, source.index, destination.index));
   };
 
   return (
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/60 transition-opacity duration-200 z-[1000] ${open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-black/60 transition-opacity duration-200 z-[1000] ${
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
         onClick={onClose}
       />
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[640px] max-height-[90dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
+        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[640px] max-h-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -206,7 +303,10 @@ function PeoplePickerModal({
           <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-200">
             명식 선택
           </h3>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white text-sm cursor-pointer">
+          <button
+            onClick={onClose}
+            className="text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white text-sm cursor-pointer"
+          >
             닫기
           </button>
         </div>
@@ -228,7 +328,11 @@ function PeoplePickerModal({
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="people:list" type="ITEM">
             {(prov) => (
-              <div ref={prov.innerRef} {...prov.droppableProps} className="max-h-[60vh] overflow-y-auto grid grid-cols-1 gap-2">
+              <div
+                ref={prov.innerRef}
+                {...prov.droppableProps}
+                className="max-h[60vh] overflow-y-auto grid grid-cols-1 gap-2"
+              >
                 {filtered.map((m, i) => {
                   const id = idOf(m);
                   return (
@@ -243,13 +347,25 @@ function PeoplePickerModal({
                           }`}
                         >
                           <div className="flex items-center gap-2">
-                            <GripVertical className={`shrink-0 ${allowDrag ? "opacity-60" : "opacity-30"} text-neutral-500 dark:text-neutral-400`} size={16} />
+                            <GripVertical
+                              className={`shrink-0 ${
+                                allowDrag ? "opacity-60" : "opacity-30"
+                              } text-neutral-500 dark:text-neutral-400`}
+                              size={16}
+                            />
                             <div className="flex-1 min-w-0">
-                              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">{nameOf(m)}</div>
-                              <div className="text-neutral-500 dark:text-neutral-400 text-xs">{formatDate24(parseBirthLocal(m))}</div>
+                              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
+                                {nameOf(m)}
+                              </div>
+                              <div className="text-neutral-500 dark:text-neutral-400 text-xs">
+                                {formatDate24(parseBirthFixed(m))}
+                              </div>
                             </div>
                             <button
-                              onClick={() => { onSelect(m); onClose(); }} // ✅ 선택 후 자동 닫힘
+                              onClick={() => {
+                                onSelect(m);
+                                onClose();
+                              }}
                               className="ml-2 px-3 py-1 rounded text-xs bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 cursor-pointer"
                             >
                               명식 선택하기
@@ -262,7 +378,9 @@ function PeoplePickerModal({
                 })}
                 {prov.placeholder}
                 {filtered.length === 0 && (
-                  <div className="text-center text-neutral-500 dark:text-neutral-400 text-sm py-6">검색 결과가 없어요</div>
+                  <div className="text-center text-neutral-500 dark:text-neutral-400 text-sm py-6">
+                    검색 결과가 없어요
+                  </div>
                 )}
               </div>
             )}
@@ -299,9 +417,7 @@ function FourPillarsRow({
   sinsalBloom: boolean;
 }) {
   const calcTexts = (branch: Branch10sin) => {
-    const unseong = cardSettings.showSibiUnseong
-      ? getTwelveUnseong(dayStem, branch)
-      : "";
+    const unseong = cardSettings.showSibiUnseong ? getTwelveUnseong(dayStem, branch) : "";
     const shinsal = cardSettings.showSibiSinsal
       ? getTwelveShinsalBySettings({
           baseBranch: sinsalBaseBranch,
@@ -352,21 +468,14 @@ function FourPillarsRow({
 }
 
 /* =============== 사람 한 칸(원국/묘운/실시간) =============== */
-function tryParseBirthLocal(ms?: MyeongSik | null): Date | null {
-  try {
-    return ms ? parseBirthLocal(ms) : null;
-  } catch {
-    return null;
-  }
-}
-
 function genderOf(ms?: MyeongSik | null): "남" | "여" | "" {
   if (!ms) return "";
   const r = ms as unknown as Record<string, unknown>;
 
   const str = (key: string) =>
     typeof r[key] === "string" ? String(r[key]).trim().toLowerCase() : null;
-  const bool = (key: string) => (typeof r[key] === "boolean" ? (r[key] as boolean) : null);
+  const bool = (key: string) =>
+    typeof r[key] === "boolean" ? (r[key] as boolean) : null;
 
   const candidates = [
     str("gender"),
@@ -393,7 +502,7 @@ function genderOf(ms?: MyeongSik | null): "남" | "여" | "" {
 function PersonSlot({
   label,
   data,
-  mode,                  // "원국" | "묘운" | "실시간"
+  mode, // "원국" | "묘운" | "실시간"
   effectiveDate,
   onPick,
 }: {
@@ -405,21 +514,14 @@ function PersonSlot({
 }) {
   const cardSettings = useSettingsStore((s) => s.settings);
 
-  const birthLocal = useMemo(() => tryParseBirthLocal(data), [data]);
+  // ✅ 변환된 생일 고정
+  const birthFixed = useMemo(() => (data ? parseBirthFixed(data) : null), [data]);
 
-  const natal = useMemo(() => {
-    if (!data) return null;
-    try {
-      return computeNatalPillars(data, data?.mingSikType);
-    } catch {
-      return null;
-    }
-  }, [data]);
-
-  const natalHour  = ensureGZ(natal?.hour);
-  const natalDay   = ensureGZ(natal?.day);
-  const natalMonth = ensureGZ(natal?.month);
-  const natalYear  = ensureGZ(natal?.year);
+  // ✅ 원국 4주도 변환된 날짜로 직접 계산
+  const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "야자시") : undefined);
+  const natalDay = ensureGZ(birthFixed ? getDayGanZhi(birthFixed, "야자시") : undefined);
+  const natalMonth = ensureGZ(birthFixed ? getMonthGanZhi(birthFixed) : undefined);
+  const natalYear = ensureGZ(birthFixed ? getYearGanZhi(birthFixed) : undefined);
 
   const dayStem = useMemo<Stem10sin>(() => {
     const ch = natalDay.charAt(0) || "갑";
@@ -436,27 +538,45 @@ function PersonSlot({
   }, [data]);
 
   const lon = useMemo(() => {
-    if (!data?.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0) return 127.5;
+    if (!data?.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0)
+      return 127.5;
     return data.birthPlace.lon;
   }, [data]);
 
-  const ruleForBase: DayBoundaryRule = (data?.mingSikType as DayBoundaryRule) ?? "야자시";
+  const ruleForBase: DayBoundaryRule =
+    ((data?.mingSikType as DayBoundaryRule) ?? "야자시");
 
   const sinsalBaseBranch = useMemo<Branch10sin>(() => {
-    const byDay  = birthCorrected ? getDayGanZhi(birthCorrected, ruleForBase).charAt(1)  : (natalDay.charAt(1)  || "子");
-    const byYear = birthCorrected ? getYearGanZhi(birthCorrected, lon).charAt(1)         : (natalYear.charAt(1) || "子");
+    const byDay = birthCorrected
+      ? getDayGanZhi(birthCorrected, ruleForBase).charAt(1)
+      : natalDay.charAt(1) || "子";
+    const byYear = birthCorrected
+      ? getYearGanZhi(birthCorrected, lon).charAt(1)
+      : natalYear.charAt(1) || "子";
     const pick = cardSettings.sinsalBase === "일지" ? byDay : byYear;
     return pick as Branch10sin;
   }, [cardSettings.sinsalBase, birthCorrected, ruleForBase, lon, natalDay, natalYear]);
 
   const current = useMemo(() => {
-    if (mode !== "묘운" || !birthLocal) return null;
+    if (mode !== "묘운" || !birthFixed) return null;
     if (!data) return null;
     try {
-      const siju  = buildSijuSchedule(birthLocal, natalHour, data.dir, 120, data.mingSikType);
-      const ilju  = buildIljuFromSiju(siju, natalDay, data.dir, data.DayChangeRule);
-      const wolju = buildWolju(birthLocal, natalMonth, data.dir, 120, data?.birthPlace?.lon ?? 127.5);
-      const yeonju = buildYeonjuFromWolju(wolju, natalYear, data.dir, data.DayChangeRule, birthLocal);
+      const siju = buildSijuSchedule(birthFixed, natalHour, data.dir, 120, data.mingSikType);
+      const ilju = buildIljuFromSiju(siju, natalDay, data.dir, data.DayChangeRule);
+      const wolju = buildWolju(
+        birthFixed,
+        natalMonth,
+        data.dir,
+        120,
+        data?.birthPlace?.lon ?? 127.5
+      );
+      const yeonju = buildYeonjuFromWolju(
+        wolju,
+        natalYear,
+        data.dir,
+        data.DayChangeRule,
+        birthFixed
+      );
 
       const t = effectiveDate;
       return {
@@ -468,7 +588,16 @@ function PersonSlot({
     } catch {
       return null;
     }
-  }, [mode, birthLocal, natalHour, natalDay, natalMonth, natalYear, effectiveDate, data]);
+  }, [
+    mode,
+    birthFixed,
+    natalHour,
+    natalDay,
+    natalMonth,
+    natalYear,
+    effectiveDate,
+    data,
+  ]);
 
   const live = useMemo(() => {
     if (mode !== "실시간") return null;
@@ -481,8 +610,8 @@ function PersonSlot({
     };
   }, [mode, effectiveDate]);
 
-  const titleName  = data ? nameOf(data) : "";
-  const titleBirth = birthLocal ? formatDate24(birthLocal) : "";
+  const titleName = data ? nameOf(data) : "";
+  const titleBirth = birthFixed ? formatDate24(birthFixed) : "";
   const titleGender = data ? genderOf(data) : "";
 
   if (!data) {
@@ -501,20 +630,24 @@ function PersonSlot({
   return (
     <div className="space-y-2">
       {/* 상단: 이름/성별/출생일 + 선택 버튼 */}
-      <div className="flex items-start justify-between">
-        <div className="text-[11px] text-neutral-600 dark:text-neutral-300 max-w-[calc(100%_-_100px)]">
-          <span className="font-semibold text-neutral-900 dark:text-neutral-200">{label}</span>
-          <span className="ml-2 text-neutral-900 dark:text-neutral-50">{titleName}</span>
-          {titleGender && <span className="ml-1 text-neutral-500 dark:text-neutral-400">· {titleGender}</span>}
-          {titleBirth && <span className="block desk:inline-block mt-1 text-neutral-500 dark:text-neutral-400 text-[10px]">{titleBirth}</span>}
-        </div>
-        <button
-          onClick={onPick}
-          className="px-3 py-1 rounded text-xs bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border border-neutral-900 dark:border-white hover:opacity-90 cursor-pointer"
-          title="명식 바꾸기"
-        >
-          명식 선택
-        </button>
+      <button
+        onClick={onPick}
+        className="px-3 py-1 rounded text-xs bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 border border-neutral-900 dark:border-white hover:opacity-90 cursor-pointer"
+        title="명식 바꾸기"
+      >
+        명식 선택
+      </button>
+      <div className="text-[11px] text-neutral-600 dark:text-neutral-300">
+        <span className="font-semibold text-neutral-900 dark:text-neutral-200">{label}</span>
+        <span className="ml-2 text-neutral-900 dark:text-neutral-50">{titleName}</span>
+        {titleGender && (
+          <span className="ml-1 text-neutral-500 dark:text-neutral-400">· {titleGender}</span>
+        )}
+        {titleBirth && (
+          <span className="block desk:inline-block mt-1 text-neutral-500 dark:text-neutral-400 text-[10px]">
+            {titleBirth}
+          </span>
+        )}
       </div>
 
       {mode === "원국" && (
@@ -566,11 +699,7 @@ function PersonSlot({
 }
 
 /* =============== 메인 =============== */
-export default function CoupleViewer({
-  people = [],
-}: {
-  people?: MyeongSik[];
-}) {
+export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) {
   const [dataA, setDataA] = useState<MyeongSik | undefined>();
   const [dataB, setDataB] = useState<MyeongSik | undefined>();
 
@@ -586,16 +715,35 @@ export default function CoupleViewer({
     if (d) lastValidRef.current = d;
     return lastValidRef.current;
   }, [pick]);
+
   // 모달
   const [openPickA, setOpenPickA] = useState(false);
   const [openPickB, setOpenPickB] = useState(false);
+
+  function getNatalPillars(ms: MyeongSik | undefined): Pillars4 {
+    if (!ms) return ["甲子", "甲子", "甲子", "甲子"];
+    try {
+      const birth = parseBirthFixed(ms); // ← 반드시 변환된 날짜 사용
+      const natal = {
+        hour: ensureGZ(getHourGanZhi(birth, "야자시")),
+        day: ensureGZ(getDayGanZhi(birth, "야자시")),
+        month: ensureGZ(getMonthGanZhi(birth)),
+        year: ensureGZ(getYearGanZhi(birth)),
+      };
+      return [natal.year, natal.month, natal.day, natal.hour];
+    } catch {
+      return ["甲子", "甲子", "甲子", "甲子"];
+    }
+  }
 
   return (
     <>
       <div className="w-[96%] max-w-[640px] mx-auto bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 rounded-xl shadow border border-neutral-200 dark:border-neutral-800 px-2 py-4 desk:p-4">
         {/* header */}
         <header className="flex flex-wrap gap-3 justify-between items-center mb-4">
-          <div className="font-semibold text-sm text-neutral-900 dark:text-neutral-200">궁합 보기</div>
+          <div className="font-semibold text-sm text-neutral-900 dark:text-neutral-200">
+            궁합 보기
+          </div>
           <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
             <label className="flex items-center gap-1 cursor-pointer">
               <input
@@ -632,7 +780,7 @@ export default function CoupleViewer({
             onPick={() => setOpenPickB(true)}
           />
 
-          {showMyoUn && dataA && (
+        {showMyoUn && dataA && (
             <PersonSlot
               label="묘운 A"
               data={dataA}
@@ -671,9 +819,20 @@ export default function CoupleViewer({
           )}
         </div>
 
+        {dataA && dataB && (
+          <div className="mt-4">
+            <CoupleHarmonyPanel
+              pillarsA={getNatalPillars(dataA)}
+              pillarsB={getNatalPillars(dataB)}
+            />
+          </div>
+        )}
+
         {/* picker area */}
         <div className="mt-4">
-          <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2">날짜/시간 선택</label>
+          <label className="block text-xs text-neutral-600 dark:text-neutral-400 mb-2">
+            날짜/시간 선택
+          </label>
           <input
             type="datetime-local"
             value={pick}

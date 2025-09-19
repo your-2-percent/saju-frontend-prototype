@@ -320,7 +320,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
 
     if (uniq === 3) {
       const idxs = findFirstIdxPerType(members);
-      if (idxs.length === 3) pushUnique(out.jijiSamhap, `#${posMask(idxs)}_${name}_삼합`);
+      if (idxs.length === 3) pushUnique(out.jijiSamhap, `#${posMask(idxs)}_${name}삼합`);
     } else if (uniq === 2) {
       if (!present.includes(wang)) return; // 왕지 필수
       const [t1, t2] = present as [KoBranch, KoBranch];
@@ -331,7 +331,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
 
       for (const [i,j] of pairs) {
         const weak = isYearHourPair(i,j);
-        const tag = `#${posMask([i,j])}_${t1}${t2}_반합${duplicate ? "" : (weak ? `_${WEAK_SUFFIX}` : "")}`;
+        const tag = `#${posMask([i,j])}_${t1}${t2}반합${duplicate ? "" : (weak ? `_${WEAK_SUFFIX}` : "")}`;
         // ✅ 반합도 jijiSamhap으로
         pushUnique(out.jijiSamhap, tag);
       }
@@ -343,7 +343,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
     const present = new Set(members.filter(b => brs.includes(b)));
     if (present.size !== 3) return;
     const idxs = findFirstIdxPerType(members);
-    if (idxs.length === 3) pushUnique(out.jijiBanghap, `#${posMask(idxs)}_${name}_방합`);
+    if (idxs.length === 3) pushUnique(out.jijiBanghap, `#${posMask(idxs)}${name}_방합`);
   });
 
   // ── 지지: 육합/충/파/해/원진/귀문 ──
@@ -371,7 +371,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
   [["인","사","신"],["축","술","미"]].forEach(group => {
     const hits = group.flatMap(g => brs.flatMap((b,i) => b===g ? [i] : []));
     const uniqHits = Array.from(new Set(hits)).sort((a,b) => a - b);
-    if (uniqHits.length === 3) pushUnique(out.jijiHyeong, `#${posMask(uniqHits)}_${group.join("")}_삼형`);
+    if (uniqHits.length === 3) pushUnique(out.jijiHyeong, `#${posMask(uniqHits)}_${group.join("")}삼형`);
   });
   BR_SANGHYEONG_LABELS.forEach(({pair:[a,b],label}) => addBranchPairsAllByLabel(a,b,label,out.jijiHyeong));
   BR_ZAMYO_HYEONG_LABELS.forEach(({pair:[a,b],label}) => addBranchPairsAllByLabel(a,b,label,out.jijiHyeong));
@@ -401,7 +401,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
     for (let i=0;i<4;i++) {
       const gz = pillars[i] ?? ""; if (gz.length<2) continue;
       const pair = `${gz[0]}${gz[1]}`;
-      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${posToJuLabel(POS_LABELS[i]!)}_${pair}_암합`);
+      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${posToJuLabel(POS_LABELS[i]!)}_${pair}암합`);
     }
   }
 
@@ -463,7 +463,7 @@ export function buildAllRelationTags(input: {
     for (let i=0;i<4;i++) {
       const gz = natalKo[i] ?? ""; if (gz.length<2) continue;
       const pair = `${gz[0]}${gz[1]}`;
-      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${posToJuLabel(POS_LABELS[i]!)}_${pair}_암합`);
+      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${posToJuLabel(POS_LABELS[i]!)}_${pair}암합`);
     }
   }
 
@@ -484,7 +484,7 @@ export function buildAllRelationTags(input: {
     // 운 자체 간지암합(같은 기둥)
     {
       const pair = `${ls}${lb}`;
-      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${kind}_${pair}_암합`);
+      if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${kind}_${pair}암합`);
     }
 
     // 포지션별 1:1 상호작용
@@ -560,7 +560,7 @@ export function buildAllRelationTags(input: {
         const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>(
           ["시","일","월","연"].indexOf(a) - ["시","일","월","연"].indexOf(b)
         )) as [PosLabel,PosLabel];
-        pushUnique(out.jijiBanghap, `#${kind}X${p1}X${p2}_방합(${g.name})`);
+        pushUnique(out.jijiBanghap, `#${kind}X${p1}X${p2}방합(${g.name})`);
       }
     }
     for (const g of TRIAD_SHAPE_GROUPS) {
@@ -573,7 +573,7 @@ export function buildAllRelationTags(input: {
         const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>(
           ["시","일","월","연"].indexOf(a) - ["시","일","월","연"].indexOf(b)
         )) as [PosLabel,PosLabel];
-        pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}_삼형(${g.name})`);
+        pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}삼형(${g.name})`);
       }
     }
   }
@@ -745,6 +745,20 @@ export function mergeRelationTags(...entries: RelationTags[]): RelationTags {
   return finalizeBuckets(base, /* fillNone */);
 }
 
+export type HarmonyResult = {
+  cheonganHap: string[];
+  cheonganChung: string[];
+  jijiSamhap: string[];
+  jijiBanghap: string[];
+  jijiYukhap: string[];
+  amhap: string[];
+  ganjiAmhap: string[];
+  jijiChung: string[];
+  jijiHyeong: string[];
+  jijiPa: string[];
+  jijiHae: string[];
+};
+
 /* ───────── (참고) 오행 생/극 ───────── */
 export const SHENG_NEXT: Record<Element, Element> = { 목:"화", 화:"토", 토:"금", 금:"수", 수:"목" };
 export const SHENG_PREV: Record<Element, Element> = { 화:"목", 토:"화", 금:"토", 수:"금", 목:"수" };
@@ -752,3 +766,199 @@ export const KE:         Record<Element, Element> = { 목:"토", 화:"금", 토:
 export const KE_INV:     Record<Element, Element> = { 목:"금", 화:"수", 토:"목", 금:"화", 수:"토" };
 export type StrengthLevel = "왕" | "상" | "휴" | "수" | "사";
 export const LV_ADJ: Record<StrengthLevel, number> = { 왕:+0.15, 상:+0.10, 휴:-0.15, 수:-0.20, 사:-0.25 };
+
+/* ============================================================
+ * ⑤ 커플 전용: 두 명식 교차 형충회합 (A↔B로만 성립하는 것만)
+ * ============================================================ */
+export type CoupleHarmony = {
+  천간합: string[];
+  천간충: string[];
+  지지삼합: string[];
+  지지반합: string[];
+  지지방합: string[];
+  지지육합: string[];
+  암합: string[];       // 지지+지지 암합
+  간지암합: string[];  // 천간+지지 암합
+  지지충: string[];
+  지지형: string[];
+  지지파: string[];
+  지지해: string[];
+  지지원진: string[];
+  지지귀문: string[];
+};
+
+function makeMapsForPerson(pillars: Pillars4) {
+  // 원국 정규화 후 자리 매핑
+  const names = ["연","월","일","시"] as const;
+  const ko = pillars.map(normalizeGZ);
+  const stemsByPos = ko.map(gz => gzStem(gz));
+  const brsByPos   = ko.map(gz => gzBranch(gz));
+
+  const stemPos = new Map<string, number[]>(); // 천간 글자 -> [포지션 idx...]
+  const brPos   = new Map<string, number[]>(); // 지지 글자 -> [포지션 idx...]
+
+  for (let i=0;i<4;i++) {
+    const st = stemsByPos[i]; const br = brsByPos[i];
+    if (st.includes(st)) stemPos.set(st, [...(stemPos.get(st) ?? []), i]);
+    if (br.includes(br)) brPos.set(br,   [...(brPos.get(br)   ?? []), i]);
+  }
+
+  return { stemsByPos, brsByPos, stemPos, brPos, names };
+}
+
+function posLabel(i: number) {
+  return POS_LABELS[i]!;
+}
+
+function pushUniqueSorted(bucket: string[], label: string) {
+  if (!label) return;
+  if (!bucket.includes(label)) bucket.push(label);
+}
+
+export function buildCoupleHarmonyTags_AB(
+  pillarsA: Pillars4,
+  pillarsB: Pillars4
+): CoupleHarmony {
+  const A = makeMapsForPerson(pillarsA);
+  const B = makeMapsForPerson(pillarsB);
+
+  const out: CoupleHarmony = {
+    천간합: [], 천간충: [],
+    지지삼합: [], 지지방합:[], 지지반합: [], 지지육합: [],
+    암합: [], 간지암합: [],
+    지지충: [], 지지형: [], 지지파: [], 지지해: [],
+    지지원진: [], 지지귀문: [],
+  };
+
+  /* ---------- 2자 관계: A(연·월·일·시) × B(연·월·일·시) ---------- */
+  for (let i=0;i<4;i++) {
+    const As = A.stemsByPos[i], Ab = A.brsByPos[i];
+    for (let j=0;j<4;j++) {
+      const Bs = B.stemsByPos[j], Bb = B.brsByPos[j];
+
+      // --- branchesA/B ---
+      // A, B 원국에서 지지 배열 뽑기
+      const brsA = pillarsA.map(normalizeGZ).map(gzBranch).filter(Boolean);
+      const brsB = pillarsB.map(normalizeGZ).map(gzBranch).filter(Boolean);
+
+      // 삼합 (3지 완성 시)
+      for (const g of SANHE_GROUPS) {
+        const total = new Set([...brsA, ...brsB]);
+        if (g.members.every(m => total.has(m))) {
+          // 최소 1개씩 들어가야 커플 성립
+          if (g.members.some(m => brsA.includes(m)) && g.members.some(m => brsB.includes(m))) {
+            pushUniqueSorted(out.지지삼합, `${g.name}삼합`);
+          }
+        }
+        // 반합 (왕지 포함 2지)도 커플 교차로만
+        const both = g.members.filter(m => brsA.includes(m) || brsB.includes(m));
+        if (both.length === 2 && both.includes(g.wang)) {
+          if (both.some(m => brsA.includes(m)) && both.some(m => brsB.includes(m))) {
+            pushUniqueSorted(out.지지반합, `${both.join("")}반합`);
+          }
+        }
+      }
+
+      // 방합 (3지 완성 시)
+      for (const g of BANGHAP_GROUPS) {
+        const total = new Set([...brsA, ...brsB]);
+        if (g.members.every(m => total.has(m))) {
+          if (g.members.some(m => brsA.includes(m)) && g.members.some(m => brsB.includes(m))) {
+            pushUniqueSorted(out.지지방합, `${g.name}방합`);
+          }
+        }
+      }
+
+      // 천간 합/충
+      const cgH = labelForPair(STEM_HAP_LABELS, As, Bs);
+      if (cgH) pushUniqueSorted(out.천간합, `${posLabel(i)}X${posLabel(j)} ${cgH}`);
+      const cgC = labelForPair(STEM_CHUNG_LABELS, As, Bs);
+      if (cgC) pushUniqueSorted(out.천간충, `${posLabel(i)}X${posLabel(j)} 충`);
+
+      // 지지 육합/충/파/해/원진/귀문
+      const yk = labelForPair(BR_YUKHAP_LABELS, Ab, Bb);
+      if (yk) pushUniqueSorted(out.지지육합, `${posLabel(i)}X${posLabel(j)} ${yk}`);
+
+      const ch = labelForPair(BR_CHUNG_LABELS, Ab, Bb);
+      if (ch) pushUniqueSorted(out.지지충, `${posLabel(i)}X${posLabel(j)} 충`);
+
+      const pa = labelForPair(BR_PA_LABELS, Ab, Bb);
+      if (pa) pushUniqueSorted(out.지지파, `${posLabel(i)}X${posLabel(j)} 파`);
+
+      const ha = labelForPair(BR_HAE_LABELS, Ab, Bb);
+      if (ha) pushUniqueSorted(out.지지해, `${posLabel(i)}X${posLabel(j)} ${ha}`);
+
+      const wj = labelForPair(BR_WONJIN_LABELS, Ab, Bb);
+      if (wj) pushUniqueSorted(out.지지원진, `${posLabel(i)}X${posLabel(j)} ${wj}`);
+
+      const gm = labelForPair(BR_GWIMUN_LABELS, Ab, Bb);
+      if (gm) pushUniqueSorted(out.지지귀문, `${posLabel(i)}X${posLabel(j)} ${gm}`);
+
+      // 지지 암합 (지지+지지)
+      const AMHAP_BR_LABELS: Array<{ pair:[string,string]; label:string }> = [
+        { pair:["자","술"], label:"자술암합" },
+        { pair:["축","인"], label:"축인암합" },
+        { pair:["묘","신"], label:"묘신암합" },
+        { pair:["인","미"], label:"인미암합" },
+        { pair:["오","해"], label:"오해암합" },
+      ];
+      const brAm = labelForPair(AMHAP_BR_LABELS, Ab, Bb);
+      if (brAm) pushUniqueSorted(out.암합, `${posLabel(i)}X${posLabel(j)} ${brAm}`);
+
+      // 간지암합 (천간+지지) — A의 천간×B의 지지, B의 천간×A의 지지
+      const cg1 = `${As}${Bb}`; // A간 + B지
+      const cg2 = `${Bs}${Ab}`; // B간 + A지
+      if (GANJI_AMHAP_SET.has(cg1)) pushUniqueSorted(out.간지암합, `${posLabel(i)}X${posLabel(j)} ${cg1}암합`);
+      if (GANJI_AMHAP_SET.has(cg2)) pushUniqueSorted(out.간지암합, `${posLabel(j)}X${posLabel(i)} ${cg2}암합`);
+
+      // 형 (상형/자묘형/자형 포함)
+      const sang = labelForPair(BR_SANGHYEONG_LABELS, Ab, Bb);
+      if (sang) pushUniqueSorted(out.지지형, `${posLabel(i)}X${posLabel(j)} ${sang}`);
+      else {
+        const zamyo = labelForPair(BR_ZAMYO_HYEONG_LABELS, Ab, Bb);
+        if (zamyo) pushUniqueSorted(out.지지형, `${posLabel(i)}X${posLabel(j)} ${zamyo}`);
+      }
+    }
+  }
+
+  /* ---------- 3자 관계: 삼합/방합 (A/B 최소 1개씩) ---------- */
+  const branchesA = new Set(A.brsByPos.filter(Boolean));
+  const branchesB = new Set(B.brsByPos.filter(Boolean));
+
+  // 삼합
+  for (const g of SANHE_GROUPS) {
+    const countA = g.members.filter(m => branchesA.has(m)).length;
+    const countB = g.members.filter(m => branchesB.has(m)).length;
+    if (countA + countB === 3 && countA >= 1 && countB >= 1) {
+      pushUniqueSorted(out.지지삼합, `${g.name}삼합`);
+    }
+    // 반합(왕지 포함 2자) — A/B가 1개씩일 때만
+    if (countA === 1 && countB === 1) {
+      const both = g.members.filter(m => branchesA.has(m) || branchesB.has(m));
+      if (both.includes(g.wang)) {
+        const [b1, b2] = both as [KoBranch, KoBranch];
+        // 어느 포지션인지 찾아 자리 라벨 부여
+        const posA = (A.brPos.get(b1)?.[0] ?? A.brPos.get(b2)?.[0]);
+        const posB = (B.brPos.get(b1)?.[0] ?? B.brPos.get(b2)?.[0]);
+        if (posA != null && posB != null) {
+          const combo = `${b1}${b2}`; // 출력은 조합+반합
+          pushUniqueSorted(out.지지삼합, `${posLabel(posA)}X${posLabel(posB)} ${combo}반합`);
+        }
+      }
+    }
+  }
+
+  // 방합
+  for (const g of BANGHAP_GROUPS) {
+    const countA = g.members.filter(m => branchesA.has(m)).length;
+    const countB = g.members.filter(m => branchesB.has(m)).length;
+    if (countA + countB === 3 && countA >= 1 && countB >= 1) {
+      pushUniqueSorted(out.지지방합, `${g.name}방합`);
+    }
+  }
+
+  // 보기 좋게 정렬
+  (Object.keys(out) as (keyof CoupleHarmony)[]).forEach(k => out[k]!.sort());
+
+  return out;
+}

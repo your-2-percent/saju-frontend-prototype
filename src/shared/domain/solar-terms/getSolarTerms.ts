@@ -203,15 +203,34 @@ export function findSolarTermUTC(year: number, targetDeg: number, lon?: number):
     jd += d / dLdt;
   }
 
+  // const utc = jdUTCToDate(jd);
+  // if (Number.isFinite(lon)){
+  //   const deltaHoursFromKST = (lon!/15) - 9;
+  //   if (Math.abs(deltaHoursFromKST) > 1e-12)
+  //     return new Date(utc.getTime() + deltaHoursFromKST*3600_000);
+  // }
+  
   const utc = jdUTCToDate(jd);
-  if (Number.isFinite(lon)){
-    const deltaHoursFromKST = (lon!/15) - 9;
-    if (Math.abs(deltaHoursFromKST) > 1e-12)
-      return new Date(utc.getTime() + deltaHoursFromKST*3600_000);
-  }
-  return utc;
-}
 
+  // ⚡ 분 단위로 내림 처리
+  const floored = new Date(
+    utc.getFullYear(),
+    utc.getMonth(),
+    utc.getDate(),
+    utc.getHours(),
+    utc.getMinutes(),
+    0,
+    0
+  );
+
+  if (Number.isFinite(lon)) {
+    const deltaHoursFromKST = (lon! / 15) - 9;
+    if (Math.abs(deltaHoursFromKST) > 1e-12) {
+      return new Date(floored.getTime() + deltaHoursFromKST * 3600_000);
+    }
+  }
+  return floored;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VSOP87D Earth — 상위항 발췌(정밀 절기용). 필요시 전체표로 교체 가능.

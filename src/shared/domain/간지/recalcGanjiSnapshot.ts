@@ -65,7 +65,9 @@ export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLo
 
   // 보정
   const raw = new Date(y, mo - 1, d, hh, mi, 0, 0);
-  const corr = getCorrectedDate(raw, lon);
+  //const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
+  const isUnknownPlace = !ms.birthPlace || (typeof ms.birthPlace === "object" && ms.birthPlace.name === "모름");
+  const corr = getCorrectedDate(raw, lon, isUnknownPlace);
   const correctedLocal = unknownTime
     ? ""
     : corr.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
