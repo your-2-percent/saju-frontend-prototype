@@ -1,6 +1,12 @@
 // components/SettingsDrawer.tsx
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Toast from "@/shared/ui/feedback/Toast";
 import {
   useSettingsStore,
@@ -115,102 +121,17 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     onClose();
   };
 
-  /* ── Drag & Drop ──────────────────────────────────────────── */
-  const dragIdRef = useRef<SectionKey | null>(null);
+  const handleSectionDragEnd = (result: DropResult) => {
+    const { destination, source } = result;
+    if (!destination) return;
+    if (destination.index === source.index) return;
 
-  // 공통 onDragOver
-  const onDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
+    const newOrder = Array.from(order);
+    const [moved] = newOrder.splice(source.index, 1);
+    newOrder.splice(destination.index, 0, moved);
+    setOrder(newOrder);
+    writeLS({ ...localSettings, sectionOrder: newOrder });
   };
-
-  // 공통 onDrop
-  const onDrop = (_e: React.DragEvent, targetId: SectionKey) => {
-    const src = dragIdRef.current;
-    dragIdRef.current = null;
-    if (!src || src === targetId) return;
-
-    setOrder((prev) => {
-      const arr = prev.slice();
-      const from = arr.indexOf(src);
-      const to = arr.indexOf(targetId);
-      if (from === -1 || to === -1) return prev;
-      arr.splice(to, 0, ...arr.splice(from, 1));
-      const nextOrder = arr as SectionKey[];
-
-      // ✅ 드랍 순간 즉시 LS 저장(자동 저장)
-      writeLS({ ...localSettings, sectionOrder: nextOrder });
-
-      return nextOrder;
-    });
-  };
-
-  // 핸들만으로 드래그 시작 + 박스 전체 프리뷰를 위한 래퍼
-  function DraggableSection({
-    id,
-    children,
-  }: {
-    id: SectionKey;
-    children: React.ReactNode;
-  }) {
-    const ref = useRef<HTMLDivElement>(null);
-
-    const enableDrag = () => {
-      if (ref.current) ref.current.setAttribute("draggable", "true");
-    };
-    const disableDrag = () => {
-      if (ref.current) ref.current.removeAttribute("draggable");
-    };
-
-    const onDragStart = (e: React.DragEvent) => {
-      // 실제 드래그 시작 시점에 소스 ID 저장
-      dragIdRef.current = id;
-      e.dataTransfer.setData("text/plain", id);
-      e.dataTransfer.effectAllowed = "move";
-
-      // 박스 전체를 프리뷰로 (일부 브라우저 호환)
-      if (ref.current) {
-        try {
-          e.dataTransfer.setDragImage(ref.current, 20, 20);
-        } catch {
-          // 모바일 사파리 등에서 실패 가능 → 무시
-        }
-      }
-    };
-
-    const onDragEnd = () => {
-      // 손 떼면 다시 비활성화 (모바일 스크롤 간섭 방지)
-      disableDrag();
-    };
-
-    return (
-      <div
-        ref={ref}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-        onDragOver={onDragOver}
-        onDrop={(e) => onDrop(e, id)}
-        className="relative group cursor-grab active:cursor-grabbing"
-      >
-        {/* 드래그 핸들 */}
-        <div
-          data-drag-handle
-          onMouseDown={enableDrag}
-          onTouchStart={enableDrag}
-          onMouseUp={disableDrag}
-          onTouchEnd={disableDrag}
-          className="absolute left-[14px] top-1/2 -translate-y-1/2 select-none text-neutral-400 group-hover:text-neutral-200 dark:group-hover:text-white cursor-grab active:cursor-grabbing touch-none"
-          title="드래그하여 순서 변경"
-          role="button"
-          aria-label="섹션 순서 변경 드래그 핸들"
-        >
-          ☰
-        </div>
-
-        {children}
-      </div>
-    );
-  }
 
   /* ── 섹션 렌더러 ──────────────────────────────────────────── */
   const renderSection = (key: SectionKey) => {
@@ -423,13 +344,64 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         </div>
 
         {/* Content (드래그 가능) */}
-        <div className="p-4 overflow-y-auto h-[calc(100%-56px)] space-y-3">
-          {order.map((id) => (
-            <DraggableSection key={id} id={id}>
-              {renderSection(id)}
-            </DraggableSection>
-          ))}
-        </div>
+        {open && (
+          <div className="p-4 overflow-y-auto h-[calc(100%_-_56px)]">
+            <DragDropContext onDragEnd={handleSectionDragEnd}>
+              <Droppable
+                droppableId="settings-sections"
+                renderClone={(prov, _snapshot, rubric) => (
+                  <li
+                    ref={prov.innerRef}
+                    {...prov.draggableProps}
+                    {...prov.dragHandleProps}
+                    style={prov.draggableProps.style}
+                    className="bg-white dark:bg-neutral-900 border rounded p-2 shadow-lg"
+                  >
+                    {renderSection(order[rubric.source.index])}
+                  </li>
+                )}
+              >
+                {(dropProvided) => (
+                  <ul ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-2">
+                    {order.map((id, idx) => (
+                      <Draggable key={id} draggableId={id} index={idx}>
+                        {(prov, snapshot) => (
+                          <li
+                            ref={prov.innerRef}
+                            {...prov.draggableProps}
+                            // 드래그 핸들은 따로만 주기
+                            style={{
+                              ...prov.draggableProps.style,
+                              visibility: snapshot.isDragging ? "hidden" : "visible",
+                            }}
+                            className="!flex items-center bg-white dark:bg-neutral-900 border rounded p-2"
+                          >
+                            {/* 드래그 핸들: 왼쪽 세로 중앙 */}
+                            <span
+                              {...prov.dragHandleProps}
+                              className="cursor-grab select-none mr-2 flex items-center"
+                              style={{
+                                cursor: snapshot.isDragging ? "grabbing" : "grab",
+                                userSelect: "none",
+                              }}
+                            >
+                              ☰
+                            </span>
+
+                            {/* 섹션 본문 */}
+                            <div className="flex-1 min-w-0">{renderSection(id)}</div>
+                          </li>
+                        )}
+                      </Draggable>
+                    ))}
+                    {dropProvided.placeholder}
+                  </ul>
+                )}
+              </Droppable>
+            </DragDropContext>
+
+          </div>
+        )}
       </div>
 
       {/* Toast */}

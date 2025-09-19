@@ -66,7 +66,7 @@ export function HiddenStems({
           return (
             <div
               key={idx}
-              className={`w-full text-[10px] desk:text-xs text-neutral-500 py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap`}
+              className={`w-full max-w-[80px] mx-auto text-[10px] desk:text-xs text-neutral-500 py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap`}
             >
               (-) (없음)
             </div>
@@ -75,7 +75,7 @@ export function HiddenStems({
         return (
           <div
             key={idx}
-            className={`w-full text-[10px] desk:text-xs py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap 
+            className={`w-full max-w-[80px] mx-auto text-[10px] desk:text-xs py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap 
             ${
               (mode === "main" || idx === 2) ? `jeonggi bg-neutral-500/50 ${hiddenJeonggi} font-bold` : ""
             }`}

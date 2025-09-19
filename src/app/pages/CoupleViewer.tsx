@@ -1,6 +1,14 @@
 // features/couple/CoupleViewer.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
+//import { arrayMoveImmutable as arrayMove } from 'array-move';
 import type { MyeongSik } from "@/shared/lib/storage";
+
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  type DropResult,
+} from "@hello-pangea/dnd";
 
 import {
   buildSijuSchedule,
@@ -44,15 +52,6 @@ import {
   getLeapFlag,
   lunarToSolar,
 } from "@/shared/lib/calendar/lunar";
-
-// dnd + icon
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  type DropResult,
-} from "@hello-pangea/dnd";
-import { GripVertical } from "lucide-react";
 
 /* =============== 유틸 =============== */
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -209,7 +208,7 @@ function arrayMove<T>(arr: T[], from: number, to: number) {
 function PeoplePickerModal({
   open,
   list,
-  onSelect,
+  //onSelect,
   onClose,
 }: {
   open: boolean;
@@ -275,14 +274,34 @@ function PeoplePickerModal({
   // 검색 중엔 드래그 비활성(인덱스 불일치 방지)
   const allowDrag = q.trim() === "";
 
-  const onDragEnd = (r: DropResult) => {
-    const { destination, source, type } = r;
-    if (!destination || type !== "ITEM" || !allowDrag) return;
+const onDragEnd = (r: DropResult) => {
+  const { destination, source } = r;
+  if (!destination) return;
+  if (!allowDrag) return;
+  if (destination.index === source.index) return;
 
-    // allowDrag = true ⇒ filtered === ordered ⇒ visibleIds === orderIds
-    const visibleIds = ordered.map(idOf);
-    return persist(arrayMove(visibleIds, source.index, destination.index));
-  };
+  // 1) 보이는 리스트 기준으로 이동
+  const visibleIds = filtered.map(idOf);
+  const movedVisible = arrayMove(visibleIds, source.index, destination.index);
+
+  // 2) 전체 순서로 환원 (필터 밖 요소는 기존 순서 유지)
+  const allIds = ordered.map(idOf);
+  const invisibleIds = allIds.filter(id => !visibleIds.includes(id));
+  const nextIds = [...movedVisible, ...invisibleIds];
+
+  // 3) 실제 렌더에 쓰는 원본 리스트를 갱신 (여기서 'setOrdered' 자리에 당신 프로젝트 setter 사용)
+  //const byId = new Map(ordered.map(o => [idOf(o), o]));
+  //const nextOrdered = nextIds.map(id => byId.get(id)!);
+
+  // 예시: zustand라면
+  // usePeopleStore.getState().setOrdered(nextOrdered);
+
+  // 혹은 로컬 상태라면
+  // setOrdered(nextOrdered);
+
+  // 4) 영속화는 부가적으로
+  persist(nextIds);
+};
 
   return (
     <>
@@ -325,67 +344,84 @@ function PeoplePickerModal({
           )}
         </div>
 
-        <DragDropContext onDragEnd={onDragEnd}>
-          <Droppable droppableId="people:list" type="ITEM">
-            {(prov) => (
-              <div
-                ref={prov.innerRef}
-                {...prov.droppableProps}
-                className="max-h[60vh] overflow-y-auto grid grid-cols-1 gap-2"
-              >
-                {filtered.map((m, i) => {
-                  const id = idOf(m);
-                  return (
-                    <Draggable draggableId={id} index={i} key={id}>
-                      {(drag) => (
-                        <div
-                          ref={drag.innerRef}
-                          {...drag.draggableProps}
-                          {...(allowDrag ? drag.dragHandleProps : {})}
-                          className={`w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 ${
-                            allowDrag ? "cursor-grab" : "cursor-default"
-                          }`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <GripVertical
-                              className={`shrink-0 ${
-                                allowDrag ? "opacity-60" : "opacity-30"
-                              } text-neutral-500 dark:text-neutral-400`}
-                              size={16}
-                            />
-                            <div className="flex-1 min-w-0">
-                              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
-                                {nameOf(m)}
-                              </div>
-                              <div className="text-neutral-500 dark:text-neutral-400 text-xs">
-                                {formatDate24(parseBirthFixed(m))}
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                onSelect(m);
-                                onClose();
-                              }}
-                              className="ml-2 px-3 py-1 rounded text-xs bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:opacity-90 cursor-pointer"
-                            >
-                              명식 선택하기
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </Draggable>
-                  );
-                })}
-                {prov.placeholder}
-                {filtered.length === 0 && (
-                  <div className="text-center text-neutral-500 dark:text-neutral-400 text-sm py-6">
-                    검색 결과가 없어요
-                  </div>
-                )}
+<DragDropContext onDragEnd={onDragEnd}>
+  <Droppable
+    droppableId="peopleList"
+    renderClone={(prov, _snapshot, rubric) => {
+      const m = filtered[rubric.source.index];
+      return (
+        <li
+          ref={prov.innerRef}
+          {...prov.draggableProps}
+          {...prov.dragHandleProps}
+          style={prov.draggableProps.style}
+          className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 shadow-lg opacity-95"
+        >
+          <div className="flex items-center gap-2">
+            <span className="cursor-grabbing mr-2 select-none">☰</span>
+            <div className="flex-1 min-w-0">
+              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
+                {nameOf(m)}
               </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+              <div className="text-neutral-500 dark:text-neutral-400 text-xs">
+                {formatDate24(parseBirthFixed(m))}
+              </div>
+            </div>
+          </div>
+        </li>
+      );
+    }}
+  >
+    {(dropProvided) => (
+      <ul
+        ref={dropProvided.innerRef}
+        {...dropProvided.droppableProps}
+        className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto"
+      >
+        {filtered.map((m, i) => {
+          const id = String(idOf(m));
+          return (
+            <Draggable key={id} draggableId={id} index={i}>
+              {(prov, snapshot) => (
+                <li
+                  ref={prov.innerRef}
+                  {...prov.draggableProps}
+                  // 👇 원본은 드래그 중이면 숨겨야 clone만 보임
+                  style={{
+                    ...prov.draggableProps.style,
+                    visibility: snapshot.isDragging ? "hidden" : "visible",
+                  }}
+                  className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      {...prov.dragHandleProps}
+                      className="cursor-grab mr-2 select-none flex items-center"
+                    >
+                      ☰
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
+                        {nameOf(m)}
+                      </div>
+                      <div className="text-neutral-500 dark:text-neutral-400 text-xs">
+                        {formatDate24(parseBirthFixed(m))}
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              )}
+            </Draggable>
+          );
+        })}
+        {dropProvided.placeholder}
+      </ul>
+    )}
+  </Droppable>
+</DragDropContext>
+
+
+
       </div>
     </>
   );
