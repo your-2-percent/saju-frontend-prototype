@@ -75,7 +75,7 @@ function BlankCard({
             {Array.from({ length: hiddenRows }).map((_, idx) => (
               <div
                 key={idx}
-                className="w-full mx-auto text-[10px] desk:text-xs py-0.5 desk:px-1 border border-neutral-200 dark:border-neutral-800 rounded text-center text-nowrap text-neutral-500 dark:text-neutral-400"
+                className="w-full max-w-[80px] mx-auto text-[10px] desk:text-xs py-0.5 desk:px-1 border border-neutral-200 dark:border-neutral-800 rounded text-center text-nowrap text-neutral-500 dark:text-neutral-400"
               >
                 -
               </div>
