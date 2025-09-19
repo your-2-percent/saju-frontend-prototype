@@ -2,6 +2,7 @@ import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
 /* ── 표시 변환 테이블 ── */
 const STEM_H2K = {
@@ -173,15 +174,28 @@ export function PillarCardShared({
   // 박스(천간/지지) 스타일
   // - white 변형: 항상 흰 배경 + 진한 글자
   // - auto  변형: 오행 색상 배경(getElementColor) + 흰 글자
+  const { settings: settingsObj } = useSettingsStore();
+
   const stemBoxCls = white
     ? `bg-white ${boxBorderCls}`
-    : `${getElementColor(stemKeyForUtil, "stem")} ${boxBorderCls}`;
-  const stemTextCls = white ? "text-neutral-900" : "text-white";
+    : `${getElementColor(stemKeyForUtil, "stem", settingsObj)} ${boxBorderCls}`;
+    // 난이도 모드일 때는 settings.theme 체크
+    const stemTextCls =
+      settingsObj.difficultyMode
+        ? settingsObj.theme === "light"
+          ? "text-neutral-900" // 라이트 모드
+          : "text-black"       // 다크 모드
+        : "text-white";        // 일반 모드
 
-  const branchBoxCls = white
-    ? `bg-white ${boxBorderCls}`
-    : `${getElementColor(branchKeyForUtil, "branch")} ${boxBorderCls}`;
-  const branchTextCls = white ? "text-neutral-900" : "text-white";
+      const branchBoxCls = white
+        ? `bg-white ${boxBorderCls}`
+        : `${getElementColor(branchKeyForUtil, "branch", settingsObj)} ${boxBorderCls}`;
+      const branchTextCls =
+      settingsObj.difficultyMode
+        ? settingsObj.theme === "light"
+          ? "text-neutral-900"
+          : "text-black"
+        : "text-white";
 
   return (
     <div className={`rounded-sm desk:rounded-xl overflow-hidden ${cardRootCls}`}>

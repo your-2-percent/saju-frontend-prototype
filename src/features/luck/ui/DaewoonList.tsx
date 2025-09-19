@@ -175,10 +175,11 @@ export default function DaewoonList({
                 <div
                   className={`w-8 h-8 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     stem,
-                    "stem"
+                    "stem",
+                    settings
                   )}`}
                 >
-                  <span className={`text-[20px] md:text-xl text-white ${stemFont}`}>
+                  <span className={`text-[20px] md:text-xl ${stemFont}`}>
                     {stemDisp}
                   </span>
                 </div>
@@ -187,10 +188,11 @@ export default function DaewoonList({
                 <div
                   className={`w-8 h-8 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     branch,
-                    "branch"
+                    "branch",
+                    settings
                   )}`}
                 >
-                  <span className={`text-[20px] md:text-xl text-white ${branchFont}`}>
+                  <span className={`text-[20px] md:text-xl ${branchFont}`}>
                     {branchDisp}
                   </span>
                 </div>

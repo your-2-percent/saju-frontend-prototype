@@ -7,6 +7,7 @@ import {
   십신_천간,
   십신_지지
 } from "@/shared/domain/간지/const";
+import type { Settings } from "@/shared/lib/hooks/useSettingsStore";
 
 type ElementType = "목" | "화" | "토" | "금" | "수";
 
@@ -31,9 +32,18 @@ export function normalizeBranch(ch: string): Branch | string {
   return ch;
 }
 
-
 /** 오행 → Tailwind 배경색 */
-export function elemToBg(elem?: ElementType): string {
+export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
+  if (settingsV1?.difficultyMode) {
+    if (settingsV1?.theme === "light") {
+      // 라이트 모드 → 흰색 바탕 + 회색 테두리
+      return "bg-white border border-gray-300 text-gray-800 text-black";
+    }
+    // 다크 모드 → 올화이트
+    return "bg-white text-black";
+  }
+
+  // ✅ 기존 로직
   switch (elem) {
     case "목": return "bg-green-600";
     case "화": return "bg-red-600";
@@ -45,17 +55,21 @@ export function elemToBg(elem?: ElementType): string {
 }
 
 /** 간지 글자 → 색상 */
-export function getElementColor(char: string, kind: "stem" | "branch"): string {
+export function getElementColor(
+  char: string,
+  kind: "stem" | "branch",
+  settingsV1?: Settings   // ✅ settings 전달받기
+): string {
   if (kind === "stem") {
     const kor = normalizeStem(char);
     const idx = STEMS.indexOf(kor as (typeof STEMS)[number]);
     const elem = idx >= 0 ? 천간_오행[idx] : undefined;
-    return elemToBg(elem as ElementType);
+    return elemToBg(elem as ElementType, settingsV1);   // ✅ settings 반영
   } else {
     const kor = normalizeBranch(char);
     const idx = BRANCHES.indexOf(kor as (typeof BRANCHES)[number]);
     const elem = idx >= 0 ? 지지_오행[idx] : undefined;
-    return elemToBg(elem as ElementType);
+    return elemToBg(elem as ElementType, settingsV1);   // ✅ settings 반영
   }
 }
 

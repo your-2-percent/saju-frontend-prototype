@@ -28,6 +28,7 @@ const DEFAULT_SECTION_KEYS = [
   "charType",         // 글자 타입
   "thinEum",          // 음간 얇게
   "visibility",       // 표시 항목(묶음)
+  "difficultyMode",  // 난이도 모드 (신규)
 ] as const;
 
 type SectionKey = (typeof DEFAULT_SECTION_KEYS)[number];
@@ -321,6 +322,16 @@ export default function SettingsDrawer({ open, onClose }: Props) {
             </div>
           </Section>
         );
+      case "difficultyMode":
+      return (
+        <Section title="난이도 UP ver.">
+          <Switch
+            label="난이도 UP 적용"
+            checked={localSettings.difficultyMode ?? false}
+            onChange={(v) => update("difficultyMode", v)}
+          />
+        </Section>
+      );
 
       default:
         return null;

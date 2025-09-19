@@ -566,14 +566,15 @@ function Cell({
   charType: "한자" | "한글";
   thinEum: boolean;
 }) {
-  const color = getElementColor(value, kind);
+  const { settings } = useSettingsStore();
+  const color = getElementColor(value, kind, settings);
   const display = toDisplayChar(value, kind, charType);
   const isYin = isYinUnified(value, kind); // 원본값 기준(한자/한글 상관없음)
   const weight = thinEum && isYin ? "font-thin" : "font-bold";
 
   return (
     <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-14 md:h-14 rounded-md ${color} flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}>
-      <span className={`text-[24px] md:text-2xl ${weight} text-white`}>
+      <span className={`text-[24px] md:text-2xl ${weight}`}>
         {display}
       </span>
     </div>

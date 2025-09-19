@@ -1,6 +1,7 @@
 // features/CustomSaju/CustomSajuModal.tsx
 import { flushSync } from "react-dom";
 import { v4 as uuidv4 } from "uuid";
+import { getElementColor } from "@/shared/domain/간지/utils";
 import { useState, useCallback, useEffect } from "react";
 import { X } from "lucide-react";
 import { 시주매핑_자시, 시주매핑_인시 } from "@/shared/domain/간지/const";
@@ -8,6 +9,7 @@ import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/sh
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
 // 프로젝트 규격에 맞춰 필요시 조정
 type DayBoundaryRule = "야자시" | "조자시" | "인시";
@@ -114,6 +116,8 @@ export default function CustomSajuModal({
   onClose: () => void;
   onSave: (data: MyeongSik) => void;
 }) {
+  const { settings: settingsObj } = useSettingsStore();
+
   const [monthBranchChoices, setMonthBranchChoices] = useState<Branch[] | null>(null);
   const [pillars, setPillars] = useState<Pillars>({});
   const [active, setActive] = useState<keyof Pillars | null>(null);
@@ -608,6 +612,8 @@ export default function CustomSajuModal({
     }
   };
 
+  
+
   return (
     <div className="fixed min-w-[320px] inset-0 z-[1000] flex items-center justify-center bg-black/50">
       <div className="bg-white max-w-[360px] dark:bg-neutral-900 rounded-xl shadow-xl w-full max-w-5xl p-4 relative">
@@ -762,43 +768,47 @@ export default function CustomSajuModal({
           ) : (
             <div className="w-full">
               {activeIsStem && ( 
-                <div className=""> 
+                <div> 
                   <p className="font-medium mb-2">천간</p> 
                   <div className="grid grid-cols-5 gap-2"> 
-                    {STEMS.map(s => ( 
-                      <button key={s} onClick={() => handleSelect(s)} 
-                        className="border rounded px-2 py-1 hover:bg-orange-100 dark:hover:bg-orange-800 cursor-pointer" > 
-                        {s} 
-                      </button> 
+                    {STEMS.map(s => (
+                      <button
+                        key={s}
+                        onClick={() => handleSelect(s)}
+                        className={`border rounded px-2 py-1 cursor-pointer ${getElementColor(s, "stem", settingsObj)}`}
+                      >
+                        {s}
+                      </button>
                     ))} 
                   </div> 
                 </div> 
               )}
+
               {activeIsBranch && (
-              <div>
-                <p className="font-medium mb-2">지지</p>
-                <div className="grid grid-cols-6 gap-2">
-                  {BRANCHES.filter(b => {
-                    // 현재 기둥의 천간이 이미 선택된 경우 → 같은 음양만 허용
-                    const stemKey = counterpartKey(active!);
-                    const st = pillars[stemKey] as Stem | undefined;
-                    if (st) {
-                      return BRANCH_YIN_YANG[b] === STEM_YIN_YANG[st];
-                    }
-                    return true; // 천간이 아직 없으면 전부 표시
-                  }).map(b => (
-                    <button
-                      key={b}
-                      onClick={() => handleSelect(b)}
-                      className="border rounded px-2 py-1 hover:bg-orange-100 dark:hover:bg-orange-800 cursor-pointer"
-                    >
-                      {b}
-                    </button>
-                  ))}
+                <div>
+                  <p className="font-medium mb-2">지지</p>
+                  <div className="grid grid-cols-6 gap-2">
+                    {BRANCHES.filter(b => {
+                      const stemKey = counterpartKey(active!);
+                      const st = pillars[stemKey] as Stem | undefined;
+                      if (st) {
+                        return BRANCH_YIN_YANG[b] === STEM_YIN_YANG[st];
+                      }
+                      return true;
+                    }).map(b => (
+                      <button
+                        key={b}
+                        onClick={() => handleSelect(b)}
+                        className={`border rounded px-2 py-1 cursor-pointer ${getElementColor(b, "branch", settingsObj)}`}
+                      >
+                        {b}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
             </div>
+
           )}
         </div>
 
