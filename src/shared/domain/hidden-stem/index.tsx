@@ -60,13 +60,13 @@ export function HiddenStems({
   const hiddenJeonggi = white ? "text-yellow-900" : "text-red-600 dark:text-yellow-300"
 
   return (
-    <div className="flex flex-col gap-1 mt-1">
+    <div className="w-full flex flex-col gap-1 mt-1">
       {visibleStems.map((s, idx) => {
         if (s === "(-)") {
           return (
             <div
               key={idx}
-              className={`flex-1 text-[10px] desk:text-xs text-neutral-500 py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap`}
+              className={`w-full text-[10px] desk:text-xs text-neutral-500 py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap`}
             >
               (-) (없음)
             </div>
@@ -75,7 +75,7 @@ export function HiddenStems({
         return (
           <div
             key={idx}
-            className={`flex-1 text-[10px] desk:text-xs py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap 
+            className={`w-full text-[10px] desk:text-xs py-0.5 desk:px-1 border ${hiddenBorder} ${hiddenText} rounded text-center text-nowrap 
             ${
               (mode === "main" || idx === 2) ? `jeonggi bg-neutral-500/50 ${hiddenJeonggi} font-bold` : ""
             }`}
