@@ -12,7 +12,7 @@ export default function TopNav({
 }) {
   return (
     <header className="fixed min-w-[320px] top-0 left-0 right-0 bg-white dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800 z-55 px-2 desk:px-3 transition-colors">
-      <div className="max-w-[640px] w-full mx-auto h-12 sm:h-14 flex items-center">
+      <div className="relative max-w-[640px] w-full mx-auto h-12 sm:h-14 flex justify-between items-center">
         {/* 햄버거: 명식리스트 열기 */}
         <button
           type="button"
@@ -24,7 +24,7 @@ export default function TopNav({
         </button>
 
         {/* 가운데 타이틀 */}
-        <h1 className="mx-auto text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+        <h1 className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 mx-auto text-base sm:text-lg font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
           화림만세력
         </h1>
 
