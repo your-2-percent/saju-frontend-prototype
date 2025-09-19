@@ -203,7 +203,7 @@ export function PillarCardShared({
         {label}
       </div>
 
-      <div className="p-3 flex flex-col items-center gap-1">
+      <div className="py-3 flex flex-col items-center gap-1">
         {/* 십신(천간) */}
         {sipSinStem && (
           <div className={`text-[10px] desk:text-xs ${sipTextCls} text-nowrap`}>
