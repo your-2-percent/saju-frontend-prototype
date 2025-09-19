@@ -173,7 +173,7 @@ export default function DaewoonList({
 
                 {/* 천간 */}
                 <div
-                  className={`w-8 h-8 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
+                  className={`w-8 h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     stem,
                     "stem",
                     settings
@@ -186,7 +186,7 @@ export default function DaewoonList({
 
                 {/* 지지 */}
                 <div
-                  className={`w-8 h-8 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
+                  className={`w-8 h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 ${getElementColor(
                     branch,
                     "branch",
                     settings

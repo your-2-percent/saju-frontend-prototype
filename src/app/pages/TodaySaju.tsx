@@ -30,20 +30,13 @@ function toKoStemKeyStrict(ch: string): Stem10sin {
 /* ===== 시주 비우기용 카드 ===== */
 function BlankCard({
   label,
-  size = "sm",
   settings,
   hideBranchSipSin = true,
 }: {
   label: string;
-  size?: "sm" | "md" | "lg";
   settings: CardSettings;
   hideBranchSipSin?: boolean;
 }) {
-  const sizeMap = {
-    sm: "w-8 h-8 sm:w-12 sm:h-12",
-    md: "w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16",
-    lg: "w-14 h-14 sm:w-16 sm:h-16 md:w-20 md:h-20",
-  } as const;
 
   const showSipSinTop = settings.showSipSin;
   const showHidden = !!settings.hiddenStem;
@@ -64,16 +57,16 @@ function BlankCard({
 
         {/* 천간 박스 — 흰 박스 유지 */}
         <div
-          className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
         >
-          <span className="text-xl sm:text-2xl md:text-3xl font-bold text-neutral-900">-</span>
+          <span className="text-2xl md:text-3xl font-bold text-neutral-900">-</span>
         </div>
 
         {/* 지지 박스 — 흰 박스 유지 */}
         <div
-          className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
+          className={`w-10 h-10 sm:w-12 sm:h-12 rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
         >
-          <span className="text-xl sm:text-2xl md:text-3xl font-bold text-neutral-900">-</span>
+          <span className="text-2xl md:text-3xl font-bold text-neutral-900">-</span>
         </div>
 
         {/* 지장간 */}
@@ -82,7 +75,7 @@ function BlankCard({
             {Array.from({ length: hiddenRows }).map((_, idx) => (
               <div
                 key={idx}
-                className="w-full max-w-[54px] mx-auto text-[10px] desk:text-xs py-0.5 desk:px-1 border border-neutral-200 dark:border-neutral-800 rounded text-center text-nowrap text-neutral-500 dark:text-neutral-400"
+                className="w-full mx-auto text-[10px] desk:text-xs py-0.5 desk:px-1 border border-neutral-200 dark:border-neutral-800 rounded text-center text-nowrap text-neutral-500 dark:text-neutral-400"
               >
                 -
               </div>
@@ -169,7 +162,7 @@ export default function TodaySaju() {
         {/* 4기둥 */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {blankHour ? (
-            <BlankCard label="시주" size="sm" settings={settings} hideBranchSipSin />
+            <BlankCard label="시주" settings={settings} hideBranchSipSin />
           ) : (
             <PillarCardShared
               label="시주"
