@@ -17,7 +17,7 @@ const LS_KEY = "harim.settings.v1";
 
 // 섹션 ID 고정 목록(렌더 키)
 const DEFAULT_SECTION_KEYS = [
-  "theme",            // ✅ 테마 토글(신규)
+  "theme",            // ✅ 테마 토글
   "hiddenStem",       // 지장간 표시 타입
   "hiddenStemMode",   // 지장간 유형
   "ilunRule",         // 일운 달력 시간타입
@@ -28,7 +28,7 @@ const DEFAULT_SECTION_KEYS = [
   "charType",         // 글자 타입
   "thinEum",          // 음간 얇게
   "visibility",       // 표시 항목(묶음)
-  "difficultyMode",  // 난이도 모드 (신규)
+  "difficultyMode",   // 난이도 모드 (신규)
 ] as const;
 
 type SectionKey = (typeof DEFAULT_SECTION_KEYS)[number];
@@ -103,8 +103,6 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => {
       const next = { ...prev, [key]: value };
-      // 기존 writeLS(next) 호출이 있다면 유지
-      // 테마면 전용 키에도 즉시 저장
       if (key === "theme") setStoredTheme(value as ThemeMode);
       return next;
     });
@@ -113,7 +111,6 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const applyChanges = () => {
     setSettings({ ...localSettings, sectionOrder: order });
     if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
-    // 기존 writeLS({...}) 유지
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };
@@ -121,29 +118,13 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   /* ── Drag & Drop ──────────────────────────────────────────── */
   const dragIdRef = useRef<SectionKey | null>(null);
 
-  // 스택 전체 드래그 시작(인터랙티브 요소면 무시)
-  const onDragStartContainer = (e: React.DragEvent, id: SectionKey) => {
-    const t = e.target as HTMLElement;
-    if (
-      t.closest("[data-no-drag]") ||
-      ["BUTTON", "INPUT", "SELECT", "TEXTAREA", "A", "LABEL"].includes(t.tagName)
-    ) {
-      e.preventDefault();
-      return;
-    }
-    dragIdRef.current = id;
-    e.dataTransfer.setData("text/plain", id);
-    e.dataTransfer.effectAllowed = "move";
-  };
-
-  const onDragStartHandle = (e: React.DragEvent, id: SectionKey) =>
-    onDragStartContainer(e, id);
-
+  // 공통 onDragOver
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
   };
 
+  // 공통 onDrop
   const onDrop = (_e: React.DragEvent, targetId: SectionKey) => {
     const src = dragIdRef.current;
     dragIdRef.current = null;
@@ -163,6 +144,73 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       return nextOrder;
     });
   };
+
+  // 핸들만으로 드래그 시작 + 박스 전체 프리뷰를 위한 래퍼
+  function DraggableSection({
+    id,
+    children,
+  }: {
+    id: SectionKey;
+    children: React.ReactNode;
+  }) {
+    const ref = useRef<HTMLDivElement>(null);
+
+    const enableDrag = () => {
+      if (ref.current) ref.current.setAttribute("draggable", "true");
+    };
+    const disableDrag = () => {
+      if (ref.current) ref.current.removeAttribute("draggable");
+    };
+
+    const onDragStart = (e: React.DragEvent) => {
+      // 실제 드래그 시작 시점에 소스 ID 저장
+      dragIdRef.current = id;
+      e.dataTransfer.setData("text/plain", id);
+      e.dataTransfer.effectAllowed = "move";
+
+      // 박스 전체를 프리뷰로 (일부 브라우저 호환)
+      if (ref.current) {
+        try {
+          e.dataTransfer.setDragImage(ref.current, 20, 20);
+        } catch {
+          // 모바일 사파리 등에서 실패 가능 → 무시
+        }
+      }
+    };
+
+    const onDragEnd = () => {
+      // 손 떼면 다시 비활성화 (모바일 스크롤 간섭 방지)
+      disableDrag();
+    };
+
+    return (
+      <div
+        ref={ref}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        onDragOver={onDragOver}
+        onDrop={(e) => onDrop(e, id)}
+        className="relative group cursor-grab active:cursor-grabbing"
+      >
+        {/* 드래그 핸들 */}
+        <div
+          data-drag-handle
+          onMouseDown={enableDrag}
+          onTouchStart={enableDrag}
+          onMouseUp={disableDrag}
+          onTouchEnd={disableDrag}
+          className="absolute left-[14px] top-1/2 -translate-y-1/2 select-none text-neutral-400 group-hover:text-neutral-200 dark:group-hover:text-white cursor-grab active:cursor-grabbing touch-none"
+          title="드래그하여 순서 변경"
+          role="button"
+          aria-label="섹션 순서 변경 드래그 핸들"
+        >
+          ☰
+        </div>
+
+        {children}
+      </div>
+    );
+  }
 
   /* ── 섹션 렌더러 ──────────────────────────────────────────── */
   const renderSection = (key: SectionKey) => {
@@ -322,16 +370,17 @@ export default function SettingsDrawer({ open, onClose }: Props) {
             </div>
           </Section>
         );
+
       case "difficultyMode":
-      return (
-        <Section title="난이도 UP ver.">
-          <Switch
-            label="난이도 UP 적용"
-            checked={localSettings.difficultyMode ?? false}
-            onChange={(v) => update("difficultyMode", v)}
-          />
-        </Section>
-      );
+        return (
+          <Section title="난이도 UP ver.">
+            <Switch
+              label="난이도 UP 적용"
+              checked={localSettings.difficultyMode ?? false}
+              onChange={(v) => update("difficultyMode", v)}
+            />
+          </Section>
+        );
 
       default:
         return null;
@@ -376,30 +425,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         {/* Content (드래그 가능) */}
         <div className="p-4 overflow-y-auto h-[calc(100%-56px)] space-y-3">
           {order.map((id) => (
-            <div
-              key={id}
-              draggable
-              onDragStart={(e) => onDragStartContainer(e, id)}
-              onDragOver={onDragOver}
-              onDrop={(e) => onDrop(e, id)}
-              className="relative group cursor-grab active:cursor-grabbing"
-              //aria-dropeffect="move"
-            >
-              {/* 왼쪽 세로 중앙 핸들 */}
-              <div
-                data-drag-handle
-                draggable
-                onDragStart={(e) => onDragStartHandle(e, id)}
-                className="absolute left-[14px] top-1/2 -translate-y-1/2 select-none text-neutral-400 group-hover:text-neutral-200 dark:group-hover:text-white cursor-grab active:cursor-grabbing"
-                title="드래그하여 순서 변경"
-                //aria-grabbed={dragIdRef.current === id}
-                role="button"
-              >
-                ☰
-              </div>
-
+            <DraggableSection key={id} id={id}>
               {renderSection(id)}
-            </div>
+            </DraggableSection>
           ))}
         </div>
       </div>
