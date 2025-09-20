@@ -1,13 +1,18 @@
 // components/Sidebar.tsx
-import { X, Plus, ChevronDown, ChevronUp, Star, GripVertical } from "lucide-react";
+import {
+  X,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  Star,
+} from "lucide-react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
@@ -18,17 +23,15 @@ import {
   getGanjiString,
 } from "@/features/sidebar/lib/sidebarUtils";
 import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
-import { useLocalStorageState } from "@/shared/lib/hooks/useLocalStorageState";
-import type { DayBoundaryRule } from "@/shared/type";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 import { formatLocalHM } from "@/shared/utils";
 import { isDST } from "@/shared/lib/core/timeCorrection";
-import type { CSSProperties } from "react";
+import type { DayBoundaryRule } from "@/shared/type";
 
 type MemoOpenMap = Record<string, boolean>;
 type OrderMap = Record<string, string[]>; // droppableId -> itemId[]
 
-/** ITEM 드롭영역 id 규칙 */
+// ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const listDroppableId = (folderName: string) => `list:${folderName}`;
 const decodeListIdToFolder = (droppableId: string): string | undefined => {
@@ -36,35 +39,6 @@ const decodeListIdToFolder = (droppableId: string): string | undefined => {
   const key = droppableId.slice(5);
   return key === "__unassigned__" ? undefined : key;
 };
-
-/** 드래그 중인 노드를 body로 포털 */
-function useDragPortal() {
-  const portalEl = useMemo(() => {
-    const el = document.createElement("div");
-    el.style.position = "fixed";
-    el.style.top = "0";
-    el.style.left = "0";
-    el.style.width = "100%";
-    el.style.height = "100%";
-    el.style.zIndex = "9999";
-    el.style.pointerEvents = "none";
-    return el;
-  }, []);
-
-  useEffect(() => {
-    document.body.appendChild(portalEl);
-    return () => {
-      try {
-        document.body.removeChild(portalEl);
-      } catch {
-        // noop
-      }
-    };
-  }, [portalEl]);
-
-  return (node: ReactNode, isDragging: boolean) =>
-    isDragging ? createPortal(node, portalEl) : node;
-}
 
 type SidebarProps = {
   open: boolean;
@@ -93,74 +67,93 @@ export default function Sidebar({
     newFolderName,
     setNewFolderName,
     orderedFolders,
-    grouped,
-    unassignedItems,
-    handleDragEnd: handleFolderDragEnd, // 폴더 재정렬용
+    grouped,             // { [folderName]: MyeongSik[] }
+    unassignedItems,     // MyeongSik[]
+    handleDragEnd: handleFolderDragEnd, // 폴더 재정렬용 훅 내부 처리
     createFolder,
     deleteFolder,
     UNASSIGNED_LABEL,
     displayFolderLabel,
   } = useSidebarLogic(list, update);
 
-  // 리스트별 아이템 순서(로컬 전용)
-  const [orderMap, setOrderMap] = useLocalStorageState<OrderMap>("ms_order_map", {});
-  const [folderOrder, setFolderOrder] = useLocalStorageState<string[]>("folder_order", []);
+  /** 폴더 렌더 순서 (로컬 유지) */
+  const [folderOrder, setFolderOrder] = useState<string[]>([]);
 
-  // 전역 드래그 상태 (모바일 최적화용)
+  /** 리스트별 아이템 렌더 순서 (DroppableId -> itemId[]) */
+  const [orderMap, setOrderMap] = useState<OrderMap>({});
+
+  /** 전역 드래그 여부(모바일 스크롤 UX 보조) */
   const [isDraggingAny, setIsDraggingAny] = useState(false);
 
-  // 포털
-  const portalize = useDragPortal();
-
-  /** 현재 렌더기준 배열을 orderMap 순서로 정렬 */
+  /** 현재 렌더 기준 배열을 orderMap 순서로 정렬 */
   const orderItems = (droppableId: string, arr: MyeongSik[]) => {
     const byId = new Map(arr.map((it) => [it.id, it]));
-    const order = orderMap[droppableId] ?? [];
+    const ord = orderMap[droppableId] ?? [];
     const out: MyeongSik[] = [];
-    for (const id of order) {
+    for (const id of ord) {
       const it = byId.get(id);
       if (it) {
         out.push(it);
         byId.delete(id);
       }
     }
+    // 누락 보강(새/정리되지 않은 항목)
     byId.forEach((it) => out.push(it));
     return out;
   };
 
-  // 드롭다운 옵션: 바깥 선택 포함
-  const folderOptions = [UNASSIGNED_LABEL, ...orderedFolders];
+  /** 화면에 “현재 보이는 순서”의 id 배열(인덱스 일치 보장) */
+  const getDisplayOrder = (droppableId: string): string[] => {
+    const folder = decodeListIdToFolder(droppableId);
+    const baseArr = folder ? (grouped[folder] || []) : unassignedItems;
+    return orderItems(droppableId, baseArr).map((it) => it.id);
+  };
 
-  /** orderMap 초기화 (누락 id 보강) */
+  /** orderMap 초기화/보강: 누락 id 뒤에 추가, 새 폴더/항목 반영 */
   useEffect(() => {
     setOrderMap((prev) => {
       let changed = false;
       const next: OrderMap = { ...prev };
 
       // 바깥(미지정)
-      const outId = DROPPABLE_UNASSIGNED;
-      if (!next[outId]) {
-        next[outId] = unassignedItems.map((it) => it.id);
-        changed = true;
-      } else {
-        const missing = unassignedItems.map((it) => it.id).filter((id) => !next[outId].includes(id));
-        if (missing.length) {
-          next[outId] = [...next[outId], ...missing];
+      {
+        const outId = DROPPABLE_UNASSIGNED;
+        const base = unassignedItems.map((it) => it.id);
+        if (!next[outId]) {
+          next[outId] = base;
           changed = true;
+        } else {
+          // 누락 보강
+          const missing = base.filter((id) => !next[outId].includes(id));
+          if (missing.length) {
+            next[outId] = [...next[outId], ...missing];
+            changed = true;
+          }
+          // orderMap에 있는데 실제 목록에서 사라진 id 제거
+          const gone = next[outId].filter((id) => !base.includes(id));
+          if (gone.length) {
+            next[outId] = next[outId].filter((id) => !gone.includes(id));
+            changed = true;
+          }
         }
       }
 
       // 각 폴더
       for (const folderName of orderedFolders) {
         const listId = listDroppableId(folderName);
-        const arr = grouped[folderName] || [];
+        const base = (grouped[folderName] || []).map((it) => it.id);
         if (!next[listId]) {
-          next[listId] = arr.map((it) => it.id);
+          next[listId] = base;
           changed = true;
         } else {
-          const missing = arr.map((it) => it.id).filter((id) => !next[listId].includes(id));
+          const missing = base.filter((id) => !next[listId].includes(id));
           if (missing.length) {
             next[listId] = [...next[listId], ...missing];
+            changed = true;
+          }
+          const gone = next[listId].filter((id) => !base.includes(id));
+          if (gone.length) {
+            next[listId] = next[listId].filter((id) => !gone.includes(id));
             changed = true;
           }
         }
@@ -168,265 +161,273 @@ export default function Sidebar({
 
       return changed ? next : prev;
     });
-  }, [unassignedItems, grouped, orderedFolders, setOrderMap]);
+  }, [unassignedItems, grouped, orderedFolders]);
 
-  // 화면에 “현재 보이는 순서”의 id 배열을 만든다 (인덱스 일치 보장용)
-  const getDisplayOrder = (droppableId: string): string[] => {
-    const folder = decodeListIdToFolder(droppableId);
-    const baseArr = folder ? (grouped[folder] || []) : unassignedItems;
-    return orderItems(droppableId, baseArr).map((it) => it.id);
+  /** 폴더 렌더 순서: 저장된 순서 우선 + 신규 폴더 보강 */
+  const foldersToRender = useMemo(
+    () => [
+      ...folderOrder.filter((f) => orderedFolders.includes(f)),
+      ...orderedFolders.filter((f) => !folderOrder.includes(f)),
+    ],
+    [folderOrder, orderedFolders]
+  );
+
+  /** 드래그 아이템 스타일(필요 시만): 여기선 transition 커스텀 제거 */
+  const getDragStyle = (base: CSSProperties | undefined): CSSProperties => {
+    return base ?? {};
   };
 
-  // 드래그 아이템 스타일: 드롭 애니메이션 약간 더 짧게
-  const getDragStyle = (base: CSSProperties | undefined, isDropAnimating: boolean): CSSProperties => {
-    if (!base) return {};
-    return isDropAnimating
-      ? { ...base, transition: "transform 160ms cubic-bezier(0.2, 0, 0.2, 1)" }
-      : base;
-  };
-
-  // 카드(아이템) Draggable (포털 적용) — 전용 핸들 사용
+  /** 개별 카드(아이템) 렌더 — li 전체 핸들 */
   const renderCard = (m: MyeongSik, index: number) => {
-    const memoOpen = !!memoOpenMap[m.id];
     const ganji = getGanjiString(m);
     const placeDisplay = formatPlaceDisplay(m.birthPlace?.name);
     const keyId = `item:${m.id}`;
+    const memoOpen = !!memoOpenMap[m.id];
 
     let correctedDate = new Date(m.corrected);
-
-    const useDST = isDST(
-      correctedDate.getFullYear(),
-      correctedDate.getMonth() + 1, // JS는 0~11월 → +1 필요
-      correctedDate.getDate()
-    );
-
-    if (useDST) {
+    if (
+      isDST(
+        correctedDate.getFullYear(),
+        correctedDate.getMonth() + 1,
+        correctedDate.getDate()
+      )
+    ) {
       correctedDate = new Date(correctedDate.getTime() - 60 * 60 * 1000);
     }
 
     return (
       <Draggable draggableId={keyId} index={index} key={keyId}>
-        {(drag, snapshot) =>
-          portalize(
-            <li
-              ref={drag.innerRef}
-              {...drag.draggableProps}
-              // 핸들 분리: dragHandleProps 는 아래 Grip 버튼에만 붙임
-              style={getDragStyle(drag.draggableProps.style, snapshot.isDropAnimating)}
-              className="list-none select-none rounded-xl border
-                         bg-white dark:bg-neutral-900
-                         border-neutral-200 dark:border-neutral-800
-                         text-neutral-900 dark:text-neutral-100"
-            >
-              <div className="p-3">
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-sm desk:text-base">
-                    {m.name} ({calcAgeFromBirthDay(m.birthDay)}세, {m.gender})
-                  </div>
-                  <span className="opacity-40">｜</span>
-                  <div className="text-sm text-neutral-600 dark:text-neutral-300">
-                    {m.relationship ? m.relationship : "관계 미지정"}
-                  </div>
-                  {/* 전용 드래그 핸들 (모바일 스크롤 충돌 방지) */}
-                  <button
-                    aria-label="드래그"
-                    {...drag.dragHandleProps}
-                    className="ml-auto py-1.5 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                    style={{ touchAction: "none" }}
-                  >
-                    <GripVertical size={16} />
-                  </button>
+        {(prov) => (
+          <li
+            ref={prov.innerRef}
+            {...prov.draggableProps}
+            {...prov.dragHandleProps} // ← li 전체가 핸들!
+            style={getDragStyle(prov.draggableProps.style)}
+            className="list-none select-none rounded-xl border
+                       bg-white dark:bg-neutral-900
+                       border-neutral-200 dark:border-neutral-800
+                       text-neutral-900 dark:text-neutral-100
+                       cursor-grab active:cursor-grabbing"
+          >
+            <div className="p-3">
+              <div className="flex items-center gap-2">
+                <div className="font-semibold text-sm desk:text-base">
+                  {m.name} ({calcAgeFromBirthDay(m.birthDay)}세, {m.gender})
                 </div>
-
-                <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
-                  {fmtBirthKR(m.birthDay, m.birthTime)}, {m.calendarType === "lunar" ? "음력" : "양력"}
+                <span className="opacity-40">｜</span>
+                <div className="text-sm text-neutral-600 dark:text-neutral-300">
+                  {m.relationship ? m.relationship : "관계 미지정"}
                 </div>
+                {/* 시각 힌트만 제공(실제 핸들은 li 전체) */}
+                <span className="ml-auto opacity-50 select-none">☰</span>
+              </div>
 
-                {(placeDisplay || correctedDate) && (
-                  <div className="text-sm text-neutral-500 dark:text-neutral-400">
-                    {placeDisplay}
-                    {correctedDate && (
-                      <span className="opacity-70"> · 보정시 {formatLocalHM(correctedDate)}</span>
-                    )}
-                  </div>
-                )}
+              <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
+                {fmtBirthKR(m.birthDay, m.birthTime)},{" "}
+                {m.calendarType === "lunar" ? "음력" : "양력"}
+              </div>
 
-                {ganji && (
-                  <div className="text-sm text-neutral-800 dark:text-neutral-200 mt-1 whitespace-pre-wrap break-keep">
-                    {ganji}
-                  </div>
-                )}
-
-                {m.memo && m.memo.trim() !== "" && (
-                  <div>
-                    <button
-                      type="button"
-                      className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 inline-flex items-center gap-1 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setMemoOpenMap((s: MemoOpenMap) => ({
-                          ...s,
-                          [m.id]: !s[m.id],
-                        }));
-                      }}
-                    >
-                      {memoOpen ? "메모 닫기" : "메모 열기"}
-                    </button>
-                    <div
-                      className={memoOpen ? "mt-1 text-sm text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap" : "hidden"}
-                    >
-                      {m.memo}
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-2 mt-3">
-                  {/* 폴더 선택 */}
-                  <select
-                    className="h-30 text-xs rounded px-2 py-1 cursor-pointer
-                               bg-white dark:bg-neutral-900
-                               border border-neutral-300 dark:border-neutral-700
-                               text-neutral-900 dark:text-neutral-100
-                               focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    value={displayFolderLabel(m.folder)}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      const normalized = normalizeFolderValue(raw);
-                      const itemId = m.id;
-
-                      const srcListId = m.folder ? listDroppableId(m.folder) : DROPPABLE_UNASSIGNED;
-                      const dstListId = normalized ? listDroppableId(normalized) : DROPPABLE_UNASSIGNED;
-
-                      if (normalized && !orderedFolders.includes(normalized)) {
-                        createFolder(normalized);
-                      }
-
-                      // orderMap 갱신 (항상 화면 기준 배열로)
-                      setOrderMap((prev) => {
-                        const next: OrderMap = { ...prev };
-                        const src = getDisplayOrder(srcListId);
-                        const dst = srcListId === dstListId ? src.slice() : getDisplayOrder(dstListId).slice();
-
-                        // src에서 제거
-                        const si = src.indexOf(itemId);
-                        if (si >= 0) src.splice(si, 1);
-
-                        // dst 맨앞으로
-                        const di = dst.indexOf(itemId);
-                        if (di >= 0) dst.splice(di, 1);
-                        dst.unshift(itemId);
-
-                        next[srcListId] = src;
-                        next[dstListId] = dst;
-                        return next;
-                      });
-
-                      // 실제 데이터 이동
-                      update(itemId, { folder: normalized });
-                    }}
-                  >
-                    {folderOptions.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                  </select>
-
-                  {/* 명식 기준 선택 */}
-                  <select
-                    className="h-30 text-xs rounded px-2 py-1 cursor-pointer
-                               bg-white dark:bg-neutral-900
-                               border border-neutral-300 dark:border-neutral-700
-                               text-neutral-900 dark:text-neutral-100
-                               focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                    value={m.mingSikType ?? "야자시"}
-                    onChange={(e) => {
-                      const nextRule = e.target.value as DayBoundaryRule;
-
-                      const updated = { ...m, mingSikType: nextRule };
-                      const snapshot = recalcGanjiSnapshot(updated);
-
-                      update(m.id, { mingSikType: nextRule, ...snapshot });
-                      onView({ ...updated, ...snapshot });
-                      onClose();
-                    }}
-                  >
-                    <option value="야자시">야자시명식</option>
-                    <option value="조자시">조자시명식</option>
-                    <option value="인시">인시명식</option>
-                  </select>
+              {(placeDisplay || correctedDate) && (
+                <div className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {placeDisplay}
+                  {correctedDate && (
+                    <span className="opacity-70">
+                      {" "}
+                      · 보정시 {formatLocalHM(correctedDate)}
+                    </span>
+                  )}
                 </div>
+              )}
 
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onView(m);
-                      onClose();
-                    }}
-                    className="px-3 py-1 rounded text-white text-sm cursor-pointer
-                               bg-indigo-600 hover:bg-indigo-500"
-                  >
-                    보기
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit?.(m);
-                    }}
-                    className="px-3 py-1 rounded text-white text-sm cursor-pointer
-                               bg-amber-600 hover:bg-amber-500"
-                  >
-                    수정
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+              {ganji && (
+                <div className="text-sm text-neutral-800 dark:text-neutral-200 mt-1 whitespace-pre-wrap break-keep">
+                  {ganji}
+                </div>
+              )}
 
-                      if (confirm(`'${m.name}' 명식을 삭제할까요?`)) {
-                        remove(m.id); // 확인 눌렀을 때만 실행
-                      } else {
-                        console.log("취소됨"); // 취소 눌렀을 때
-                      }
-                    }}
-                    className="px-3 py-1 rounded text-white text-sm cursor-pointer
-                              bg-red-600 hover:bg-red-500"
-                  >
-                    삭제
-                  </button>
+              {m.memo && m.memo.trim() !== "" && (
+                <div>
                   <button
                     type="button"
+                    className="text-xs text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200 inline-flex items-center gap-1 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
-                      update(m.id, { favorite: !m.favorite });
+                      setMemoOpenMap((s: MemoOpenMap) => ({
+                        ...s,
+                        [m.id]: !s[m.id],
+                      }));
                     }}
-                    className={`ml-auto p-1 rounded cursor-pointer ${
-                      m.favorite ? "text-yellow-400" : "text-neutral-400"
-                    } hover:text-yellow-400`}
                   >
-                    <Star size={16} fill={m.favorite ? "currentColor" : "none"} />
+                    {memoOpen ? "메모 닫기" : "메모 열기"}
                   </button>
+                  <div
+                    className={
+                      memoOpen
+                        ? "mt-1 text-sm text-neutral-800 dark:text-neutral-200 whitespace-pre-wrap"
+                        : "hidden"
+                    }
+                  >
+                    {m.memo}
+                  </div>
                 </div>
+              )}
+
+              <div className="flex flex-wrap gap-2 mt-3">
+                {/* 폴더 선택 */}
+                <select
+                  className="h-30 text-xs rounded px-2 py-1 cursor-pointer
+                             bg-white dark:bg-neutral-900
+                             border border-neutral-300 dark:border-neutral-700
+                             text-neutral-900 dark:text-neutral-100
+                             focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  value={displayFolderLabel(m.folder)}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const raw = e.target.value;
+                    const normalized = normalizeFolderValue(raw);
+                    const itemId = m.id;
+
+                    const srcListId = m.folder
+                      ? listDroppableId(m.folder)
+                      : DROPPABLE_UNASSIGNED;
+                    const dstListId = normalized
+                      ? listDroppableId(normalized)
+                      : DROPPABLE_UNASSIGNED;
+
+                    if (normalized && !orderedFolders.includes(normalized)) {
+                      createFolder(normalized);
+                    }
+
+                    // orderMap 갱신 (화면 보이는 순서 기준)
+                    setOrderMap((prev) => {
+                      const next: OrderMap = { ...prev };
+                      const srcDisplay = getDisplayOrder(srcListId);
+                      const dstDisplay =
+                        srcListId === dstListId
+                          ? srcDisplay.slice()
+                          : getDisplayOrder(dstListId).slice();
+
+                      // src에서 제거
+                      const si = srcDisplay.indexOf(itemId);
+                      if (si >= 0) srcDisplay.splice(si, 1);
+
+                      // dst 맨앞 삽입
+                      const di = dstDisplay.indexOf(itemId);
+                      if (di >= 0) dstDisplay.splice(di, 1);
+                      dstDisplay.unshift(itemId);
+
+                      next[srcListId] = srcDisplay;
+                      next[dstListId] = dstDisplay;
+                      return next;
+                    });
+
+                    // 실제 데이터 이동
+                    update(itemId, { folder: normalized });
+                  }}
+                >
+                  {[UNASSIGNED_LABEL, ...orderedFolders].map((f) => (
+                    <option key={f} value={f}>
+                      {f}
+                    </option>
+                  ))}
+                </select>
+
+                {/* 명식 기준 선택 */}
+                <select
+                  className="h-30 text-xs rounded px-2 py-1 cursor-pointer
+                             bg-white dark:bg-neutral-900
+                             border border-neutral-300 dark:border-neutral-700
+                             text-neutral-900 dark:text-neutral-100
+                             focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+                  value={m.mingSikType ?? "야자시"}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    const nextRule = e.target.value as DayBoundaryRule;
+
+                    const updated = { ...m, mingSikType: nextRule };
+                    const snapshot = recalcGanjiSnapshot(updated);
+
+                    update(m.id, { mingSikType: nextRule, ...snapshot });
+                    onView({ ...updated, ...snapshot });
+                    onClose();
+                  }}
+                >
+                  <option value="야자시">야자시명식</option>
+                  <option value="조자시">조자시명식</option>
+                  <option value="인시">인시명식</option>
+                </select>
               </div>
-            </li>,
-            snapshot.isDragging
-          )
-        }
+
+              <div className="flex gap-2 mt-3">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onView(m);
+                    onClose();
+                  }}
+                  className="px-3 py-1 rounded text-white text-sm cursor-pointer
+                             bg-indigo-600 hover:bg-indigo-500"
+                >
+                  보기
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(m);
+                  }}
+                  className="px-3 py-1 rounded text-white text-sm cursor-pointer
+                             bg-amber-600 hover:bg-amber-500"
+                >
+                  수정
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm(`'${m.name}' 명식을 삭제할까요?`)) {
+                      remove(m.id);
+                    }
+                  }}
+                  className="px-3 py-1 rounded text-white text-sm cursor-pointer
+                             bg-red-600 hover:bg-red-500"
+                >
+                  삭제
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    update(m.id, { favorite: !m.favorite });
+                  }}
+                  className={`ml-auto p-1 rounded cursor-pointer ${
+                    m.favorite ? "text-yellow-400" : "text-neutral-400"
+                  } hover:text-yellow-400`}
+                >
+                  <Star size={16} fill={m.favorite ? "currentColor" : "none"} />
+                </button>
+              </div>
+            </div>
+          </li>
+        )}
       </Draggable>
     );
   };
 
-  // onDragEnd: 화면에 보이는 순서를 기준으로 재배열
+  /** 드롭 처리: 폴더/아이템 모두 처리(보이는 순서 기반) */
   const handleDrop = (r: DropResult) => {
     const { source, destination, draggableId, type } = r;
     if (!destination) return;
 
     if (type === "FOLDER") {
+      // 훅 내부 폴더 로직 호출 + 로컬 렌더 순서 업데이트
       handleFolderDragEnd(r);
-      const newOrder = Array.from(folderOrder);
-      const [moved] = newOrder.splice(source.index, 1);
-      newOrder.splice(destination.index, 0, moved);
-      setFolderOrder(newOrder);
+      setFolderOrder((prev) => {
+        const next = [...prev];
+        const [moved] = next.splice(source.index, 1);
+        next.splice(destination.index, 0, moved);
+        return next;
+      });
       return;
     }
 
@@ -438,25 +439,27 @@ export default function Sidebar({
       setOrderMap((prev) => {
         const next: OrderMap = { ...prev };
 
-        // ✅ 지금 화면에 보이는 순서를 기준으로 가져옴
+        // 현재 화면 보이는 순서(인덱스 정확)로 가져오기
         const srcDisplay = getDisplayOrder(srcListId);
-        const dstDisplay = srcListId === dstListId ? srcDisplay.slice() : getDisplayOrder(dstListId).slice();
+        const dstDisplay =
+          srcListId === dstListId
+            ? srcDisplay.slice()
+            : getDisplayOrder(dstListId).slice();
 
-        // 같은 리스트 재정렬
         if (srcListId === dstListId) {
+          // 같은 리스트 내 재정렬
           const [moved] = dstDisplay.splice(source.index, 1);
           dstDisplay.splice(destination.index, 0, moved);
           next[srcListId] = dstDisplay;
           return next;
         }
 
-        // 서로 다른 리스트 이동
-        const fromIdx = srcDisplay.indexOf(itemId);
-        if (fromIdx >= 0) srcDisplay.splice(fromIdx, 1);
+        // 서로 다른 리스트 간 이동
+        const si = srcDisplay.indexOf(itemId);
+        if (si >= 0) srcDisplay.splice(si, 1);
 
-        // 목적지에 끼워넣기 (드랍 인덱스 기준)
-        const existIdx = dstDisplay.indexOf(itemId);
-        if (existIdx >= 0) dstDisplay.splice(existIdx, 1);
+        const di = dstDisplay.indexOf(itemId);
+        if (di >= 0) dstDisplay.splice(di, 1);
         dstDisplay.splice(destination.index, 0, itemId);
 
         next[srcListId] = srcDisplay;
@@ -473,15 +476,10 @@ export default function Sidebar({
     }
   };
 
-  // 폴더 렌더 순서
-  const foldersToRender = [
-    ...folderOrder.filter((f) => orderedFolders.includes(f)),
-    ...orderedFolders.filter((f) => !folderOrder.includes(f)),
-  ];
-
-  const list4 = useMyeongSikStore(s => s.list);
-  const currentId = useMyeongSikStore(s => s.currentId);
-  const setCurrent = useMyeongSikStore(s => s.setCurrent);
+  // 하단 선택 리스트용
+  const list4 = useMyeongSikStore((s) => s.list);
+  const currentId = useMyeongSikStore((s) => s.currentId);
+  const setCurrent = useMyeongSikStore((s) => s.setCurrent);
 
   return (
     <>
@@ -493,19 +491,19 @@ export default function Sidebar({
         onClick={onClose}
       />
 
-      {/* Sidebar (모바일 드래그 중에는 transform 제거) */}
+      {/* Sidebar — transform 제거, left 이동만 */}
       <div
-        className={`fixed top-0 left-0 h-[calc(100dvh_-_0px)] min-w-[320px] w-full desk:w-1/3
+        className={`fixed top-0 left-0 h-[100dvh] min-w-[320px] w-full desk:w-1/3
                     bg-white dark:bg-neutral-950
                     text-neutral-900 dark:text-white
-                    shadow-lg z-99
-                    ${isDraggingAny ? "transform-none" : "transform transition-transform duration-300"}
-                    ${open ? (isDraggingAny ? "" : "translate-x-0") : "-translate-x-full"}`}
+                    shadow-lg z-99 transition-[left] duration-300
+                    ${isDraggingAny ? "overflow-hidden" : "overflow-auto"}
+                    ${open ? "left-0" : "left-[-100%]"}`}
       >
-        {/* Header */}
+        {/* 헤더 */}
         <div className="flex justify-between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
           <h2 className="text-lg font-bold">명식 리스트</h2>
-          <div className="flex items-center gap-1 desk:gap-2">
+          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => {
@@ -534,8 +532,8 @@ export default function Sidebar({
           }}
         >
           <div
-            className="p-4 overflow-y-auto h-[calc(100%-56px)] overscroll-contain"
-            style={{ touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
+            className="p-4 h-[calc(100%-56px)] overflow-y-auto overscroll-contain"
+            style={{ touchAction: "pan-y" }}
           >
             {/* 새 폴더 생성 */}
             <div className="flex items-center mb-2 gap-2">
@@ -549,6 +547,7 @@ export default function Sidebar({
                            border border-neutral-300 dark:border-neutral-700
                            text-sm text-neutral-900 dark:text-neutral-100
                            placeholder-neutral-400 dark:placeholder-neutral-500"
+                onClick={(e) => e.stopPropagation()}
               />
               <button
                 type="button"
@@ -558,6 +557,7 @@ export default function Sidebar({
                            dark:bg-neutral-800 dark:hover:bg-neutral-700
                            text-neutral-900 dark:text-neutral-100
                            border border-neutral-200 dark:border-neutral-700"
+                onClickCapture={(e) => e.stopPropagation()}
               >
                 생성
               </button>
@@ -567,12 +567,17 @@ export default function Sidebar({
             </p>
 
             {/* 바깥(미지정) 드롭 영역 */}
-            <Droppable droppableId={DROPPABLE_UNASSIGNED} type="ITEM" direction="vertical" ignoreContainerClipping>
+            <Droppable
+              droppableId={DROPPABLE_UNASSIGNED}
+              type="ITEM"
+              direction="vertical"
+              ignoreContainerClipping
+            >
               {(prov) => {
                 const outItems = orderItems(DROPPABLE_UNASSIGNED, unassignedItems);
                 return (
                   <div ref={prov.innerRef} {...prov.droppableProps} className="mb-6">
-                    <ul className="space-y-3">
+                    <ul className="flex flex-col gap-2">
                       {outItems.map((m, i) => renderCard(m, i))}
                       {prov.placeholder}
                     </ul>
@@ -582,12 +587,20 @@ export default function Sidebar({
             </Droppable>
 
             {/* 폴더 섹션들 */}
-            <Droppable droppableId="folders:root" type="FOLDER" direction="vertical" ignoreContainerClipping>
+            <Droppable
+              droppableId="folders:root"
+              type="FOLDER"
+              direction="vertical"
+              ignoreContainerClipping
+            >
               {(foldersProv) => (
                 <div ref={foldersProv.innerRef} {...foldersProv.droppableProps}>
                   {foldersToRender.map((folderName, folderIndex) => {
                     const listId = listDroppableId(folderName);
-                    const inItems = orderItems(listId, grouped[folderName] || []);
+                    const inItemsOrdered = orderItems(
+                      listId,
+                      grouped[folderName] || []
+                    );
                     const openF = !!folderOpenMap[folderName];
                     const isFavFolder = !!folderFavMap[folderName];
 
@@ -597,130 +610,132 @@ export default function Sidebar({
                         draggableId={`folder-${folderName}`}
                         index={folderIndex}
                       >
-                        {(folderDrag, folderSnap) =>
-                          portalize(
+                        {(prov) => (
+                          <div
+                            ref={prov.innerRef}
+                            {...prov.draggableProps}
+                            {...prov.dragHandleProps} // 폴더 헤더도 전체 핸들
+                            className="mb-4 cursor-grab active:cursor-grabbing select-none"
+                          >
+                            {/* 폴더 헤더 */}
                             <div
-                              ref={folderDrag.innerRef}
-                              {...folderDrag.draggableProps}
-                              style={getDragStyle(folderDrag.draggableProps.style, folderSnap.isDropAnimating)}
-                              className="mb-4"
+                              className="flex items-center justify-between px-2 py-2 rounded
+                                         bg-neutral-50 dark:bg-neutral-900/70
+                                         border border-neutral-200 dark:border-neutral-800
+                                         text-neutral-800 dark:text-neutral-200"
                             >
-                              {/* 헤더 */}
-                              <div
-                                className="flex items-center justify-between px-2 py-2 rounded
-                                           bg-neutral-50 dark:bg-neutral-900/70
-                                           border border-neutral-200 dark:border-neutral-800
-                                           text-neutral-800 dark:text-neutral-200"
-                              >
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setFolderOpenMap((s: MemoOpenMap) => ({
-                                        ...s,
-                                        [folderName]: !openF,
-                                      }));
-                                    }}
-                                    className="inline-flex items-center gap-1 text-sm font-semibold cursor-pointer"
-                                  >
-                                    {openF ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                    <span className="text-sm font-semibold">{folderName}</span>
-                                  </button>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFolderOpenMap((s: MemoOpenMap) => ({
+                                      ...s,
+                                      [folderName]: !openF,
+                                    }));
+                                  }}
+                                  className="inline-flex items-center gap-1 text-sm font-semibold cursor-pointer"
+                                >
+                                  {openF ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                  <span className="text-sm font-semibold">{folderName}</span>
+                                </button>
 
-                                  {/* 폴더 전용 드래그 핸들 */}
-                                  <button
-                                    aria-label="폴더 드래그"
-                                    {...folderDrag.dragHandleProps}
-                                    className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-neutral-100 dark:hover:bg-neutral-800"
-                                    style={{ touchAction: "none" }}
-                                  >
-                                    <GripVertical size={16} />
-                                  </button>
-
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setFolderFavMap((s: MemoOpenMap) => ({
-                                        ...s,
-                                        [folderName]: !s[folderName],
-                                      }));
-                                    }}
-                                    className={`p-1 rounded cursor-pointer ${
-                                      isFavFolder ? "text-yellow-400" : "text-neutral-400"
-                                    } hover:text-yellow-400`}
-                                  >
-                                    <Star size={16} fill={isFavFolder ? "currentColor" : "none"} />
-                                  </button>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                  <span className="opacity-60 text-xs">{inItems.length}개</span>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-
-                                      if (folderFavMap[folderName]) {
-                                        alert(`'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`);
-                                        return;
-                                      }
-
-                                      if (confirm(`'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`)) {
-                                        deleteFolder(folderName);
-                                      }
-                                    }}
-                                    className="px-2 py-1 rounded text-xs cursor-pointer
-                                              border border-red-300 dark:border-red-700
-                                              text-red-700 dark:text-red-300
-                                              hover:bg-red-50 dark:hover:bg-red-900/30"
-                                  >
-                                    삭제
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFolderFavMap((s: MemoOpenMap) => ({
+                                      ...s,
+                                      [folderName]: !s[folderName],
+                                    }));
+                                  }}
+                                  className={`p-1 rounded cursor-pointer ${
+                                    isFavFolder ? "text-yellow-400" : "text-neutral-400"
+                                  } hover:text-yellow-400`}
+                                >
+                                  <Star size={16} fill={isFavFolder ? "currentColor" : "none"} />
+                                </button>
                               </div>
 
-                              {/* 폴더 내부 아이템 드롭 영역 */}
-                              {openF && (
-                                <Droppable droppableId={listId} type="ITEM" direction="vertical" ignoreContainerClipping>
-                                  {(prov) => (
-                                    <div ref={prov.innerRef} {...prov.droppableProps} className="mt-2">
-                                      <ul className="space-y-3">
-                                        {inItems.map((m, i) => renderCard(m, i))}
-                                        {prov.placeholder}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </Droppable>
-                              )}
-                            </div>,
-                            folderSnap.isDragging
-                          )
-                        }
+                              {/* 오른쪽 끝: 개수 + 삭제 */}
+                              <div className="flex items-center gap-2">
+                                <span className="opacity-60 text-xs">
+                                  {inItemsOrdered.length}개
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (folderFavMap[folderName]) {
+                                      alert(
+                                        `'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`
+                                      );
+                                      return;
+                                    }
+                                    if (
+                                      confirm(
+                                        `'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`
+                                      )
+                                    ) {
+                                      deleteFolder(folderName);
+                                    }
+                                  }}
+                                  className="px-2 py-1 rounded text-xs cursor-pointer
+                                             border border-red-300 dark:border-red-700
+                                             text-red-700 dark:text-red-300
+                                             hover:bg-red-50 dark:hover:bg-red-900/30"
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* 폴더 내부 아이템 드롭 영역 */}
+                            {openF && (
+                              <Droppable
+                                droppableId={listId}
+                                type="ITEM"
+                                direction="vertical"
+                                ignoreContainerClipping
+                              >
+                                {(prov) => (
+                                  <div ref={prov.innerRef} {...prov.droppableProps} className="mt-2">
+                                    <ul className="flex flex-col gap-2">
+                                      {inItemsOrdered.map((m, i) => renderCard(m, i))}
+                                      {prov.placeholder}
+                                    </ul>
+                                  </div>
+                                )}
+                              </Droppable>
+                            )}
+                          </div>
+                        )}
                       </Draggable>
                     );
                   })}
                   {foldersProv.placeholder}
                 </div>
               )}
-              
             </Droppable>
+
+            {/* 하단: 선택 리스트(원래 코드 유지) */}
+            <ul className="mt-4 space-y-1">
+              {list4.map((ms) => (
+                <li
+                  key={ms.id}
+                  onClick={() => setCurrent(ms.id)}
+                  className={[
+                    "cursor-pointer p-2 rounded",
+                    currentId === ms.id
+                      ? "bg-purple-100 dark:bg-purple-800"
+                      : "hover:bg-neutral-100 dark:hover:bg-neutral-800",
+                  ].join(" ")}
+                >
+                  {ms.name || "이름없음"} ({ms.birthDay})
+                </li>
+              ))}
+            </ul>
           </div>
-          {list4.map(ms => (
-            <li
-              key={ms.id}
-              onClick={() => setCurrent(ms.id)}
-              className={[
-                "cursor-pointer p-2 rounded",
-                currentId === ms.id
-                  ? "bg-purple-100 dark:bg-purple-800" // ✅ 선택 스타일
-                  : "hover:bg-neutral-100 dark:hover:bg-neutral-800"
-              ].join(" ")}
-            >
-              {ms.name || "이름없음"} ({ms.birthDay})
-            </li>
-          ))}
         </DragDropContext>
       </div>
     </>

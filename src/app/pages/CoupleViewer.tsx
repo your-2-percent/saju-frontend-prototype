@@ -1,6 +1,5 @@
 // features/couple/CoupleViewer.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-//import { arrayMoveImmutable as arrayMove } from 'array-move';
 import type { MyeongSik } from "@/shared/lib/storage";
 
 import {
@@ -60,52 +59,12 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 // 2글자 간지 보장
 const STEMS_ALL = [
-  "갑",
-  "을",
-  "병",
-  "정",
-  "무",
-  "기",
-  "경",
-  "신",
-  "임",
-  "계",
-  "甲",
-  "乙",
-  "丙",
-  "丁",
-  "戊",
-  "己",
-  "庚",
-  "辛",
-  "壬",
-  "癸",
+  "갑","을","병","정","무","기","경","신","임","계",
+  "甲","乙","丙","丁","戊","己","庚","辛","壬","癸",
 ] as const;
 const BR_ALL = [
-  "자",
-  "축",
-  "인",
-  "묘",
-  "진",
-  "사",
-  "오",
-  "미",
-  "신",
-  "유",
-  "술",
-  "해",
-  "子",
-  "丑",
-  "寅",
-  "卯",
-  "辰",
-  "巳",
-  "午",
-  "未",
-  "申",
-  "酉",
-  "戌",
-  "亥",
+  "자","축","인","묘","진","사","오","미","신","유","술","해",
+  "子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥",
 ] as const;
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
 const BR_SET = new Set<string>(BR_ALL as readonly string[]);
@@ -181,12 +140,9 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
 
 /* ===== 음력 → 양력: 고정 파서 ===== */
 function parseBirthFixed(ms: MyeongSik): Date {
-  // 시간/분은 기존 로직 유지
   const raw = parseBirthLocal(ms);
-
   if (!isLunarCalendar(ms)) return raw;
 
-  // 가능한 키에서 날짜 추출 (여기서는 birthDay 사용)
   const ymd = parseYMD((ms as unknown as { birthDay?: unknown }).birthDay);
   if (!ymd) return raw;
 
@@ -198,17 +154,17 @@ function parseBirthFixed(ms: MyeongSik): Date {
 /* =============== 명식 선택 모달 (드래그 정렬 + 로컬스토리지 저장) =============== */
 const ORDER_KEY = "people_picker_order_v1";
 
-function arrayMove<T>(arr: T[], from: number, to: number) {
-  const copy = [...arr];
-  const [item] = copy.splice(from, 1);
-  copy.splice(to, 0, item);
-  return copy;
+function arrayMove<T>(arr: readonly T[], from: number, to: number): T[] {
+  const next = arr.slice();
+  const [moved] = next.splice(from, 1);
+  next.splice(to, 0, moved);
+  return next;
 }
 
 function PeoplePickerModal({
   open,
   list,
-  //onSelect,
+  onSelect,
   onClose,
 }: {
   open: boolean;
@@ -274,37 +230,30 @@ function PeoplePickerModal({
   // 검색 중엔 드래그 비활성(인덱스 불일치 방지)
   const allowDrag = q.trim() === "";
 
-const onDragEnd = (r: DropResult) => {
-  const { destination, source } = r;
-  if (!destination) return;
-  if (!allowDrag) return;
-  if (destination.index === source.index) return;
+  const onDragEnd = (r: DropResult) => {
+    const { destination, source } = r;
+    if (!destination) return;
+    if (!allowDrag) return;
+    if (destination.index === source.index) return;
 
-  // 1) 보이는 리스트 기준으로 이동
-  const visibleIds = filtered.map(idOf);
-  const movedVisible = arrayMove(visibleIds, source.index, destination.index);
+    // 1) 보이는 리스트 기준으로 이동
+    const visibleIds = filtered.map(idOf);
+    const movedVisible = arrayMove(visibleIds, source.index, destination.index);
 
-  // 2) 전체 순서로 환원 (필터 밖 요소는 기존 순서 유지)
-  const allIds = ordered.map(idOf);
-  const invisibleIds = allIds.filter(id => !visibleIds.includes(id));
-  const nextIds = [...movedVisible, ...invisibleIds];
+    // 2) 전체 순서로 환원 (필터 밖 요소는 기존 순서 유지)
+    const allIds = ordered.map(idOf);
+    const invisibleIds = allIds.filter((id) => !visibleIds.includes(id));
+    const nextIds = [...movedVisible, ...invisibleIds];
 
-  // 3) 실제 렌더에 쓰는 원본 리스트를 갱신 (여기서 'setOrdered' 자리에 당신 프로젝트 setter 사용)
-  //const byId = new Map(ordered.map(o => [idOf(o), o]));
-  //const nextOrdered = nextIds.map(id => byId.get(id)!);
-
-  // 예시: zustand라면
-  // usePeopleStore.getState().setOrdered(nextOrdered);
-
-  // 혹은 로컬 상태라면
-  // setOrdered(nextOrdered);
-
-  // 4) 영속화는 부가적으로
-  persist(nextIds);
-};
+    // 3) 영속화 + 로컬 상태 갱신
+    persist(nextIds);
+  };
 
   return (
     <>
+      {/* 모바일 터치 안정화 */}
+      <style>{`[data-rbd-drag-handle-context-id]{touch-action:none!important}`}</style>
+
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/60 transition-opacity duration-200 z-[1000] ${
@@ -314,8 +263,8 @@ const onDragEnd = (r: DropResult) => {
       />
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[640px] max-h-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
-          open ? "translate-y-0" : "translate-y-full"
+        className={`fixed bottom-0 inset-x-0 mx-auto w-full max-w-[640px] max-h-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-bottom duration-300 z-[1001] ${
+          open ? "bottom-0" : "bottom-[-80dvh]"
         }`}
       >
         <div className="flex items-center justify-between mb-3">
@@ -344,83 +293,48 @@ const onDragEnd = (r: DropResult) => {
           )}
         </div>
 
-<DragDropContext onDragEnd={onDragEnd}>
-  <Droppable
-    droppableId="peopleList"
-    renderClone={(prov, _snapshot, rubric) => {
-      const m = filtered[rubric.source.index];
-      return (
-        <li
-          ref={prov.innerRef}
-          {...prov.draggableProps}
-          {...prov.dragHandleProps}
-          style={prov.draggableProps.style}
-          className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 shadow-lg opacity-95"
-        >
-          <div className="flex items-center gap-2">
-            <span className="cursor-grabbing mr-2 select-none">☰</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
-                {nameOf(m)}
-              </div>
-              <div className="text-neutral-500 dark:text-neutral-400 text-xs">
-                {formatDate24(parseBirthFixed(m))}
-              </div>
-            </div>
-          </div>
-        </li>
-      );
-    }}
-  >
-    {(dropProvided) => (
-      <ul
-        ref={dropProvided.innerRef}
-        {...dropProvided.droppableProps}
-        className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto"
-      >
-        {filtered.map((m, i) => {
-          const id = String(idOf(m));
-          return (
-            <Draggable key={id} draggableId={id} index={i}>
-              {(prov, snapshot) => (
-                <li
-                  ref={prov.innerRef}
-                  {...prov.draggableProps}
-                  // 👇 원본은 드래그 중이면 숨겨야 clone만 보임
-                  style={{
-                    ...prov.draggableProps.style,
-                    visibility: snapshot.isDragging ? "hidden" : "visible",
-                  }}
-                  className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      {...prov.dragHandleProps}
-                      className="cursor-grab mr-2 select-none flex items-center"
-                    >
-                      ☰
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
-                        {nameOf(m)}
-                      </div>
-                      <div className="text-neutral-500 dark:text-neutral-400 text-xs">
-                        {formatDate24(parseBirthFixed(m))}
-                      </div>
-                    </div>
-                  </div>
-                </li>
-              )}
-            </Draggable>
-          );
-        })}
-        {dropProvided.placeholder}
-      </ul>
-    )}
-  </Droppable>
-</DragDropContext>
-
-
+        <DragDropContext onDragEnd={onDragEnd}>
+          <Droppable droppableId="peopleList">
+            {(dropProvided) => (
+              <ul
+                ref={dropProvided.innerRef}
+                {...dropProvided.droppableProps}
+                className="flex flex-col gap-2 max-h-[60vh] overflow-y-auto"
+              >
+                {filtered.map((m, i) => {
+                  const id = String(idOf(m));
+                  return (
+                    <Draggable key={id} draggableId={id} index={i}>
+                      {(prov) => (
+                        <li
+                          ref={prov.innerRef}
+                          {...prov.draggableProps}
+                          {...prov.dragHandleProps}  
+                          onClick={() => onSelect(m)}
+                          className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 cursor-grab select-none active:cursor-grabbing"
+                        >
+                          <div className="flex items-center gap-2">
+                            {/* 아이콘은 시각적 힌트만 */}
+                            <span className="mr-2 select-none">☰</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
+                                {nameOf(m)}
+                              </div>
+                              <div className="text-neutral-500 dark:text-neutral-400 text-xs">
+                                {formatDate24(parseBirthFixed(m))}
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      )}
+                    </Draggable>
+                  );
+                })}
+                {dropProvided.placeholder}
+              </ul>
+            )}
+          </Droppable>
+        </DragDropContext>
 
       </div>
     </>
@@ -816,7 +730,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
             onPick={() => setOpenPickB(true)}
           />
 
-        {showMyoUn && dataA && (
+          {showMyoUn && dataA && (
             <PersonSlot
               label="묘운 A"
               data={dataA}
@@ -884,13 +798,19 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
       <PeoplePickerModal
         open={openPickA}
         list={people || []}
-        onSelect={(m) => setDataA(m)}
+        onSelect={(m) => {
+          setDataA(m);
+          setOpenPickA(false);
+        }}
         onClose={() => setOpenPickA(false)}
       />
       <PeoplePickerModal
         open={openPickB}
         list={people || []}
-        onSelect={(m) => setDataB(m)}
+        onSelect={(m) => {
+          setDataB(m);
+          setOpenPickB(false);
+        }}
         onClose={() => setOpenPickB(false)}
       />
     </>
