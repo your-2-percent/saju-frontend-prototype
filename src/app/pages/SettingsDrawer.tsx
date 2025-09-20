@@ -1,4 +1,5 @@
 // components/SettingsDrawer.tsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -6,7 +7,6 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import { X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import Toast from "@/shared/ui/feedback/Toast";
 import {
   useSettingsStore,
@@ -15,13 +15,12 @@ import {
 import { useApplyTheme } from "@/shared/lib/hooks/useTheme";
 import { setStoredTheme, type ThemeMode } from "@/shared/lib/theme";
 
-type Props = { open: boolean; onClose: () => void };
-
-// ─────────────────────────────────────────────────────────────
-// 로컬스토리지 키
+/* ─────────────────────────────────────────────────────────────
+ * 로컬스토리지 키
+ * ──────────────────────────────────────────────────────────── */
 const LS_KEY = "harim.settings.v1";
 
-// 섹션 ID 고정 목록(렌더 키)
+/* 섹션 ID 고정 목록(렌더 키) */
 const DEFAULT_SECTION_KEYS = [
   "theme",            // ✅ 테마 토글
   "hiddenStem",       // 지장간 표시 타입
@@ -39,16 +38,16 @@ const DEFAULT_SECTION_KEYS = [
 
 type SectionKey = (typeof DEFAULT_SECTION_KEYS)[number];
 
-// 유효 키 가드
+/* 유효 키 가드 */
 function isSectionKey(v: unknown): v is SectionKey {
   return typeof v === "string" && (DEFAULT_SECTION_KEYS as readonly string[]).includes(v);
 }
 
-// 저장된 섹션 순서 정규화: 유효 키만 살리고 누락은 뒤에 보충
+/* 저장된 섹션 순서 정규화: 유효 키만 살리고 누락은 뒤에 보충 */
 function normalizeOrder(saved: unknown): SectionKey[] {
-  const base = Array.isArray(saved) ? saved.filter(isSectionKey) : [];
-  const missing = (DEFAULT_SECTION_KEYS as readonly SectionKey[]).filter(k => !base.includes(k));
-  return [...base, ...missing];
+  const base = Array.isArray(saved) ? (saved as unknown[]).filter(isSectionKey) : [];
+  const missing = (DEFAULT_SECTION_KEYS as readonly SectionKey[]).filter((k) => !base.includes(k as SectionKey));
+  return [...base, ...missing] as SectionKey[];
 }
 
 type PersistPayload = Partial<Settings> & { sectionOrder?: SectionKey[] };
@@ -63,6 +62,7 @@ function readLS(): PersistPayload | null {
     return null;
   }
 }
+
 function writeLS(payload: PersistPayload) {
   if (typeof window === "undefined") return;
   try {
@@ -74,7 +74,7 @@ function writeLS(payload: PersistPayload) {
   }
 }
 
-// ─────────────────────────────────────────────────────────────
+type Props = { open: boolean; onClose: () => void };
 
 export default function SettingsDrawer({ open, onClose }: Props) {
   const { settings, setSettings } = useSettingsStore();
@@ -89,7 +89,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // 테마 클래스 적용(실시간)
+  // 테마 클래스 적용(실시간 미리보기)
   useApplyTheme(localSettings.theme ?? "dark");
 
   // 드로어 열 때 LS값 우선 로드(있으면 스토어보다 최신으로 간주)
@@ -117,20 +117,20 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const applyChanges = () => {
     setSettings({ ...localSettings, sectionOrder: order });
     if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
+    writeLS({ ...localSettings, sectionOrder: order });
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };
 
-  const handleSectionDragEnd = (result: DropResult) => {
+  const handleDragEnd = (result: DropResult) => {
     const { destination, source } = result;
     if (!destination) return;
     if (destination.index === source.index) return;
 
-    const newOrder = Array.from(order);
-    const [moved] = newOrder.splice(source.index, 1);
-    newOrder.splice(destination.index, 0, moved);
-    setOrder(newOrder);
-    writeLS({ ...localSettings, sectionOrder: newOrder });
+    const next = Array.from(order);
+    const [moved] = next.splice(source.index, 1);
+    next.splice(destination.index, 0, moved);
+    setOrder(next);
   };
 
   /* ── 섹션 렌더러 ──────────────────────────────────────────── */
@@ -140,7 +140,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="테마">
             <ThemeSwitch
-              value={localSettings.theme ?? "dark"}
+              value={(localSettings.theme as ThemeMode) ?? "dark"}
               onChange={(v) => update("theme", v)}
             />
           </Section>
@@ -222,7 +222,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="개화론 적용여부">
             <Switch
               label="개화론 적용"
-              checked={localSettings.sinsalBloom}
+              checked={Boolean(localSettings.sinsalBloom)}
               onChange={(v) => update("sinsalBloom", v)}
             />
           </Section>
@@ -263,7 +263,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="음간 얇게">
             <Switch
               label="음간 얇게"
-              checked={localSettings.thinEum}
+              checked={Boolean(localSettings.thinEum)}
               onChange={(v) => update("thinEum", v)}
             />
           </Section>
@@ -275,17 +275,17 @@ export default function SettingsDrawer({ open, onClose }: Props) {
             <div className="space-y-2 w-full max-w-[140px] mx-auto">
               <Switch
                 label="십신 표시"
-                checked={localSettings.showSipSin}
+                checked={Boolean(localSettings.showSipSin)}
                 onChange={(v) => update("showSipSin", v)}
               />
               <Switch
                 label="운성 표시"
-                checked={localSettings.showSibiUnseong}
+                checked={Boolean(localSettings.showSibiUnseong)}
                 onChange={(v) => update("showSibiUnseong", v)}
               />
               <Switch
                 label="신살 표시"
-                checked={localSettings.showSibiSinsal}
+                checked={Boolean(localSettings.showSibiSinsal)}
                 onChange={(v) => update("showSibiSinsal", v)}
               />
             </div>
@@ -297,7 +297,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="난이도 UP ver.">
             <Switch
               label="난이도 UP 적용"
-              checked={localSettings.difficultyMode ?? false}
+              checked={Boolean(localSettings.difficultyMode)}
               onChange={(v) => update("difficultyMode", v)}
             />
           </Section>
@@ -310,6 +310,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
 
   return (
     <>
+      {/* 모바일 터치 드래그 안정화 */}
+      <style>{`[data-rbd-drag-handle-context-id]{touch-action:none!important}`}</style>
+
       {/* Backdrop */}
       <div
         className={`fixed inset-0 bg-black/60 transition-opacity duration-300 z-90 ${
@@ -320,8 +323,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
 
       {/* Drawer */}
       <div
-        className={`fixed bottom-0 left-1/2 translate-x-[-50%] w-full max-w-[640px] h-[88dvh] bg-white text-neutral-900 dark:bg-neutral-950 dark:text-white shadow-lg rounded-t-2xl transform transition-transform duration-300 z-99 ${
-          open ? "translate-y-0" : "translate-y-full"
+        className={`fixed inset-x-0 mx-auto w-full max-w-[640px] h-[88dvh] bg-white text-neutral-900 dark:bg-neutral-950 dark:text-white shadow-lg rounded-t-2xl transition-bottom duration-300 z-99 ${
+          open ? "bottom-0" : "bottom-[-88dvh]"
         }`}
       >
         {/* Header */}
@@ -345,62 +348,35 @@ export default function SettingsDrawer({ open, onClose }: Props) {
 
         {/* Content (드래그 가능) */}
         {open && (
-          <div className="p-4 overflow-y-auto h-[calc(100%_-_56px)]">
-            <DragDropContext onDragEnd={handleSectionDragEnd}>
-              <Droppable
-                droppableId="settings-sections"
-                renderClone={(prov, _snapshot, rubric) => (
-                  <li
-                    ref={prov.innerRef}
-                    {...prov.draggableProps}
-                    {...prov.dragHandleProps}
-                    style={prov.draggableProps.style}
-                    className="bg-white dark:bg-neutral-900 border rounded p-2 shadow-lg"
-                  >
-                    {renderSection(order[rubric.source.index])}
-                  </li>
-                )}
-              >
-                {(dropProvided) => (
-                  <ul ref={dropProvided.innerRef} {...dropProvided.droppableProps} className="space-y-2">
-                    {order.map((id, idx) => (
-                      <Draggable key={id} draggableId={id} index={idx}>
-                        {(prov, snapshot) => (
-                          <li
-                            ref={prov.innerRef}
-                            {...prov.draggableProps}
-                            // 드래그 핸들은 따로만 주기
-                            style={{
-                              ...prov.draggableProps.style,
-                              visibility: snapshot.isDragging ? "hidden" : "visible",
-                            }}
-                            className="!flex items-center bg-white dark:bg-neutral-900 border rounded p-2"
-                          >
-                            {/* 드래그 핸들: 왼쪽 세로 중앙 */}
-                            <span
-                              {...prov.dragHandleProps}
-                              className="cursor-grab select-none mr-2 flex items-center"
-                              style={{
-                                cursor: snapshot.isDragging ? "grabbing" : "grab",
-                                userSelect: "none",
-                              }}
-                            >
-                              ☰
-                            </span>
-
-                            {/* 섹션 본문 */}
-                            <div className="flex-1 min-w-0">{renderSection(id)}</div>
-                          </li>
-                        )}
-                      </Draggable>
-                    ))}
-                    {dropProvided.placeholder}
-                  </ul>
-                )}
-              </Droppable>
-            </DragDropContext>
-
-          </div>
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Droppable droppableId="settings-sections">
+              {(provided) => (
+                <ul
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="flex flex-col gap-2 p-4 overflow-y-auto max-h-[80dvh] list-none"
+                >
+                  {order.map((id, idx) => (
+                    <Draggable key={id} draggableId={id} index={idx}>
+                      {(prov) => (
+                        <li
+                          ref={prov.innerRef}
+                          {...prov.draggableProps}
+                          {...prov.dragHandleProps}  // ← li 전체가 핸들!
+                          className="!flex justify-between items-center bg-white dark:bg-neutral-800 p-2 rounded border text-sm desk:text-base select-none cursor-grab active:cursor-grabbing"
+                        >
+                          {/* 아이콘은 표시용 */}
+                          <span className="mr-2 select-none">☰</span>
+                          <div className="flex-1 min-w-0">{renderSection(id)}</div>
+                        </li>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </ul>
+              )}
+            </Droppable>
+          </DragDropContext>
         )}
       </div>
 
@@ -434,7 +410,6 @@ function ThemeSwitch({
       title="다크/라이트 전환"
       aria-pressed={isDark}
     >
-      {/* 비주얼 토글 */}
       <span className="inline-block w-10 h-5 bg-neutral-300 rounded-full relative after:content-[''] after:w-4 after:h-4 after:bg-white after:rounded-full after:absolute after:top-0.5 after:left-0.5 after:transition-all dark:bg-neutral-700" />
       <span>{isDark ? "다크" : "라이트"}</span>
     </button>
