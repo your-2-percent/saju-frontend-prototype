@@ -104,7 +104,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       setLocalSettings(settings);
       setOrder([...initialOrder]);
     }
-  }, [open, settings, initialOrder]);
+    // 의도: 열릴 때 한 번만 초기화. open 변할 때만 실행.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => {
@@ -175,19 +177,19 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         );
 
       case "ilunRule":
-        return (
-          <Section title="일운 달력 시간타입">
-            <SegmentedControl
-              value={localSettings.ilunRule}
-              onChange={(v) => update("ilunRule", v)}
-              options={[
-                { label: "야자시", value: "야자시" },
-                { label: "조자시", value: "조자시" },
-                { label: "인시", value: "인시" },
-              ]}
-            />
-          </Section>
-        );
+      return (
+        <Section title="일운 달력 시간타입">
+          <SegmentedControl
+            value={localSettings.ilunRule ?? "조자시"}
+            onChange={(v) => update("ilunRule", v)}
+            options={[
+              { label: "야자시", value: "야자시" },
+              { label: "조자시", value: "조자시" },
+              { label: "인시", value: "인시" },
+            ]}
+          />
+        </Section>
+      );
 
       case "sinsalMode":
         return (
@@ -438,12 +440,15 @@ function SegmentedControl<T extends string>({
     <div
       data-no-drag
       className="inline-flex rounded-md overflow-hidden border border-neutral-300 bg-white dark:border-neutral-700 dark:bg-neutral-800"
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
     >
       {options.map((opt) => {
         const active = value === opt.value;
         return (
           <button
             key={opt.value}
+            type="button"                             
             onClick={() => onChange(opt.value)}
             className={`px-3 py-1 text-sm transition-colors ${
               active
