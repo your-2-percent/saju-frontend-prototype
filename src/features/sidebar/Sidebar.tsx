@@ -476,11 +476,6 @@ export default function Sidebar({
     }
   };
 
-  // 하단 선택 리스트용
-  const list4 = useMyeongSikStore((s) => s.list);
-  const currentId = useMyeongSikStore((s) => s.currentId);
-  const setCurrent = useMyeongSikStore((s) => s.setCurrent);
-
   return (
     <>
       {/* Overlay */}
@@ -717,24 +712,6 @@ export default function Sidebar({
                 </div>
               )}
             </Droppable>
-
-            {/* 하단: 선택 리스트(원래 코드 유지) */}
-            <ul className="mt-4 space-y-1">
-              {list4.map((ms) => (
-                <li
-                  key={ms.id}
-                  onClick={() => setCurrent(ms.id)}
-                  className={[
-                    "cursor-pointer p-2 rounded",
-                    currentId === ms.id
-                      ? "bg-purple-100 dark:bg-purple-800"
-                      : "hover:bg-neutral-100 dark:hover:bg-neutral-800",
-                  ].join(" ")}
-                >
-                  {ms.name || "이름없음"} ({ms.birthDay})
-                </li>
-              ))}
-            </ul>
           </div>
         </DragDropContext>
       </div>
