@@ -369,9 +369,22 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
 
   // ── 형: 삼형/상형/자묘형/자형 ──
   [["인","사","신"],["축","술","미"]].forEach(group => {
-    const hits = group.flatMap(g => brs.flatMap((b,i) => b===g ? [i] : []));
-    const uniqHits = Array.from(new Set(hits)).sort((a,b) => a - b);
-    if (uniqHits.length === 3) pushUnique(out.jijiHyeong, `#${posMask(uniqHits)}_${group.join("")}삼형`);
+    const hits: number[] = [];
+    const found = new Set<string>();
+
+    group.forEach(g => {
+      brs.forEach((b,i) => {
+        if (b === g) {
+          hits.push(i);
+          found.add(g);
+        }
+      });
+    });
+
+    if (found.size === 3) {
+      const uniqHits = Array.from(new Set(hits)).sort((a,b) => a - b);
+      pushUnique(out.jijiHyeong, `#${posMask(uniqHits)}_${group.join("")}삼형`);
+    }
   });
   BR_SANGHYEONG_LABELS.forEach(({pair:[a,b],label}) => addBranchPairsAllByLabel(a,b,label,out.jijiHyeong));
   BR_ZAMYO_HYEONG_LABELS.forEach(({pair:[a,b],label}) => addBranchPairsAllByLabel(a,b,label,out.jijiHyeong));
