@@ -16,6 +16,7 @@ import { blendElementStrength, type BlendTab, BLEND_TABS } from "./logic/blend";
 import { mapElementsToTenGods } from "./utils/tenGod";
 import ShinsalTagPanel from "./ShinsalTagPanel";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import ClimateBars from "./ClimateBars";
 
 const EMPTY_TOTALS: ReadonlyArray<PowerData> = Object.freeze([]);
 
@@ -571,6 +572,8 @@ export default function AnalysisReport({
           />
 
           <StrengthBar value={strengthPct} />
+
+          <ClimateBars natal={pillars} />
 
           <div className="w-full p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 space-y-3">
             <div className="flex items-center justify-between">
