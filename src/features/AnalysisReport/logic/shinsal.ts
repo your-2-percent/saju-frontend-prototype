@@ -117,7 +117,7 @@ function posToKey(pos: PosIndex): keyof TagBucketsByPos {
 }
 
 /* ────────────────────────────────────────────────────────────────────────────
- * 표기 헬퍼: #좌측X우측_신살
+ * 표기 헬퍼: #좌측X우측_신살(혹은 '쌍+신살')
  * ──────────────────────────────────────────────────────────────────────────── */
 const posKo = (p: PosIndex): "연지" | "월지" | "일지" | "시지" =>
   (p === 0 ? "연지" : p === 1 ? "월지" : p === 2 ? "일지" : "시지");
@@ -179,7 +179,6 @@ function natalBranches(natal: Pillars4): string[] {
  *  - 도화(桃花) 관련 전부 제외
  * ──────────────────────────────────────────────────────────────────────────── */
 
-/* ==== 연지(年支) 기준 — 흉살 (적용: 주석에 표기) ==== */
 type YMap = Record<string, string[]>;
 const Y = (o: Record<string, string | string[]>): YMap =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [normBranchChar(k), (Array.isArray(v) ? v : [v]).map(normBranchChar)]));
@@ -212,31 +211,27 @@ const MAP_Y_BIYEOM_all  = Y({ 자:"신", 축:"유", 인:"술", 묘:"해", 진:"�
 const MAP_Y_MAEA_all    = Y({ 자:"축", 축:"묘", 인:"신", 묘:"축", 진:"묘", 사:"신", 오:"축", 미:"묘", 신:"신", 유:"축", 술:"묘", 해:"신" });
 const MAP_Y_TANGHWA_all = Y({ 자:"오", 축:"미", 인:"인", 묘:"오", 진:"미", 사:"인", 오:"오", 미:"미", 신:"인", 유:"오", 술:"미", 해:"인" });
 
-// (모두 “전체지지적용” 표시는 ALL, 특정 표시는 DAY/HOUR 로 강제)
 type ApplyScope = "ALL" | "DAY" | "HOUR";
-type DMap = Record<string, string[]>; // 일간→지지들
+type DMap = Record<string, string[]>;
 const toArr = (v: string | string[]) =>
   (Array.isArray(v) ? v : String(v).split("·")).map(s => normBranchChar(s.trim())).filter(Boolean);
 
 /* ==== 월지(月支) 기준 — 길/흉 (적용: 주석) ==== */
-type MMapB = Record<string, string[]>; // 월지→지지(1개 이상)
-type MMapS = Record<string, string>;   // 월지→천간(1개)
+type MMapB = Record<string, string[]>;
+type MMapS = Record<string, string>;
 
 const M_B = (o: Record<string, string | string[]>): MMapB =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [normBranchChar(k), (Array.isArray(v) ? v : [v]).map(s => normBranchChar(s))]));
 
-// 천덕귀인/월덕귀인/천덕합/월덕합 — 전체 천간 적용
 const MAP_M_CHEONDEOK_S: MMapS = { 인:"정", 묘:"신", 진:"임", 사:"신", 오:"해", 미:"갑", 신:"계", 유:"인", 술:"병", 해:"을", 자:"사", 축:"경" };
 const MAP_M_WOLDEOK_S:  MMapS = { 인:"병", 묘:"갑", 진:"임", 사:"경", 오:"병", 미:"갑", 신:"임", 유:"경", 술:"병", 해:"갑", 자:"임", 축:"경" };
 const MAP_M_CHEONDEOKHAP_S: MMapS = { 인:"임", 묘:"사", 진:"정", 사:"병", 오:"인", 미:"기", 신:"무", 유:"해", 술:"신", 해:"경", 자:"신", 축:"을" };
 const MAP_M_WOLDEOKHAP_S:  MMapS = { 인:"신", 묘:"기", 진:"정", 사:"을", 오:"신", 미:"기", 신:"정", 유:"을", 술:"신", 해:"기", 자:"정", 축:"을" };
 
-// 혈지 — 전체지지 / 금쇄 — 연지·일지
 const MAP_M_HYULJI_B = M_B({ 인:"술", 묘:"해", 진:"자", 사:"축", 오:"인", 미:"묘", 신:"진", 유:"사", 술:"오", 해:"미", 자:"신", 축:"유" });
 const MAP_M_GEUMSOE_B = M_B({ 인:"신", 묘:"유", 진:"술", 사:"해", 오:"자", 미:"축", 신:"신", 유:"유", 술:"술", 해:"해", 자:"자", 축:"축" });
 
-// 천사/천전/지전/진신 — 일주(월지→일주 정확매칭)
-type MMapIlju = Record<string, string[]>; // 월지→[일주들]
+type MMapIlju = Record<string, string[]>;
 const M_ILJU = (o: Record<string, string | string[]>): MMapIlju =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [normBranchChar(k), toArr(v)]));
 
@@ -253,7 +248,7 @@ const MAP_M_JINSIN_ILJU = M_ILJU({
   인:"갑자", 묘:"갑자", 진:"갑자", 사:"갑오", 오:"갑오", 미:"갑오", 신:"무신", 유:"무신", 술:"무신", 해:"갑자", 자:"갑자", 축:"갑자",
 });
 
-// 급각/단교관/부벽/욕분관/사주관/천의성/천희신/황은대사/홍란성/장수성
+// 급각/단교관/...
 const MAP_M_GUPGAK_B = M_B({
   인:["해","자"], 묘:["해","자"], 진:["해","자"], 사:["묘","미"], 오:["묘","미"], 미:["묘","미"],
   신:["인","술"], 유:["인","술"], 술:["인","술"], 해:["축","진"], 자:["축","진"], 축:["축","진"],
@@ -327,6 +322,18 @@ function isInPairList(list: ReadonlyArray<readonly [string, string]>, a: string,
   const A = normBranchChar(a), B = normBranchChar(b);
   for (const [x, y] of list) if ((x === A && y === B) || (x === B && y === A)) return true;
   return false;
+}
+/** 원진/귀문 쌍의 ‘정방향’ 문자열(예: 사+술 => "사술")을 반환. 매칭 안되면 a+b */
+function canonicalPairString(
+  list: ReadonlyArray<readonly [string, string]>,
+  a: string,
+  b: string
+): string {
+  const A = normBranchChar(a), B = normBranchChar(b);
+  for (const [x, y] of list) {
+    if ((x === A && y === B) || (x === B && y === A)) return `${x}${y}`;
+  }
+  return `${A}${B}`;
 }
 function getVoidPair(pillar: string): [string, string] | null {
   for (const row of 공망표) if (row.set.has(pillar)) return row.voids;
@@ -593,9 +600,7 @@ export function buildShinsalTags({
   /* ── 괴강/백호 — 같은 동림(같은 기둥) 조건 반영 ── */
   const isGwaegangIlju = 괴강_일주세트.has(natal[idx.day]);
   if (isGwaegangIlju) {
-    // 일주 표기
     natalBadPos.push({ name: labelIlju("괴강살"), weight: POS_WEIGHT[idx.day], pos: idx.day });
-    // 동일 간지(동림)인 다른 자리에도 단일 라벨
     for (const p of [idx.year, idx.month, idx.hour]) {
       if (natal[p] === natal[idx.day]) {
         natalBadPos.push({ name: labelPos_at("괴강살", p), weight: POS_WEIGHT[p], pos: p });
@@ -603,7 +608,7 @@ export function buildShinsalTags({
     }
   }
 
-  // 백호: 일간 기준 매핑 + 같은 기둥(해당 자리의 천간이 '일간'과 같고, 지지가 매핑값)에서만 성립
+  // 백호
   const bhTargets = MAP_D_BAEKHO[dStem];
   if (bhTargets) {
     for (const p of [idx.year, idx.month, idx.day, idx.hour]) {
@@ -640,7 +645,7 @@ export function buildShinsalTags({
     }
   }
 
-  // (NEW) 십악대패살: 특정 일주일 때 성립
+  // (NEW) 십악대패살
   {
     const 십악대패세트 = new Set(["갑진","을사","임신","병신","정해","경진","무술","계해","신사","기축"]);
     if (십악대패세트.has(natal[idx.day])) {
@@ -665,7 +670,8 @@ export function buildShinsalTags({
       }
     }
   }
-  // 원진 (연-시 제외) — 우선순위 높은 자리 하나만
+
+  // 원진 — 우선순위 높은 자리 하나만, 라벨에 ‘쌍’ 포함 (예: 사술원진)
   {
     const pairs: Array<[PosIndex, PosIndex]> = [
       [idx.year,  idx.month],
@@ -676,20 +682,27 @@ export function buildShinsalTags({
     ];
     for (const [p1, p2] of pairs) {
       const b1 = getBranchAt(natal[p1]), b2 = getBranchAt(natal[p2]);
-      if (isInPairList(원진_pairs, b1, b2)) pushPairTag(natalBadPos, "원진", p1, p2);
+      if (isInPairList(원진_pairs, b1, b2)) {
+        const pairStr = canonicalPairString(원진_pairs, b1, b2); // 예: 사술
+        pushPairTag(natalBadPos, `${pairStr}원진`, p1, p2);
+      }
     }
   }
-  // 귀문 (연지 제외, 월-일/일-시 인접) — 우선순위 높은 자리 하나만
+
+  // 귀문 — 요청대로 연X월, 월X시도 포함. 라벨에 ‘쌍’ 포함 (예: 사술귀문)
   {
-    const pairs: Array<[PosIndex, PosIndex, "월일" | "일시"]> = [
-      [idx.month, idx.day, "월일"],
-      [idx.day,   idx.hour, "일시"],
+    const targetPairs: Array<[PosIndex, PosIndex, number]> = [
+      [idx.year,  idx.month, 0], // 연-월 (추가)
+      [idx.month, idx.day,   1], // 월-일 (가산점)
+      [idx.month, idx.hour,  0], // 월-시 (추가)
+      [idx.day,   idx.hour,  0], // 일-시
     ];
-    for (const [p1, p2, kind] of pairs) {
+    for (const [p1, p2, bonusFlag] of targetPairs) {
       const b1 = getBranchAt(natal[p1]), b2 = getBranchAt(natal[p2]);
       if (isInPairList(귀문_pairs, b1, b2)) {
-        const bonus = (kind === "월일" ? 1 : 0) + (귀문_strong_set.has(b1 + b2) ? 1 : 0);
-        pushPairTag(natalBadPos, "귀문", p1, p2, bonus);
+        const pairStr = canonicalPairString(귀문_pairs, b1, b2); // 예: 사술
+        const bonus = (bonusFlag ? 1 : 0) + (귀문_strong_set.has(b1 + b2) ? 1 : 0);
+        pushPairTag(natalBadPos, `${pairStr}귀문`, p1, p2, bonus);
       }
     }
   }
@@ -699,7 +712,13 @@ export function buildShinsalTags({
     return idx >= 0 ? label.slice(idx + 1) : label;
   }
 
-  const MULTI_POS_ALLOWED = new Set(["현침살", "곡각살"]);
+  const MULTI_POS_ALWAYS = new Set(["현침살", "곡각살"]);
+
+  /** 원진/귀문은 겹침 허용: 같은 ‘쌍+종류’ 태그가 여러 자리에서 떠도 모두 살림 */
+  function isMultiAllowed(tagName: string): boolean {
+    if (MULTI_POS_ALWAYS.has(tagName)) return true;
+    return tagName.endsWith("원진") || tagName.endsWith("귀문");
+  }
 
   function uniqKeepMaxPerTag(items: TagBucketPos[]): TagBucketPos[] {
     const grouped = new Map<string, TagBucketPos[]>();
@@ -711,7 +730,7 @@ export function buildShinsalTags({
 
     const result: TagBucketPos[] = [];
     for (const [tagName, arr] of grouped) {
-      if (MULTI_POS_ALLOWED.has(tagName)) {
+      if (isMultiAllowed(tagName)) {
         result.push(...arr);
       } else {
         const chosen = arr.sort((a, b) =>
@@ -782,9 +801,9 @@ export function buildShinsalTags({
     if (MAP_D_GEUMYEO[dStem]?.includes(Lb))  pushLuck(good, labelLuck_SB("금여록", src));
     if (MAP_D_HONGYEOM[dStem]?.includes(Lb)) pushLuck(bad,  labelLuck_SB("홍염", src));
     if (MAP_D_YANGIN[dStem]?.includes(Lb))   pushLuck(bad,  labelLuck_SB("양인살", src));
-    if (MAP_D_BAEKHO[dStem]?.includes(Lb))   pushLuck(bad,  labelLuck_SB("백호대살", src)); // 운 표기는 대표로 유지
+    if (MAP_D_BAEKHO[dStem]?.includes(Lb))   pushLuck(bad,  labelLuck_SB("백호대살", src));
 
-    // 연지 기준 세운 악살: 상문/조객 (라벨은 운 전용 단일)
+    // 연지 기준 세운 악살: 상문/조객
     if (src === "se") {
       if (MAP_Y_SANGMOON_se[yBranch]?.includes(Lb)) pushLuck(bad, labelLuck_SangJoe(src, "상문살"));
       if (MAP_Y_JOGAEK_se[yBranch]?.includes(Lb))   pushLuck(bad, labelLuck_SangJoe(src, "조객살"));
@@ -808,7 +827,7 @@ export function buildShinsalTags({
     const pair = (basis?.voidBasis ?? "day") === "day" ? dayVoid : yearVoid;
     if (pair && (Lb === pair[0] || Lb === pair[1])) pushLuck(bad, labelLuck_Void(src, basis?.voidBasis ?? "day"));
 
-    // 원진/귀문(운지+원국)
+    // 원진/귀문(운지+원국) — 운 표기는 기존 규격 유지
     for (let p = 0 as PosIndex; p <= 3; p++) {
       const nb = getBranchAt(natal[p]);
       if (isInPairList(원진_pairs, Lb, nb)) pushLuck(bad, labelLuck_SrcWithPos("원진", src, p));
@@ -829,8 +848,16 @@ export function buildShinsalTags({
 
   return {
     title,
-    good: { ...goodByPos, dae: luckGoodDae, se: luckGoodSe, wolun: luckGoodWol },
-    bad:  { ...badByPos,  dae: luckBadDae,  se: luckBadSe,  wolun: luckBadWol },
+    good: { ...({ si: [], il: [], yeon: [], wol: [] } as TagBucketsByPos), ...(() => {
+      const res: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
+      for (const it of goodPosDedup) res[posToKey(it.pos)].push(it.name);
+      return res;
+    })(), dae: luckGoodDae, se: luckGoodSe, wolun: luckGoodWol },
+    bad:  { ...({ si: [], il: [], yeon: [], wol: [] } as TagBucketsByPos), ...(() => {
+      const res: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
+      for (const it of badPosDedup) res[posToKey(it.pos)].push(it.name);
+      return res;
+    })(), dae: luckBadDae,  se: luckBadSe,  wolun: luckBadWol },
     meta: {
       voidPair: { day: getVoidPair(natal[idx.day]) ?? undefined, year: getVoidPair(natal[idx.year]) ?? undefined },
       samjaeYears: {
