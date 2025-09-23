@@ -76,7 +76,6 @@ export default function DaewoonList({
   onSelect: (i: number) => void;
 }) {
   const list = useDaewoonList(data); // [{ at: Date, gz: "갑자" }, ...]
-  console.log(data);
   const dayStem = toDayStem(data) as Stem10sin;
 
   const { date, setFromEvent } = useLuckPickerStore();

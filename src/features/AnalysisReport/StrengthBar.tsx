@@ -49,7 +49,7 @@ export default function StrengthBar({ value }: { value: number }) {
   }, [percent, category]);
 
   return (
-    <div className="w-full mx-auto p-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
+    <div className="w-full mx-auto p-2 desk:p-4 bg-neutral-100 dark:bg-neutral-800 rounded-xl">
       {/* 상단 라벨(대략적 느낌) */}
       <div className="flex justify-between text-[11px] text-neutral-400 mb-1">
         <span>신약</span>

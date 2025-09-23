@@ -3,7 +3,7 @@ import { 천간, 지지, 간지_MAP, 육십갑자_자시, 시주매핑_자시, t
 import { getYearStem } from '@/shared/domain/간지/천간';
 import type { DayBoundaryRule } from "@/shared/type";
 //import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
-import { format } from "date-fns";
+//import { format } from "date-fns";
 
 // export const toHourTable = (ming: DayBoundaryRule): DayBoundaryRule => {
 //   return ming;
@@ -69,24 +69,24 @@ function getMonthBoundaries(useYear: number, lon = 127.5): Date[] {
   return raw.map(d => new Date(d.getTime() + 30 * 60 * 1000));
 }
 
-function printSolarTerms(year: number, lon = 127.5) {
-  const bounds = getMonthBoundaries(year, lon);
+// function printSolarTerms(year: number, lon = 127.5) {
+//   const bounds = getMonthBoundaries(year, lon);
 
-  console.log(`==== ${year}년 절기 (lon=${lon}) ====`);
-  bounds.forEach((d, i) => {
-    // 월 인덱스: 0=입춘, 1=경칩, 2=청명 … 11=대한 직전 동지
-    const names = [
-      "입춘", "경칩", "청명", "입하", "망종", "소서",
-      "입추", "백로", "한로", "입동", "대설", "소한"
-    ];
-    const name = names[i] ?? `절기${i + 1}`;
-    const s = format(d, "yyyy-MM-dd HH:mm");
-    console.log(`${name}: ${s}`);
-  });
-}
+//   console.log(`==== ${year}년 절기 (lon=${lon}) ====`);
+//   bounds.forEach((d, i) => {
+//     // 월 인덱스: 0=입춘, 1=경칩, 2=청명 … 11=대한 직전 동지
+//     const names = [
+//       "입춘", "경칩", "청명", "입하", "망종", "소서",
+//       "입추", "백로", "한로", "입동", "대설", "소한"
+//     ];
+//     const name = names[i] ?? `절기${i + 1}`;
+//     const s = format(d, "yyyy-MM-dd HH:mm");
+//     console.log(`${name}: ${s}`);
+//   });
+// }
 
-// 예시 실행
-printSolarTerms(1991);
+// // 예시 실행
+// printSolarTerms(1991);
 
 export function getMonthIndex(dateObj: Date, lon = 127.5) {
   const { useYear } = resolveYearIndex(dateObj, lon);
