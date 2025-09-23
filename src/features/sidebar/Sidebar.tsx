@@ -31,6 +31,9 @@ import type { DayBoundaryRule } from "@/shared/type";
 type MemoOpenMap = Record<string, boolean>;
 type OrderMap = Record<string, string[]>; // droppableId -> itemId[]
 
+const LS_ORDER_KEY = "sidebar.orderMap.v1";
+const LS_FOLDER_ORDER_KEY = "sidebar.folderOrder.v1";
+
 // ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const listDroppableId = (folderName: string) => `list:${folderName}`;
@@ -46,6 +49,7 @@ type SidebarProps = {
   onView: (m: MyeongSik) => void;
   onAddNew: () => void;
   onEdit: (m: MyeongSik) => void;
+  onDeleteView: () => void;
 };
 
 export default function Sidebar({
@@ -54,6 +58,7 @@ export default function Sidebar({
   onView,
   onAddNew,
   onEdit,
+  onDeleteView,
 }: SidebarProps) {
   const { list, remove, update } = useMyeongSikStore();
 
@@ -79,8 +84,51 @@ export default function Sidebar({
   /** 폴더 렌더 순서 (로컬 유지) */
   const [folderOrder, setFolderOrder] = useState<string[]>([]);
 
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_FOLDER_ORDER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as string[];
+        if (Array.isArray(parsed)) setFolderOrder(parsed);
+      }
+    } catch {
+      console.log('[Sidebar] Failed to load folderOrder from localStorage');
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_FOLDER_ORDER_KEY, JSON.stringify(folderOrder));
+    } catch {
+      console.log('[Sidebar] Failed to save folderOrder to localStorage');
+    }
+  }, [folderOrder]);
+
   /** 리스트별 아이템 렌더 순서 (DroppableId -> itemId[]) */
   const [orderMap, setOrderMap] = useState<OrderMap>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(LS_ORDER_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as OrderMap;
+        if (parsed && typeof parsed === "object") {
+          // 현재 목록과 병합(없는 드롭영역은 그대로)
+          setOrderMap((prev) => ({ ...parsed, ...prev }));
+        }
+      }
+    } catch {
+      console.log('[Sidebar] Failed to load orderMap from localStorage');
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(LS_ORDER_KEY, JSON.stringify(orderMap));
+    } catch {
+      console.log('[Sidebar] Failed to save orderMap to localStorage');
+    }
+  }, [orderMap]);
 
   /** 전역 드래그 여부(모바일 스크롤 UX 보조) */
   const [isDraggingAny, setIsDraggingAny] = useState(false);
@@ -171,6 +219,8 @@ export default function Sidebar({
     ],
     [folderOrder, orderedFolders]
   );
+
+
 
   /** 드래그 아이템 스타일(필요 시만): 여기선 transition 커스텀 제거 */
   const getDragStyle = (base: CSSProperties | undefined): CSSProperties => {
@@ -387,6 +437,10 @@ export default function Sidebar({
                     e.stopPropagation();
                     if (confirm(`'${m.name}' 명식을 삭제할까요?`)) {
                       remove(m.id);
+
+                      if (onDeleteView) {
+                        onDeleteView();
+                      }
                     }
                   }}
                   className="px-3 py-1 rounded text-white text-sm cursor-pointer

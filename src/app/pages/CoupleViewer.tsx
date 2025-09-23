@@ -14,7 +14,6 @@ import {
   buildIljuFromSiju,
   buildWolju,
   buildYeonjuFromWolju,
-  parseBirthLocal,
 } from "@/features/myoun";
 
 import type { DayBoundaryRule } from "@/shared/type";
@@ -45,12 +44,7 @@ import {
 } from "@/shared/domain/간지/twelve";
 
 // 음력 → 양력 변환 유틸
-import {
-  parseYMD,
-  isLunarCalendar,
-  getLeapFlag,
-  lunarToSolar,
-} from "@/shared/lib/calendar/lunar";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
 /* =============== 유틸 =============== */
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -110,7 +104,7 @@ function nameOf(ms: MyeongSik): string {
   return "이름 없음";
 }
 function keyOf(ms: MyeongSik): string {
-  const birth = parseBirthFixed(ms);
+  const birth = lunarToSolarStrict(Number(ms.birthDay.slice(0,4)), Number(ms.birthDay.slice(4,6)), Number(ms.birthDay.slice(6,8)));
   return `${nameOf(ms)}-${birth.toISOString()}`;
 }
 function idOf(ms: MyeongSik): string {
@@ -136,19 +130,6 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
       : (exported.Modern ?? exported.modern)!;
   }
   return mode as unknown as Twelve.EraType;
-}
-
-/* ===== 음력 → 양력: 고정 파서 ===== */
-function parseBirthFixed(ms: MyeongSik): Date {
-  const raw = parseBirthLocal(ms);
-  if (!isLunarCalendar(ms)) return raw;
-
-  const ymd = parseYMD((ms as unknown as { birthDay?: unknown }).birthDay);
-  if (!ymd) return raw;
-
-  const leap = getLeapFlag(ms);
-  const solar = lunarToSolar(ymd.y, ymd.m, ymd.d, leap);
-  return new Date(solar.y, solar.m - 1, solar.d, raw.getHours(), raw.getMinutes());
 }
 
 /* =============== 명식 선택 모달 (드래그 정렬 + 로컬스토리지 저장) =============== */
@@ -236,16 +217,18 @@ function PeoplePickerModal({
     if (!allowDrag) return;
     if (destination.index === source.index) return;
 
-    // 1) 보이는 리스트 기준으로 이동
+    // 1) 현재 보이는 리스트 기준으로 이동
     const visibleIds = filtered.map(idOf);
     const movedVisible = arrayMove(visibleIds, source.index, destination.index);
 
     // 2) 전체 순서로 환원 (필터 밖 요소는 기존 순서 유지)
     const allIds = ordered.map(idOf);
     const invisibleIds = allIds.filter((id) => !visibleIds.includes(id));
-    const nextIds = [...movedVisible, ...invisibleIds];
 
-    // 3) 영속화 + 로컬 상태 갱신
+    // ⚠️ 중복 방지: movedVisible + invisibleIds 합치기 전에 세트로 한 번 정리
+    const nextIds = [...movedVisible, ...invisibleIds].filter((id, i, arr) => arr.indexOf(id) === i);
+
+    // 3) 영속화 + 로컬 상태 갱신  ✅ 즉시 저장
     persist(nextIds);
   };
 
@@ -321,7 +304,7 @@ function PeoplePickerModal({
                                 {nameOf(m)}
                               </div>
                               <div className="text-neutral-500 dark:text-neutral-400 text-xs">
-                                {formatDate24(parseBirthFixed(m))}
+                                {formatDate24(lunarToSolarStrict(Number(m.birthDay.slice(0,4)), Number(m.birthDay.slice(4,6)), Number(m.birthDay.slice(6,8))))}
                               </div>
                             </div>
                           </div>
@@ -465,7 +448,21 @@ function PersonSlot({
   const cardSettings = useSettingsStore((s) => s.settings);
 
   // ✅ 변환된 생일 고정
-  const birthFixed = useMemo(() => (data ? parseBirthFixed(data) : null), [data]);
+  const birthFixed = useMemo(() => {
+    if (!data) return null;
+
+    const y = Number(data.birthDay.slice(0, 4));
+    const mo = Number(data.birthDay.slice(4, 6));
+    const d = Number(data.birthDay.slice(6, 8));
+
+    let h = 0, mm = 0;
+    if (typeof data.birthTime === "string" && data.birthTime.length >= 4) {
+      h = Number(data.birthTime.slice(0, 2));
+      mm = Number(data.birthTime.slice(2, 4));
+    }
+
+    return lunarToSolarStrict(y, mo, d, h, mm);
+  }, [data]);
 
   // ✅ 원국 4주도 변환된 날짜로 직접 계산
   const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "야자시") : undefined);
@@ -673,7 +670,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
   function getNatalPillars(ms: MyeongSik | undefined): Pillars4 {
     if (!ms) return ["甲子", "甲子", "甲子", "甲子"];
     try {
-      const birth = parseBirthFixed(ms); // ← 반드시 변환된 날짜 사용
+      const birth = lunarToSolarStrict(Number(ms.birthDay.slice(0,4)), Number(ms.birthDay.slice(4,6)), Number(ms.birthDay.slice(6,8))); // ← 반드시 변환된 날짜 사용
       const natal = {
         hour: ensureGZ(getHourGanZhi(birth, "야자시")),
         day: ensureGZ(getDayGanZhi(birth, "야자시")),

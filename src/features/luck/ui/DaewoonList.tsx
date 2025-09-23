@@ -179,7 +179,7 @@ export default function DaewoonList({
                     settings
                   )}`}
                 >
-                  <span className={`text-[20px] md:text-xl ${stemFont}`}>
+                  <span className={`text-[20px] md:text-xl text-white ${stemFont}`}>
                     {stemDisp}
                   </span>
                 </div>
@@ -192,7 +192,7 @@ export default function DaewoonList({
                     settings
                   )}`}
                 >
-                  <span className={`text-[20px] md:text-xl ${branchFont}`}>
+                  <span className={`text-[20px] md:text-xl text-white ${branchFont}`}>
                     {branchDisp}
                   </span>
                 </div>

@@ -15,70 +15,7 @@ import FolderField from "@/features/sidebar/ui/FolderField";
 import Toast from "@/shared/ui/feedback/Toast";
 import { UNASSIGNED_LABEL, normalizeFolderValue } from "@/features/sidebar/model/folderModel";
 import type { DayBoundaryRule } from "@/shared/type";
-import * as solarlunar from "solarlunar";
-
-/* ===== solarlunar 안전 래퍼 (CJS/ESM 호환, 윤달 인자 false 고정) ===== */
-
-type CalendarType = "solar" | "lunar";
-
-type Lunar2SolarRaw = {
-  cYear: number;
-  cMonth: number;
-  cDay: number;
-  isLeap?: boolean;
-};
-
-type SolarLunarAPI = {
-  lunar2solar: (y: number, m: number, d: number, isLeap: boolean) => Lunar2SolarRaw;
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-function hasDefault(v: unknown): v is { default: unknown } {
-  return isRecord(v) && "default" in v;
-}
-
-function hasLunar2Solar(
-  v: unknown
-): v is { lunar2solar: (y: number, m: number, d: number, isLeap?: boolean) => unknown } {
-  return isRecord(v) && typeof v["lunar2solar"] === "function";
-}
-
-function assertL2S(v: unknown): Lunar2SolarRaw {
-  if (!isRecord(v)) throw new Error("Invalid lunar2solar result");
-  const y = v["cYear"];
-  const m = v["cMonth"];
-  const d = v["cDay"];
-  const leap = v["isLeap"];
-  if (typeof y !== "number" || typeof m !== "number" || typeof d !== "number") {
-    throw new Error("Invalid lunar2solar fields");
-  }
-  return {
-    cYear: y,
-    cMonth: m,
-    cDay: d,
-    isLeap: typeof leap === "boolean" ? leap : undefined,
-  };
-}
-
-function pickSolarLunar(mod: unknown): SolarLunarAPI {
-  const base: unknown = hasDefault(mod) ? mod.default : mod;
-  if (!hasLunar2Solar(base)) throw new Error("solarlunar.lunar2solar not found");
-  const lunar2solar = (y: number, m: number, d: number, isLeap: boolean): Lunar2SolarRaw => {
-    const res = (base as { lunar2solar: (y: number, m: number, d: number, isLeap?: boolean) => unknown })
-      .lunar2solar(y, m, d, isLeap);
-    return assertL2S(res);
-  };
-  return { lunar2solar };
-}
-const SL = pickSolarLunar(solarlunar);
-
-function lunarToSolarStrict(y: number, m: number, d: number) {
-  const out = SL.lunar2solar(y, m, d, false); // 윤달 미사용 고정
-  return { y: out.cYear, m: out.cMonth, d: out.cDay };
-}
+import { type CalendarType, lunarToSolarStrict }  from "@/shared/lib/calendar/lunar";
 
 /* ===== 폼 정의 & 키보드 네비 헬퍼 ===== */
 
@@ -211,7 +148,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
       const m = Number(form.birthDay.slice(4, 6));
       const d = Number(form.birthDay.slice(6, 8));
       const out = lunarToSolarStrict(y, m, d);
-      return `→ 양력 ${out.y}-${String(out.m).padStart(2, "0")}-${String(out.d).padStart(2, "0")}`;
+      return `→ 양력 ${out.getFullYear()}-${String(out.getMonth() + 1).padStart(2, "0")}-${String(out.getDate()).padStart(2, "0")}`;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : undefined;
       return `→ 변환 실패${msg ? `: ${msg}` : ""}`;
@@ -306,7 +243,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
 
     if (form.calendarType === "lunar") {
       const solar = lunarToSolarStrict(y, mo, d);
-      y = solar.y; mo = solar.m; d = solar.d;
+      y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
     }
 
     const hh = isUnknownTime ? 0 : Number(form.birthTime!.slice(0, 2) || "0");

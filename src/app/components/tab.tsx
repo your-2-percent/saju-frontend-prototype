@@ -4,100 +4,75 @@ import UnViewer from "@/features/luck/viewer";
 import MyoUnViewer from "@/features/myoun/MyoUnViewer";
 import AnalysisReport from "@/features/AnalysisReport/";
 import type { MyeongSik } from "@/shared/lib/storage";
-import * as solarlunar from "solarlunar";
-
-// 간지 계산 유틸
+import { toCorrected } from "@/shared/domain/meongsik";
 import {
   getYearGanZhi,
   getMonthGanZhi,
   getDayGanZhi,
   getHourGanZhi,
 } from "@/shared/domain/간지/공통";
-import { toCorrected } from "@/shared/domain/meongsik"; // 경도/DST 교정
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
-/* ────────────────────────────────────────────────────────────────────────────
- * solarlunar interop(ESM/CJS 모두 안전)
- * ──────────────────────────────────────────────────────────────────────────── */
-type Lunar2SolarRaw = { cYear: number; cMonth: number; cDay: number; isLeap?: boolean };
-type SolarLunarAPI = {
-  lunar2solar: (y: number, m: number, d: number, isLeap?: boolean) => Lunar2SolarRaw;
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-function hasDefault(v: unknown): v is { default: unknown } {
-  return isRecord(v) && "default" in v;
-}
-function hasLunar2Solar(v: unknown): v is { lunar2solar: SolarLunarAPI["lunar2solar"] } {
-  return isRecord(v) && typeof v["lunar2solar"] === "function";
-}
-function assertL2S(v: unknown): Lunar2SolarRaw {
-  if (!isRecord(v)) throw new Error("Invalid lunar2solar result");
-  const y = v["cYear"], m = v["cMonth"], d = v["cDay"], leap = v["isLeap"];
-  if (typeof y !== "number" || typeof m !== "number" || typeof d !== "number") {
-    throw new Error("Invalid lunar2solar fields");
-  }
-  return { cYear: y, cMonth: m, cDay: d, isLeap: typeof leap === "boolean" ? leap : undefined };
-}
-function pickSolarLunar(mod: unknown): SolarLunarAPI {
-  const base: unknown = hasDefault(mod) ? (mod as { default: unknown }).default : mod;
-  if (!hasLunar2Solar(base)) throw new Error("solarlunar.lunar2solar not found");
-  const lunar2solar = (y: number, m: number, d: number, isLeap?: boolean): Lunar2SolarRaw => {
-    const res = (base as { lunar2solar: SolarLunarAPI["lunar2solar"] }).lunar2solar(y, m, d, !!isLeap);
-    return assertL2S(res);
-  };
-  return { lunar2solar };
-}
-const SL = pickSolarLunar(solarlunar);
-
-/* ────────────────────────────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────
  * 달력 변환/유틸
- * ──────────────────────────────────────────────────────────────────────────── */
+ * ──────────────────────────────────────────────────────────── */
 const DEBUG = false;
-
-const isGZ = (s: unknown): s is string => typeof s === "string" && s.length >= 2;
-const isValidPillars = (arr: unknown): arr is [string, string, string, string] =>
-  Array.isArray(arr) && arr.length === 4 && arr.every(isGZ);
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+const isGZ = (s: unknown): s is string => typeof s === "string" && s.length >= 2;
+const isValidPillars = (arr: unknown): arr is [string, string, string, string] => 
+  Array.isArray(arr) && arr.length === 4 && arr.every(isGZ); 
 
 /** data가 음력이라면 반드시 ‘양력 birthDay(YYYYMMDD)’로 치환한 사본을 반환 */
 function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
-  // 느슨하게 접근(타입 안전)
   const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
 
   const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
-  const calType  = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+  const calType = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
 
-  if (birthDay.length < 8) return data; // 날짜 형식 불충분 → 원본 유지
+  if (birthDay.length < 8) return data;
 
   const y = Number(birthDay.slice(0, 4));
   const m = Number(birthDay.slice(4, 6));
   const d = Number(birthDay.slice(6, 8));
 
   // 프로젝트에 있을 수 있는 다양한 윤달 필드 케이스를 모두 수용
-  const leapFlags = [
-    "isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap",
-  ] as const;
+  const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
   let isLeap = false;
   for (const k of leapFlags) {
     const v = any[k];
-    if (typeof v === "boolean") { isLeap = v; break; }
-    if (typeof v === "number")  { isLeap = v === 1; break; }
-    if (typeof v === "string")  { isLeap = v === "1" || v.toLowerCase() === "true"; break; }
+    if (typeof v === "boolean") {
+      isLeap = v;
+      break;
+    }
+    if (typeof v === "number") {
+      isLeap = v === 1;
+      break;
+    }
+    if (typeof v === "string") {
+      isLeap = v === "1" || v.toLowerCase() === "true";
+      break;
+    }
   }
 
   if (calType === "lunar") {
     try {
-      const res = SL.lunar2solar(y, m, d, isLeap);
-      const newBirthDay = `${res.cYear}${pad2(res.cMonth)}${pad2(res.cDay)}`;
+      // ✅ lunarToSolarStrict 사용
+      const solarDate = lunarToSolarStrict(y, m, d, 0, 0);
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(
+        solarDate.getMonth() + 1
+      )}${pad2(solarDate.getDate())}`;
+
       const out: MyeongSik = {
         ...data,
         birthDay: newBirthDay,
         calendarType: "solar",
       } as MyeongSik;
+
       if (DEBUG) {
-        console.debug("[UnMyounTabs] lunar→solar:", { in: { y, m, d, isLeap }, out: newBirthDay });
+        console.debug("[UnMyounTabs] lunar→solar:", {
+          in: { y, m, d, isLeap },
+          out: newBirthDay,
+        });
       }
       return out;
     } catch (e) {
@@ -109,17 +84,17 @@ function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
   return data; // 이미 양력
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
+/* ────────────────────────────────────────────────────────────
  * 컴포넌트
- * ──────────────────────────────────────────────────────────────────────────── */
+ * ──────────────────────────────────────────────────────────── */
 export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   const [tab, setTab] = useState<"un" | "myoun" | "report">("un");
 
   // 1) ‘양력화 사본’을 만든 뒤 교정 → 모든 간지 계산은 이 correctedSolar 기준
   const correctedSolar = useMemo(() => {
     try {
-      const solarized = ensureSolarBirthDay(data);   // ✅ 음→양 보장(윤달 포함)
-      const corrected = toCorrected(solarized);      // 경도/DST 교정
+      const solarized = ensureSolarBirthDay(data); // ✅ 음→양 보장
+      const corrected = toCorrected(solarized); // 경도/DST 교정
       if (DEBUG) console.debug("[UnMyounTabs] correctedSolar:", corrected.toString());
       return corrected;
     } catch (e) {
@@ -135,9 +110,7 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
       const m = getMonthGanZhi(correctedSolar, data.birthPlace?.lon);
       const d = getDayGanZhi(correctedSolar, data.mingSikType);
       const h = getHourGanZhi(correctedSolar, data.mingSikType);
-      const arr = [y, m, d, h];
-      if (DEBUG) console.debug("[UnMyounTabs] pillars:", arr);
-      return isValidPillars(arr) ? arr : [];
+      return [y, m, d, h];
     } catch (e) {
       if (DEBUG) console.warn("[UnMyounTabs] 간지 계산 실패", e);
       return [];

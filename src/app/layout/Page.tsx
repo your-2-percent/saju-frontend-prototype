@@ -213,6 +213,11 @@ export default function Page() {
           setShowToday(false);
           setShowCouple(false); // ← 궁합 끄기
         }}
+        onDeleteView={() => {
+          setCurrentId(null);
+          setShowToday(true);   // ✅ 오늘의 사주로 fallback
+          setShowCouple(false);
+        }}
       />
 
       {/* 오늘의 사주 */}
