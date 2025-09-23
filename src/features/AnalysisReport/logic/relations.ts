@@ -849,54 +849,21 @@ export function buildCoupleHarmonyTags_AB(
     for (let j=0;j<4;j++) {
       const Bs = B.stemsByPos[j], Bb = B.brsByPos[j];
 
-      // --- branchesA/B ---
-      // A, B 원국에서 지지 배열 뽑기
-      const brsA = pillarsA.map(normalizeGZ).map(gzBranch).filter(Boolean);
-      const brsB = pillarsB.map(normalizeGZ).map(gzBranch).filter(Boolean);
-
-      // 삼합 (3지 완성 시)
-      for (const g of SANHE_GROUPS) {
-        const total = new Set([...brsA, ...brsB]);
-        if (g.members.every(m => total.has(m))) {
-          // 최소 1개씩 들어가야 커플 성립
-          if (g.members.some(m => brsA.includes(m)) && g.members.some(m => brsB.includes(m))) {
-            pushUniqueSorted(out.지지삼합, `${g.name}삼합`);
-          }
-        }
-        // 반합 (왕지 포함 2지)도 커플 교차로만
-        const both = g.members.filter(m => brsA.includes(m) || brsB.includes(m));
-        if (both.length === 2 && both.includes(g.wang)) {
-          if (both.some(m => brsA.includes(m)) && both.some(m => brsB.includes(m))) {
-            pushUniqueSorted(out.지지반합, `${both.join("")}반합`);
-          }
-        }
-      }
-
-      // 방합 (3지 완성 시)
-      for (const g of BANGHAP_GROUPS) {
-        const total = new Set([...brsA, ...brsB]);
-        if (g.members.every(m => total.has(m))) {
-          if (g.members.some(m => brsA.includes(m)) && g.members.some(m => brsB.includes(m))) {
-            pushUniqueSorted(out.지지방합, `${g.name}방합`);
-          }
-        }
-      }
-
       // 천간 합/충
       const cgH = labelForPair(STEM_HAP_LABELS, As, Bs);
       if (cgH) pushUniqueSorted(out.천간합, `${posLabel(i)}X${posLabel(j)} ${cgH}`);
       const cgC = labelForPair(STEM_CHUNG_LABELS, As, Bs);
-      if (cgC) pushUniqueSorted(out.천간충, `${posLabel(i)}X${posLabel(j)} 충`);
+      if (cgC) pushUniqueSorted(out.천간충, `${posLabel(i)}X${posLabel(j)} ${cgC}`);
 
       // 지지 육합/충/파/해/원진/귀문
       const yk = labelForPair(BR_YUKHAP_LABELS, Ab, Bb);
       if (yk) pushUniqueSorted(out.지지육합, `${posLabel(i)}X${posLabel(j)} ${yk}`);
 
       const ch = labelForPair(BR_CHUNG_LABELS, Ab, Bb);
-      if (ch) pushUniqueSorted(out.지지충, `${posLabel(i)}X${posLabel(j)} 충`);
+      if (ch) pushUniqueSorted(out.지지충, `${posLabel(i)}X${posLabel(j)} ${ch}`);
 
       const pa = labelForPair(BR_PA_LABELS, Ab, Bb);
-      if (pa) pushUniqueSorted(out.지지파, `${posLabel(i)}X${posLabel(j)} 파`);
+      if (pa) pushUniqueSorted(out.지지파, `${posLabel(i)}X${posLabel(j)} ${pa}`);
 
       const ha = labelForPair(BR_HAE_LABELS, Ab, Bb);
       if (ha) pushUniqueSorted(out.지지해, `${posLabel(i)}X${posLabel(j)} ${ha}`);
@@ -940,22 +907,27 @@ export function buildCoupleHarmonyTags_AB(
 
   // 삼합
   for (const g of SANHE_GROUPS) {
-    const countA = g.members.filter(m => branchesA.has(m)).length;
-    const countB = g.members.filter(m => branchesB.has(m)).length;
-    if (countA + countB === 3 && countA >= 1 && countB >= 1) {
-      pushUniqueSorted(out.지지삼합, `${g.name}삼합`);
+    const hasAll = g.members.every(m => branchesA.has(m) || branchesB.has(m));
+    if (hasAll) {
+      // A/B 양쪽 최소 1개씩
+      const countA = g.members.filter(m => branchesA.has(m)).length;
+      const countB = g.members.filter(m => branchesB.has(m)).length;
+      if (countA >= 1 && countB >= 1) {
+        pushUniqueSorted(out.지지삼합, `${g.name}삼합`);
+      }
     }
-    // 반합(왕지 포함 2자) — A/B가 1개씩일 때만
-    if (countA === 1 && countB === 1) {
-      const both = g.members.filter(m => branchesA.has(m) || branchesB.has(m));
-      if (both.includes(g.wang)) {
-        const [b1, b2] = both as [KoBranch, KoBranch];
-        // 어느 포지션인지 찾아 자리 라벨 부여
-        const posA = (A.brPos.get(b1)?.[0] ?? A.brPos.get(b2)?.[0]);
-        const posB = (B.brPos.get(b1)?.[0] ?? B.brPos.get(b2)?.[0]);
+
+    // 반합: 왕지 포함된 2지 + 양쪽 교차
+    const both = g.members.filter(m => branchesA.has(m) || branchesB.has(m));
+    if (both.length === 2 && both.includes(g.wang)) {
+      const aHas = both.some(m => branchesA.has(m));
+      const bHas = both.some(m => branchesB.has(m));
+      if (aHas && bHas) {
+        const [b1, b2] = both.sort() as [KoBranch, KoBranch];
+        const posA = A.brPos.get(b1)?.[0] ?? A.brPos.get(b2)?.[0];
+        const posB = B.brPos.get(b1)?.[0] ?? B.brPos.get(b2)?.[0];
         if (posA != null && posB != null) {
-          const combo = `${b1}${b2}`; // 출력은 조합+반합
-          pushUniqueSorted(out.지지삼합, `${posLabel(posA)}X${posLabel(posB)} ${combo}반합`);
+          pushUniqueSorted(out.지지반합, `${posLabel(posA)}X${posLabel(posB)} ${b1}${b2}반합`);
         }
       }
     }
@@ -963,10 +935,13 @@ export function buildCoupleHarmonyTags_AB(
 
   // 방합
   for (const g of BANGHAP_GROUPS) {
-    const countA = g.members.filter(m => branchesA.has(m)).length;
-    const countB = g.members.filter(m => branchesB.has(m)).length;
-    if (countA + countB === 3 && countA >= 1 && countB >= 1) {
-      pushUniqueSorted(out.지지방합, `${g.name}방합`);
+    const hasAll = g.members.every(m => branchesA.has(m) || branchesB.has(m));
+    if (hasAll) {
+      const countA = g.members.filter(m => branchesA.has(m)).length;
+      const countB = g.members.filter(m => branchesB.has(m)).length;
+      if (countA >= 1 && countB >= 1) {
+        pushUniqueSorted(out.지지방합, `${g.name}방합`);
+      }
     }
   }
 

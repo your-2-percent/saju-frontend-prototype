@@ -15,7 +15,7 @@ import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { useCurrentUnCards } from "@/features/luck/luck-make";
 import { formatLocalYMDHM } from "@/shared/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
-import * as solarlunar from "solarlunar";
+import { lunarToSolarStrict, isRecord } from "@/shared/lib/calendar/lunar";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -35,45 +35,6 @@ type Props = {
   /** 부모가 강제로 테이블을 지정하고 싶을 때만 넘김. 기본은 data.mingSikType */
   hourTable?: DayBoundaryRule;
 };
-
-/* ===== solarlunar 안전 래퍼 (CJS/ESM 호환, 윤달 미사용) ===== */
-type Lunar2SolarRaw = { cYear: number; cMonth: number; cDay: number; isLeap?: boolean };
-type L2SFn = (y: number, m: number, d: number, isLeap?: boolean) => unknown;
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-function hasDefault(v: unknown): v is { default: unknown } {
-  return isRecord(v) && "default" in v;
-}
-function hasL2S(v: unknown): v is { lunar2solar: L2SFn } {
-  return isRecord(v) && typeof (v as Record<string, unknown>).lunar2solar === "function";
-}
-function assertL2SResult(v: unknown): Lunar2SolarRaw {
-  if (!isRecord(v)) throw new Error("Invalid lunar2solar result");
-  const y = v["cYear"], m = v["cMonth"], d = v["cDay"];
-  if (typeof y !== "number" || typeof m !== "number" || typeof d !== "number") {
-    throw new Error("Invalid lunar2solar fields");
-  }
-  const isLeapVal = v["isLeap"];
-  return { cYear: y, cMonth: m, cDay: d, isLeap: typeof isLeapVal === "boolean" ? isLeapVal : undefined };
-}
-function pickSolarLunar(mod: unknown): { lunar2solar: (y: number, m: number, d: number, isLeap: boolean) => Lunar2SolarRaw } {
-  const base = hasDefault(mod) ? (mod as { default: unknown }).default : mod;
-  if (!hasL2S(base)) throw new Error("solarlunar.lunar2solar not found");
-  return {
-    lunar2solar: (y: number, m: number, d: number, isLeap: boolean) => {
-      const raw = (base as { lunar2solar: L2SFn }).lunar2solar(y, m, d, isLeap);
-      return assertL2SResult(raw);
-    },
-  };
-}
-const SL = pickSolarLunar(solarlunar);
-
-function lunarToSolarStrict(y: number, m: number, d: number) {
-  const out = SL.lunar2solar(y, m, d, false);
-  return { y: out.cYear, m: out.cMonth, d: out.cDay };
-}
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -165,7 +126,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     let d = Number(birthDay?.slice(6, 8) ?? 1);
     if (calendarType === "lunar") {
       const s = lunarToSolarStrict(y, m, d);
-      y = s.y; m = s.m; d = s.d;
+      y = s.getFullYear(); m = s.getMonth() + 1; d = s.getDate();
     }
     return { solarY: y, solarM: m, solarD: d };
   }, [birthDay, calendarType]);
@@ -190,7 +151,7 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     if (data.calendarType === "lunar") {
       const solar = lunarToSolarStrict(y, mo, d);
-      y = solar.y; mo = solar.m; d = solar.d;
+      y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
     }
 
     const hh = isUnknownTime ? 0 : Number(data.birthTime!.slice(0, 2) || "0");
@@ -574,7 +535,7 @@ function Cell({
 
   return (
     <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-14 md:h-14 rounded-md ${color} flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}>
-      <span className={`text-[24px] md:text-2xl ${weight}`}>
+      <span className={`text-[24px] md:text-2xl ${weight} text-white`}>
         {display}
       </span>
     </div>
