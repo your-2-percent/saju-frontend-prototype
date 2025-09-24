@@ -114,14 +114,15 @@ export default function ShinsalTagPanel({
     rows: T,
     tb: StageTab
   ): T => {
-    if (tb === "원국") return rows;
+    
 
     // ✅ 누적 포함 규칙
     const sources: Array<"natal" | "dae" | "se" | "wol" | "il"> = ["natal"];
-    if (tb === "대운") sources.push("dae");
-    if (tb === "세운") sources.push("dae", "se");
-    if (tb === "월운") sources.push("dae", "se", "wol");
-    if (tb === "일운") sources.push("dae", "se", "wol", "il");
+    if (tb === "원국") sources.push("natal");
+    if (tb === "대운") sources.push("natal", "dae");
+    if (tb === "세운") sources.push("natal", "dae", "se");
+    if (tb === "월운") sources.push("natal", "dae", "se", "wol");
+    if (tb === "일운") sources.push("natal", "dae", "se", "wol", "il");
 
     return rows.filter((r) => sources.includes(r.source)) as T;
   };
