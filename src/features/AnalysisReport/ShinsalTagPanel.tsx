@@ -3,9 +3,9 @@ import { useMemo, useState } from "react";
 import type { Pillars4 } from "./logic/relations";
 import { buildShinsalTags, type ShinsalBasis } from "./logic/shinsal";
 
-type StageTab = "전체" | "원국" | "대운" | "세운" | "월운";
+type StageTab = "원국" | "대운" | "세운" | "월운" | "일운";
 
-function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
+function getClass(t: string, source: "natal" | "dae" | "se" | "wol" | "il"): string {
   if (t === "#없음") {
     return "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700";
   }
@@ -18,12 +18,14 @@ function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800";
     case "wol":
       return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800";
+    case "il":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800";
     default:
       return "";
   }
 }
 
-function Chips({ items, source }: { items: string[]; source: "natal" | "dae" | "se" | "wol" }) {
+function Chips({ items, source }: { items: string[]; source: "natal" | "dae" | "se" | "wol" | "il" }) {
   const list = items.length > 0 ? items : ["#없음"];
   return (
     <div className="flex flex-wrap gap-2">
@@ -44,7 +46,7 @@ function Section({
   rows,
 }: {
   title: string;
-  rows: Array<{ label: string; items: string[]; source: "natal" | "dae" | "se" | "wol" }>;
+  rows: Array<{ label: string; items: string[]; source: "natal" | "dae" | "se" | "wol" | "il" }>;
 }) {
   return (
     <div className="space-y-2 desk:flex-1 desk:px-1">
@@ -74,12 +76,14 @@ export default function ShinsalTagPanel({
   daewoon,
   sewoon,
   wolwoon,
-  tab = "전체",
+  ilwoon,
+  tab = "원국",
 }: {
   pillars: Pillars4;
   daewoon?: string | null;
   sewoon?: string | null;
   wolwoon?: string | null;
+  ilwoon?: string | null;
   tab?: StageTab;
 }) {
   // ▼ 셀렉트 상태: 공망/삼재 기준
@@ -95,8 +99,8 @@ export default function ShinsalTagPanel({
   );
 
   const data = useMemo(
-    () => buildShinsalTags({ natal: pillars, daewoon, sewoon, wolwoon, basis }),
-    [pillars, daewoon, sewoon, wolwoon, basis]
+    () => buildShinsalTags({ natal: pillars, daewoon, sewoon, wolwoon, ilwoon, basis }),
+    [pillars, daewoon, sewoon, wolwoon, ilwoon, basis]
   );
 
   const { good, bad, meta } = data;
@@ -104,11 +108,24 @@ export default function ShinsalTagPanel({
   // 원국 칩 접두어 "원국 " 부여
   const withNatalPrefix = (items: string[]) => items.map((t) => (t === "#없음" ? t : `원국 ${t}`));
 
-  const applyTab = <T extends Array<{ label: string; items: string[]; source: "natal" | "dae" | "se" | "wol" }>>(rows: T, tb: StageTab): T => {
-    if (tb === "전체") return rows;
-    const want = tb === "원국" ? "natal" : tb === "대운" ? "dae" : tb === "세운" ? "se" : "wol";
-    return rows.filter((r) => r.source === want) as T;
+  const applyTab = <
+    T extends Array<{ label: string; items: string[]; source: "natal" | "dae" | "se" | "wol" | "il" }>
+  >(
+    rows: T,
+    tb: StageTab
+  ): T => {
+    if (tb === "원국") return rows;
+
+    // ✅ 누적 포함 규칙
+    const sources: Array<"natal" | "dae" | "se" | "wol" | "il"> = ["natal"];
+    if (tb === "대운") sources.push("dae");
+    if (tb === "세운") sources.push("dae", "se");
+    if (tb === "월운") sources.push("dae", "se", "wol");
+    if (tb === "일운") sources.push("dae", "se", "wol", "il");
+
+    return rows.filter((r) => sources.includes(r.source)) as T;
   };
+
 
   // 표시는 요구 순서: 시주, 일주, 월주, 연주, 대운, 세운, 월운
   const goodRowsAll = [
@@ -119,6 +136,7 @@ export default function ShinsalTagPanel({
     { label: "대운", items: good.dae,                   source: "dae"   as const },
     { label: "세운", items: good.se,                    source: "se"    as const },
     { label: "월운", items: good.wolun,                 source: "wol"   as const },
+    { label: "일운", items: good.ilun,                 source: "il"   as const },
   ];
   const badRowsAll = [
     { label: "시주", items: withNatalPrefix(bad.si),   source: "natal" as const },
@@ -128,6 +146,7 @@ export default function ShinsalTagPanel({
     { label: "대운", items: bad.dae,                   source: "dae"   as const },
     { label: "세운", items: bad.se,                    source: "se"    as const },
     { label: "월운", items: bad.wolun,                 source: "wol"   as const },
+    { label: "일운", items: bad.ilun,                 source: "il"   as const },
   ];
 
   // ✅ 여기서 탭 적용

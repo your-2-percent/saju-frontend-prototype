@@ -130,10 +130,11 @@ export interface ComputeOptions {
   useHarmonyOverlay?: boolean;
   criteriaMode?: CriteriaMode;
   luck?: {
-    tab: "전체" | "원국" | "대운" | "세운" | "월운";
+    tab: "원국" | "대운" | "세운" | "월운" | "일운";
     dae?: string | null;
     se?: string | null;
     wol?: string | null;
+    il?: string | null;
   };
 }
 

@@ -166,9 +166,10 @@ export default function AnalysisReport({
   const [blendTab, setBlendTab] = useState<BlendTab>("원국");
 
   // 전역 피커
-  const { date, yearGZ, monthGZ } = useLuckPickerStore();
+  const { date, yearGZ, monthGZ, dayGZ } = useLuckPickerStore();
   const seGz = useMemo(() => normalizeGZ(yearGZ), [yearGZ]);     // 세운
   const wolGz = useMemo(() => normalizeGZ(monthGZ), [monthGZ]);  // 월운
+  const ilGz = useMemo(() => normalizeGZ(dayGZ), [dayGZ]);       // 일운
 
   // 대운
   const daeList = useDaewoonList(data, data?.mingSikType);
@@ -204,12 +205,13 @@ export default function AnalysisReport({
   // 탭별 운 입력(필터링)
   const luckInput = useMemo(
     () => ({
-      tab: blendTab as "원국" | "대운" | "세운" | "월운",
+      tab: blendTab as "원국" | "대운" | "세운" | "월운" | "일운",   // ✅ 일운 추가
       dae: blendTab !== "원국" ? daewoonGz || undefined : undefined,
-      se: blendTab === "세운" || blendTab === "월운" ? seGz || undefined : undefined,
+      se: blendTab === "세운" || blendTab === "월운" || blendTab === "일운" ? seGz || undefined : undefined,
       wol: blendTab === "월운" ? wolGz || undefined : undefined,
+      il: blendTab === "일운" ? ilGz || undefined : undefined,   // ✅ 일운만 선택
     }),
-    [blendTab, daewoonGz, seGz, wolGz]
+    [blendTab, daewoonGz, seGz, wolGz, ilGz]
   );
 
   // 원국만(운X): 신약/신강/용신/부재
@@ -296,15 +298,16 @@ export default function AnalysisReport({
   );
   const elemForFallback = elementScoreNatal ?? lightElementScoreFromPillars(activePillars);
 
-  // ── 운 반영 혼합 점수 (펜타곤) ──
-  const effectiveTab = blendTab === "전체" ? "월운" : blendTab;
+  const effectiveTab: BlendTab = blendTab;
 
+  // ── 운 반영 혼합 점수 (펜타곤) ──
   const mixed = blendElementStrength({
     natalElementScore: elementScoreNatal,
     daewoonGz: effectiveTab !== "원국" ? daewoonGz ?? undefined : undefined,
-    sewoonGz: effectiveTab === "세운" || effectiveTab === "월운" ? seGz ?? undefined : undefined,
-    wolwoonGz: effectiveTab === "월운" ? wolGz ?? undefined : undefined,
-    tab: blendTab, // 오행 합산은 원래대로 "전체"
+    sewoonGz: effectiveTab === "세운" || effectiveTab === "월운" || effectiveTab === "일운" ? seGz ?? undefined : undefined,
+    wolwoonGz: effectiveTab === "월운" || effectiveTab === "일운" ? wolGz ?? undefined : undefined,
+    ilwoonGz: effectiveTab === "일운" ? ilGz ?? undefined : undefined,
+    tab: blendTab,
   });
 
   // ── PentagonChart 데이터 ─
@@ -386,10 +389,11 @@ export default function AnalysisReport({
       daewoonGz ?? "",
       seGz ?? "",
       wolGz ?? "",
+      ilGz ?? "",
       date?.toISOString?.() ?? "",
       JSON.stringify(detailedLuck?.perStemElementScaled ?? {}), // ✅ 추가
       ].join("|"),
-    [blendTab, daewoonGz, seGz, wolGz, date, detailedLuck?.perStemElementScaled]
+    [blendTab, daewoonGz, seGz, wolGz, ilGz, date, detailedLuck?.perStemElementScaled]
   );
   const revKey = useMemo(() => {
     const subsSig = perTenGodForChart
@@ -524,6 +528,7 @@ export default function AnalysisReport({
           daewoon={daewoonGz || undefined}
           sewoon={seGz || undefined}
           wolwoon={wolGz || undefined}
+          ilwoon={ilGz || undefined}
           tab={blendTab}
         />
       )}
@@ -567,6 +572,7 @@ export default function AnalysisReport({
             daewoonGz={daewoonGz}
             sewoonGz={seGz}
             wolwoonGz={wolGz}
+            ilwoonGz={ilGz}
             perStemElement={detailedLuck?.perStemElementScaled}  // ✅ 전달
             dayStem={activePillars?.[2]?.charAt(0) ?? null}      // ✅ 일간 천간
           />
@@ -646,6 +652,7 @@ export default function AnalysisReport({
           daewoon={daewoonGz || undefined}
           sewoon={seGz || undefined}
           wolwoon={wolGz || undefined}
+          ilwoon={ilGz || undefined}
           tab={blendTab}
         />
       )}

@@ -5,9 +5,9 @@ import { buildHarmonyTags, buildAllRelationTags, Pillars4 } from "./logic/relati
 /* ========================
  * 색상 유틸
  * ======================== */
-type StageTab = "전체" | "원국" | "대운" | "세운" | "월운";
+type StageTab = "원국" | "대운" | "세운" | "월운" | "일운";
 
-function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
+function getClass(t: string, source: "natal" | "dae" | "se" | "wol" | "il"): string {
   if (t === "#없음") {
     return "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-900 dark:text-neutral-500 dark:border-neutral-700";
   }
@@ -20,6 +20,8 @@ function getClass(t: string, source: "natal" | "dae" | "se" | "wol"): string {
       return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800";
     case "wol":
       return "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200 dark:border-orange-800";
+    case "il":
+      return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800";
     default:
       return "";
   }
@@ -34,14 +36,16 @@ function Row({
   dae,
   se,
   wol,
+  il
 }: {
   label: string;
   natal: string[];
   dae: string[];
   se: string[];
   wol: string[];
+  il: string[];
 }) {
-  const hasLuck = (dae.length + se.length + wol.length) > 0;
+  const hasLuck = (dae.length + se.length + wol.length + il.length) > 0;
   const shownNatal = natal.length > 0 ? natal : ["#없음"];
   const displayNatal = hasLuck ? shownNatal.filter((t) => t !== "#없음") : shownNatal;
 
@@ -50,7 +54,8 @@ function Row({
     displayNatal.some((t) => t !== "#없음") ||
     dae.length > 0 ||
     se.length > 0 ||
-    wol.length > 0;
+    wol.length > 0 ||
+    il.length > 0;
 
   const labelClass = hasTag
     ? "shrink-0 w-20 text-xs font-semibold text-orange-700 dark:text-orange-300 mt-1"
@@ -104,6 +109,17 @@ function Row({
             {t}
           </span>
         ))}
+        {il.map((t, i) => (
+          <span
+            key={`il-${i}`}
+            className={
+              "text-xs px-2 py-1 rounded-full border whitespace-nowrap " +
+              getClass(t, "il")
+            }
+          >
+            {t}
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -143,12 +159,14 @@ export default function HarmonyTagPanel({
   daewoon,
   sewoon,
   wolwoon,
-  tab = "전체", 
+  ilwoon,
+  tab = "원국", 
 }: {
   pillars: Pillars4;
   daewoon?: string;
   sewoon?: string;
   wolwoon?: string;
+  ilwoon?: string;
   tab?: StageTab;
   //tab: BlendTab;
 }) {
@@ -170,12 +188,17 @@ export default function HarmonyTagPanel({
     ? (buildAllRelationTags({ natal: pillars, daewoon, sewoon, wolwoon }) as LuckLike)
     : stepB;
 
+  const stepD = ilwoon
+    ? (buildAllRelationTags({ natal: pillars, daewoon, sewoon, wolwoon, ilwoon }) as LuckLike)
+    : stepC;
+
   /* 카테고리별로 증분 분리 */
   const mk = (key: keyof LuckLike) => ({
     natal: arr((natalRaw as LuckLike)[key]),
     dae: diff(base[key], stepA[key]),
     se: diff(stepA[key], stepB[key]),
     wol: diff(stepB[key], stepC[key]),
+    il: diff(stepC[key], stepD[key])
   });
 
   const K = {
@@ -192,14 +215,25 @@ export default function HarmonyTagPanel({
     jijiHae: mk("jijiHae"),
   };
 
-  const pick = (v: {natal:string[]; dae:string[]; se:string[]; wol:string[]}) => {
-    if (tab === "전체") return v;
-    return {
-      natal: tab === "원국" ? v.natal : [],
-      dae:   tab === "대운" ? v.dae   : [],
-      se:    tab === "세운" ? v.se    : [],
-      wol:   tab === "월운" ? v.wol   : [],
-    };
+  const pick = (v: { natal: string[]; dae: string[]; se: string[]; wol: string[]; il: string[] }) => {
+
+    if (tab === "원국") {
+      return { natal: v.natal, dae: [], se: [], wol: [], il: [] };
+    }
+    if (tab === "대운") {
+      return { natal: v.natal, dae: v.dae, se: [], wol: [], il: [] };
+    }
+    if (tab === "세운") {
+      return { natal: v.natal, dae: v.dae, se: v.se, wol: [], il: [] };
+    }
+    if (tab === "월운") {
+      return { natal: v.natal, dae: v.dae, se: v.se, wol: v.wol, il: [] };
+    }
+    if (tab === "일운") {
+      return { natal: v.natal, dae: v.dae, se: v.se, wol: v.wol, il: v.il };
+    }
+
+    return { natal: [], dae: [], se: [], wol: [], il: [] };
   };
 
   return (

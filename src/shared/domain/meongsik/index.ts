@@ -36,7 +36,6 @@ export function toDayStem(ms: MyeongSik): Stem10sin {
 
     // 음력 → 양력 변환
     baseDate = lunarToSolarStrict(y, m, d);
-    console.log(baseDate);
   } else {
     // solar 그대로
     baseDate = toCorrected(ms);
