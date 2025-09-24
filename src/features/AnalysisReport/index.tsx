@@ -449,7 +449,7 @@ export default function AnalysisReport({
             ? {
                 ...it,
                 score: 0,
-                reasons: [...it.reasons, "부재후순위: 원국(천간) 부재 → 0점"],
+                reasons: [...it.reasons, "부재후순위: 원국 부재 → 0점"],
               }
             : it
         )
