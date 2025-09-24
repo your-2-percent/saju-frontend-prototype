@@ -13,7 +13,6 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
 
-
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
   "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
@@ -36,7 +35,7 @@ function toDisplayChar(value: string, kind: "stem" | "branch", charType: "한자
 }
 
 const YIN_STEMS_ALL = new Set<string>(["乙","丁","己","辛","癸","을","정","기","신","계"]);
-const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]); // 주의: '酉' 오타 방지
+const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]);
 function isYinUnified(value: string, kind: "stem" | "branch") {
   return kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
 }
@@ -154,7 +153,7 @@ export default function IlwoonCalendar({
   }, [days, date]);
 
   return (
-    <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+    <div className="w-full max-w={[800]} mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       {/* 헤더 */}
       <div className="flex justify-center items-center px-2 desk:px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60">
         <div className="text-center text-[11px] desk:text-sm font-semibold text-neutral-700 dark:text-neutral-200">
@@ -222,7 +221,10 @@ export default function IlwoonCalendar({
             return (
               <div
                 key={d.toISOString()}
-                onClick={() => setFromEvent({ at: d }, "일운")}
+                onClick={() => {
+                  // ✅ 일운 클릭 시 글로벌 날짜 갱신 → 월운 리스트는 절입 경계 기준으로 자동 active 변경
+                  setFromEvent({ at: d }, "일운");
+                }}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}
@@ -284,12 +286,3 @@ function formatStartKST(d?: Date): string | null {
   }
   return `${month}/${day} ${hour}:${minute}`;
 }
-
-/*function isToday(date: Date) {
-  const today = new Date();
-  return (
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate()
-  );
-}*/

@@ -306,7 +306,7 @@ export default function MyeongSikEditor({
                   onChange={() => setForm({ ...form, calendarType: "solar" })}
                   id="editor_calendar_solar"
                 />
-                <label htmlFor="editor_calendar_solar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200">양력</label>
+                <label htmlFor="editor_calendar_solar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer">양력</label>
               </span>
               <span className="inline-flex items-center gap-1">
                 <input
@@ -317,7 +317,7 @@ export default function MyeongSikEditor({
                   onChange={() => setForm({ ...form, calendarType: "lunar" })}
                   id="editor_calendar_lunar"
                 />
-                <label htmlFor="editor_calendar_lunar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200">음력</label>
+                <label htmlFor="editor_calendar_lunar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer">음력</label>
               </span>
             </div>
             {form.calendarType === "lunar" && form.birthDay?.length === 8 && (
@@ -363,7 +363,7 @@ export default function MyeongSikEditor({
               onChange={(e) => setUnknownTime(e.target.checked)}
               id="editor_birthTimeX"
             />
-            <label htmlFor="editor_birthTimeX" className="text-neutral-800 dark:text-neutral-200">
+            <label htmlFor="editor_birthTimeX" className="text-neutral-800 dark:text-neutral-200 cursor-pointer">
               모름
             </label>
           </div>
@@ -387,7 +387,7 @@ export default function MyeongSikEditor({
                     onChange={() => setForm({ ...form, mingSikType: v })}
                     id={id}
                   />
-                  <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200">{v}</label>
+                  <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200 cursor-pointer">{v}</label>
                 </span>
               );
             })}
@@ -409,7 +409,7 @@ export default function MyeongSikEditor({
                     onChange={(e) => setForm({ ...form, gender: e.target.value })}
                     id={id}
                   />
-                  <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200">{g}</label>
+                  <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200 cursor-pointer">{g}</label>
                 </span>
               );
             })}
@@ -434,7 +434,7 @@ export default function MyeongSikEditor({
             onChange={(e) => setUnknownPlace(e.target.checked)}
             id="editor_birthPlaceX"
           />
-          <label htmlFor="editor_birthPlaceX" className="text-neutral-800 dark:text-neutral-200">
+          <label htmlFor="editor_birthPlaceX" className="text-neutral-800 dark:text-neutral-200 cursor-pointer">
             모름
           </label>
         </div>

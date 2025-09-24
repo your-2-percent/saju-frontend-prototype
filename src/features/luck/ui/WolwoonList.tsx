@@ -1,5 +1,5 @@
 // features/luck/WolwoonList.tsx
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { getMonthGanZhi, getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
@@ -16,6 +16,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
+import { getSolarTermBoundaries } from "@/features/myoun";
 
 /* ===== 한자/한글 변환 + 음간/음지 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -62,6 +63,59 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
   return (mode as unknown) as Twelve.EraType;
 }
 
+/* ===== 절입(12절) 정의 ===== */
+const JIE_SET = new Set([
+  "입춘", "경칩", "청명", "입하", "망종", "소서",
+  "입추", "백로", "한로", "입동", "대설", "소한",
+]);
+
+/* ===== KST 보정 유틸 ===== */
+function startOfLocalDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+function monthNumberKST(d: Date): number {
+  const parts = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "numeric" }).formatToParts(d);
+  return Number(parts.find(p => p.type === "month")?.value ?? (d.getMonth() + 1));
+}
+
+/* ===== 절기 테이블 앵커(연 단위) ===== */
+function solarYearAnchorDate(year: number) {
+  // 태양년 내부 확정일(6/15 정오)
+  return new Date(year, 5, 15, 12, 0, 0, 0);
+}
+
+//type JieBoundary = { name: string; date: Date };
+
+/** activeYear의 1/1(로컬) 이후 '첫 입춘'부터 12개 절입을 뽑아서,
+ *  각 절입의 "그 날 00:00(KST)"을 월운 시작점으로 사용. */
+function buildSolarMonthStarts(activeYear: number): Array<{ name: string; termAt: Date; at00: Date }> {
+  const tables = [
+    ...(getSolarTermBoundaries(solarYearAnchorDate(activeYear - 1)) ?? []),
+    ...(getSolarTermBoundaries(solarYearAnchorDate(activeYear)) ?? []),
+    ...(getSolarTermBoundaries(solarYearAnchorDate(activeYear + 1)) ?? []),
+  ]
+    .map(t => ({ name: String(t.name), date: new Date(t.date) }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const jie = tables.filter(t => JIE_SET.has(t.name));
+
+  const jan1 = new Date(activeYear, 0, 1, 0, 0, 0, 0);
+  const nextJan1 = new Date(activeYear + 1, 0, 1, 0, 0, 0, 0);
+
+  const startIdx = jie.findIndex(t => t.name === "입춘" && t.date >= jan1 && t.date < nextJan1);
+  if (startIdx === -1) return [];
+
+  const out: Array<{ name: string; termAt: Date; at00: Date }> = [];
+  for (let k = 0; k < 12; k++) {
+    const item = jie[startIdx + k];
+    if (!item) break;
+    const termAt = new Date(item.date);        // 절입 실제 시각
+    const at00 = startOfLocalDay(termAt);      // 월 경계는 그 날 00:00로 묶는다
+    out.push({ name: item.name, termAt, at00 });
+  }
+  return out;
+}
+
 /* ===== 컴포넌트 ===== */
 export default function WolwoonList({
   data,
@@ -73,7 +127,6 @@ export default function WolwoonList({
   onSelect?: (year: number, month: number) => void;
 }) {
   const settings = useSettingsStore((s) => s.settings);
-  const [/*activeIndex*/, setActiveIndex] = useState<number | null>(null);
 
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
@@ -91,33 +144,20 @@ export default function WolwoonList({
       : getYearGanZhi(birth, lon).charAt(1)
   ) as Branch10sin;
 
-  // 월운 리스트 (해당 연도 2월~다음해 1월)
+  // 월운 리스트 (절입 기준 12개, at=그날 00:00)
   const list = useMemo(() => {
     if (!activeYear) return [];
-    const arr: { at: Date; gz: string }[] = [];
-    for (let m = 2; m <= 13; m++) {
-      const y = m === 13 ? activeYear + 1 : activeYear;
-      const mon = m === 13 ? 1 : m;
-      const dt = new Date(y, mon - 1, 10);
-      const gz = getMonthGanZhi(dt, lon);
-      arr.push({ at: dt, gz });
-    }
-    return arr;
-  }, [activeYear, lon]);
+    const jieStarts = buildSolarMonthStarts(activeYear);
+    return jieStarts.map(j => {
+      const at = j.at00;
+      // 절입 다음날 0시를 월간지 계산용으로 사용
+      const safeForGz = new Date(j.at00);
+      safeForGz.setDate(safeForGz.getDate() + 1);
 
-  // 현재 월 자동 active
-  useEffect(() => {
-    if (!list.length) return;
-    setActiveIndex(null);
-    const now = new Date();
-    const idx = list.findIndex((it, i) => {
-      const next = list[i + 1]?.at;
-      return now >= it.at && (!next || now < next);
+      const gz = getMonthGanZhi(safeForGz, lon);
+      return { at, gz, term: j.name, termAt: j.termAt };
     });
-    if (activeYear === now.getFullYear()) {
-      setActiveIndex(idx !== -1 ? idx : null);
-    }
-  }, [list, activeYear]);
+  }, [activeYear, lon]);
 
   const { date, setFromEvent } = useLuckPickerStore();
   const activeIndex = findActiveIndexByDate(list, date);
@@ -132,7 +172,7 @@ export default function WolwoonList({
         {list.map((ev, i) => {
           const stem = ev.gz.charAt(0) as Stem10sin;
           const branch = ev.gz.charAt(1) as Branch10sin;
-          const label = `${ev.at.getMonth() + 1}월`;
+          const label = `${monthNumberKST(ev.at)}월`; // ✅ KST 기준 월 라벨
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", settings.charType);
@@ -155,18 +195,19 @@ export default function WolwoonList({
 
           return (
             <div
-              key={ev.gz}
+              key={`${ev.term}-${ev.at.toISOString()}`}
               onClick={() => {
-                setActiveIndex(i);
-                onSelect?.(ev.at.getFullYear(), ev.at.getMonth() + 1);
-                setFromEvent(ev, "월운");
+                const delayed = new Date(ev.at);
+                delayed.setDate(delayed.getDate() + 1);
+                onSelect?.(delayed.getFullYear(), delayed.getMonth() + 1);
+                setFromEvent({ at: delayed, gz: ev.gz }, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive
                   ? "border border-yellow-500"
                   : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
               }`}
-              title={`${ev.gz} · ${ev.at.toLocaleDateString()}`}
+              title={`${ev.term} 시작 · ${ev.gz} · ${ev.termAt.toLocaleString()}`}
             >
               <div className="desk:px-2 py-1 text-center text-[10px] bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300">
                 {label}
@@ -220,6 +261,11 @@ export default function WolwoonList({
                     {settings.showSibiSinsal && shinsal && <div>{shinsal}</div>}
                   </div>
                 )}
+
+                {/* 절입 라벨(보조) */}
+                <div className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                  {ev.term}
+                </div>
               </div>
             </div>
           );
