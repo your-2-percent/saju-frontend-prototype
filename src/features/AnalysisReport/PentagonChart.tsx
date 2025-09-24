@@ -57,8 +57,10 @@ export default function PentagonChart({
   daewoonGz?: string | null;
   sewoonGz?: string | null;
   wolwoonGz?: string | null;
+  ilwoonGz?: string | null;
   yearGZ?: string | null;
   monthGZ?: string | null;
+  dayGZ?: string | null;
 }) {
   const sizeW = width, sizeH = height;
   const cx = sizeW / 2, cy = sizeH / 2;

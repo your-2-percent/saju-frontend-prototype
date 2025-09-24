@@ -426,7 +426,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
  *    - 기본값 emitNatalGanjiAmhap=false (원국 중복 방지)
  *    - 운이 실제 있을 때만 원국 간지암합 생성 가능(hasLuck 가드)
  * ============================================================ */
-type LuckKind = "대운" | "세운" | "월운";
+type LuckKind = "대운" | "세운" | "월운" | "일운";
 export interface LuckOptions {
   emitNatalGanjiAmhap?: boolean; // 기본 false
   fillNone?: boolean;            // 기본 true
@@ -437,6 +437,7 @@ export function buildAllRelationTags(input: {
   daewoon?: string;
   sewoon?: string;
   wolwoon?: string;
+  ilwoon?: string; // 미사용
 }, opts: LuckOptions = {}): RelationTags {
   const { emitNatalGanjiAmhap = false } = opts;
 
@@ -484,6 +485,7 @@ export function buildAllRelationTags(input: {
     ["대운", input.daewoon],
     ["세운", input.sewoon],
     ["월운", input.wolwoon],
+    ["일운", input.ilwoon],
   ];
 
   for (const [kind, rawLuck] of lucks) {
@@ -593,9 +595,25 @@ export function buildAllRelationTags(input: {
 
   // ── 운끼리 상호작용 ──
   const luckPairs: Array<[LuckKind, string, LuckKind, string]> = [];
-  if (input.daewoon && input.sewoon) luckPairs.push(["대운", input.daewoon, "세운", input.sewoon]);
-  if (input.sewoon && input.wolwoon) luckPairs.push(["세운", input.sewoon, "월운", input.wolwoon]);
-  if (input.daewoon && input.wolwoon) luckPairs.push(["대운", input.daewoon, "월운", input.wolwoon]);
+
+  if (input.daewoon && input.sewoon)
+    luckPairs.push(["대운", input.daewoon, "세운", input.sewoon]);
+
+  if (input.sewoon && input.wolwoon)
+    luckPairs.push(["세운", input.sewoon, "월운", input.wolwoon]);
+
+  if (input.daewoon && input.wolwoon)
+    luckPairs.push(["대운", input.daewoon, "월운", input.wolwoon]);
+
+  // ✅ 일운 추가
+  if (input.ilwoon && input.daewoon)
+    luckPairs.push(["일운", input.ilwoon, "대운", input.daewoon]);
+
+  if (input.ilwoon && input.sewoon)
+    luckPairs.push(["일운", input.ilwoon, "세운", input.sewoon]);
+
+  if (input.ilwoon && input.wolwoon)
+    luckPairs.push(["일운", input.ilwoon, "월운", input.wolwoon]);
 
   for (const [k1, raw1, k2, raw2] of luckPairs) {
     const g1 = normalizeGZ(raw1);

@@ -5,6 +5,7 @@ import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 // import type { DayBoundaryRule } from "@/shared/type";
 
+
 export default function LuckGlobalPicker({
   pillars,
   ms,

@@ -404,8 +404,9 @@ export default function MyeongSikEditor({
                     type="radio"
                     className={radioAccent}
                     name="gender"
-                    checked={form.gender === g}
-                    onChange={() => setForm({ ...form, gender: g })}
+                    value={g}                       
+                    checked={form.gender === g}     
+                    onChange={(e) => setForm({ ...form, gender: e.target.value })}
                     id={id}
                   />
                   <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200">{g}</label>

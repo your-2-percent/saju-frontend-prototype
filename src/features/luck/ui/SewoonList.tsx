@@ -1,3 +1,5 @@
+// features/luck/components/SewoonList.tsx
+import { useEffect, useMemo, useState } from "react";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
@@ -44,7 +46,26 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
   return mode as Twelve.EraType;
 }
 
-/* ===== 컴포넌트 ===== */
+/* 경계 회피용: 해당 해 ‘한가운데’(7/2 12:00) */
+function toSafeMiddleOfYear(y: number): Date {
+  return new Date(y, 6, 2, 12, 0, 0, 0);
+}
+
+function buildDateKeepingMonth(targetYear: number, prev?: Date): Date {
+  const base = prev ?? new Date();
+  const m = base.getMonth();             // 0~11
+  const hh = base.getHours();
+  const mm = base.getMinutes();
+
+  // 월운 리스트는 "해당 해 2월 ~ 다음 해 1월" 구조.
+  // 기존 월이 1월(0)이면, targetYear의 "다음해 1월"에 매핑해야 맞음.
+  if (m === 0) {
+    return new Date(targetYear + 1, 0, 10, hh, mm, 0, 0); // 다음해 1월 10일
+  }
+  // 그 외엔 targetYear의 같은 달 10일로 고정(경계 회피)
+  return new Date(targetYear, m, 10, hh, mm, 0, 0);
+}
+
 export default function SewoonList({
   data,
   list,
@@ -56,11 +77,54 @@ export default function SewoonList({
 }) {
   const settings = useSettingsStore((s) => s.settings);
   const { date, setFromEvent } = useLuckPickerStore();
-  const activeIndex = findActiveIndexByDate(list, date);
 
-  const dayStem = toDayStem(data) as Stem10sin;
+  /* 1) 리스트 ‘고정(sticky)’: 부모가 일시적으로 빈 배열을 내려줘도 이전 리스트 유지 */
+  const [stickyList, setStickyList] = useState<{ at: Date; gz: string }[]>(() => list);
+  useEffect(() => {
+    if (list && list.length > 0) setStickyList(list);
+  }, [list]);
+
+  /* 2) 최종 뷰 리스트: 우선 현재 list, 없으면 sticky, 그것마저 없으면 한 해짜리 fallback */
+  // 출생/좌표 등 파생값
   const birth = toCorrected(data);
   const lon = !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0 ? 127.5 : data.birthPlace.lon;
+
+  const fallbackList = useMemo(() => {
+    if (!date) return [];
+    const y = date.getFullYear();
+    const at = toSafeMiddleOfYear(y);
+    const gz = getYearGanZhi(at, lon);
+    return [{ at, gz }];
+  }, [date, lon]);
+
+  const rawViewList = (list.length > 0 ? list : (stickyList.length > 0 ? stickyList : fallbackList));
+
+  /* 3) 정렬 보장 */
+  const viewList = useMemo(
+    () => [...rawViewList].sort((a, b) => a.at.getTime() - b.at.getTime()),
+    [rawViewList]
+  );
+
+  /* 4) 인덱스 계산(클램핑) */
+  const storeIndex = useMemo(() => {
+    if (viewList.length === 0) return 0;
+    const idx = findActiveIndexByDate(viewList, date);
+    if (idx < 0) return 0;
+    if (idx >= viewList.length) return viewList.length - 1;
+    return idx;
+  }, [viewList, date]);
+
+  /* 5) 낙관적 로컬 인덱스: 클릭 즉시 반영해서 플리커 방지 */
+  const [localIndex, setLocalIndex] = useState<number | null>(null);
+  useEffect(() => {
+    // 외부 상태 바뀌면 로컬 고정 해제(동기화)
+    setLocalIndex(null);
+  }, [date, viewList]);
+
+  const activeIndex = localIndex ?? storeIndex;
+
+  /* 6) 도메인 파생값(표시/신살 등) */
+  const dayStem = toDayStem(data) as Stem10sin;
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
   const baseBranch: Branch10sin = (
     settings.sinsalBase === "일지" ? getDayGanZhi(birth, rule).charAt(1) : getYearGanZhi(birth, lon).charAt(1)
@@ -73,11 +137,14 @@ export default function SewoonList({
       </div>
 
       <div className="flex gap-0.5 desk:gap-1 py-2 desk:p-2 flex-row-reverse">
-        {list.map((ev, i) => {
+        {viewList.map((ev, i) => {
           const year = ev.at.getFullYear();
-          const yearGZ = getYearGanZhi(new Date(year, 6, 1), lon);
+          // 표시용 간지(확정): 연중간 날짜로 계산 → 경계/입춘 영향 최소화
+          const mid = toSafeMiddleOfYear(year);
+          const yearGZ = getYearGanZhi(mid, lon);
           const stem = yearGZ.charAt(0) as Stem10sin;
           const branch = yearGZ.charAt(1) as Branch10sin;
+
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", settings.charType);
@@ -97,8 +164,20 @@ export default function SewoonList({
             <div
               key={`${year}-${ev.gz || i}`}
               onClick={() => {
-                onSelect?.(year);
-                setFromEvent(ev, "세운");
+                // 1) 화면 플리커 방지용(선택 표시 즉시 반영)
+                setLocalIndex(i);
+
+                // 2) 현재 store의 month를 유지한 채 연도만 targetYear로 교체
+                const targetAt = buildDateKeepingMonth(year, date);
+
+                // 3) 전역 상태 업데이트 (gz는 해당 targetAt 기준 연간지)
+                setFromEvent({ at: targetAt, gz: getYearGanZhi(targetAt, lon) }, "세운");
+
+                // 4) 부모 콜백은 한 틱 뒤(레이스 방지)
+                if (onSelect) {
+                  if (typeof queueMicrotask !== "undefined") queueMicrotask(() => onSelect(year));
+                  else Promise.resolve().then(() => onSelect(year));
+                }
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive ? "border border-yellow-500" : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"

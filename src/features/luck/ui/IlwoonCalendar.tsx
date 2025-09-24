@@ -36,7 +36,7 @@ function toDisplayChar(value: string, kind: "stem" | "branch", charType: "한자
 }
 
 const YIN_STEMS_ALL = new Set<string>(["乙","丁","己","辛","癸","을","정","기","신","계"]);
-const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","癸","亥","축","묘","사","미","유","해"]); // 주의: '酉' 오타 방지
+const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]); // 주의: '酉' 오타 방지
 function isYinUnified(value: string, kind: "stem" | "branch") {
   return kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
 }
@@ -223,7 +223,7 @@ export default function IlwoonCalendar({
               <div
                 key={d.toISOString()}
                 onClick={() => setFromEvent({ at: d }, "일운")}
-                className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border ${
+                className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}
                 title={`${gz} (${dayLocal.toLocaleDateString()})`}

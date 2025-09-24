@@ -16,6 +16,7 @@ import { useCurrentUnCards } from "@/features/luck/luck-make";
 import { formatLocalYMDHM } from "@/shared/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import { lunarToSolarStrict, isRecord } from "@/shared/lib/calendar/lunar";
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -95,6 +96,8 @@ function getCardLevel(label: string): number {
 export default function SajuChart({ data, hourTable }: Props) {
   // ✅ 진입 즉시 안전 변환
   const ms: MyeongSik | null = data ?? null;
+
+  const { date } = useLuckPickerStore();
 
   if (ms) {
     if (!(ms.dateObj instanceof Date)) {
@@ -228,8 +231,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   if (!dateObj || isNaN(dateObj.getTime())) {
     console.error("⚠ Invalid dateObj in SajuChart:", ms?.dateObj);
   }
-  const luck = useGlobalLuck(ms, hourTable);
-
+  const luck = useGlobalLuck(ms, hourTable, date);
   // 예시: 차트에 표기할 운 간지(대/세/월/일)
   const daeGz = luck.dae.gz;
   const seGz  = luck.se.gz;

@@ -5,7 +5,7 @@ import type { Pillars4 } from "./relations";
 type PosIndex = 0 | 1 | 2 | 3;
 const POS_WEIGHT: Record<PosIndex, number> = { 2: 4, 1: 3, 3: 2, 0: 1 } as const;
 
-type Source = "natal" | "dae" | "se" | "wol";
+type Source = "natal" | "dae" | "se" | "wol" | "il";
 
 type TagBucketPos = { name: string; weight: number; pos: PosIndex };
 type TagBucketsByPos = { si: string[]; il: string[]; yeon: string[]; wol: string[] };
@@ -479,17 +479,19 @@ export function buildShinsalTags({
   daewoon,
   sewoon,
   wolwoon,
+  ilwoon,
   basis,
 }: {
   natal: Pillars4;
   daewoon?: string | null;
   sewoon?: string | null;
   wolwoon?: string | null;
+  ilwoon?: string | null;
   basis?: ShinsalBasis;
 }): {
   title: string;
-  good: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[] };
-  bad: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[] };
+  good: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[], ilun: string[] };
+  bad: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[], ilun: string[] };
   meta: {
     voidPair: { day?: [string, string]; year?: [string, string] };
     samjaeYears: { day?: string[]; year?: string[] };
@@ -774,20 +776,43 @@ export function buildShinsalTags({
   const luckGoodDae: string[] = [];
   const luckGoodSe: string[]  = [];
   const luckGoodWol: string[] = [];
+  const luckGoodil: string[] = [];
   const luckBadDae: string[]  = [];
   const luckBadSe: string[]   = [];
   const luckBadWol: string[]  = [];
+  const luckBadil: string[]  = [];
 
   function pushLuck(arr: string[], v: string) { if (!arr.includes(v)) arr.push(v); }
 
   function matchLuckOne(src: Source, luck: string | null) {
     const gz = parseGZ(luck);
-    if (!gz) return;
-    const Lb = gz.branch;
-    const Ls = gz.stem;
+  if (!gz) return;
+  const Lb = gz.branch;
+  const Ls = gz.stem;
 
-    const good = src === "dae" ? luckGoodDae : src === "se" ? luckGoodSe : luckGoodWol;
-    const bad  = src === "dae" ? luckBadDae  : src === "se" ? luckBadSe  : luckBadWol;
+  let good: string[];
+  let bad: string[];
+
+  switch (src) {
+    case "dae":
+      good = luckGoodDae;
+      bad  = luckBadDae;
+      break;
+    case "se":
+      good = luckGoodSe;
+      bad  = luckBadSe;
+      break;
+    case "wol":
+      good = luckGoodWol;
+      bad  = luckBadWol;
+      break;
+    case "il": // ✅ 일운 처리 추가
+      good = luckGoodil;
+      bad  = luckBadil;
+      break;
+    default:
+      return;
+  }
 
     // 월지×운 (길)
     if (normStemChar(MAP_M_CHEONDEOK_S[mBranch]) === Ls) pushLuck(good, labelLuck_Month("천덕귀인", src));
@@ -845,6 +870,7 @@ export function buildShinsalTags({
   matchLuckOne("dae", daewoon ?? null);
   matchLuckOne("se",  sewoon  ?? null);
   matchLuckOne("wol", wolwoon ?? null);
+  matchLuckOne("il", ilwoon ?? null);
 
   return {
     title,
@@ -852,12 +878,12 @@ export function buildShinsalTags({
       const res: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
       for (const it of goodPosDedup) res[posToKey(it.pos)].push(it.name);
       return res;
-    })(), dae: luckGoodDae, se: luckGoodSe, wolun: luckGoodWol },
+    })(), dae: luckGoodDae, se: luckGoodSe, wolun: luckGoodWol, ilun: luckGoodil },
     bad:  { ...({ si: [], il: [], yeon: [], wol: [] } as TagBucketsByPos), ...(() => {
       const res: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
       for (const it of badPosDedup) res[posToKey(it.pos)].push(it.name);
       return res;
-    })(), dae: luckBadDae,  se: luckBadSe,  wolun: luckBadWol },
+    })(), dae: luckBadDae,  se: luckBadSe,  wolun: luckBadWol, ilun: luckBadil },
     meta: {
       voidPair: { day: getVoidPair(natal[idx.day]) ?? undefined, year: getVoidPair(natal[idx.year]) ?? undefined },
       samjaeYears: {
