@@ -5,7 +5,6 @@ import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 // import type { DayBoundaryRule } from "@/shared/type";
 
-
 export default function LuckGlobalPicker({
   pillars,
   ms,
@@ -34,12 +33,36 @@ export default function LuckGlobalPicker({
     return `${y}-${m}-${day}`;
   }, [date]);
 
+  // 🔒 말일 안전화: 10/31 → 다음 달 이동 시 유효 일자(그 달의 마지막 날)로 보정
   const onDateChange = (v: string) => {
-    const base = date ?? new Date(); // 현재 전역 시각(초/분 유지)
-    const [y, m, d] = v.split("-").map(Number);
+    if (!v) return;
+
+    // yyyy-mm-dd → 숫자 파싱
+    const [ys, ms, ds] = v.split("-");
+    const y = Number(ys);
+    const m = Number(ms); // 1~12
+    const d = Number(ds);
+
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) {
+      return; // 잘못된 값은 무시
+    }
+
+    // 현재 전역 시각(시/분 유지)
+    const base = date ?? new Date();
     const hh = base.getHours();
     const mm = base.getMinutes();
-    setDate(new Date(y, (m ?? 1) - 1, d ?? 1, hh, mm, 0));
+
+    // 해당 월의 마지막 날짜 계산 (m은 1~12 이므로 m 그대로 사용)
+    const lastDayOfMonth = new Date(y, m, 0).getDate();
+    const safeDay = Math.min(d, lastDayOfMonth); // 11월에 31일 없음 → 30으로 보정 등
+
+    // 로컬 타임존 기준으로 생성 (UTC 파싱 회피)
+    const next = new Date(y, m - 1, safeDay, hh, mm, 0, 0);
+
+    // 유효성 체크 후 반영
+    if (!Number.isNaN(next.getTime())) {
+      setDate(next);
+    }
   };
 
   // 원국 + 운세 표시줄
@@ -76,6 +99,9 @@ export default function LuckGlobalPicker({
             type="date"
             value={dateStr}
             onChange={(e) => onDateChange(e.target.value)}
+            // 선택 범위 안전망(선택). 필요 없으면 지워도 됨.
+            min="1900-01-01"
+            max="2100-12-31"
             className="w rounded-md border border-neutral-300 dark:border-neutral-700 bg-transparent px-2 py-1 text-sm"
           />
         </label>
