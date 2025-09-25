@@ -121,8 +121,11 @@ function posToKey(pos: PosIndex): keyof TagBucketsByPos {
  * ──────────────────────────────────────────────────────────────────────────── */
 const posKo = (p: PosIndex): "연지" | "월지" | "일지" | "시지" =>
   (p === 0 ? "연지" : p === 1 ? "월지" : p === 2 ? "일지" : "시지");
-const srcKo = (s: Source): "대운" | "세운" | "월운" =>
-  (s === "dae" ? "대운" : s === "se" ? "세운" : "월운");
+const srcKo = (s: Source): "대운" | "세운" | "월운" | "일운" =>
+  s === "dae" ? "대운" :
+  s === "se"  ? "세운" :
+  s === "wol" ? "월운" :
+  "일운";
 
 // (원국) 일간 × (지지 위치)
 const labelSB_at = (tag: string, atPos: PosIndex) => `#일간X${posKo(atPos)}_${tag}`;
