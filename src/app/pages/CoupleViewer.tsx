@@ -44,7 +44,7 @@ import {
   getTwelveShinsalBySettings,
 } from "@/shared/domain/간지/twelve";
 
-// 음력 → 양력 변환 유틸
+// 음력 → 양력 변환 유틸 (주의: month 인자 0-기반 사용으로 가정)
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
 /* =============== 유틸 =============== */
@@ -52,6 +52,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
+// 간지 2글자 보장
+const STEMS_ALL = [
+  "갑","을","병","정","무","기","경","신","임","계",
+  "甲","乙","丙","丁","戊","己","庚","辛","壬","癸",
+] as const;
+const BR_ALL = [
+  "자","축","인","묘","진","사","오","미","신","유","술","해",
+  "子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥",
+] as const;
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
 const BR_SET = new Set<string>(BR_ALL as readonly string[]);
 function isGZ(x: unknown): x is string {
@@ -95,18 +104,53 @@ function nameOf(ms: MyeongSik): string {
   if (typeof r.memo === "string" && r.memo) return r.memo;
   return "이름 없음";
 }
-function keyOf(ms: MyeongSik): string {
-  let y = Number(ms.birthDay!.slice(0, 4));
-  let mo = Number(ms.birthDay!.slice(4, 6));
-  let d = Number(ms.birthDay!.slice(6, 8));
-  if (ms.calendarType === "lunar") {
-    const solar = lunarToSolarStrict(y, mo, d);
-    y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
-    return `${nameOf(ms)}-${solar.toISOString()}`;
-  } else {
-    const solar = new Date(y, mo, d);
-    return `${nameOf(ms)}-${solar.toISOString()}`;
+
+/* === 날짜 파싱 & 보정 === */
+function parseYMDHM(ms: MyeongSik) {
+  const y = Number(ms.birthDay.slice(0, 4));
+  const m = Number(ms.birthDay.slice(4, 6)); // 1~12
+  const d = Number(ms.birthDay.slice(6, 8));
+  let hh = 0, mm = 0;
+  const r = ms as unknown as Record<string, unknown>;
+  if (typeof r.birthTime === "string" && r.birthTime.length >= 4) {
+    hh = Number((r.birthTime as string).slice(0, 2));
+    mm = Number((r.birthTime as string).slice(2, 4));
   }
+  return { y, m, d, hh, mm };
+}
+
+/** 음력 → 양력 변환 안전 래퍼 (이 프로젝트에선 month 0-기반 가정) */
+function lunarToSolarSafe(y: number, m1to12: number, d: number, hh = 0, mm = 0): Date {
+  // lunarToSolarStrict가 0-기반 month를 받는 구현이었기 때문에 -1 적용
+  return lunarToSolarStrict(y, m1to12, d, hh, mm);
+}
+
+/** 최종적으로 사용할 "보정된" Date
+ *  - calendarType === "lunar" → 음력→양력 변환(lunarToSolarSafe)
+ *  - calendarType === "solar" → toCorrected(ms) (실패 시 new Date)
+ */
+function safeCorrected(ms: MyeongSik): Date {
+  const { y, m, d, hh, mm } = parseYMDHM(ms);
+  if ((ms).calendarType === "lunar") {
+    try {
+      return lunarToSolarSafe(y, m, d, hh, mm);
+    } catch {
+      // 폴백: 최소한 시/분 포함해 JS Date 생성(같은 YMD로)
+      return new Date(y, m - 1, d, hh, mm);
+    }
+  }
+  // solar
+  try {
+    const dt = toCorrected(ms);
+    if (dt instanceof Date && !Number.isNaN(dt.getTime())) return dt;
+  } catch { /* ignore */ }
+  return new Date(y, m - 1, d, hh, mm);
+}
+
+/** 키 생성은 보정된 날짜 기준으로 */
+function keyOf(ms: MyeongSik): string {
+  const corrected = safeCorrected(ms);
+  return `${nameOf(ms)}-${corrected.toISOString()}`;
 }
 function idOf(ms: MyeongSik): string {
   const r = ms as unknown as Record<string, unknown>;
@@ -226,10 +270,10 @@ function PeoplePickerModal({
     const allIds = ordered.map(idOf);
     const invisibleIds = allIds.filter((id) => !visibleIds.includes(id));
 
-    // ⚠️ 중복 방지: movedVisible + invisibleIds 합치기 전에 세트로 한 번 정리
+    // ⚠️ 중복 방지
     const nextIds = [...movedVisible, ...invisibleIds].filter((id, i, arr) => arr.indexOf(id) === i);
 
-    // 3) 영속화 + 로컬 상태 갱신  ✅ 즉시 저장
+    // 3) 영속화
     persist(nextIds);
   };
 
@@ -247,8 +291,8 @@ function PeoplePickerModal({
       />
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 inset-x-0 mx-auto w-full max-w-[640px] max-h-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-bottom duration-300 z-[1001] ${
-          open ? "bottom-0" : "bottom-[-80dvh]"
+        className={`fixed bottom-0 inset-x-0 mx-auto w-full max-w-[640px] max-height-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
+          open ? "translate-y-0" : "translate-y-full"
         }`}
       >
         <div className="flex items-center justify-between mb-3">
@@ -287,25 +331,25 @@ function PeoplePickerModal({
               >
                 {filtered.map((m, i) => {
                   const id = String(idOf(m));
+                  const display = safeCorrected(m); // ✅ 음력은 양력 변환 + 시간, 양력은 보정시 반영
                   return (
                     <Draggable key={id} draggableId={id} index={i}>
                       {(prov) => (
                         <li
                           ref={prov.innerRef}
                           {...prov.draggableProps}
-                          {...prov.dragHandleProps}  
+                          {...prov.dragHandleProps}
                           onClick={() => onSelect(m)}
                           className="w-full text-left p-3 rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-800 cursor-grab select-none active:cursor-grabbing"
                         >
                           <div className="flex items-center gap-2">
-                            {/* 아이콘은 시각적 힌트만 */}
                             <span className="mr-2 select-none">☰</span>
                             <div className="flex-1 min-w-0">
                               <div className="text-neutral-900 dark:text-neutral-50 text-sm truncate">
                                 {nameOf(m)}
                               </div>
                               <div className="text-neutral-500 dark:text-neutral-400 text-xs">
-                                {formatDate24(lunarToSolarStrict(Number(m.birthDay.slice(0,4)), Number(m.birthDay.slice(4,6)), Number(m.birthDay.slice(6,8))))}
+                                {formatDate24(display)}
                               </div>
                             </div>
                           </div>
@@ -319,7 +363,6 @@ function PeoplePickerModal({
             )}
           </Droppable>
         </DragDropContext>
-
       </div>
     </>
   );
@@ -448,24 +491,10 @@ function PersonSlot({
 }) {
   const cardSettings = useSettingsStore((s) => s.settings);
 
-  // ✅ 변환된 생일 고정
-  const birthFixed = useMemo(() => {
-    if (!data) return null;
+  // ✅ 보정된 출생 시각 (음력은 양력화 + 시분 포함, 양력은 보정시)
+  const birthFixed = useMemo(() => (data ? safeCorrected(data) : null), [data]);
 
-    const y = Number(data.birthDay.slice(0, 4));
-    const mo = Number(data.birthDay.slice(4, 6));
-    const d = Number(data.birthDay.slice(6, 8));
-
-    let h = 0, mm = 0;
-    if (typeof data.birthTime === "string" && data.birthTime.length >= 4) {
-      h = Number(data.birthTime.slice(0, 2));
-      mm = Number(data.birthTime.slice(2, 4));
-    }
-
-    return lunarToSolarStrict(y, mo, d, h, mm);
-  }, [data]);
-
-  // ✅ 원국 4주도 변환된 날짜로 직접 계산
+  // ✅ 원국 4주 계산
   const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "야자시") : undefined);
   const natalDay = ensureGZ(birthFixed ? getDayGanZhi(birthFixed, "야자시") : undefined);
   const natalMonth = ensureGZ(birthFixed ? getMonthGanZhi(birthFixed) : undefined);
@@ -476,53 +505,43 @@ function PersonSlot({
     return ch as Stem10sin;
   }, [natalDay]);
 
-  const birthCorrected = useMemo(() => {
-    if (!data) return null;
-    try {
-      return toCorrected(data);
-    } catch {
-      return null;
-    }
-  }, [data]);
-
   const lon = useMemo(() => {
-    if (!data?.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0)
-      return 127.5;
-    return data.birthPlace.lon;
+    const p = (data)?.birthPlace as { name?: string; lon?: number } | undefined;
+    if (!p || p.name === "모름" || !p.lon) return 127.5;
+    return p.lon;
   }, [data]);
 
   const ruleForBase: DayBoundaryRule =
     ((data?.mingSikType as DayBoundaryRule) ?? "야자시");
 
   const sinsalBaseBranch = useMemo<Branch10sin>(() => {
-    const byDay = birthCorrected
-      ? getDayGanZhi(birthCorrected, ruleForBase).charAt(1)
-      : natalDay.charAt(1) || "子";
-    const byYear = birthCorrected
-      ? getYearGanZhi(birthCorrected, lon).charAt(1)
-      : natalYear.charAt(1) || "子";
-    const pick = cardSettings.sinsalBase === "일지" ? byDay : byYear;
+    const byDay = birthFixed
+      ? getDayGanZhi(birthFixed, ruleForBase).charAt(1)
+      : (natalDay.charAt(1) || "子");
+    const byYear = birthFixed
+      ? getYearGanZhi(birthFixed, lon).charAt(1)
+      : (natalYear.charAt(1) || "子");
+    const pick = (cardSettings.sinsalBase ?? "일지") === "일지" ? byDay : byYear;
     return pick as Branch10sin;
-  }, [cardSettings.sinsalBase, birthCorrected, ruleForBase, lon, natalDay, natalYear]);
+  }, [cardSettings.sinsalBase, birthFixed, ruleForBase, lon, natalDay, natalYear]);
 
   const current = useMemo(() => {
-    if (mode !== "묘운" || !birthFixed) return null;
-    if (!data) return null;
+    if (mode !== "묘운" || !birthFixed || !data) return null;
     try {
-      const siju = buildSijuSchedule(birthFixed, natalHour, data.dir, 120, data.mingSikType);
-      const ilju = buildIljuFromSiju(siju, natalDay, data.dir, data.DayChangeRule);
+      const siju = buildSijuSchedule(birthFixed, natalHour, (data).dir, 120, (data).mingSikType);
+      const ilju = buildIljuFromSiju(siju, natalDay, (data).dir, (data).DayChangeRule);
       const wolju = buildWolju(
         birthFixed,
         natalMonth,
-        data.dir,
+        (data).dir,
         120,
-        data?.birthPlace?.lon ?? 127.5
+        ((data)?.birthPlace?.lon ?? 127.5)
       );
       const yeonju = buildYeonjuFromWolju(
         wolju,
         natalYear,
-        data.dir,
-        data.DayChangeRule,
+        (data).dir,
+        (data).DayChangeRule,
         birthFixed
       );
 
@@ -671,7 +690,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
   function getNatalPillars(ms: MyeongSik | undefined): Pillars4 {
     if (!ms) return ["甲子", "甲子", "甲子", "甲子"];
     try {
-      const birth = lunarToSolarStrict(Number(ms.birthDay.slice(0,4)), Number(ms.birthDay.slice(4,6)), Number(ms.birthDay.slice(6,8))); // ← 반드시 변환된 날짜 사용
+      const birth = safeCorrected(ms); // ✅ 음력은 양력변환 + 시간, 양력은 보정시 적용
       const natal = {
         hour: ensureGZ(getHourGanZhi(birth, "야자시")),
         day: ensureGZ(getDayGanZhi(birth, "야자시")),
@@ -692,7 +711,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
           <div className="font-semibold text-sm text-neutral-900 dark:text-neutral-200">
             궁합 보기
           </div>
-          <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
+        <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
             <label className="flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
