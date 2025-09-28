@@ -1,10 +1,10 @@
 /* ── 한글↔한자 매핑 ── */
-import { 천간, 지지, 간지_MAP } from "@/shared/domain/간지/const";
+import { 천간, 지지, 간지_한자_MAP } from "@/shared/domain/간지/const";
 
-const STEM_H2K: Record<string, string> = Object.fromEntries(간지_MAP.천간.map((h,i)=>[h, 천간[i]]));
-const STEM_K2H: Record<string, string> = Object.fromEntries(천간.map((k,i)=>[k, 간지_MAP.천간[i]]));
-const BRANCH_H2K: Record<string, string> = Object.fromEntries(간지_MAP.지지.map((h,i)=>[h, 지지[i]]));
-const BRANCH_K2H: Record<string, string> = Object.fromEntries(지지.map((k,i)=>[k, 간지_MAP.지지[i]]));
+const STEM_H2K: Record<string, string> = Object.fromEntries(간지_한자_MAP.천간.map((h,i)=>[h, 천간[i]]));
+const STEM_K2H: Record<string, string> = Object.fromEntries(천간.map((k,i)=>[k, 간지_한자_MAP.천간[i]]));
+const BRANCH_H2K: Record<string, string> = Object.fromEntries(간지_한자_MAP.지지.map((h,i)=>[h, 지지[i]]));
+const BRANCH_K2H: Record<string, string> = Object.fromEntries(지지.map((k,i)=>[k, 간지_한자_MAP.지지[i]]));
 
 const toKoStem   = (ch: string) => STEM_H2K[ch]   ?? ch;
 const toKoBranch = (ch: string) => BRANCH_H2K[ch] ?? ch;
