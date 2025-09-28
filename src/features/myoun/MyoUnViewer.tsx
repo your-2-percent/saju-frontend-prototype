@@ -24,11 +24,11 @@ import * as Twelve from "@/shared/domain/간지/twelve";
 
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
+import { STEMS_ALL, BR_ALL, 천간as } from "@/shared/domain/간지/const";
+
 /* ===== 간단 유틸 ===== */
 
 // 2글자 간지 보장
-const STEMS_ALL = ["갑","을","병","정","무","기","경","신","임","계","甲","乙","丙","丁","戊","己","庚","辛","壬","癸"] as const;
-const BR_ALL    = ["자","축","인","묘","진","사","오","미","신","유","술","해","子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"] as const;
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
 const BR_SET   = new Set<string>(BR_ALL as readonly string[]);
 function isGZ(x: unknown): x is string { return typeof x === "string" && x.length >= 2 && STEM_SET.has(x[0]) && BR_SET.has(x[1]); }
@@ -41,9 +41,8 @@ function ensureGZ(maybe: unknown, ...fallbacks: unknown[]): string {
 // 한자↔한글 매핑
 const STEM_H2K: Record<string,string> = { "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무","己":"기","庚":"경","辛":"신","壬":"임","癸":"계" };
 const BR_H2K:   Record<string,string> = { "子":"자","丑":"축","寅":"인","卯":"묘","辰":"진","巳":"사","午":"오","未":"미","申":"신","酉":"유","戌":"술","亥":"해" };
-const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"] as const;
 function isKoStem(s: string | undefined): s is Stem10sin {
-  return !!s && (STEMS_KO as readonly string[]).includes(s);
+  return !!s && (천간as as readonly string[]).includes(s);
 }
 function toKoreanStem(ch: string)  { return STEM_H2K[ch] ?? ch; }
 function toKoreanBranch(ch: string){ return BR_H2K[ch] ?? ch; }

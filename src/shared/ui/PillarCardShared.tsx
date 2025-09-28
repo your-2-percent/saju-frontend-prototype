@@ -3,6 +3,7 @@ import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { 천간as, 지지as, 간지_MAP } from "@/shared/domain/간지/const";
 
 /* ── 표시 변환 테이블 ── */
 const STEM_H2K = {
@@ -21,22 +22,17 @@ const BR_K2H = Object.fromEntries(
   Object.entries(BR_H2K).map(([h, k]) => [k, h])
 ) as Record<string, string>;
 
-const STEMS_HANJA = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"] as const;
-const STEMS_KO    = ["갑","을","병","정","무","기","경","신","임","계"] as const;
-const BRANCH_HANJA = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"] as const;
-const BRANCH_KO    = ["자","축","인","묘","진","사","오","미","신","유","술","해"] as const;
-
 function isKoStem(s: string): s is Stem10sin {
-  return (STEMS_KO as readonly string[]).includes(s);
+  return (천간as as readonly string[]).includes(s);
 }
 function isKoBranch(s: string): s is Branch10sin {
-  return (BRANCH_KO as readonly string[]).includes(s);
+  return (지지as as readonly string[]).includes(s);
 }
 function isHanjaStem(s: string): s is Stem10sin {
-  return (STEMS_HANJA as readonly string[]).includes(s);
+  return (간지_MAP.천간 as readonly string[]).includes(s);
 }
 function isHanjaBranch(s: string): s is Branch10sin {
-  return (BRANCH_HANJA as readonly string[]).includes(s);
+  return (간지_MAP.지지 as readonly string[]).includes(s);
 }
 
 /* ── 표시용: 글자 변환 (사용자 설정 반영) ── */
