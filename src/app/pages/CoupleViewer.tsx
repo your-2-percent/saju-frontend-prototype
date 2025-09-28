@@ -104,8 +104,17 @@ function nameOf(ms: MyeongSik): string {
   return "이름 없음";
 }
 function keyOf(ms: MyeongSik): string {
-  const birth = lunarToSolarStrict(Number(ms.birthDay.slice(0,4)), Number(ms.birthDay.slice(4,6)), Number(ms.birthDay.slice(6,8)));
-  return `${nameOf(ms)}-${birth.toISOString()}`;
+  let y = Number(ms.birthDay!.slice(0, 4));
+  let mo = Number(ms.birthDay!.slice(4, 6));
+  let d = Number(ms.birthDay!.slice(6, 8));
+  if (ms.calendarType === "lunar") {
+    const solar = lunarToSolarStrict(y, mo, d);
+    y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
+    return `${nameOf(ms)}-${solar.toISOString()}`;
+  } else {
+    const solar = new Date(y, mo, d);
+    return `${nameOf(ms)}-${solar.toISOString()}`;
+  }
 }
 function idOf(ms: MyeongSik): string {
   const r = ms as unknown as Record<string, unknown>;
