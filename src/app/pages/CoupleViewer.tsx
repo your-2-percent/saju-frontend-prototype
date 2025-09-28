@@ -52,6 +52,15 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
+// 간지 2글자 보장
+const STEMS_ALL = [
+  "갑","을","병","정","무","기","경","신","임","계",
+  "甲","乙","丙","丁","戊","己","庚","辛","壬","癸",
+] as const;
+const BR_ALL = [
+  "자","축","인","묘","진","사","오","미","신","유","술","해",
+  "子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥",
+] as const;
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
 const BR_SET = new Set<string>(BR_ALL as readonly string[]);
 function isGZ(x: unknown): x is string {
