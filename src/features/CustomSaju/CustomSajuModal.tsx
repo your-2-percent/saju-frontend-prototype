@@ -10,6 +10,7 @@ import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { 천간as, 지지as } from "@/shared/domain/간지/const";
 
 // 프로젝트 규격에 맞춰 필요시 조정
 type DayBoundaryRule = "야자시" | "조자시" | "인시";
@@ -21,10 +22,8 @@ type Pillars = {
   hourStem?: Stem;  hourBranch?: Branch;
 };
 
-const STEMS = ["갑","을","병","정","무","기","경","신","임","계"] as const;
-const BRANCHES = ["자","축","인","묘","진","사","오","미","신","유","술","해"] as const;
-type Stem = typeof STEMS[number];
-type Branch = typeof BRANCHES[number];
+type Stem = typeof 천간as[number];
+type Branch = typeof 지지as[number];
 
 type HourRule = "자시" | "인시";
 
@@ -51,7 +50,7 @@ function isFilledAll(p: Pillars): p is Required<Pillars> {
 
 /* ── 월두(연간→월주 후보) : 계산 함수 없이 연간만으로 처리 ── */
 const STEM_INDEX: Record<Stem, number> = { 갑:0, 을:1, 병:2, 정:3, 무:4, 기:5, 경:6, 신:7, 임:8, 계:9 };
-const INDEX_STEM = STEMS;
+const INDEX_STEM = 천간as;
 const MONTH_SEQ_FROM_IN: Branch[] = ["인","묘","진","사","오","미","신","유","술","해","자","축"];
 // --- 월두법: 年干 + 月支 -> 月干 계산 (인시 기준 전용)
 function monthStemOf(yearStem: Stem, monthBranch: Branch): Stem {
@@ -70,7 +69,7 @@ function monthStemOf(yearStem: Stem, monthBranch: Branch): Stem {
 }
 
 /* ── 시두(일간→시주) : 브랜치-맵으로 매칭 정확화 ── */
-const ORDER_JASI: Branch[] = BRANCHES.slice(); // ["자","축","인",...,"해"]
+const ORDER_JASI: Branch[] = 지지as.slice(); // ["자","축","인",...,"해"]
 const ORDER_INSI: Branch[] = ["인","묘","진","사","오","미","신","유","술","해","자","축"];
 
 /** 일간/규칙에 따른 {branch -> "간지"} 맵 */
@@ -78,7 +77,7 @@ function buildHourMap(dayStem: Stem, rule: HourRule): Record<Branch, string> {
   const table = rule === "자시" ? 시주매핑_자시 : 시주매핑_인시;
   const arr = table[dayStem] as readonly string[]; // 길이 12
   const order = rule === "자시" ? ORDER_JASI : ORDER_INSI;
-  const map: Record<Branch, string> = BRANCHES.reduce((acc, b) => {
+  const map: Record<Branch, string> = 지지as.reduce((acc, b) => {
     acc[b] = "";
     return acc;
   }, {} as Record<Branch, string>);
@@ -531,7 +530,7 @@ export default function CustomSajuModal({
         const hourMap = buildHourMap(pillars.dayStem!, hourRule);
         const slots: { branch: Branch; time: string }[] = [];
         for (let i = 0; i < 12; i++) {
-          const br = BRANCHES[i];
+          const br = 지지as[i];
           if (hourMap[br] === targetHour) {
             slots.push({ branch: br, time: TIME_WINDOWS[i] });
           }
@@ -771,7 +770,7 @@ export default function CustomSajuModal({
                 <div> 
                   <p className="font-medium mb-2">천간</p> 
                   <div className="grid grid-cols-5 gap-2"> 
-                    {STEMS.map(s => (
+                    {천간as.map(s => (
                       <button
                         key={s}
                         onClick={() => handleSelect(s)}
@@ -788,7 +787,7 @@ export default function CustomSajuModal({
                 <div>
                   <p className="font-medium mb-2">지지</p>
                   <div className="grid grid-cols-6 gap-2">
-                    {BRANCHES.filter(b => {
+                    {지지as.filter(b => {
                       const stemKey = counterpartKey(active!);
                       const st = pillars[stemKey] as Stem | undefined;
                       if (st) {

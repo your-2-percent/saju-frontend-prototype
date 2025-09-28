@@ -1,17 +1,12 @@
 import type { Element } from "./types";
+import { 천간, 지지, 간지_MAP } from "@/shared/domain/간지/const";
 
 export type HiddenStem = { stem: string; ratio: number; main?: boolean };
 
-/* ── 한글↔한자 매핑 ── */
-const STEM_KO = ["갑","을","병","정","무","기","경","신","임","계"] as const;
-const STEM_CN = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"] as const;
-const BRANCH_KO = ["자","축","인","묘","진","사","오","미","신","유","술","해"] as const;
-const BRANCH_CN = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"] as const;
-
-const STEM_H2K: Record<string, string> = Object.fromEntries(STEM_CN.map((h,i)=>[h, STEM_KO[i]]));
-const STEM_K2H: Record<string, string> = Object.fromEntries(STEM_KO.map((k,i)=>[k, STEM_CN[i]]));
-const BRANCH_H2K: Record<string, string> = Object.fromEntries(BRANCH_CN.map((h,i)=>[h, BRANCH_KO[i]]));
-const BRANCH_K2H: Record<string, string> = Object.fromEntries(BRANCH_KO.map((k,i)=>[k, BRANCH_CN[i]]));
+const STEM_H2K: Record<string, string> = Object.fromEntries(간지_MAP.천간.map((h,i)=>[h, 천간[i]]));
+const STEM_K2H: Record<string, string> = Object.fromEntries(천간.map((k,i)=>[k, 간지_MAP.천간[i]]));
+const BRANCH_H2K: Record<string, string> = Object.fromEntries(간지_MAP.지지.map((h,i)=>[h, 지지[i]]));
+const BRANCH_K2H: Record<string, string> = Object.fromEntries(지지.map((k,i)=>[k, 간지_MAP.지지[i]]));
 
 const toKoStem   = (ch: string) => STEM_H2K[ch]   ?? ch;
 const toKoBranch = (ch: string) => BRANCH_H2K[ch] ?? ch;

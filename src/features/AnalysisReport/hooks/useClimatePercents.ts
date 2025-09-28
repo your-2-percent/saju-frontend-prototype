@@ -1,6 +1,7 @@
 // features/AnalysisReport/hooks/useClimatePercents.ts
 import { useMemo } from "react";
 import type { Pillars4 } from "../logic/relations";
+import { STEMS_KO, BRANCHES_KO, STEM_H2K, BRANCH_H2K } from "@/shared/domain/간지/const";
 
 /** 위치 인덱스 (연, 월, 일, 시) */
 const POS = { year: 0, month: 1, day: 2, hour: 3 } as const;
@@ -26,21 +27,6 @@ const W_STEM: Record<PosIndex, number> = {
   [POS.day]: 0.0,
   [POS.hour]: 0.15,
 }; // 합계 0.30
-
-/* ─────────────────────────────────────────────────────────
- * 한글/한자 정규화
- * ───────────────────────────────────────────────────────── */
-const BRANCH_H2K: Record<string, string> = {
-  "子": "자", "丑": "축", "寅": "인", "卯": "묘",
-  "辰": "진", "巳": "사", "午": "오", "未": "미",
-  "申": "신", "酉": "유", "戌": "술", "亥": "해",
-};
-const STEM_H2K: Record<string, string> = {
-  "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
-  "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계",
-};
-const BRANCHES_KO = new Set(["자","축","인","묘","진","사","오","미","신","유","술","해"]);
-const STEMS_KO = new Set(["갑","을","병","정","무","기","경","신","임","계"]);
 
 const normBranch = (ch: string) => (BRANCHES_KO.has(ch) ? ch : (BRANCH_H2K[ch] ?? ch));
 const normStem   = (ch: string) => (STEMS_KO.has(ch)   ? ch : (STEM_H2K[ch]   ?? ch));

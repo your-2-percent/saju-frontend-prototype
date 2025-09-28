@@ -11,18 +11,13 @@ import type { Stem10sin } from "@/shared/domain/간지/utils";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import type { Settings as CardSettings } from "@/shared/lib/hooks/useSettings";
+import { STEMS_KO, 간지_한자_MAP, STEM_H2K } from "@/shared/domain/간지/const";
 
-/* ===== 일간을 ‘항상 한글(갑…계)’로 강제 ===== */
-const STEM_H2K: Record<string, Stem10sin> = {
-  "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무",
-  "己":"기","庚":"경","辛":"신","壬":"임","癸":"계",
-};
-const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"] as const;
-const STEMS_KO_SET = new Set<string>(STEMS_KO);
-const STEMS_HANJA_SET = new Set<string>(["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"]);
+
+const STEMS_HANJA_SET = new Set<string>(간지_한자_MAP.천간);
 
 function toKoStemKeyStrict(ch: string): Stem10sin {
-  if (STEMS_KO_SET.has(ch)) return ch as Stem10sin;
+  if (STEMS_KO.has(ch)) return ch as Stem10sin;
   if (STEMS_HANJA_SET.has(ch)) return STEM_H2K[ch] as Stem10sin;
   return "갑";
 }

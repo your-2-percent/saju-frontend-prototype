@@ -1,6 +1,7 @@
 // features/couple/CoupleViewer.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
+import { STEMS_ALL, BR_ALL } from "@/shared/domain/간지/const";
 
 import {
   DragDropContext,
