@@ -1,5 +1,6 @@
 // features/AnalysisReport/logic/shinsal.ts
 import type { Pillars4 } from "./relations";
+import { STEMS_KO, BRANCHES_KO, STEM_H2K, BRANCH_H2K } from "@/shared/domain/간지/const";
 
 /** 위치가중치: 일지(2)>월지(1)>시지(3)>연지(0) */
 type PosIndex = 0 | 1 | 2 | 3;
@@ -25,18 +26,6 @@ const POS_PRIORITY: Record<PosIndex, number> = {
   3: 1, // 시지
 };
 
-/* ───────── 한자→한글 보정 ───────── */
-const STEM_H2K: Record<string, string> = {
-  "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
-  "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계",
-};
-const BRANCH_H2K: Record<string, string> = {
-  "子": "자", "丑": "축", "寅": "인", "卯": "묘", "辰": "진", "巳": "사",
-  "午": "오", "未": "미", "申": "신", "酉": "유", "戌": "술", "亥": "해",
-};
-
-const STEMS_KO = new Set(["갑","을","병","정","무","기","경","신","임","계"]);
-const BRANCHES_KO = new Set(["자","축","인","묘","진","사","오","미","신","유","술","해"]);
 const STEMS_HJ = new Set(Object.keys(STEM_H2K));
 const BRANCHES_HJ = new Set(Object.keys(BRANCH_H2K));
 
