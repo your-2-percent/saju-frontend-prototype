@@ -1,7 +1,6 @@
 // features/couple/CoupleViewer.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { STEMS_ALL, BR_ALL } from "@/shared/domain/간지/const";
 
 import {
   DragDropContext,
@@ -25,7 +24,7 @@ import {
   getDayGanZhi,
   getHourGanZhi,
 } from "@/shared/domain/간지/공통";
-import { toCorrected } from "@/shared/domain/meongsik";
+//import { toCorrected } from "@/shared/domain/meongsik";
 
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import { formatDate24 } from "@/shared/utils";
@@ -44,14 +43,23 @@ import {
   getTwelveShinsalBySettings,
 } from "@/shared/domain/간지/twelve";
 
-// 음력 → 양력 변환 유틸 (주의: month 인자 0-기반 사용으로 가정)
+// 음력 → 양력 변환 유틸
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
-/* =============== 유틸 =============== */
+/* =============== 공통 유틸 =============== */
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
+/** 간지 2글자 보장용 */
+const STEMS_ALL = [
+  "갑","을","병","정","무","기","경","신","임","계",
+  "甲","乙","丙","丁","戊","己","庚","辛","壬","癸",
+] as const;
+const BR_ALL = [
+  "자","축","인","묘","진","사","오","미","신","유","술","해",
+  "子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥",
+] as const;
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
 const BR_SET = new Set<string>(BR_ALL as readonly string[]);
 function isGZ(x: unknown): x is string {
@@ -96,7 +104,7 @@ function nameOf(ms: MyeongSik): string {
   return "이름 없음";
 }
 
-/* === 날짜 파싱 & 보정 === */
+/** birthDay/birthTime 파싱 */
 function parseYMDHM(ms: MyeongSik) {
   const y = Number(ms.birthDay.slice(0, 4));
   const m = Number(ms.birthDay.slice(4, 6)); // 1~12
@@ -110,37 +118,30 @@ function parseYMDHM(ms: MyeongSik) {
   return { y, m, d, hh, mm };
 }
 
-/** 음력 → 양력 변환 안전 래퍼 (이 프로젝트에선 month 0-기반 가정) */
-function lunarToSolarSafe(y: number, m1to12: number, d: number, hh = 0, mm = 0): Date {
-  // lunarToSolarStrict가 0-기반 month를 받는 구현이었기 때문에 -1 적용
-  return lunarToSolarStrict(y, m1to12, d, hh, mm);
+/** 음력→양력 변환(시간 포함) 또는 양력 Date 생성 */
+function baseSolarDate(ms: MyeongSik): Date {
+  const { y, m, d } = parseYMDHM(ms);
+  const hh = ms.corrected.getHours();   // number
+  const mm = ms.corrected.getMinutes(); // number
+
+  return ms.calendarType === "lunar"
+    ? lunarToSolarStrict(y, m, d, hh, mm)   // ✅ number 그대로 전달
+    : new Date(y, m - 1, d, hh, mm);
 }
 
-/** 최종적으로 사용할 "보정된" Date
- *  - calendarType === "lunar" → 음력→양력 변환(lunarToSolarSafe)
- *  - calendarType === "solar" → toCorrected(ms) (실패 시 new Date)
- */
-function safeCorrected(ms: MyeongSik): Date {
-  const { y, m, d, hh, mm } = parseYMDHM(ms);
-  if ((ms).calendarType === "lunar") {
-    try {
-      return lunarToSolarSafe(y, m, d, hh, mm);
-    } catch {
-      // 폴백: 최소한 시/분 포함해 JS Date 생성(같은 YMD로)
-      return new Date(y, m - 1, d, hh, mm);
-    }
-  }
-  // solar
-  try {
-    const dt = toCorrected(ms);
-    if (dt instanceof Date && !Number.isNaN(dt.getTime())) return dt;
-  } catch { /* ignore */ }
-  return new Date(y, m - 1, d, hh, mm);
-}
+/** 보정시가 반영된 안전한 Date (toCorrected 실패 시 baseSolarDate로 폴백) */
+// function baseSolarDate(ms: MyeongSik): Date {
+//   try {
+//     const dt = toCorrected(ms);
+//     if (dt instanceof Date && !Number.isNaN(dt.getTime())) return dt;
+//   } catch {/* ignore */}
+//   // toCorrected 실패 시 기본 로직으로
+//   return baseSolarDate(ms);
+// }
 
-/** 키 생성은 보정된 날짜 기준으로 */
+/** 고유 키: 이름 + 보정시 적용된 ISO */
 function keyOf(ms: MyeongSik): string {
-  const corrected = safeCorrected(ms);
+  const corrected = baseSolarDate(ms);
   return `${nameOf(ms)}-${corrected.toISOString()}`;
 }
 function idOf(ms: MyeongSik): string {
@@ -282,7 +283,7 @@ function PeoplePickerModal({
       />
       {/* Sheet */}
       <div
-        className={`fixed bottom-0 inset-x-0 mx-auto w-full max-w-[640px] max-height-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
+        className={`fixed bottom-0 inset-x-0 mx-auto w-full max-w-[640px] max-h-[80dvh] bg-white dark:bg-neutral-950 rounded-t-2xl border border-neutral-200 dark:border-neutral-800 p-4 overflow-auto transition-transform duration-300 z-[1001] ${
           open ? "translate-y-0" : "translate-y-full"
         }`}
       >
@@ -322,7 +323,7 @@ function PeoplePickerModal({
               >
                 {filtered.map((m, i) => {
                   const id = String(idOf(m));
-                  const display = safeCorrected(m); // ✅ 음력은 양력 변환 + 시간, 양력은 보정시 반영
+                  const display = baseSolarDate(m); // ✅ 보정시 반영 (시간 포함)
                   return (
                     <Draggable key={id} draggableId={id} index={i}>
                       {(prov) => (
@@ -422,7 +423,7 @@ function FourPillarsRow({
               label={lbl}
               gz={gz}
               dayStem={dayStem}
-              settings={cardSettings}
+              settings={useSettingsStore.getState().settings} // 최신 설정 참조
               unseongText={unseongText}
               shinsalText={shinsalText}
               hideBranchSipSin={true}
@@ -439,7 +440,6 @@ function FourPillarsRow({
 function genderOf(ms?: MyeongSik | null): "남" | "여" | "" {
   if (!ms) return "";
   const r = ms as unknown as Record<string, unknown>;
-
   const str = (key: string) =>
     typeof r[key] === "string" ? String(r[key]).trim().toLowerCase() : null;
   const bool = (key: string) =>
@@ -482,10 +482,10 @@ function PersonSlot({
 }) {
   const cardSettings = useSettingsStore((s) => s.settings);
 
-  // ✅ 보정된 출생 시각 (음력은 양력화 + 시분 포함, 양력은 보정시)
-  const birthFixed = useMemo(() => (data ? safeCorrected(data) : null), [data]);
+  // ✅ 보정시 반영된 출생시각 고정
+  const birthFixed = useMemo(() => (data ? baseSolarDate(data) : null), [data]);
 
-  // ✅ 원국 4주 계산
+  // ✅ 원국 4주 (보정된 Date 기준)
   const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "야자시") : undefined);
   const natalDay = ensureGZ(birthFixed ? getDayGanZhi(birthFixed, "야자시") : undefined);
   const natalMonth = ensureGZ(birthFixed ? getMonthGanZhi(birthFixed) : undefined);
@@ -495,6 +495,8 @@ function PersonSlot({
     const ch = natalDay.charAt(0) || "갑";
     return ch as Stem10sin;
   }, [natalDay]);
+
+  const birthCorrected = birthFixed; // 이미 보정 완료
 
   const lon = useMemo(() => {
     const p = (data)?.birthPlace as { name?: string; lon?: number } | undefined;
@@ -506,15 +508,16 @@ function PersonSlot({
     ((data?.mingSikType as DayBoundaryRule) ?? "야자시");
 
   const sinsalBaseBranch = useMemo<Branch10sin>(() => {
-    const byDay = birthFixed
-      ? getDayGanZhi(birthFixed, ruleForBase).charAt(1)
+    const byDay = birthCorrected
+      ? getDayGanZhi(birthCorrected, ruleForBase).charAt(1)
       : (natalDay.charAt(1) || "子");
-    const byYear = birthFixed
-      ? getYearGanZhi(birthFixed, lon).charAt(1)
+    const byYear = birthCorrected
+      ? getYearGanZhi(birthCorrected, lon).charAt(1)
       : (natalYear.charAt(1) || "子");
-    const pick = (cardSettings.sinsalBase ?? "일지") === "일지" ? byDay : byYear;
+    const pick =
+      (cardSettings.sinsalBase ?? "일지") === "일지" ? byDay : byYear;
     return pick as Branch10sin;
-  }, [cardSettings.sinsalBase, birthFixed, ruleForBase, lon, natalDay, natalYear]);
+  }, [cardSettings.sinsalBase, birthCorrected, ruleForBase, lon, natalDay, natalYear]);
 
   const current = useMemo(() => {
     if (mode !== "묘운" || !birthFixed || !data) return null;
@@ -681,13 +684,14 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
   function getNatalPillars(ms: MyeongSik | undefined): Pillars4 {
     if (!ms) return ["甲子", "甲子", "甲子", "甲子"];
     try {
-      const birth = safeCorrected(ms); // ✅ 음력은 양력변환 + 시간, 양력은 보정시 적용
+      const birth = baseSolarDate(ms); // ✅ 보정시 반영된 출생 시각
       const natal = {
         hour: ensureGZ(getHourGanZhi(birth, "야자시")),
         day: ensureGZ(getDayGanZhi(birth, "야자시")),
         month: ensureGZ(getMonthGanZhi(birth)),
         year: ensureGZ(getYearGanZhi(birth)),
       };
+      // CoupleHarmonyPanel expects [연,월,일,시]
       return [natal.year, natal.month, natal.day, natal.hour];
     } catch {
       return ["甲子", "甲子", "甲子", "甲子"];
@@ -702,7 +706,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
           <div className="font-semibold text-sm text-neutral-900 dark:text-neutral-200">
             궁합 보기
           </div>
-        <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
+          <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
             <label className="flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"

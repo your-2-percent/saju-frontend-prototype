@@ -3,7 +3,7 @@ import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
-import { 천간as, 지지as, 간지_MAP } from "@/shared/domain/간지/const";
+import { 간지_MAP, 간지_한자_MAP } from "@/shared/domain/간지/const";
 
 /* ── 표시 변환 테이블 ── */
 const STEM_H2K = {
@@ -23,16 +23,16 @@ const BR_K2H = Object.fromEntries(
 ) as Record<string, string>;
 
 function isKoStem(s: string): s is Stem10sin {
-  return (천간as as readonly string[]).includes(s);
-}
-function isKoBranch(s: string): s is Branch10sin {
-  return (지지as as readonly string[]).includes(s);
-}
-function isHanjaStem(s: string): s is Stem10sin {
   return (간지_MAP.천간 as readonly string[]).includes(s);
 }
-function isHanjaBranch(s: string): s is Branch10sin {
+function isKoBranch(s: string): s is Branch10sin {
   return (간지_MAP.지지 as readonly string[]).includes(s);
+}
+function isHanjaStem(s: string): s is Stem10sin {
+  return (간지_한자_MAP.천간 as readonly string[]).includes(s);
+}
+function isHanjaBranch(s: string): s is Branch10sin {
+  return (간지_한자_MAP.지지 as readonly string[]).includes(s);
 }
 
 /* ── 표시용: 글자 변환 (사용자 설정 반영) ── */

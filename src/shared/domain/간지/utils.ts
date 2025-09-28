@@ -16,21 +16,26 @@ type Stem = (typeof STEMS)[number];
 // 지지: '자' | '축' ...
 type Branch = (typeof BRANCHES)[number];
 
-export function normalizeStem(ch: string): Stem | string {
+export function normalizeStem(ch: string): Stem | null {
   const iKor = STEMS.indexOf(ch as Stem);
   if (iKor !== -1) return STEMS[iKor];
+
   const iHan = 간지_한자_MAP.천간.indexOf(ch as (typeof 간지_한자_MAP.천간)[number]);
   if (iHan !== -1) return STEMS[iHan];
-  return ch;
+
+  return null;   // ❌ 원본 반환 금지
 }
 
-export function normalizeBranch(ch: string): Branch | string {
+export function normalizeBranch(ch: string): Branch | null {
   const iKor = BRANCHES.indexOf(ch as Branch);
   if (iKor !== -1) return BRANCHES[iKor];
+
   const iHan = 간지_한자_MAP.지지.indexOf(ch as (typeof 간지_한자_MAP.지지)[number]);
   if (iHan !== -1) return BRANCHES[iHan];
-  return ch;
+
+  return null;   // ❌ 원본 반환 금지
 }
+
 
 /** 오행 → Tailwind 배경색 */
 export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
@@ -58,18 +63,26 @@ export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
 export function getElementColor(
   char: string,
   kind: "stem" | "branch",
-  settingsV1?: Settings   // ✅ settings 전달받기
+  settingsV1?: Settings
 ): string {
   if (kind === "stem") {
     const kor = normalizeStem(char);
-    const idx = STEMS.indexOf(kor as (typeof STEMS)[number]);
+    if (!kor) {
+      console.warn("Invalid stem:", char);
+      return "bg-neutral-700";
+    }
+    const idx = STEMS.indexOf(kor);
     const elem = idx >= 0 ? 천간_오행[idx] : undefined;
-    return elemToBg(elem as ElementType, settingsV1);   // ✅ settings 반영
+    return elemToBg(elem as ElementType, settingsV1);
   } else {
     const kor = normalizeBranch(char);
-    const idx = BRANCHES.indexOf(kor as (typeof BRANCHES)[number]);
+    if (!kor) {
+      console.warn("Invalid branch:", char);
+      return "bg-neutral-700";
+    }
+    const idx = BRANCHES.indexOf(kor);
     const elem = idx >= 0 ? 지지_오행[idx] : undefined;
-    return elemToBg(elem as ElementType, settingsV1);   // ✅ settings 반영
+    return elemToBg(elem as ElementType, settingsV1);
   }
 }
 

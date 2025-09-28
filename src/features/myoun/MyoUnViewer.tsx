@@ -24,7 +24,7 @@ import * as Twelve from "@/shared/domain/간지/twelve";
 
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
-import { STEMS_ALL, BR_ALL, 천간as } from "@/shared/domain/간지/const";
+import { STEMS_ALL, BR_ALL, 간지_MAP } from "@/shared/domain/간지/const";
 
 /* ===== 간단 유틸 ===== */
 
@@ -42,7 +42,7 @@ function ensureGZ(maybe: unknown, ...fallbacks: unknown[]): string {
 const STEM_H2K: Record<string,string> = { "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무","己":"기","庚":"경","辛":"신","壬":"임","癸":"계" };
 const BR_H2K:   Record<string,string> = { "子":"자","丑":"축","寅":"인","卯":"묘","辰":"진","巳":"사","午":"오","未":"미","申":"신","酉":"유","戌":"술","亥":"해" };
 function isKoStem(s: string | undefined): s is Stem10sin {
-  return !!s && (천간as as readonly string[]).includes(s);
+  return !!s && (간지_MAP.천간 as readonly string[]).includes(s);
 }
 function toKoreanStem(ch: string)  { return STEM_H2K[ch] ?? ch; }
 function toKoreanBranch(ch: string){ return BR_H2K[ch] ?? ch; }
