@@ -322,7 +322,6 @@ export function buildWolju(
     const isAdjacent =
       (dir === "forward"  && refMonthAtBirthHJ !== refMonthAtBirth) ||
       (dir === "backward" && refMonthAtBirthHJ !== refMonthAtBirth);
-    //console.log(refMonthAtBirth, refMonthAtBirthHJ, prevOfNatal);
     if (isAdjacent) {
       // 출생 직후로 ‘첫 월주 전환’을 스냅 (표시상 0~1세 시작)
       const epsilonMs = 60_000; // +1분

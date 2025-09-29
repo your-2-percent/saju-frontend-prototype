@@ -6,11 +6,11 @@ import type { MyeongSik } from "@/shared/lib/storage";
 // import type { DayBoundaryRule } from "@/shared/type";
 
 export default function LuckGlobalPicker({
-  pillars,
+  //pillars,
   ms,
   // hourTable,
 }: {
-  pillars?: string[];
+  //pillars?: string[];
   ms: MyeongSik;
   // hourTable?: DayBoundaryRule;
 }) {
@@ -66,21 +66,16 @@ export default function LuckGlobalPicker({
   };
 
   // 원국 + 운세 표시줄
+  //const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
   const titleLine = useMemo(() => {
-    const natal =
-      Array.isArray(pillars) && pillars.length >= 4
-        ? `${pillars[0]}년 ${pillars[1]}월 ${pillars[2]}일 ${pillars[3]}시`
-        : "";
-
-    // 👉 전역 피커(date) 기준 luck 계산값 사용
+    const natal = ms.ganji;
     const dae = luck?.dae?.gz ? `${luck.dae.gz}대운` : null;
     const se = luck?.se?.gz ? `${luck.se.gz}세운` : null;
     const wol = luck?.wol?.gz ? `${luck.wol.gz}월운` : null;
 
     const extras = [dae, se, wol].filter(Boolean).join(" ");
-
     return [natal, extras].filter(Boolean).join(" + ");
-  }, [pillars, luck]);
+  }, [ms, luck]); 
 
   return (
     <div className="max-w-[640px] mx-auto mb-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-3 space-y-3">

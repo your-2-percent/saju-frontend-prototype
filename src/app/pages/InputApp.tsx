@@ -246,8 +246,8 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
       y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
     }
 
-    const hh = isUnknownTime ? 0 : Number(form.birthTime!.slice(0, 2) || "0");
-    const mi = isUnknownTime ? 0 : Number(form.birthTime!.slice(2, 4) || "0");
+    const hh = isUnknownTime ? 4 : Number(form.birthTime!.slice(0, 2));
+    const mi = isUnknownTime ? 30 : Number(form.birthTime!.slice(2, 4));
 
     const rawBirth = new Date(y, mo - 1, d, hh, mi, 0, 0);
 

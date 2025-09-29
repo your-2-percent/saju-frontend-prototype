@@ -6,12 +6,13 @@ import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import type { DayBoundaryRule } from "@/shared/type";
 import { getSolarTermBoundaries } from "@/features/myoun";
-import { toDayStem, toCorrected } from "@/shared/domain/meongsik";
+import { toCorrected } from "@/shared/domain/meongsik";
 import * as Twelve from "@/shared/domain/간지/twelve";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
+import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -89,19 +90,25 @@ export default function IlwoonCalendar({
   const rule: DayBoundaryRule =
     hourTable ?? ((data?.mingSikType as DayBoundaryRule | undefined) ?? "야자시");
 
-  const dayStem = data ? (toDayStem(data) as Stem10sin) : undefined;
-  const birth = data ? toCorrected(data) : null;
+  const birthRaw = data ? toCorrected(data) : null;
+  const birthSafe = data && birthRaw ? withSafeClockForUnknownTime(data, birthRaw) : null;
+
+  const dayStem: Stem10sin | undefined = useMemo(() => {
+    if (!birthSafe) return undefined;
+    const gz = getDayGanZhi(birthSafe, rule);
+    return gz.charAt(0) as Stem10sin;
+  }, [birthSafe, rule]);
   const lon =
     data && data.birthPlace && data.birthPlace.name !== "모름" && data.birthPlace.lon !== 0
       ? data.birthPlace.lon
       : 127.5;
 
   const baseBranch: Branch10sin | null =
-    data && birth
-      ? ((settings.sinsalBase === "일지"
-          ? getDayGanZhi(birth, rule).charAt(1)
-          : getYearGanZhi(birth, lon).charAt(1)) as Branch10sin)
-      : null;
+   data && birthSafe
+     ? ((settings.sinsalBase === "일지"
+         ? getDayGanZhi(birthSafe, rule).charAt(1)
+         : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
+     : null;
 
   // 월 범위(정오 고정)
   const { start: monthStart, end: monthEnd } = useMemo(
@@ -183,7 +190,7 @@ export default function IlwoonCalendar({
         {weeks.map((week, wi) =>
           week.map((d, di) => {
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
-            const dayLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate()); // 표시용
+            const dayLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 4, 30, 0, 0);
 
             const idx = days.findIndex(x => x.getTime() === d.getTime());
             const isActive = idx === activeIndex;

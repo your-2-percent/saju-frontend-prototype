@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { toDayStem, toCorrected } from "@/shared/domain/meongsik";
+import { toCorrected } from "@/shared/domain/meongsik";
 import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import type { DayBoundaryRule } from "@/shared/type";
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -11,6 +11,7 @@ import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/�
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
+import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 /* ===== 한자/한글 변환 + 음간/음지 ===== */
 const STEM_H2K: Record<string, string> = { "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무", "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계" };
@@ -86,8 +87,15 @@ export default function SewoonList({
 
   /* 2) 최종 뷰 리스트: 우선 현재 list, 없으면 sticky, 그것마저 없으면 한 해짜리 fallback */
   // 출생/좌표 등 파생값
-  const birth = toCorrected(data);
-  const lon = !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0 ? 127.5 : data.birthPlace.lon;
+  const birthRaw = toCorrected(data);
+  const birth = useMemo(
+    () => withSafeClockForUnknownTime(data, birthRaw),
+    [data, birthRaw]
+  );
+  const lon =
+    !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
+      ? 127.5
+      : data.birthPlace.lon;
 
   const fallbackList = useMemo(() => {
     if (!date) return [];
@@ -97,7 +105,8 @@ export default function SewoonList({
     return [{ at, gz }];
   }, [date, lon]);
 
-  const rawViewList = (list.length > 0 ? list : (stickyList.length > 0 ? stickyList : fallbackList));
+  const rawViewList =
+    list.length > 0 ? list : stickyList.length > 0 ? stickyList : fallbackList;
 
   /* 3) 정렬 보장 */
   const viewList = useMemo(
@@ -123,12 +132,20 @@ export default function SewoonList({
 
   const activeIndex = localIndex ?? storeIndex;
 
-  /* 6) 도메인 파생값(표시/신살 등) */
-  const dayStem = toDayStem(data) as Stem10sin;
+  /* 6) 도메인 파생값(표시/신살 등) — ✅ 안전한 일간/기준지지 */
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
-  const baseBranch: Branch10sin = (
-    settings.sinsalBase === "일지" ? getDayGanZhi(birth, rule).charAt(1) : getYearGanZhi(birth, lon).charAt(1)
-  ) as Branch10sin;
+  const dayStem = useMemo<Stem10sin>(() => {
+    const dayGz = getDayGanZhi(birth, rule);
+    return dayGz.charAt(0) as Stem10sin;
+  }, [birth, rule]);
+
+  const baseBranch: Branch10sin = useMemo(() => {
+    return (
+      (settings.sinsalBase === "일지"
+        ? getDayGanZhi(birth, rule).charAt(1)
+        : getYearGanZhi(birth, lon).charAt(1)) as Branch10sin
+    );
+  }, [birth, rule, lon, settings.sinsalBase]);
 
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">

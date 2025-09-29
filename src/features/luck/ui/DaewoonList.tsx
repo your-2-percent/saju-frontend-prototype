@@ -4,9 +4,10 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getElementColor, getSipSin } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { toDayStem, toCorrected } from "@/shared/domain/meongsik";
+import { toCorrected } from "@/shared/domain/meongsik";
 import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import type { DayBoundaryRule } from "@/shared/type";
+import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 //import { buildWolju } from "@/features/myoun"
 
 // 십이운성/십이신살
@@ -72,12 +73,25 @@ export default function DaewoonList({
   //onSelect,
 }: {
   data: MyeongSik;
-  activeIndex: number | null;
-  onSelect: (i: number) => void;
+  //activeIndex: number | null;
+  //onSelect: (i: number) => void;
 }) {
-  const list = useDaewoonList(data); // [{ at: Date, gz: "갑자" }, ...]
-  const dayStem = toDayStem(data) as Stem10sin;
+  const list = useDaewoonList(data);
 
+  // ✅ 출생시각 교정 + (시간 미상 시) 정오 보정
+  const birthRaw = toCorrected(data);
+  const birth = useMemo(
+    () => withSafeClockForUnknownTime(data, birthRaw),
+    [data, birthRaw]
+  );
+
+  // ✅ '대운 십신' 기준이 되는 일간을 안전하게 다시 산출 (toDayStem 쓰지 말자)
+  const dayStem = useMemo<Stem10sin>(() => {
+    const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+    const dayGz = getDayGanZhi(birth, rule);           // ← 너가 이미 맞다고 확인한 그 로직
+    return dayGz.charAt(0) as Stem10sin;               // ← 일간만 뽑기
+  }, [birth, data.mingSikType]);
+  
   const { date, setFromEvent } = useLuckPickerStore();
   const activeIndex = useMemo(() => findActiveIndexByDate(list, date), [list, date]);
 
@@ -94,9 +108,6 @@ export default function DaewoonList({
     sinsalBloom,  // boolean
   } = settings;
 
-  // 기준 지지 계산: 일지/연지
-  
-  const birth = toCorrected(data);
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
