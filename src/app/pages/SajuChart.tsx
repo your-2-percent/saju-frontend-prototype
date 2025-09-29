@@ -241,14 +241,14 @@ export default function SajuChart({ data, hourTable }: Props) {
   // ✅ 원국 표시용: 시주/일주 확정값
   const hourData = manualHour ?? parsed.hour;
 
+  // ── 십이운성/십이신살 계산
+  const baseBranchForShinsal =
+    (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin;
+
   // ✅ 시주예측 선택 핸들러 (원국 불변, 시주만 교체)
   const handleManualHourSelect = (stem: string, branch: string) => {
     setManualHour({ stem, branch });
   };
-
-  // ── 십이운성/십이신살 계산
-  const baseBranchForShinsal =
-    parsed.year.branch as Branch10sin;
 
   const calcUnseong = (branch: string) =>
     settings.showSibiUnseong ? getTwelveUnseong(dayStem, branch) : null;
@@ -485,7 +485,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: parsed.year.branch as Branch10sin,
+                                    baseBranch: (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
@@ -539,7 +539,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: parsed.year.branch as Branch10sin,
+                                    baseBranch: (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
