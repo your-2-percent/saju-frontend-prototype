@@ -4,7 +4,7 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import { getMonthGanZhi, getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { toDayStem, toCorrected } from "@/shared/domain/meongsik";
+import { toCorrected } from "@/shared/domain/meongsik";
 import type { DayBoundaryRule } from "@/shared/type";
 
 // 십이운성/십이신살
@@ -17,6 +17,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
 import { getSolarTermBoundaries } from "@/features/myoun";
+import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 /* ===== 한자/한글 변환 + 음간/음지 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -133,11 +134,17 @@ export default function WolwoonList({
       ? 127.5
       : data.birthPlace.lon;
 
-  const dayStem = toDayStem(data) as Stem10sin;
-
-  // 신살 기준 지지(일지/연지)
-  const birth = toCorrected(data);
+    const birthRaw = toCorrected(data);
+  const birth = useMemo(
+    () => withSafeClockForUnknownTime(data, birthRaw),
+    [data, birthRaw]
+  );
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+  // 안전한 일간(십신 계산용)
+  const dayStem = useMemo<Stem10sin>(() => {
+    const dayGz = getDayGanZhi(birth, rule);
+    return dayGz.charAt(0) as Stem10sin;
+  }, [birth, rule]);
   const baseBranch: Branch10sin = (
     settings.sinsalBase === "일지"
       ? getDayGanZhi(birth, rule).charAt(1)
@@ -200,7 +207,7 @@ export default function WolwoonList({
                 const delayed = new Date(ev.at);
                 delayed.setDate(delayed.getDate() + 1);
                 onSelect?.(delayed.getFullYear(), delayed.getMonth() + 1);
-                setFromEvent({ at: delayed, gz: ev.gz }, "월운");
+                setFromEvent({ at: delayed, gz: getMonthGanZhi(delayed, lon) }, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive

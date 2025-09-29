@@ -54,8 +54,8 @@ export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLo
 
   // 시간
   const unknownTime = !ms.birthTime || ms.birthTime === "모름";
-  const hh = unknownTime ? 0 : Number(ms.birthTime.slice(0, 2) || "0");
-  const mi = unknownTime ? 0 : Number(ms.birthTime.slice(2, 4) || "0");
+  const hh = unknownTime ? 4 : Number(ms.birthTime.slice(0, 2));
+  const mi = unknownTime ? 30 : Number(ms.birthTime.slice(2, 4));
 
   // 경도 (모름이면 127.5)
   const lon =

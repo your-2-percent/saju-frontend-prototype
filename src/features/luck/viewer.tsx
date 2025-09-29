@@ -77,11 +77,6 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       {/* 대운 */}
       <DaewoonList
         data={data}
-        activeIndex={activeDaeIndex}
-        onSelect={(i) => {
-          setActiveDaeIndex(i);
-          setVisibleLevel("se"); // 대운 클릭 → 세운까지 보임
-        }}
       />
 
       {/* 세운 */}

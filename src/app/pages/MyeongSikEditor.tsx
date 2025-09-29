@@ -140,8 +140,8 @@ export default function MyeongSikEditor({
     }
 
     // 2) 시간/분
-    const hh = unknownTime ? 0 : Number((form.birthTime ?? "0000").slice(0, 2));
-    const mi = unknownTime ? 0 : Number((form.birthTime ?? "0000").slice(2, 4));
+    const hh = unknownTime ? 4 : Number((form.birthTime ?? "0430").slice(0, 2));
+    const mi = unknownTime ? 30 : Number((form.birthTime ?? "0430").slice(2, 4));
 
     // 3) 장소/경도
     const lon =
@@ -174,7 +174,7 @@ export default function MyeongSikEditor({
       ...item, // id 등 고정 필드 유지
       name: (form.name ?? "").trim() || "이름없음",
       birthDay: form.birthDay!,                    // 원본 입력(YYYYMMDD, lunar일 수도 있음)
-      birthTime: unknownTime ? "모름" : (form.birthTime ?? "0000"),
+      birthTime: unknownTime ? "모름" : (form.birthTime ?? "0430"),
       gender: form.gender ?? "남자",
       birthPlace: unknownPlace
         ? { name: "모름", lat: 0, lon: 127.5 }

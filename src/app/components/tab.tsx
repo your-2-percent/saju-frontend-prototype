@@ -12,6 +12,7 @@ import {
   getHourGanZhi,
 } from "@/shared/domain/간지/공통";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
+import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 /* ────────────────────────────────────────────────────────────
  * 달력 변환/유틸
@@ -90,32 +91,36 @@ function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
 export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   const [tab, setTab] = useState<"un" | "myoun" | "report">("un");
 
-  // 1) ‘양력화 사본’을 만든 뒤 교정 → 모든 간지 계산은 이 correctedSolar 기준
-  const correctedSolar = useMemo(() => {
+  // 1) 음→양 보장 + 경도/DST 교정
+  const correctedSolarRaw = useMemo(() => {
     try {
-      const solarized = ensureSolarBirthDay(data); // ✅ 음→양 보장
-      const corrected = toCorrected(solarized); // 경도/DST 교정
-      if (DEBUG) console.debug("[UnMyounTabs] correctedSolar:", corrected.toString());
-      return corrected;
-    } catch (e) {
-      if (DEBUG) console.warn("[UnMyounTabs] toCorrected 실패 → now()", e);
+      const solarized = ensureSolarBirthDay(data);
+      return toCorrected(solarized); // Date
+    } catch {
       return new Date();
     }
   }, [data]);
 
-  // 2) 양력 간지(연/월/일/시) 계산
+  // 2) 시간 미상 시 정오 고정(야자시 경계 이슈 제거)
+  const correctedSolar = useMemo(
+    () => withSafeClockForUnknownTime(data, correctedSolarRaw),
+    [data, correctedSolarRaw]
+  );
+
+  const isUnknownTime = !data.birthTime || data.birthTime === "모름";
+
+  // 3) 간지 계산 (시주는 isUnknownTime이면 계산/표시 생략)
   const pillars = useMemo<string[]>(() => {
     try {
       const y = getYearGanZhi(correctedSolar, data.birthPlace?.lon);
       const m = getMonthGanZhi(correctedSolar, data.birthPlace?.lon);
       const d = getDayGanZhi(correctedSolar, data.mingSikType);
-      const h = getHourGanZhi(correctedSolar, data.mingSikType);
+      const h = isUnknownTime ? "" : getHourGanZhi(correctedSolar, data.mingSikType);
       return [y, m, d, h];
-    } catch (e) {
-      if (DEBUG) console.warn("[UnMyounTabs] 간지 계산 실패", e);
+    } catch {
       return [];
     }
-  }, [correctedSolar, data?.mingSikType, data?.birthPlace?.lon]);
+  }, [correctedSolar, data?.mingSikType, data?.birthPlace?.lon, isUnknownTime]);
 
   return (
     <div className="w-[96%] max-w-[640px] mx-auto">
