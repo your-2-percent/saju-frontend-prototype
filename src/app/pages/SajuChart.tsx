@@ -18,7 +18,6 @@ import { HiddenStems } from "@/shared/domain/hidden-stem";
 import { lunarToSolarStrict, isRecord } from "@/shared/lib/calendar/lunar";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { 시주매핑_자시, 시주매핑_인시 } from "@/shared/domain/간지/const";
-//import { toCorrected } from "@/shared/domain/meongsik";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -30,14 +29,7 @@ import type { EraType } from "@/shared/domain/간지/twelve";
 
 // ✅ 전역 설정 스토어 (Zustand)
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
-
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
-
-type Props = {
-  data: MyeongSik;
-  /** 부모가 강제로 테이블을 지정하고 싶을 때만 넘김. 기본은 data.mingSikType */
-  hourTable?: DayBoundaryRule;
-};
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -95,148 +87,187 @@ function getCardLevel(label: string): number {
   return 1;
 }
 
-export default function SajuChart({ data, hourTable }: Props) {
-
-  type HourGZ = { stem: string; branch: string };
-  const [manualHour, setManualHour] = useState<HourGZ | null>(null);
-
-  // ✅ 진입 즉시 안전 변환
-  const ms: MyeongSik | null = data ?? null;
-
-  const { date } = useLuckPickerStore();
-
-  if (ms) {
-    if (!(ms.dateObj instanceof Date)) {
-      ms.dateObj = ms.dateObj ? new Date(ms.dateObj) : new Date();
-    }
-    if (!(ms.corrected instanceof Date)) {
-      ms.corrected = ms.corrected ? new Date(ms.corrected) : new Date();
-    }
+/* ===== 지지 → 오행 매핑 (시주 버튼 색상용) ===== */
+const BRANCH_TO_ELEMENT: Record<string, "목" | "화" | "토" | "금" | "수"> = {
+  자: "수",
+  축: "토",
+  인: "목",
+  묘: "목",
+  진: "토",
+  사: "화",
+  오: "화",
+  미: "토",
+  신: "금",
+  유: "금",
+  술: "토",
+  해: "수",
+};
+function getBranchBgColor(branch: string): string {
+  const elem = BRANCH_TO_ELEMENT[branch];
+  switch (elem) {
+    case "목": return "bg-green-600 text-white border-green-600";
+    case "화": return "bg-red-600 text-white border-red-600";
+    case "토": return "bg-yellow-500 text-white border-yellow-500";
+    case "금": return "bg-gray-400 text-white border-gray-400";
+    case "수": return "bg-blue-900 text-white border-blue-600";
+    default:   return "bg-neutral-700 text-white border-neutral-700";
   }
+}
 
-  const { name, birthDay, birthTime, birthPlace, gender, calendarType, mingSikType } = data;
+type Props = {
+  data: MyeongSik;
+  /** 부모가 강제로 테이블을 지정하고 싶을 때만 넘김. 기본은 data.mingSikType */
+  hourTable?: DayBoundaryRule;
+};
 
-  // ✅ 전역 설정 구독
+type Parsed = {
+  corrected: Date;
+  year: { stem: string; branch: string };
+  month: { stem: string; branch: string };
+  day: { stem: string; branch: string };
+  hour: { stem: string; branch: string } | null;
+};
+
+export default function SajuChart({ data, hourTable }: Props) {
+  // ✅ 전역 스토어
+  const { date } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
 
   // ✅ 명식 기준 (data > prop > 기본)
-  const rule: DayBoundaryRule = (mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
-
-  const lon =
-    !birthPlace || birthPlace.name === "모름" || !birthPlace.lon
-      ? 127.5
-      : birthPlace.lon;
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
+  const lon = !data.birthPlace || data.birthPlace.name === "모름" || !data.birthPlace.lon ? 127.5 : data.birthPlace.lon;
 
   // 1) 출생 ‘양력’ 날짜를 먼저 구해서 DST 기본값 판단
   const { solarY, solarM, solarD } = useMemo(() => {
-    
-    let y = Number(birthDay?.slice(0, 4) ?? 2000);
-    let m = Number(birthDay?.slice(4, 6) ?? 1);
-    let d = Number(birthDay?.slice(6, 8) ?? 1);
-    if (calendarType === "lunar") {
+    let y = Number(data.birthDay?.slice(0, 4) ?? 2000);
+    let m = Number(data.birthDay?.slice(4, 6) ?? 1);
+    let d = Number(data.birthDay?.slice(6, 8) ?? 1);
+    if (data.calendarType === "lunar") {
       const s = lunarToSolarStrict(y, m, d);
       y = s.getFullYear(); m = s.getMonth() + 1; d = s.getDate();
     }
     return { solarY: y, solarM: m, solarD: d };
-  }, [birthDay, calendarType]);
+  }, [data.birthDay, data.calendarType]);
 
   // 2) DST 토글 (초기값만 자동 감지, 이후엔 사용자가 제어)
   const [useDST, setUseDST] = useState<boolean>(false);
-
   useEffect(() => {
     if (solarY && solarM && solarD) {
       setUseDST(isDST(solarY, solarM, solarD));
     }
   }, [solarY, solarM, solarD]);
 
-  // 3) 원국 계산
-
   const isUnknownTime = !data.birthTime || data.birthTime === "모름";
-  // 수정 → state로 관리
-  type Parsed = {
-    corrected: Date;
-    year: { stem: string; branch: string };
-    month: { stem: string; branch: string };
-    day: { stem: string; branch: string };
-    hour: { stem: string; branch: string } | null;
-  };
 
-  const [parsed, setParsed] = useState<Parsed>(() => {
-    // 초기값 계산 (기존 useMemo 안 코드 그대로)
-    const isUnknownPlace = !data.birthPlace;
-    let y = Number(data.birthDay!.slice(0, 4));
-    let mo = Number(data.birthDay!.slice(4, 6));
-    let d = Number(data.birthDay!.slice(6, 8));
+  // ✅ 원국 계산 함수 (data + useDST만으로 계산, 시주예측과 분리)
+  function makeParsed(d: MyeongSik, useDSTFlag: boolean): Parsed {
+    const unknown = !d.birthTime || d.birthTime === "모름";
 
-    if (data.calendarType === "lunar") {
-      const solar = lunarToSolarStrict(y, mo, d);
-      y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
+    let y = Number(d.birthDay!.slice(0, 4));
+    let mo = Number(d.birthDay!.slice(4, 6));
+    let da = Number(d.birthDay!.slice(6, 8));
+    if (d.calendarType === "lunar") {
+      const solar = lunarToSolarStrict(y, mo, da);
+      y = solar.getFullYear(); mo = solar.getMonth() + 1; da = solar.getDate();
     }
 
-    const hh = isUnknownTime ? 4 : Number(data.birthTime!.slice(0, 2));
-    const mi = isUnknownTime ? 30 : Number(data.birthTime!.slice(2, 4));
+    const hh = unknown ? 4 : Number(d.birthTime!.slice(0, 2));
+    const mi = unknown ? 30 : Number(d.birthTime!.slice(2, 4));
+    const rawBirth = new Date(y, mo - 1, da, hh, mi, 0, 0);
 
-    const rawBirth = new Date(y, mo - 1, d, hh, mi, 0, 0);
-    const lonVal = isUnknownPlace || !data.birthPlace || data.birthPlace.lon === 0 ? 127.5 : data.birthPlace.lon;
+    const lonVal = !d.birthPlace || d.birthPlace.lon === 0 ? 127.5 : d.birthPlace.lon;
+    const corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
+    const corrected = useDSTFlag ? new Date(corrected0.getTime() - 60 * 60 * 1000) : corrected0;
 
-    let corrected = data.corrected ?? getCorrectedDate(rawBirth, lonVal, isUnknownTime);
+    const hourRule: DayBoundaryRule = (d.mingSikType ?? "야자시") as DayBoundaryRule;
 
-    if (useDST) {
-      corrected = new Date(corrected.getTime() - 60 * 60 * 1000);
-    }
-
-    const hourRule: DayBoundaryRule = (data.mingSikType ?? "야자시") as DayBoundaryRule;
-
-    const yearGZ = getYearGanZhi(corrected as Date, lonVal);
-    const monthGZ = getMonthGanZhi(corrected as Date, lonVal);
-    const dayGZ = getDayGanZhi(corrected as Date, hourRule);
-    const hourGZ = isUnknownTime ? null : getHourGanZhi(corrected as Date, hourRule);
+    const yGZ = getYearGanZhi(corrected, lonVal);
+    const mGZ = getMonthGanZhi(corrected, lonVal);
+    const dGZ = getDayGanZhi(corrected, hourRule);
+    const hGZ = unknown ? null : getHourGanZhi(corrected, hourRule);
 
     return {
       corrected,
-      year: { stem: yearGZ.charAt(0), branch: yearGZ.charAt(1) },
-      month: { stem: monthGZ.charAt(0), branch: monthGZ.charAt(1) },
-      day: { stem: dayGZ.charAt(0), branch: dayGZ.charAt(1) },
-      hour: hourGZ ? { stem: hourGZ.charAt(0), branch: hourGZ.charAt(1) } : null,
+      year:  { stem: yGZ.charAt(0), branch: yGZ.charAt(1) },
+      month: { stem: mGZ.charAt(0), branch: mGZ.charAt(1) },
+      day:   { stem: dGZ.charAt(0), branch: dGZ.charAt(1) },
+      hour:  hGZ ? { stem: hGZ.charAt(0), branch: hGZ.charAt(1) } : null,
     };
-  });
+  }
 
-  const showDSTButton = isDST(solarY, solarM, solarD);
+  // ✅ parsed는 data/useDST 바뀔 때만 재계산
+  const [parsed, setParsed] = useState<Parsed>(() => makeParsed(data, useDST));
+  useEffect(() => {
+    setParsed(makeParsed(data, useDST));
+  }, [data, useDST]);
 
-  // ✅ 교정된 출생시각
-  //const birthCorrected = useMemo(() => toCorrected(data), [data]);
+  // ✅ “사람 전환” 키 (상태 리셋 기준)
+  const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
 
-  // ✅ 최초 일간 고정 (출생일 그대로, 보정 X)
-  const [dayStem] = useState<Stem10sin>(() => {
+  // ✅ 최초 일간 고정: 사람 바뀔 때만 갱신 (시간미상 +1일 보정 포함)
+  const dayStem = useMemo<Stem10sin>(() => {
     const y = Number(data.birthDay.slice(0, 4));
     const m = Number(data.birthDay.slice(4, 6));
     const d = Number(data.birthDay.slice(6, 8));
-
-    // 음력일 경우 변환
-    let solar = new Date(y, m - 1, d + 1);
+    let solar = new Date(y, m - 1, d);
     if (data.calendarType === "lunar") {
-      solar = lunarToSolarStrict(y, m, d + 1);
+      solar = lunarToSolarStrict(y, m, d);
     }
+    if (!data.birthTime || data.birthTime === "모름") {
+      solar.setDate(solar.getDate()); // 시간미상 보정
+    }
+    const gz = getDayGanZhi(solar, "야자시" as DayBoundaryRule); // 일간 고정용: rule 영향 최소화
+    return gz.charAt(0) as Stem10sin;
+  }, [data.birthDay, data.birthTime, data.calendarType]);
 
-    const dayGz = getDayGanZhi(solar, rule);
-    return dayGz.charAt(0) as Stem10sin;
-  });
+  // ✅ 시주예측 상태 (선택된 시주만 저장)
+  type HourGZ = { stem: string; branch: string };
+  const [manualHour, setManualHour] = useState<HourGZ | null>(null);
 
-  // ✅ 초기 useInsi 값도 저장
+  // ✅ 자시/인시 토글 (초기값은 mingSikType 반영)
   const [useInsi, setUseInsi] = useState(() => data.mingSikType === "인시");
+  useEffect(() => {
+    // 사람/명식 바뀌면 시주예측/토글 초기화
+    setManualHour(null);
+    setUseInsi(data.mingSikType === "인시");
+  }, [personKey, data.mingSikType]);
 
-  // ✅ 후보 리스트 (baseDayStem 고정)
+  // ✅ 후보 리스트 (일간+토글 기준, 원국/날짜와 무관)
   const hourCandidates = useMemo(() => {
-    const map = useInsi ? 시주매핑_인시 : 시주매핑_자시;
+    const map = useInsi ? (시주매핑_인시 as Record<string, string[]>) : (시주매핑_자시 as Record<string, string[]>);
     return map[dayStem] ?? [];
   }, [useInsi, dayStem]);
 
-  useEffect(() => {
-    setUseInsi(data.mingSikType === "인시");
-  }, [data.mingSikType]);
+  // ✅ 원국 표시용: 시주/일주 확정값
+  const hourData = manualHour ?? parsed.hour;
 
+  const displayDay = useMemo(() => {
+    if (!manualHour) return parsed.day;
+
+    // 규칙: 인시 = 자/축이면 하루 이전, 야자시/조자시 = 자시면 하루 이전
+    const needsPrevDay =
+      data.mingSikType === "인시"
+        ? manualHour.branch === "자" || manualHour.branch === "축"
+        : (data.mingSikType === "야자시" || data.mingSikType === "조자시")
+          ? manualHour.branch === "자"
+          : false;
+
+    if (!needsPrevDay) return parsed.day;
+
+    const base = new Date(parsed.corrected);
+    base.setDate(base.getDate() - 1);
+    const gz = getDayGanZhi(base, rule);
+    return { stem: gz.charAt(0), branch: gz.charAt(1) };
+  }, [manualHour, parsed.corrected, parsed.day, data.mingSikType, rule]);
+
+  // ✅ 시주예측 선택 핸들러 (원국 불변, 시주만 교체)
+  const handleManualHourSelect = (stem: string, branch: string) => {
+    setManualHour({ stem, branch });
+  };
+
+  // ── 십이운성/십이신살 계산
   const baseBranchForShinsal =
-    (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin;
+    (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin;
 
   const calcUnseong = (branch: string) =>
     settings.showSibiUnseong ? getTwelveUnseong(dayStem, branch) : null;
@@ -246,7 +277,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       ? getTwelveShinsalBySettings({
           baseBranch: baseBranchForShinsal,
           targetBranch,
-          era: mapEra(settings.sinsalMode), // ★ EraType 안전 매핑
+          era: mapEra(settings.sinsalMode),
           gaehwa: settings.sinsalBloom,
         })
       : null;
@@ -264,71 +295,11 @@ export default function SajuChart({ data, hourTable }: Props) {
     ? []
     : unCards.filter((c) => getCardLevel(c.label) <= exposureLevel);
 
-  const handleDSTToggle = () => setUseDST((prev) => !prev);
+  const showDSTButton = isDST(solarY, solarM, solarD);
+  const handleDSTToggle = () => setUseDST((prev: boolean) => !prev);
 
-    // ✅ 시주예측 선택 핸들러
-    // 초기 rawBirth 저장
-  const rawBirth = useMemo(() => {
-    let y = Number(data.birthDay!.slice(0, 4));
-    let m = Number(data.birthDay!.slice(4, 6));
-    let d = Number(data.birthDay!.slice(6, 8));
-
-    if (data.calendarType === "lunar") {
-      const solar = lunarToSolarStrict(y, m, d);
-      y = solar.getFullYear(); m = solar.getMonth() + 1; d = solar.getDate();
-    }
-
-    const hh = isUnknownTime ? 4 : Number(data.birthTime!.slice(0, 2));
-    const mi = isUnknownTime ? 30 : Number(data.birthTime!.slice(2, 4));
-
-    return new Date(y, m - 1, d, hh, mi, 0, 0);
-  }, [data, isUnknownTime]);
-
-  // 시간 수동 선택 핸들러
-  const handleManualHourSelect = (stem: string, branch: string) => {
-    const needsPrevDay =
-      data.mingSikType === "인시"
-        ? branch === "자" || branch === "축"
-        : data.mingSikType === "야자시" || data.mingSikType === "조자시"
-          ? branch === "자"
-          : false;
-
-    // ✅ 항상 rawBirth 기준으로만 계산
-    const baseDate = new Date(rawBirth);
-    if (needsPrevDay) {
-      baseDate.setDate(baseDate.getDate() - 1);
-    }
-
-    const lonVal =
-      !data.birthPlace || data.birthPlace.lon === 0 ? 127.5 : data.birthPlace.lon;
-    const rule: DayBoundaryRule = (data.mingSikType ?? "야자시") as DayBoundaryRule;
-
-    const yearGZ = getYearGanZhi(baseDate, lonVal);
-    const monthGZ = getMonthGanZhi(baseDate, lonVal);
-    const dayGZ = getDayGanZhi(baseDate, rule);
-
-    setParsed({
-      corrected: baseDate,
-      year: { stem: yearGZ.charAt(0), branch: yearGZ.charAt(1) },
-      month: { stem: monthGZ.charAt(0), branch: monthGZ.charAt(1) },
-      day: { stem: dayGZ.charAt(0), branch: dayGZ.charAt(1) },
-      hour: { stem, branch }, // 버튼으로 고른 시주
-    });
-
-    setManualHour({ stem, branch });
-  };
-
-
-  //const ms: MyeongSik | null = data ?? null;
-
-  const dateObj = ms?.dateObj instanceof Date ? ms.dateObj : new Date(ms?.dateObj ?? "");
-  //const corrected = ms?.corrected instanceof Date ? ms.corrected : new Date(ms?.corrected ?? "");
-
-  if (!dateObj || isNaN(dateObj.getTime())) {
-    console.error("⚠ Invalid dateObj in SajuChart:", ms?.dateObj);
-  }
-  const luck = useGlobalLuck(ms, hourTable, date);
-  // 예시: 차트에 표기할 운 간지(대/세/월/일)
+  // 운 표시용
+  const luck = useGlobalLuck(data, hourTable, date);
   const daeGz = luck.dae.gz;
   const seGz  = luck.se.gz;
   const wolGz = luck.wol.gz;
@@ -339,8 +310,8 @@ export default function SajuChart({ data, hourTable }: Props) {
       <div className="mb-1 flex flex-wrap items-end justify-between gap-2 p-2">
         <div>
           <div className="text-md desk:text-xl font-bold text-neutral-900 dark:text-neutral-100">
-            {name?.trim() || "이름없음"}{" "}
-            <span className="text-sm text-neutral-500 dark:text-neutral-400 mr-2">({gender})</span>
+            {(data.name?.trim() || "이름없음") + " "}
+            <span className="text-sm text-neutral-500 dark:text-neutral-400 mr-2">({data.gender})</span>
             {/* ✅ DST 조건부 버튼 */}
             {showDSTButton && (
               <button
@@ -357,8 +328,8 @@ export default function SajuChart({ data, hourTable }: Props) {
             )}
           </div>
           <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {formatBirthDisplay(birthDay, birthTime)}
-            {birthPlace?.name ? ` · ${"출생지: " + birthPlace.name}` : ""}
+            {formatBirthDisplay(data.birthDay, data.birthTime)}
+            {data.birthPlace?.name ? ` · ${"출생지: " + data.birthPlace.name}` : ""}
           </div>
           <div className="text-sm text-neutral-600 dark:text-neutral-400">
             보정시: {`${isUnknownTime ? "모름" : formatLocalYMDHM(parsed.corrected)}`}
@@ -413,7 +384,6 @@ export default function SajuChart({ data, hourTable }: Props) {
                       stem = wolGz.charAt(0) as Stem10sin;
                       branch = wolGz.charAt(1) as Branch10sin;
                     }
-                    // 일운 카드도 따로 있다면 동일하게 ilGz 적용
 
                     const unseong = calcUnseong(branch);
                     const shinsal = calcShinsal(branch);
@@ -505,10 +475,10 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="pb-2">
               <div className="grid grid-cols-4 gap-2 p-3">
                 {[
-                  { key: "hour", label: "시주", data: parsed.hour },
-                  { key: "day", label: "일주", data: parsed.day },
+                  { key: "hour",  label: "시주", data: hourData },
+                  { key: "day",   label: "일주", data: displayDay },
                   { key: "month", label: "월주", data: parsed.month },
-                  { key: "year", label: "연주", data: parsed.year },
+                  { key: "year",  label: "연주", data: parsed.year },
                 ].map((c) => (
                   <div
                     key={c.key}
@@ -525,7 +495,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {getSipSin(dayStem, { stem: c.data.stem as Stem10sin })}
                             </div>
                           )}
-                          <Cell value={c.data.stem} kind="stem" charType={settings.charType} thinEum={settings.thinEum} />
+                          <Cell value={c.data.stem}   kind="stem"   charType={settings.charType} thinEum={settings.thinEum} />
                           <Cell value={c.data.branch} kind="branch" charType={settings.charType} thinEum={settings.thinEum} />
                           <HiddenStems branch={c.data.branch as Branch10sin} dayStem={dayStem} mode={hiddenMode} mapping={settings.hiddenStemMode} />
                           {(settings.showSibiUnseong || settings.showSibiSinsal) && (
@@ -534,7 +504,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin,
+                                    baseBranch: (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
@@ -559,10 +529,10 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="px-1 pb-2">
               <div className="grid grid-cols-4 gap-1">
                 {[
-                  { key: "hour", label: "시주", data: parsed.hour },
-                  { key: "day", label: "일주", data: parsed.day },
+                  { key: "hour",  label: "시주", data: hourData },
+                  { key: "day",   label: "일주", data: displayDay },
                   { key: "month", label: "월주", data: parsed.month },
-                  { key: "year", label: "연주", data: parsed.year },
+                  { key: "year",  label: "연주", data: parsed.year },
                 ].map((c) => (
                   <div
                     key={c.key}
@@ -579,7 +549,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {getSipSin(dayStem, { stem: c.data.stem as Stem10sin })}
                             </div>
                           )}
-                          <Cell value={c.data.stem} kind="stem" charType={settings.charType} thinEum={settings.thinEum} />
+                          <Cell value={c.data.stem}   kind="stem"   charType={settings.charType} thinEum={settings.thinEum} />
                           <Cell value={c.data.branch} kind="branch" charType={settings.charType} thinEum={settings.thinEum} />
                           <HiddenStems branch={c.data.branch as Branch10sin} dayStem={dayStem} mode={hiddenMode} mapping={settings.hiddenStemMode} />
                           {(settings.showSibiUnseong || settings.showSibiSinsal) && (
@@ -588,7 +558,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin,
+                                    baseBranch: (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
@@ -599,7 +569,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                           )}
                         </>
                       ) : (
-                        <span className="text-[10px] desk:text-xs text-neutral-500 dark:text-neutral-400 text-nowrap">시간 미상</span>
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400 text-nowrap">시간 미상</span>
                       )}
                     </div>
                   </div>
@@ -608,10 +578,9 @@ export default function SajuChart({ data, hourTable }: Props) {
             </div>
           </div>
         )}
-
-        {/* ✅ 시주 예측: 시간 미상일 때만 */}
-        
       </div>
+
+      {/* ✅ 시주 예측: 시간 미상일 때만 */}
       {isUnknownTime && (
         <div className="mt-4 p-3 border rounded bg-neutral-50 dark:bg-neutral-800">
           <div className="flex items-center justify-between mb-2">
@@ -634,11 +603,12 @@ export default function SajuChart({ data, hourTable }: Props) {
                 <button
                   key={gz}
                   onClick={() => handleManualHourSelect(s, b)}
-                  className={`p-2 text-xs flex-1 rounded-sm desk:rounded-lg cursor-pointer ${
+                  className={`p-2 text-xs rounded border cursor-pointer ${
                     isActive
-                      ? getBranchBgColor(b)  // branchElem은 지지의 오행값
+                      ? getBranchBgColor(b)
                       : "bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 border-neutral-300 dark:border-neutral-600"
                   }`}
+                  title={`${gz} (시주 후보)`}
                 >
                   {gz}
                 </button>
@@ -648,7 +618,6 @@ export default function SajuChart({ data, hourTable }: Props) {
         </div>
       )}
     </div>
-    
   );
 }
 
@@ -688,32 +657,3 @@ function formatBirthDisplay(yyyymmdd?: string, hhmm?: string) {
   if (!hhmm || hhmm === "모름" || !/^\d{4}$/.test(hhmm)) return date;
   return `${date} ${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
 }
-
-// 지지 → 오행 매핑
-const BRANCH_TO_ELEMENT: Record<string, "목" | "화" | "토" | "금" | "수"> = {
-  자: "수",
-  축: "토",
-  인: "목",
-  묘: "목",
-  진: "토",
-  사: "화",
-  오: "화",
-  미: "토",
-  신: "금",
-  유: "금",
-  술: "토",
-  해: "수",
-};
-
-function getBranchBgColor(branch: string): string {
-  const elem = BRANCH_TO_ELEMENT[branch];
-  switch (elem) {
-    case "목": return "bg-green-600 text-white border-green-600";
-    case "화": return "bg-red-600 text-white border-red-600";
-    case "토": return "bg-yellow-500 text-white border-yellow-500";
-    case "금": return "bg-gray-400 text-white border-gray-400";
-    case "수": return "bg-blue-900 text-white border-blue-600";
-    default:   return "bg-neutral-700 text-white border-neutral-700";
-  }
-}
-
