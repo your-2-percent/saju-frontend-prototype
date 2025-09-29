@@ -270,7 +270,7 @@ export default function WolwoonList({
                 )}
 
                 {/* 절입 라벨(보조) */}
-                <div className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                <div className="text-[10px] text-neutral-400 dark:text-neutral-500 text-nowrap">
                   {ev.term}
                 </div>
               </div>
