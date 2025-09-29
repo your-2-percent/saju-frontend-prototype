@@ -599,7 +599,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                           )}
                         </>
                       ) : (
-                        <span className="text-xs text-neutral-500 dark:text-neutral-400">시간 미상</span>
+                        <span className="text-[10px] desk:text-xs text-neutral-500 dark:text-neutral-400">시간 미상</span>
                       )}
                     </div>
                   </div>
