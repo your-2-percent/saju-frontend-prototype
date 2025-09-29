@@ -241,25 +241,6 @@ export default function SajuChart({ data, hourTable }: Props) {
   // ✅ 원국 표시용: 시주/일주 확정값
   const hourData = manualHour ?? parsed.hour;
 
-  const displayDay = useMemo(() => {
-    if (!manualHour) return parsed.day;
-
-    // 규칙: 인시 = 자/축이면 하루 이전, 야자시/조자시 = 자시면 하루 이전
-    const needsPrevDay =
-      data.mingSikType === "인시"
-        ? manualHour.branch === "자" || manualHour.branch === "축"
-        : (data.mingSikType === "야자시" || data.mingSikType === "조자시")
-          ? manualHour.branch === "자"
-          : false;
-
-    if (!needsPrevDay) return parsed.day;
-
-    const base = new Date(parsed.corrected);
-    base.setDate(base.getDate() - 1);
-    const gz = getDayGanZhi(base, rule);
-    return { stem: gz.charAt(0), branch: gz.charAt(1) };
-  }, [manualHour, parsed.corrected, parsed.day, data.mingSikType, rule]);
-
   // ✅ 시주예측 선택 핸들러 (원국 불변, 시주만 교체)
   const handleManualHourSelect = (stem: string, branch: string) => {
     setManualHour({ stem, branch });
@@ -267,7 +248,7 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   // ── 십이운성/십이신살 계산
   const baseBranchForShinsal =
-    (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin;
+    parsed.year.branch as Branch10sin;
 
   const calcUnseong = (branch: string) =>
     settings.showSibiUnseong ? getTwelveUnseong(dayStem, branch) : null;
@@ -476,7 +457,7 @@ export default function SajuChart({ data, hourTable }: Props) {
               <div className="grid grid-cols-4 gap-2 p-3">
                 {[
                   { key: "hour",  label: "시주", data: hourData },
-                  { key: "day",   label: "일주", data: displayDay },
+                  { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
                 ].map((c) => (
@@ -504,7 +485,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin,
+                                    baseBranch: parsed.year.branch as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
@@ -530,7 +511,7 @@ export default function SajuChart({ data, hourTable }: Props) {
               <div className="grid grid-cols-4 gap-1">
                 {[
                   { key: "hour",  label: "시주", data: hourData },
-                  { key: "day",   label: "일주", data: displayDay },
+                  { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
                 ].map((c) => (
@@ -558,7 +539,7 @@ export default function SajuChart({ data, hourTable }: Props) {
                               {settings.showSibiSinsal && (
                                 <div>
                                   {getTwelveShinsalBySettings({
-                                    baseBranch: (settings.sinsalBase === "일지" ? displayDay.branch : parsed.year.branch) as Branch10sin,
+                                    baseBranch: parsed.year.branch as Branch10sin,
                                     targetBranch: c.data.branch,
                                     era: mapEra(settings.sinsalMode),
                                     gaehwa: settings.sinsalBloom,
