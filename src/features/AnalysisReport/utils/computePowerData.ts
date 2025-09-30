@@ -136,6 +136,7 @@ export interface ComputeOptions {
     wol?: string | null;
     il?: string | null;
   };
+  hourKey: string
 }
 
 export interface ComputeResult {
@@ -156,7 +157,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   const {
     pillars, dayStem: dayStemOverride,
     mode: hiddenMode, /* hidden: _hiddenStemSetting, */
-    debug, useHarmonyOverlay, criteriaMode, luck,
+    debug, useHarmonyOverlay, criteriaMode, luck
   } = opts;
 
   const WEIGHTS = criteriaMode === "modern" ? WEIGHTS_MODERN : WEIGHTS_CLASSIC;
@@ -166,7 +167,13 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
 
   // 입력 정규화
   const pillarsKo = (pillars ?? []).slice(0, 4).map(toKoGZ);
-  if (pillarsKo.length !== 4 || pillarsKo.some(gz => gz.length < 2)) {
+  // ✔ 연/월/일 3개만 유효하면 진행, 시주는 없어도 OK
+  const requiredOK =
+    pillarsKo.length === 4 &&
+    pillarsKo[0] && pillarsKo[0].length >= 2 &&
+    pillarsKo[1] && pillarsKo[1].length >= 2 &&
+    pillarsKo[2] && pillarsKo[2].length >= 2;
+  if (!requiredOK) {
     const zeros: PowerData[] = (["비겁","식상","재성","관성","인성"] as TenGod[])
       .map(n => ({ name:n, value:0, color:"#999" }));
     return {
@@ -211,6 +218,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   /* 2) 자리 점수(천간/지지) */
   for (let i = 0; i < 4; i++) {
     const gz = pillarsKo[i]!;
+    if (!gz || gz.length < 2) continue;
     const pos = PILLAR_ORDER[i]!;
     const s = gzStem(gz);
     const b = gzBranch(gz);
@@ -234,6 +242,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   /* 2-1) 통근율(천간) */
   for (let i = 0; i < 4; i++) {
     const gz = pillarsKo[i]!;
+    if (!gz || gz.length < 2) continue;
     const pos = PILLAR_ORDER[i]!;
     const rate = tongMap[gz] ?? 0;
     if (rate === 0) continue;
@@ -248,6 +257,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   /* 2-2) 투출(지지 → 같은 오행의 천간) */
   for (let i = 0; i < 4; i++) {
     const gz = pillarsKo[i]!;
+    if (!gz || gz.length < 2) continue;
     const b = gzBranch(gz);
     const mainEl = BRANCH_MAIN_ELEMENT[b];
     if (!mainEl) continue;
@@ -264,6 +274,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     const uniq = Array.from(new Set(cand));
 
     for (const si of uniq) {
+      if (!pillarsKo[si] || pillarsKo[si]!.length < 2) continue;
       const s = gzStem(pillarsKo[si]!);
       const sEl = STEM_TO_ELEMENT[s];
       if (!sEl || sEl !== mainEl) continue;
@@ -282,7 +293,9 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   /* 3) 왕상휴수사 보정(천간/지지 각각) */
   // 천간
   for (let i = 0; i < 4; i++) {
-    const s = gzStem(pillarsKo[i]!);
+    const gz = pillarsKo[i]!;
+    if (!gz || gz.length < 2) continue;       // ← 추가
+    const s = gzStem(gz);
     const el = STEM_TO_ELEMENT[s];
     if (!el) continue;
     let adj = 0;
@@ -309,7 +322,9 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   }
   // 지지
   for (let i = 0; i < 4; i++) {
-    const b = gzBranch(pillarsKo[i]!);
+    const gz = pillarsKo[i]!;
+    if (!gz || gz.length < 2) continue;       // ← 추가
+    const b = gzBranch(gz);
     const el = BRANCH_MAIN_ELEMENT[b];
     if (!el) continue;
     let adj = 0;
@@ -320,6 +335,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
 
     const sideIdx = i === 0 ? [1] : i === 3 ? [2] : [i - 1, i + 1];
     for (const j of sideIdx) {
+      if (!pillarsKo[j] || pillarsKo[j]!.length < 2) continue;
       const nb = gzBranch(pillarsKo[j]!);
       const nbEl = BRANCH_MAIN_ELEMENT[nb];
       if (!nbEl) continue;
@@ -463,7 +479,9 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   };
 
   branchParts.forEach((parts, idx) => {
-    const b = gzBranch(pillarsKo[idx]!);
+    const gz = pillarsKo[idx]!;
+    if (!gz || gz.length < 2) return;         // ← 추가
+    const b = gzBranch(gz);
     const mainStem = BRANCH_MAIN_STEM[b];
     const mainEl = BRANCH_MAIN_ELEMENT[b];
     if (mainStem && mainEl) {

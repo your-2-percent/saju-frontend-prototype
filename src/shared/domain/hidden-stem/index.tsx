@@ -39,13 +39,15 @@ export function HiddenStems({
   dayStem,
   mode = "all",   // "all" | "main"
   mapping = "classic", // "classic" | "hgc"
-  variant = "auto"
+  variant = "auto",
+  isUnknownTime = false
 }: {
   branch: Branch10sin;
   dayStem: Stem10sin;
   mode?: "all" | "main";
   mapping?: "classic" | "hgc";
   variant?: Variant;
+  isUnknownTime?: boolean;
 }) {
   const stems = (mapping === "hgc"
     ? hiddenStemMappingHGC
@@ -62,7 +64,7 @@ export function HiddenStems({
   return (
     <div className="w-full flex flex-col gap-1 mt-1">
       {visibleStems.map((s, idx) => {
-        if (s === "(-)") {
+        if (s === "(-)" || isUnknownTime) {
           return (
             <div
               key={idx}

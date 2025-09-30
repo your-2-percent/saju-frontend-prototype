@@ -18,6 +18,7 @@ import { HiddenStems } from "@/shared/domain/hidden-stem";
 import { lunarToSolarStrict, isRecord } from "@/shared/lib/calendar/lunar";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { 시주매핑_자시, 시주매핑_인시 } from "@/shared/domain/간지/const";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -245,9 +246,12 @@ export default function SajuChart({ data, hourTable }: Props) {
   const baseBranchForShinsal =
     (settings.sinsalBase === "일지" ? parsed.day.branch : parsed.year.branch) as Branch10sin;
 
-  // ✅ 시주예측 선택 핸들러 (원국 불변, 시주만 교체)
+  const setHourPrediction = useHourPredictionStore((s) => s.setManualHour);
+
   const handleManualHourSelect = (stem: string, branch: string) => {
-    setManualHour({ stem, branch });
+    const h = { stem, branch };
+    setManualHour(h);         // 로컬 상태
+    setHourPrediction(h);     // 전역 상태에도 반영
   };
 
   const calcUnseong = (branch: string) =>
