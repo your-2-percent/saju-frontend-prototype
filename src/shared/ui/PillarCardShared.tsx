@@ -4,6 +4,7 @@ import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { 간지_MAP, 간지_한자_MAP } from "@/shared/domain/간지/const";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
 /* ── 표시 변환 테이블 ── */
 const STEM_H2K = {
@@ -96,6 +97,7 @@ export function PillarCardShared({
   hideHiddenStems = false,
   size = "sm",
   variant = "auto",      // ✅ 추가: "white"면 항상 흰 카드
+  isUnknownTime = false
 }: {
   label: string;
   gz: string;
@@ -107,7 +109,11 @@ export function PillarCardShared({
   hideHiddenStems?: boolean;
   size?: "sm" | "md" | "lg";
   variant?: Variant;
+  isUnknownTime?: boolean;
 }) {
+  const { manualHour } = useHourPredictionStore();
+  const showHyphen = isUnknownTime && !manualHour;
+
   const stem   = gz.charAt(0);
   const branch = gz.charAt(1);
 
@@ -172,26 +178,32 @@ export function PillarCardShared({
   // - auto  변형: 오행 색상 배경(getElementColor) + 흰 글자
   const { settings: settingsObj } = useSettingsStore();
 
-  const stemBoxCls = white
-    ? `bg-white ${boxBorderCls}`
-    : `${getElementColor(stemKeyForUtil, "stem", settingsObj)} ${boxBorderCls}`;
-    // 난이도 모드일 때는 settings.theme 체크
-    const stemTextCls =
-      settingsObj.difficultyMode
-        ? settingsObj.theme === "light"
-          ? "text-neutral-900" // 라이트 모드
-          : "text-black"       // 다크 모드
-        : "text-white";        // 일반 모드
+  const stemBoxCls =
+    showHyphen
+      ? `bg-white ${boxBorderCls}` // 시간 모름 + 예측 없음 → 흰색
+      : `${getElementColor(stemKeyForUtil, "stem", settingsObj)} ${boxBorderCls}`;
 
-      const branchBoxCls = white
-        ? `bg-white ${boxBorderCls}`
-        : `${getElementColor(branchKeyForUtil, "branch", settingsObj)} ${boxBorderCls}`;
-      const branchTextCls =
-      settingsObj.difficultyMode
-        ? settingsObj.theme === "light"
-          ? "text-neutral-900"
-          : "text-black"
-        : "text-white";
+  const branchBoxCls =
+    showHyphen
+      ? `bg-white ${boxBorderCls}`
+      : `${getElementColor(branchKeyForUtil, "branch", settingsObj)} ${boxBorderCls}`;
+
+  // ✅ 텍스트 색상
+  const stemTextCls = showHyphen
+    ? "text-black"
+    : settingsObj.difficultyMode
+      ? settingsObj.theme === "light"
+        ? "text-neutral-900"
+        : "text-black"
+      : "text-white";
+
+  const branchTextCls = showHyphen
+    ? "text-black"
+    : settingsObj.difficultyMode
+      ? settingsObj.theme === "light"
+        ? "text-neutral-900"
+        : "text-black"
+      : "text-white";
 
   return (
     <div className={`rounded-sm desk:rounded-xl overflow-hidden ${cardRootCls}`}>
@@ -203,25 +215,21 @@ export function PillarCardShared({
         {/* 십신(천간) */}
         {sipSinStem && (
           <div className={`text-[10px] desk:text-xs ${sipTextCls} text-nowrap`}>
-            {sipSinStem}
+            {isUnknownTime && !manualHour ? "-" : sipSinStem}
           </div>
         )}
 
         {/* 천간 */}
-        <div
-          className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${stemBoxCls}`}
-        >
+        <div className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${stemBoxCls}`}>
           <span className={`text-2xl md:text-3xl ${stemTextCls} ${thinStemClass}`}>
-            {stemDisp}
+            {showHyphen ? "-" : stemDisp}
           </span>
         </div>
 
         {/* 지지 */}
-        <div
-          className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${branchBoxCls}`}
-        >
+        <div className={`${sizeMap[size]} rounded-sm desk:rounded-lg flex items-center justify-center border ${branchBoxCls}`}>
           <span className={`text-2xl md:text-3xl ${branchTextCls} ${thinBranchClass}`}>
-            {branchDisp}
+            {showHyphen ? "-" : branchDisp}
           </span>
         </div>
 
@@ -230,27 +238,28 @@ export function PillarCardShared({
           <HiddenStems
             branch={branchKeyForHidden}
             dayStem={dayStemKeyForHidden}
-            mode={hiddenMode}       // "all" | "main"
-            mapping={hiddenMapping} // "classic" | "hgc"
+            mode={hiddenMode}
+            mapping={hiddenMapping}
+            isUnknownTime={isUnknownTime && !manualHour && (label === "시주" || label === "일주")}
           />
         )}
 
         {/* 십신(지지) */}
         {sipSinBranch && (
           <div className={`text-[10px] desk:text-xs ${extraTextCls}`}>
-            {sipSinBranch}
+            {isUnknownTime && !manualHour ? "-" : sipSinBranch}
           </div>
         )}
 
         {/* 운성/신살 텍스트 */}
-        {settings.showSibiUnseong && !!unseongText && (
+        {settings.showSibiUnseong && (
           <div className={`text-[10px] desk:text-xs ${extraTextCls} text-nowrap`}>
-            {unseongText}
+            {isUnknownTime && !manualHour ? "-" : unseongText || ""}
           </div>
         )}
-        {settings.showSibiSinsal && !!shinsalText && (
+        {settings.showSibiSinsal && (
           <div className={`text-[10px] desk:text-xs ${extraTextCls} text-nowrap`}>
-            {shinsalText}
+            {isUnknownTime && !manualHour ? "-" : shinsalText || ""}
           </div>
         )}
       </div>
