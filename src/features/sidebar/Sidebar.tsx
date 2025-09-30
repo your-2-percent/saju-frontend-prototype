@@ -220,8 +220,6 @@ export default function Sidebar({
     [folderOrder, orderedFolders]
   );
 
-
-
   /** 드래그 아이템 스타일(필요 시만): 여기선 transition 커스텀 제거 */
   const getDragStyle = (base: CSSProperties | undefined): CSSProperties => {
     return base ?? {};
@@ -244,6 +242,8 @@ export default function Sidebar({
     ) {
       correctedDate = new Date(correctedDate.getTime() - 60 * 60 * 1000);
     }
+
+  const isUnknownTime = !m.birthTime || m.birthTime === "모름";
 
     return (
       <Draggable draggableId={keyId} index={index} key={keyId}>
@@ -281,9 +281,10 @@ export default function Sidebar({
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
                   {placeDisplay}
                   {correctedDate && (
+                    
                     <span className="opacity-70">
                       {" "}
-                      · 보정시 {formatLocalHM(correctedDate)}
+                      · 보정시 {isUnknownTime ? "모름" : formatLocalHM(correctedDate)}
                     </span>
                   )}
                 </div>
