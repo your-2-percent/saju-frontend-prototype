@@ -5,28 +5,20 @@ import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/간
 
 export type LuckScope = "원국만" | "대운" | "세운" | "월운" | "일운";
 
-type GZ = { yearGZ: string; monthGZ: string; dayGZ: string };
-
-function computeAll(date: Date, rule: DayBoundaryRule, lon: number | null): GZ {
-  const lng = typeof lon === "number" ? lon : undefined;
-  const yearGZ = getYearGanZhi(date, lng);
-  const monthGZ = getMonthGanZhi(date, lng);
-  const dayGZ = getDayGanZhi(date, rule);
-  return { yearGZ, monthGZ, dayGZ };
-}
-
-export interface LuckPickerState extends GZ {
+export interface LuckPickerState {
   date: Date;
   scope: LuckScope;
   rule: DayBoundaryRule;
   lon: number | null;
 
+  yearGZ: string;
+  monthGZ: string;
+  dayGZ: string;
+
   setDate: (next: Date) => void;
   setScope: (next: LuckScope) => void;
   setRule: (next: DayBoundaryRule) => void;
   setLon: (next: number | null) => void;
-
-  /** 리스트 아이템 클릭 시 전역으로 반영 */
   setFromEvent: (ev: { at: Date; gz?: string }, scope: LuckScope) => void;
   resetDate: () => void;
 }
@@ -37,46 +29,79 @@ export const useLuckPickerStore = create<LuckPickerState>()(
       const initialDate = new Date();
       const initialRule: DayBoundaryRule = "야자시";
       const initialLon: number | null = 127.5;
-      const init = computeAll(initialDate, initialRule, initialLon);
+
+      const lng = typeof initialLon === "number" ? initialLon : undefined;
+      const initYear = getYearGanZhi(initialDate, lng);
+      const initMonth = getMonthGanZhi(initialDate, lng);
+      const initDay = getDayGanZhi(initialDate, initialRule);
 
       return {
         date: initialDate,
         scope: "원국만",
         rule: initialRule,
         lon: initialLon,
-        ...init,
+
+        yearGZ: initYear,
+        monthGZ: initMonth,
+        dayGZ: initDay,
 
         setDate: (next) => {
           const { rule, lon } = get();
-          const gz = computeAll(next, rule, lon);
-          set({ date: next, ...gz });
+          const lng = typeof lon === "number" ? lon : undefined;
+          set({
+            date: next,
+            yearGZ: getYearGanZhi(next, lng),
+            monthGZ: getMonthGanZhi(next, lng),
+            dayGZ: getDayGanZhi(next, rule),
+          });
         },
 
         resetDate: () => {
           const { rule, lon } = get();
           const today = new Date();
-          const gz = computeAll(today, rule, lon);
-          set({ date: today, ...gz });
+          const lng = typeof lon === "number" ? lon : undefined;
+          set({
+            date: today,
+            yearGZ: getYearGanZhi(today, lng),
+            monthGZ: getMonthGanZhi(today, lng),
+            dayGZ: getDayGanZhi(today, rule),
+          });
         },
 
         setScope: (next) => set({ scope: next }),
 
         setRule: (next) => {
           const { date, lon } = get();
-          const gz = computeAll(date, next, lon);
-          set({ rule: next, ...gz });
+          const lng = typeof lon === "number" ? lon : undefined;
+          set({
+            rule: next,
+            yearGZ: getYearGanZhi(date, lng),
+            monthGZ: getMonthGanZhi(date, lng),
+            dayGZ: getDayGanZhi(date, next),
+          });
         },
 
         setLon: (next) => {
           const { date, rule } = get();
-          const gz = computeAll(date, rule, next);
-          set({ lon: next, ...gz });
+          const lng = typeof next === "number" ? next : undefined;
+          set({
+            lon: next,
+            yearGZ: getYearGanZhi(date, lng),
+            monthGZ: getMonthGanZhi(date, lng),
+            dayGZ: getDayGanZhi(date, rule),
+          });
         },
 
         setFromEvent: (ev, scope) => {
           const { rule, lon } = get();
-          const gz = computeAll(ev.at, rule, lon);
-          set({ date: ev.at, scope, ...gz });
+          const lng = typeof lon === "number" ? lon : undefined;
+          set({
+            date: ev.at,
+            scope,
+            yearGZ: getYearGanZhi(ev.at, lng),
+            monthGZ: getMonthGanZhi(ev.at, lng),
+            dayGZ: getDayGanZhi(ev.at, rule),
+          });
         },
       };
     },

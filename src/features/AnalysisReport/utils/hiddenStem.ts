@@ -45,28 +45,191 @@ const BRANCH_MAIN_ELEMENT_KO: Record<string, Element> = {
   "자": "수","축": "토","인": "목","묘": "목","진": "토","사": "화",
   "오": "화","미": "토","신": "금","유": "금","술": "토","해": "수",
 };
+
+export const BRANCH_MAIN_ELEMENTS: Record<string, Element> = {
+  // 子
+  "자": "수", "子": "수",
+  // 丑
+  "축": "토", "丑": "토",
+  // 寅
+  "인": "목", "寅": "목",
+  // 卯
+  "묘": "목", "卯": "목",
+  // 辰
+  "진": "토", "辰": "토",
+  // 巳
+  "사": "화", "巳": "화",
+  // 午
+  "오": "화", "午": "화",
+  // 未
+  "미": "토", "未": "토",
+  // 申
+  "신": "금", "申": "금",
+  // 酉
+  "유": "금", "酉": "금",
+  // 戌
+  "술": "토", "戌": "토",
+  // 亥
+  "해": "수", "亥": "수",
+};
+
 /** 하건충 (원본: 한글) */
 const BRANCH_HIDDEN_STEMS_HGC_KO: Record<string, HiddenStem[]> = {
+  // 子
   "자": [{ stem: "계", ratio: 1.0, main: true }],
-  "축": [{ stem: "계", ratio: 0.2 },{ stem: "신", ratio: 0.3 },{ stem: "기", ratio: 0.5, main: true }],
-  "인": [{ stem: "병", ratio: 0.3 },{ stem: "갑", ratio: 0.7, main: true }],
+  "子": [{ stem: "계", ratio: 1.0, main: true }],
+
+  // 丑
+  "축": [
+    { stem: "계", ratio: 0.2 },
+    { stem: "신", ratio: 0.3 },
+    { stem: "기", ratio: 0.5, main: true }
+  ],
+  "丑": [
+    { stem: "계", ratio: 0.2 },
+    { stem: "신", ratio: 0.3 },
+    { stem: "기", ratio: 0.5, main: true }
+  ],
+
+  // 寅
+  "인": [
+    { stem: "병", ratio: 0.3 },
+    { stem: "갑", ratio: 0.7, main: true }
+  ],
+  "寅": [
+    { stem: "병", ratio: 0.3 },
+    { stem: "갑", ratio: 0.7, main: true }
+  ],
+
+  // 卯
   "묘": [{ stem: "을", ratio: 1.0, main: true }],
-  "진": [{ stem: "을", ratio: 0.2 },{ stem: "계", ratio: 0.3 },{ stem: "무", ratio: 0.5, main: true }],
-  "사": [{ stem: "경", ratio: 0.3 },{ stem: "병", ratio: 0.7, main: true }],
+  "卯": [{ stem: "을", ratio: 1.0, main: true }],
+
+  // 辰
+  "진": [
+    { stem: "을", ratio: 0.2 },
+    { stem: "계", ratio: 0.3 },
+    { stem: "무", ratio: 0.5, main: true }
+  ],
+  "辰": [
+    { stem: "을", ratio: 0.2 },
+    { stem: "계", ratio: 0.3 },
+    { stem: "무", ratio: 0.5, main: true }
+  ],
+
+  // 巳
+  "사": [
+    { stem: "경", ratio: 0.3 },
+    { stem: "병", ratio: 0.7, main: true }
+  ],
+  "巳": [
+    { stem: "경", ratio: 0.3 },
+    { stem: "병", ratio: 0.7, main: true }
+  ],
+
+  // 午
   "오": [{ stem: "정", ratio: 1.0, main: true }],
-  "미": [{ stem: "정", ratio: 0.2 },{ stem: "을", ratio: 0.3 },{ stem: "기", ratio: 0.5, main: true }],
-  "신": [{ stem: "임", ratio: 0.3 },{ stem: "경", ratio: 0.7, main: true }],
+  "午": [{ stem: "정", ratio: 1.0, main: true }],
+
+  // 未
+  "미": [
+    { stem: "정", ratio: 0.2 },
+    { stem: "을", ratio: 0.3 },
+    { stem: "기", ratio: 0.5, main: true }
+  ],
+  "未": [
+    { stem: "정", ratio: 0.2 },
+    { stem: "을", ratio: 0.3 },
+    { stem: "기", ratio: 0.5, main: true }
+  ],
+
+  // 申
+  "신": [
+    { stem: "임", ratio: 0.3 },
+    { stem: "경", ratio: 0.7, main: true }
+  ],
+  "申": [
+    { stem: "임", ratio: 0.3 },
+    { stem: "경", ratio: 0.7, main: true }
+  ],
+
+  // 酉
   "유": [{ stem: "신", ratio: 1.0, main: true }],
-  "술": [{ stem: "신", ratio: 0.2 },{ stem: "정", ratio: 0.3 },{ stem: "무", ratio: 0.5, main: true }],
-  "해": [{ stem: "갑", ratio: 0.3 },{ stem: "임", ratio: 0.7, main: true }],
+  "酉": [{ stem: "신", ratio: 1.0, main: true }],
+
+  // 戌
+  "술": [
+    { stem: "신", ratio: 0.2 },
+    { stem: "정", ratio: 0.3 },
+    { stem: "무", ratio: 0.5, main: true }
+  ],
+  "戌": [
+    { stem: "신", ratio: 0.2 },
+    { stem: "정", ratio: 0.3 },
+    { stem: "무", ratio: 0.5, main: true }
+  ],
+
+  // 亥
+  "해": [
+    { stem: "갑", ratio: 0.3 },
+    { stem: "임", ratio: 0.7, main: true }
+  ],
+  "亥": [
+    { stem: "갑", ratio: 0.3 },
+    { stem: "임", ratio: 0.7, main: true }
+  ],
 };
-/** 고전 (원본: 한글) */
+
 const BRANCH_HIDDEN_STEMS_CLASSIC_KO: Record<string, HiddenStem[]> = {
   ...BRANCH_HIDDEN_STEMS_HGC_KO,
-  "인": [{ stem: "무", ratio: 0.2 },{ stem: "병", ratio: 0.3 },{ stem: "갑", ratio: 0.5, main: true }],
-  "오": [{ stem: "병", ratio: 0.2 },{ stem: "기", ratio: 0.2 },{ stem: "정", ratio: 1.0, main: true }],
-  "사": [{ stem: "무", ratio: 0.2 },{ stem: "경", ratio: 0.3 },{ stem: "병", ratio: 0.7, main: true }],
-  "신": [{ stem: "무", ratio: 0.2 },{ stem: "임", ratio: 0.3 },{ stem: "경", ratio: 0.7, main: true }],
+
+  // 寅
+  "인": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "병", ratio: 0.3 },
+    { stem: "갑", ratio: 0.5, main: true }
+  ],
+  "寅": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "병", ratio: 0.3 },
+    { stem: "갑", ratio: 0.5, main: true }
+  ],
+
+  // 午
+  "오": [
+    { stem: "병", ratio: 0.2 },
+    { stem: "기", ratio: 0.2 },
+    { stem: "정", ratio: 1.0, main: true }
+  ],
+  "午": [
+    { stem: "병", ratio: 0.2 },
+    { stem: "기", ratio: 0.2 },
+    { stem: "정", ratio: 1.0, main: true }
+  ],
+
+  // 巳
+  "사": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "경", ratio: 0.3 },
+    { stem: "병", ratio: 0.7, main: true }
+  ],
+  "巳": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "경", ratio: 0.3 },
+    { stem: "병", ratio: 0.7, main: true }
+  ],
+
+  // 申
+  "신": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "임", ratio: 0.3 },
+    { stem: "경", ratio: 0.7, main: true }
+  ],
+  "申": [
+    { stem: "무", ratio: 0.2 },
+    { stem: "임", ratio: 0.3 },
+    { stem: "경", ratio: 0.7, main: true }
+  ],
 };
 
 /** ── export: 한글+한자 키 모두 지원 ── */

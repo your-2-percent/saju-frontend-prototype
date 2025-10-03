@@ -2,25 +2,35 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PowerData, TenGod, Element } from "./utils/types";
 
-type PerStemElement = Record<string, number>; // 예: { "갑목": 23.5, "을목": 12.1, "경금": 18, ... }
+/** 10간 라벨 → 오행 */
+const ALL_STEMS = [
+  "갑목","을목","병화","정화",
+  "무토","기토","경금","신금",
+  "임수","계수",
+] as const;
+type StemSub = typeof ALL_STEMS[number];
 
-/** 천간(한글) → 오행 */
-const STEM_TO_ELEMENT_KO: Record<string, Element> = {
-  갑: "목", 을: "목", 병: "화", 정: "화", 무: "토", 기: "토", 경: "금", 신: "금", 임: "수", 계: "수",
+const STEM_TO_ELEMENT_FULL: Record<StemSub, Element> = {
+  갑목: "목", 을목: "목",
+  병화: "화", 정화: "화",
+  무토: "토", 기토: "토",
+  경금: "금", 신금: "금",
+  임수: "수", 계수: "수",
 };
-/** 생/극 표 */
+
+/** 일간 한글 한 글자 → 오행 */
+const STEM_TO_ELEMENT_KO: Record<string, Element> = {
+  갑: "목", 을: "목", 병: "화", 정: "화", 무: "토",
+  기: "토", 경: "금", 신: "금", 임: "수", 계: "수",
+};
+
+/** 상생/상극 표 */
 const SHENG_NEXT: Record<Element, Element> = { 목: "화", 화: "토", 토: "금", 금: "수", 수: "목" };
 const SHENG_PREV: Record<Element, Element> = { 화: "목", 토: "화", 금: "토", 수: "금", 목: "수" };
 const KE:         Record<Element, Element> = { 목: "토", 화: "금", 토: "수", 금: "목", 수: "화" };
-const KE_REV:     Record<Element, Element> = { 토: "목", 금: "화", 수: "토", 목: "금", 화: "수" }; // 나를 극하는 것
+const KE_REV:     Record<Element, Element> = { 토: "목", 금: "화", 수: "토", 목: "금", 화: "수" };
 
-function isElement(x: unknown): x is Element {
-  return x === "목" || x === "화" || x === "토" || x === "금" || x === "수";
-}
-function lastCharElement(label: string): Element | null {
-  const ch = label.slice(-1);
-  return isElement(ch) ? ch : null;
-}
+/** 십신 → 오행(일간 기준) */
 function elementOfGod(god: TenGod, dayEl: Element): Element {
   switch (god) {
     case "비겁": return dayEl;              // 나와 같은 오행
@@ -32,64 +42,38 @@ function elementOfGod(god: TenGod, dayEl: Element): Element {
   }
 }
 
+/** raw stem 값 (예: { "갑목": 0, "을목": 49.2, "무토": 58.7, ... }) */
+type PerStemElement = Partial<Record<StemSub, number>>;
+
 export default function PentagonChart({
-  data,
-  perStemElement,     // 세부 오행(갑목/을목/…) 스케일된 값 (computePowerDataDetailed에서 내려줌)
-  dayStem,            // 일간 천간(예: '갑')
+  data,                 // 대분류 5 (비겁/식상/재성/관성/인성)
+  perStemElementScaled, // 10간 분해값(이미 totals에 정합되도록 스케일됨)
+  elementPercent, 
+  dayStem,              // 일간(예: "갑")
   width = 280,
   height = 280,
-  revKey,             // 외부에서 강제 리마운트 트리거용
-  // 운/타이틀/시그니처용 (렌더에 직접 쓰지 않더라도 시그니처에 포함)
-  pillars,
-  daewoonGz,
-  sewoonGz,
-  wolwoonGz,
-  yearGZ,
-  monthGZ,
+  revKey,
 }: {
   data: PowerData[];
-  perStemElement?: PerStemElement;
+  perStemElementScaled?: PerStemElement;
+  elementPercent?: Record<Element, number>;
   dayStem?: string | null;
   width?: number;
   height?: number;
   revKey?: string | number;
-  pillars?: string[] | null;
-  daewoonGz?: string | null;
-  sewoonGz?: string | null;
-  wolwoonGz?: string | null;
-  ilwoonGz?: string | null;
-  yearGZ?: string | null;
-  monthGZ?: string | null;
-  dayGZ?: string | null;
 }) {
+  // 사이즈/중심/반지름
   const sizeW = width, sizeH = height;
   const cx = sizeW / 2, cy = sizeH / 2;
   const r = Math.min(sizeW, sizeH) * 0.37;
 
-  // 리마운트 시그니처: 운/기둥/전역피커 값들까지 모두 포함
-  const sig = useMemo(() => {
-    const dataSig = data.map((d) => `${d.name}:${d.value}`).join(",");
-    const perSig = perStemElement
-      ? Object.entries(perStemElement)
-          .sort(([a],[b]) => a.localeCompare(b))
-          .map(([k,v]) => `${k}:${v}`)
-          .join(",")
-      : "none";
-    const pillarsSig = Array.isArray(pillars) ? pillars.join("") : "";
-    const luckSig = [daewoonGz ?? "", sewoonGz ?? "", wolwoonGz ?? ""].join("|");
-    const pickerSig = [yearGZ ?? "", monthGZ ?? ""].join("|");
-    return [revKey ?? "", dataSig, perSig, dayStem ?? "", pillarsSig, luckSig, pickerSig].join("||");
-  }, [revKey, data, perStemElement, dayStem, pillars, daewoonGz, sewoonGz, wolwoonGz, yearGZ, monthGZ]);
+  /** 일간 오행 */
+  const dayEl: Element | null = useMemo(() => {
+    const st = (dayStem ?? "").charAt(0);
+    return STEM_TO_ELEMENT_KO[st] ?? null;
+  }, [dayStem]);
 
-  const [version, setVersion] = useState(0);
-  const lastSigRef = useRef<string>("");
-  useEffect(() => {
-    if (sig !== lastSigRef.current) {
-      lastSigRef.current = sig;
-      setVersion((v) => v + 1); // <svg key={version}> 리마운트
-    }
-  }, [sig]);
-
+  /** 펜타곤 꼭짓점 좌표 */
   const angle = (i: number) => Math.PI / 2 + (2 * -Math.PI * i) / 5;
   const points = useMemo(
     () =>
@@ -101,11 +85,25 @@ export default function PentagonChart({
     [data, cx, cy, r]
   );
 
-  // 일간 오행
-  const dayEl: Element | null = useMemo(() => {
-    const st = (dayStem ?? "").charAt(0);
-    return STEM_TO_ELEMENT_KO[st] ?? null;
-  }, [dayStem]);
+  // 리마운트 키 (안정 렌더)
+  const [version, setVersion] = useState(0);
+  const lastSigRef = useRef<string>("");
+  const sig = useMemo(() => {
+    const dataSig = data.map((d) => `${d.name}:${d.value}`).join(",");
+    const stemSig = ALL_STEMS.map((k) => `${k}:${perStemElementScaled?.[k] ?? 0}`).join(",");
+    //return [revKey ?? "", dataSig, stemSig, dayStem ?? ""].join("||");
+    const elSig = elementPercent
+      ? `목:${elementPercent.목 ?? 0},화:${elementPercent.화 ?? 0},토:${elementPercent.토 ?? 0},금:${elementPercent.금 ?? 0},수:${elementPercent.수 ?? 0}`
+      : "el:none";
+    return [revKey ?? "", dataSig, stemSig, elSig, dayStem ?? ""].join("||");
+  }, [revKey, data, perStemElementScaled, dayStem, elementPercent]);
+
+  useEffect(() => {
+    if (sig !== lastSigRef.current) {
+      lastSigRef.current = sig;
+      setVersion((v) => v + 1);
+    }
+  }, [sig]);
 
   return (
     <div className="w-full">
@@ -143,8 +141,7 @@ export default function PentagonChart({
               stroke="#ef4444"
               strokeWidth={1.5}
               fill="none"
-              markerEnd="url(#arrow)"
-            />
+              markerEnd="url(#arrow)" />
           );
         })}
 
@@ -154,23 +151,23 @@ export default function PentagonChart({
           </marker>
         </defs>
 
-        {/* 노드 + 세부(갑목/을목 …) */}
+        {/* 노드 + 세부(천간 소분류: 항상 두 줄, 0도 표기) */}
         {points.map((p) => {
-          const god = p.name as TenGod;
-          const items: Array<[string, number]> = (() => {
-            if (!perStemElement || !dayEl) return [];
-            const targetEl = elementOfGod(god, dayEl);
-            return Object.entries(perStemElement)
-              .filter(([label]) => lastCharElement(label) === targetEl)
-              .sort(([, va], [, vb]) => (vb as number) - (va as number))
-              .slice(0, 3) as Array<[string, number]>;
-          })();
+          const god = p.name as TenGod;             // "비겁" | "식상" | "재성" | "관성" | "인성"
+          const el = dayEl ? elementOfGod(god, dayEl) : null;
+
+          // 해당 축 오행에 속한 10간(2개)을 고정 순서로 노출
+          const items: Array<[StemSub, number]> = el
+            ? (ALL_STEMS
+                .filter((st) => STEM_TO_ELEMENT_FULL[st] === el)
+                .map((st) => [st, perStemElementScaled?.[st] ?? 0]) as Array<[StemSub, number]>)
+            : [];
 
           return (
             <g key={`${p.name}-${p.value}`} transform={`translate(${p.x},${p.y})`}>
-              <circle r={33} fill={p.color as string} opacity={p.value === 0 ? 0.7 : 1} />
-              <text textAnchor="middle" dy="-6" fontSize="14" className="fill-white font-semibold">
-                {p.name} {Math.round(p.value) }
+              <circle r={33} fill={(p.color as string) ?? "#334155"} opacity={p.value === 0 ? 0.7 : 1} />
+              <text textAnchor="middle" dy="-6" fontSize={14} className="fill-white font-semibold">
+                {p.name} {p.value}
               </text>
 
               {items.map(([label, val], idx) => (
@@ -178,10 +175,10 @@ export default function PentagonChart({
                   key={label}
                   textAnchor="middle"
                   dy={8 + idx * 11}
-                  fontSize="10"
+                  fontSize={10}
                   className="fill-white"
                 >
-                  {label} {Math.round(val * 10) / 10}
+                  {label} {Math.round(val)}
                 </text>
               ))}
             </g>

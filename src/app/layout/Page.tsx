@@ -16,10 +16,15 @@ import Footer from "@/app/pages/Footer";
 import LuckGlobalPicker from "@/features/luck/ui/LuckGlobalPicker";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
+import PromptCopyCard from "@/app/components/PromptCopyCard";
+import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
+import { useLuckChain } from "@/features/prompt/useLuckChain";
 
 export default function Page() {
   const { list } = useMyeongSikStore();
-  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [currentId, setCurrentId] = useState<string>(
+    list.length > 0 ? list[0].id : ""
+  );
 
   // ▼ 추가: Wizard 전용 스위치
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -29,11 +34,12 @@ export default function Page() {
   const [editing, setEditing] = useState<MyeongSik | null>(null);
   const [showToday, setShowToday] = useState(false);
   const [showCouple, setShowCouple] = useState(false);
-
-  const current = useMemo<MyeongSik | null>(
-    () => list.find((m) => m.id === currentId) ?? null,
+  
+  const current = useMemo<MyeongSik>(
+    () => list.find((m) => m.id === currentId) ?? list[0],
     [list, currentId]
   );
+  
 
   useEffect(() => {
     setShowToday(true);
@@ -45,8 +51,14 @@ export default function Page() {
     setWizardOpen(true);      // ← Wizard만 키기
   };
 
+  const natal = useMemo(() => buildNatalPillarsFromMs(current), [current]);
+  const chain = useLuckChain(current);
 
   const [openCustom, setOpenCustom] = useState(false);
+
+  const isGZ = (s: unknown): s is string => typeof s === "string" && s.length >= 2;
+  const isValidPillars = (arr: unknown): arr is [string, string, string, string] => 
+  Array.isArray(arr) && arr.length === 4 && arr.every(isGZ); 
 
   return (
     <div className="min-h-screen pb-16">
@@ -91,7 +103,7 @@ export default function Page() {
           setShowCouple(false); // ← 궁합 끄기
         }}
         onDeleteView={() => {
-          setCurrentId(null);
+          setCurrentId(list.length > 0 ? list[0].id : "");
           setShowToday(true);   // ✅ 오늘의 사주로 fallback
           setShowCouple(false);
         }}
@@ -141,6 +153,15 @@ export default function Page() {
 
           <div>
             <UnMyounTabs data={current} />
+          </div>
+
+          <div className="max-w-[640px] mx-auto mb-8">
+            <PromptCopyCard
+              ms={current}
+              natal={isValidPillars(natal) ? natal : []}
+              chain={chain}
+              basis={{ voidBasis: "day", samjaeBasis: "day" }}
+              includeTenGod lunarPillars={[]}            />
           </div>
         </>
       )}
