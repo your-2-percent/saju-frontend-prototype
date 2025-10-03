@@ -1,11 +1,10 @@
 // features/AnalysisReport/strength.ts
 import type { Element, TenGod } from "./types";
-import { BRANCH_MAIN_ELEMENT, BRANCH_HIDDEN_STEMS_HGC, BRANCH_HIDDEN_STEMS_CLASSIC } from "./hiddenStem";
 
 /**
  * Day Stem → Element
  */
-const STEM_TO_ELEMENT: Record<string, Element> = {
+export const STEM_TO_ELEMENT: Record<string, Element> = {
   갑: "목", 을: "목",
   병: "화", 정: "화",
   무: "토", 기: "토",
@@ -122,79 +121,45 @@ export function getCategoryElementMap(dayEl: Element): Record<TenGod, Element> {
   };
 }
 
-/** 어떤 오행이 일간 기준으로 어느 대분류에 해당하는지 */
-function elementToCategory(el: Element, dayEl: Element): TenGod {
-  if (el === dayEl) return "비겁";
-  if (SHENG_NEXT[dayEl] === el) return "식상";
-  if (SHENG_PREV[dayEl] === el) return "인성";
-  if (KE[dayEl] === el) return "재성";
-  if (KE[el] === dayEl) return "관성";
-  return "비겁";
-}
 
-/** unknown 형태의 지장간 매핑에서 '천간 문자열'들을 뽑아내기 (type guard 기반) */
-function extractStems(u: unknown): string[] {
-  if (typeof u === "string") return [toKoStem(u)];
-  if (Array.isArray(u)) {
-    const out: string[] = [];
-    for (const item of u) {
-      if (typeof item === "string") out.push(toKoStem(item));
-      else if (item && typeof item === "object" && "stem" in item) {
-        const s = (item as { stem?: unknown }).stem;
-        if (typeof s === "string") out.push(toKoStem(s));
-      }
-    }
-    return out;
-  }
-  if (u && typeof u === "object") {
-    const out: string[] = [];
-    for (const v of Object.values(u)) {
-      out.push(...extractStems(v));
-    }
-    return out;
-  }
-  return [];
-}
+// ▼ 여기부터 함수 본문만 교체
+/** 일간 → 득령/득지 인정 지지 세트 */
+const DEUK_MAP: Record<string, string[]> = {
+  갑: ["인", "寅", "묘", "卯", "자", "子", "해", "亥"],
+  을: ["인", "寅", "묘", "卯", "자", "子", "해", "亥"],
 
-/** 지장간 → 오행 집합(모던 전용). 맵이 없거나 형식이 달라도 안전하게 동작. */
-function hiddenElementsOfBranch(branch: string): Element[] {
-  const m1 = BRANCH_HIDDEN_STEMS_HGC as Record<string, unknown>;
-  const m2 = BRANCH_HIDDEN_STEMS_CLASSIC as Record<string, unknown>;
-  const raw = (m1 && m1[branch] !== undefined) ? m1[branch] : (m2 ? m2[branch] : undefined);
-  const stems = extractStems(raw);
-  const els: Element[] = [];
-  for (const s of stems) {
-    const el = STEM_TO_ELEMENT[s as keyof typeof STEM_TO_ELEMENT];
-    if (el && !els.includes(el)) els.push(el);
-  }
-  return els;
-}
+  병: ["인", "寅", "묘", "卯", "오", "午", "사", "巳"],
+  정: ["인", "寅", "묘", "卯", "오", "午", "사", "巳"],
+
+  무: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "오", "午", "사", "巳"],
+  기: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "오", "午", "사", "巳"],
+
+  경: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "신", "申", "유", "酉"],
+  신: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "신", "申", "유", "酉"],
+
+  임: ["신", "申", "유", "酉", "해", "亥", "자", "子"],
+  계: ["신", "申", "유", "酉", "해", "亥", "자", "子"],
+};
 
 /**
- * pillars: (연월일시) 간지 배열. 한자/한글 섞여도 됨.
- * elementScoreRaw: 오행 원점수(정규화 전). computePowerDataDetailed().elementScoreRaw 입력 추천.
- * mode:
- *   - "classic": 월지/기지의 "정기"만 사용
- *   - "modern" : 지장간 전체(정·중·말) 중 하나라도 해당 분류이면 득령/득지
- * 득세: 대표 오행 점수 > 25 (두 모드 공통)
+ * 득령/득지/득세 계산
  */
 export function computeDeukFlags(
   pillars: string[],
-  elementScoreRaw: Record<Element, number>,
-  mode: CriteriaMode = "classic"
+  elementScoreRaw: Record<Element, number>
 ): { flags: DeukFlags; monthBranch: string; dayEl: Element } {
   const ko = (pillars ?? []).slice(0, 4).map(toKoGZ);
   if (ko.length !== 4 || ko.some((gz) => gz.length < 2)) {
     return {
       flags: {
-        비겁: { 령: false, 지: false, 세: false },
-        식상: { 령: false, 지: false, 세: false },
-        재성: { 령: false, 지: false, 세: false },
-        관성: { 령: false, 지: false, 세: false },
-        인성: { 령: false, 지: false, 세: false },
+        비겁:{령:false,지:false,세:false},
+        식상:{령:false,지:false,세:false},
+        재성:{령:false,지:false,세:false},
+        관성:{령:false,지:false,세:false},
+        인성:{령:false,지:false,세:false},
       },
       monthBranch: "",
-      dayEl: "토", // dummy
+      dayEl: "목",
     };
   }
 
@@ -205,59 +170,34 @@ export function computeDeukFlags(
     dayS === "무" || dayS === "기" ? "토" :
     dayS === "경" || dayS === "신" ? "금" : "수";
 
-  const brs = ko.map((gz) => gzBranch(gz));
+  const brs = ko.map(gz => gzBranch(gz));
   const flags: DeukFlags = {
-    비겁: { 령: false, 지: false, 세: false },
-    식상: { 령: false, 지: false, 세: false },
-    재성: { 령: false, 지: false, 세: false },
-    관성: { 령: false, 지: false, 세: false },
-    인성: { 령: false, 지: false, 세: false },
+    비겁:{령:false,지:false,세:false},
+    식상:{령:false,지:false,세:false},
+    재성:{령:false,지:false,세:false},
+    관성:{령:false,지:false,세:false},
+    인성:{령:false,지:false,세:false},
   };
 
-  const catMap = getCategoryElementMap(dayEl);
-
-  // ── 득령: 월지 기준
+  // ── 득령: 월지가 DEUK_MAP[일간] 안에 있으면 + (비겁/인성 인정)
+  const allowBranches = DEUK_MAP[dayS] ?? [];
   const monthB = brs[1]!;
-  if (mode === "classic") {
-    const el = BRANCH_MAIN_ELEMENT[monthB];
-    if (el) flags[elementToCategory(el, dayEl)].령 = true;
-  } else {
-    // modern: 지장간 전체 중 하나라도 카테고리에 들어가면 득령
-    const els = hiddenElementsOfBranch(monthB);
-    if (els.length === 0) {
-      const el = BRANCH_MAIN_ELEMENT[monthB];
-      if (el) flags[elementToCategory(el, dayEl)].령 = true; // 폴백
-    } else {
-      for (const el of els) {
-        flags[elementToCategory(el, dayEl)].령 = true;
-      }
-    }
+  if (allowBranches.includes(monthB)) {
+    flags.비겁.령 = true;
+    flags.인성.령 = true;
   }
 
-  // ── 득지: 연/일/시지 (월지는 제외)
-  const idxs = [0, 2, 3] as const;
-  for (const i of idxs) {
-    const b = brs[i]!;
-    if (mode === "classic") {
-      const el = BRANCH_MAIN_ELEMENT[b];
-      if (el) flags[elementToCategory(el, dayEl)].지 = true;
-    } else {
-      const els = hiddenElementsOfBranch(b);
-      if (els.length === 0) {
-        const el = BRANCH_MAIN_ELEMENT[b];
-        if (el) flags[elementToCategory(el, dayEl)].지 = true; // 폴백
-      } else {
-        for (const el of els) {
-          flags[elementToCategory(el, dayEl)].지 = true;
-        }
-      }
-    }
+  // ── 득지: 연/일/시지가 DEUK_MAP[일간] 안에 있으면 + (비겁/인성 인정)
+  const dayBranch = brs[2]!;
+  if (allowBranches.includes(dayBranch)) {
+    flags.비겁.지 = true;
+    flags.인성.지 = true;
   }
 
-  // ── 득세: 대표 오행 점수 > 25 (공통)
-  (Object.entries(catMap) as [TenGod, Element][]).forEach(([cat, el]) => {
-    flags[cat].세 = (elementScoreRaw[el] ?? 0) > 25;
-  });
+  // ── 득세: 대표 오행 점수 > 25 (그대로 유지)
+  const biElement = getCategoryElementMap(dayEl)["비겁"]; // 일간과 같은 오행
+  const biScore = elementScoreRaw[biElement] ?? 0;
+  flags.비겁.세 = biScore >= 30;
 
   return { flags, monthBranch: monthB, dayEl };
 }

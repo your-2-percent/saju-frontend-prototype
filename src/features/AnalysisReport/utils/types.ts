@@ -3,8 +3,15 @@ export type Element = "목" | "화" | "토" | "금" | "수";
 
 export type TenGod = "비겁" | "식상" | "재성" | "관성" | "인성";
 
+type TenGodSubtype =
+  | "비견" | "겁재"
+  | "식신" | "상관"
+  | "정재" | "편재"
+  | "정관" | "편관"
+  | "정인" | "편인";
+
 export interface PowerData {
-  name: TenGod;
+  name: TenGod | TenGodSubtype;
   value: number;
   color: string;
 }

@@ -23,8 +23,8 @@ type SajuSettingsState = {
 };
 
 export const useSajuSettingsStore = create<SajuSettingsState>((set) => ({
-  shinsalBase: "연지",
-  shinsalEra: "고전",
+  shinsalBase: "일지",
+  shinsalEra: "현대",
   shinsalGaehwa: false,
 
   hiddenStemMode: "hgc",

@@ -12,10 +12,8 @@ type TagBucketPos = { name: string; weight: number; pos: PosIndex };
 type TagBucketsByPos = { si: string[]; il: string[]; yeon: string[]; wol: string[] };
 
 export type ShinsalBasis = {
-  /** 공망 기준: 일 or 연 (기본: 일) */
-  voidBasis?: "day" | "year";
-  /** 삼재 기준: 일 or 연 (기본: 일) */
-  samjaeBasis?: "day" | "year";
+  voidBasis: "day" | "year";
+  samjaeBasis: "day" | "year";
 };
 
 /** 우선순위: 월(1) > 일(2) > 연(0) > 시(3) */

@@ -41,7 +41,7 @@ const HOUR = 60 * MIN;
 const DAY  = 24 * HOUR;
 
 
-function addCalendarYears(base: Date, years: number): Date {
+export function addCalendarYears(base: Date, years: number): Date {
   const d = new Date(base.getTime());
   const y = d.getFullYear() + years;
   const m = d.getMonth();
