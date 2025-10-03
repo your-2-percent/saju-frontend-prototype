@@ -355,7 +355,11 @@ export function computeYongshin(
   // 4.5) 중화권 보정
   const prim = primaryOfDay(dEl);
   const tgMap: Record<TenGod, number> = { 비겁:0, 식상:0, 재성:0, 관성:0, 인성:0 };
-  if (Array.isArray(tenGodTotals)) for (const t of tenGodTotals) tgMap[t.name] = t.value;
+  if (Array.isArray(tenGodTotals)) {
+    for (const t of tenGodTotals) {
+      tgMap[t.name as TenGod] = t.value;
+    }
+  }
 
   const isNeutral = overallPct! >= 45 && overallPct! <= 55;
   if (isNeutral && prim) {
@@ -450,7 +454,12 @@ export function computeYongshin(
 
   const initTenGods: Record<TenGod, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 };
   const tgTotals: Record<TenGod, number> | undefined =
-    tenGodTotals ? tenGodTotals.reduce((acc, t) => { acc[t.name] = t.value; return acc; }, { ...initTenGods }) : undefined;
+  tenGodTotals
+    ? tenGodTotals.reduce((acc, t) => {
+        acc[t.name as TenGod] = t.value;
+        return acc;
+      }, { ...initTenGods })
+    : undefined;
 
   return {
     chosenType,

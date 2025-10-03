@@ -8,7 +8,7 @@ import {
   getDayGanZhi,
 } from "@/shared/domain/간지/공통";
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { LuckChain } from "./buildPrompt";
+import { type LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
 
 /**
  * 현재 ms + LuckPickerStore(date, rule, lon)에 따라
