@@ -338,13 +338,17 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
     }
   });
 
-  // ── 방합(3지) ──
+  // 방합
   BANGHAP_GROUPS.forEach(({ name, members }) => {
-    const present = new Set(members.filter(b => brs.includes(b)));
-    if (present.size !== 3) return;
-    const idxs = findFirstIdxPerType(members);
-    if (idxs.length === 3) pushUnique(out.jijiBanghap, `#${posMask(idxs)}${name}_방합`);
+    const present = members.filter(b => brs.includes(b));
+    const uniq = new Set(present).size;
+
+    if (uniq === 3) {
+      const idxs = findFirstIdxPerType(members);
+      if (idxs.length === 3) pushUnique(out.jijiBanghap, `#${posMask(idxs)}_${name}방합`);
+    }
   });
+
 
   // ── 지지: 육합/충/파/해/원진/귀문 ──
   const addBranchPairsAllByLabel = (
@@ -551,7 +555,10 @@ export function buildAllRelationTags(input: {
     }
 
     // 운 포함 3자 완성(삼합/방합/삼형)
-    const natalBranches = natalKo.map(gz => gzBranch(gz ?? ""));
+    const natalBranches = natalKo.map(gz => {
+      const br = gzBranch(gz ?? "");
+      return BRANCH_H2K[br] ?? br;  // ← 한자면 한글로 변환
+    });
     for (const g of SANHE_GROUPS) {
       if (!g.members.includes(lb as KoBranch)) continue;
       const others = g.members.filter(x => x !== (lb as KoBranch));
@@ -565,19 +572,23 @@ export function buildAllRelationTags(input: {
         pushUnique(out.jijiSamhap, `#${kind}X${p1}X${p2}_삼합(${g.name})`);
       }
     }
+
+    const allBranches: { b: KoBranch, pos: string }[] = [
+      ...natalKo.map((gz,i)=>({ b: gzBranch(gz) as KoBranch, pos: POS_LABELS[i]! })),
+      ...(input.daewoon ? [{ b: gzBranch(normalizeGZ(input.daewoon)) as KoBranch, pos: "대운" }] : []),
+      ...(input.sewoon ? [{ b: gzBranch(normalizeGZ(input.sewoon)) as KoBranch, pos: "세운" }] : []),
+      ...(input.wolwoon ? [{ b: gzBranch(normalizeGZ(input.wolwoon)) as KoBranch, pos: "월운" }] : []),
+      ...(input.ilwoon ? [{ b: gzBranch(normalizeGZ(input.ilwoon)) as KoBranch, pos: "일운" }] : []),
+    ];
+
     for (const g of BANGHAP_GROUPS) {
-      if (!g.members.includes(lb as KoBranch)) continue;
-      const others = g.members.filter(x => x !== (lb as KoBranch));
-      const hits = natalBranches
-        .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
-        .filter(o => others.includes(o.b as KoBranch));
-      if (hits.length >= 2) {
-        const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>(
-          ["시","일","월","연"].indexOf(a) - ["시","일","월","연"].indexOf(b)
-        )) as [PosLabel,PosLabel];
-        pushUnique(out.jijiBanghap, `#${kind}X${p1}X${p2}방합(${g.name})`);
+      const hits = allBranches.filter(o => g.members.includes(o.b));
+      if (new Set(hits.map(h => h.b)).size === 3) {
+        const posMask = hits.map(h => h.pos).join("X");
+        pushUnique(out.jijiBanghap, `#${posMask}_방합(${g.name})`);
       }
     }
+
     for (const g of TRIAD_SHAPE_GROUPS) {
       if (!g.members.includes(lb)) continue;
       const others = g.members.filter(x => x !== lb);
@@ -780,6 +791,7 @@ export type HarmonyResult = {
   cheonganHap: string[];
   cheonganChung: string[];
   jijiSamhap: string[];
+  jijiBanhap: string[];
   jijiBanghap: string[];
   jijiYukhap: string[];
   amhap: string[];
