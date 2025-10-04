@@ -119,46 +119,6 @@ function normalizeTo100(obj: Record<string, number>): Record<string, number> {
   return out;
 }
 
-/* ===== overlay 계산에 필요한 보조 유틸 ===== */
-function stemsScaledToElementPercent100(perStemScaled: Record<string, number>): Record<Element, number> {
-  const acc: Record<Element, number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
-  for (const [k, v] of Object.entries(perStemScaled ?? {})) {
-    const el = STEM_TO_ELEMENT[normalizeStemLike(k) as keyof typeof STEM_TO_ELEMENT];
-    if (el && v > 0) acc[el] += v;
-  }
-  return normalizeTo100(acc) as Record<Element, number>;
-}
-
-function stemsScaledToSubTotals(perStemScaled: Record<string, number>, dayStem: string) {
-  const acc: Record<TenGodSubtype, number> = {
-    비견:0, 겁재:0, 식신:0, 상관:0, 정재:0, 편재:0, 정관:0, 편관:0, 정인:0, 편인:0
-  };
-  for (const [k, v] of Object.entries(perStemScaled ?? {})) {
-    if (v <= 0) continue;
-    const stemKo = normalizeStemLike(k);
-    if (!stemKo) continue;
-    const sub = mapStemToTenGodSub(dayStem, stemKo);
-    acc[sub] += v;
-  }
-  return normalizeTo100(acc) as Record<TenGodSubtype, number>;
-}
-
-type TenGodMain = "비겁" | "식상" | "재성" | "관성" | "인성";
-function subTotalsToMainTotals(subTotals: Record<TenGodSubtype, number>): Record<TenGodMain, number> {
-  const acc: Record<TenGodMain, number> = { 비겁:0, 식상:0, 재성:0, 관성:0, 인성:0 };
-  for (const [sub, v] of Object.entries(subTotals)) {
-    switch (sub as TenGodSubtype) {
-      case "비견": case "겁재": acc.비겁 += v; break;
-      case "식신": case "상관": acc.식상 += v; break;
-      case "정재": case "편재": acc.재성 += v; break;
-      case "정관": case "편관": acc.관성 += v; break;
-      case "정인": case "편인": acc.인성 += v; break;
-    }
-  }
-  // 소분류가 이미 100이므로 여기선 추가 정규화 불필요. (정렬 보정 원하면 normalizeTo100(acc))
-  return acc;
-}
-
 /* ===== bare/merge 유틸 (컴포넌트와 동일) ===== */
 //const STEMS_BARE = ["갑","을","병","정","무","기","경","신","임","계"] as const;
 
@@ -190,20 +150,65 @@ function toBareFromGZ(gz: string): Record<string, number> {
 /* 가중치 */
 const LUCK_RATIO = { natal:50, dae:30, se:20, wol:7, il:3 } as const;
 
-function mergeWithRatio(parts: { kind: keyof typeof LUCK_RATIO; bare: Record<string, number> }[]) {
+function mergeWithRatio(
+  parts: { kind: keyof typeof LUCK_RATIO; bare: Record<string, number> }[]
+): Record<string, number> {
   const acc: Record<string, number> = {};
+
   for (const { kind, bare } of parts) {
     const ratio = LUCK_RATIO[kind] ?? 0;
     if (ratio <= 0) continue;
-    const norm = normalizeTo100(bare);
+
+    const norm = normalizeTo100(bare); // ✅ 소스 자체 합100 맞춰줌
     for (const [stem, val] of Object.entries(norm)) {
       acc[stem] = (acc[stem] ?? 0) + val * ratio;
     }
   }
+
+  // ✅ 최종 합100으로 normalize
   const sum = Object.values(acc).reduce((a, b) => a + b, 0);
-  if (sum > 0) for (const k of Object.keys(acc)) acc[k] = (acc[k] / sum) * 100;
+  if (sum > 0) {
+    for (const k of Object.keys(acc)) {
+      acc[k] = (acc[k] / sum) * 100;
+    }
+  }
   return acc;
 }
+
+// ✅ 새 유틸: 이미 정수 100으로 정규화된 per-stem 분포를 받아 단순 합산만 한다.
+function elementsFromNormalized(perStemInt: Record<string, number>, stemToElement: Record<string, "목"|"화"|"토"|"금"|"수">) {
+  const acc: Record<"목"|"화"|"토"|"금"|"수", number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
+  for (const [stem, v] of Object.entries(perStemInt)) {
+    const el = stemToElement[stem];
+    if (el) acc[el] += v;
+  }
+  return acc; // 추가 normalize/반올림 없음
+}
+
+function tenSubFromNormalized(perStemInt: Record<string, number>, dayStem: string) {
+  const acc: Record<
+    "비견"|"겁재"|"식신"|"상관"|"정재"|"편재"|"정관"|"편관"|"정인"|"편인",
+    number
+  > = { 비견:0, 겁재:0, 식신:0, 상관:0, 정재:0, 편재:0, 정관:0, 편관:0, 정인:0, 편인:0 };
+
+  for (const [stemKo, v] of Object.entries(perStemInt)) {
+    if (v <= 0) continue;
+    const sub = mapStemToTenGodSub(dayStem, stemKo); // 기존 함수
+    acc[sub] += v;
+  }
+  return acc; // 추가 normalize/반올림 없음
+}
+
+function tenMainFromSub(sub: Record<"비견"|"겁재"|"식신"|"상관"|"정재"|"편재"|"정관"|"편관"|"정인"|"편인", number>) {
+  return {
+    비겁: sub.비견 + sub.겁재,
+    식상: sub.식신 + sub.상관,
+    재성: sub.정재 + sub.편재,
+    관성: sub.정관 + sub.편관,
+    인성: sub.정인 + sub.편인,
+  } as const; // 합 100 보장
+}
+
 
 /* ===== 프롬프트 전용 overlay (AnalysisReport와 동일 계산) ===== */
 function makeOverlayByLuck(unified: UnifiedPowerResult, tab: BlendTab, chain?: LuckChain) {
@@ -225,15 +230,20 @@ function makeOverlayByLuck(unified: UnifiedPowerResult, tab: BlendTab, chain?: L
     { kind:"il",    bare:ilBare   },
   ]);
 
-  // 4) 소분류/오행
-  const totalsSub  = stemsScaledToSubTotals(merged, unified.dayStem);       // 10신(합100)
-  const totalsMain = subTotalsToMainTotals(totalsSub);                      // 5신(합100)
-  const elemPct100 = stemsScaledToElementPercent100(merged);                // 오행(합100)
+  // ✅ 4) "정수 100"으로 딱 한 번 정규화 — 이 벡터만 사용!
+  const mergedInt100 = normalizeTo100(merged);
 
-  // 5) per-stem 풀 라벨(선택): 프롬포트에선 안 쓰지만 혹시 대비
-  const perStemAugFull = merged; // (개발 편의: 필요시 bareToFull로 변경 가능)
+  // ✅ 5) 여기서부터는 "추가 normalize 금지" — 단순 합산만
+  const elementPercentInt = elementsFromNormalized(mergedInt100, STEM_TO_ELEMENT);
+  const totalsSubInt      = tenSubFromNormalized(mergedInt100, unified.dayStem);
+  const totalsMainInt     = tenMainFromSub(totalsSubInt);
 
-  return { totalsSub, totalsMain, elementPercent: elemPct100, perStemAugFull };
+  return {
+    perStemAugBare: mergedInt100,          // 기반 벡터(정수100)
+    elementPercent: elementPercentInt,     // 오행(정수) — 화 == 식신+상관 보장
+    totalsSub: totalsSubInt,               // 소분류(정수)
+    totalsMain: totalsMainInt,             // 대분류(정수)
+  };
 }
 
 // ─────────────────────────────────────────────
