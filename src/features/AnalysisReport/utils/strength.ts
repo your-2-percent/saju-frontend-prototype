@@ -201,3 +201,94 @@ export function computeDeukFlags(
 
   return { flags, monthBranch: monthB, dayEl };
 }
+
+export type DeukFlagsSub = {
+  령: boolean;
+  지: boolean;
+  세: boolean;
+};
+
+export type DeukFlags10 = {
+  비견: DeukFlagsSub;
+  겁재: DeukFlagsSub;
+  식신: DeukFlagsSub;
+  상관: DeukFlagsSub;
+  정재: DeukFlagsSub;
+  편재: DeukFlagsSub;
+  정관: DeukFlagsSub;
+  편관: DeukFlagsSub;
+  정인: DeukFlagsSub;
+  편인: DeukFlagsSub;
+};
+
+export function computeDeukFlags10(
+  pillars: string[],
+  elementScoreRaw: Record<Element, number>
+): { flags: DeukFlags10; monthBranch: string; dayEl: Element } {
+  const ko = (pillars ?? []).slice(0, 4).map(toKoGZ);
+  if (ko.length < 3 || ko[0].length < 2 || ko[1].length < 2 || ko[2].length < 2) {
+    const empty: DeukFlagsSub = { 령: false, 지: false, 세: false };
+    return {
+      flags: {
+        비견: { ...empty }, 겁재: { ...empty },
+        식신: { ...empty }, 상관: { ...empty },
+        정재: { ...empty }, 편재: { ...empty },
+        정관: { ...empty }, 편관: { ...empty },
+        정인: { ...empty }, 편인: { ...empty },
+      },
+      monthBranch: "",
+      dayEl: "목",
+    };
+  }
+
+  const dayS = gzStem(ko[2]!);
+  const dayEl: Element =
+    dayS === "갑" || dayS === "을" ? "목" :
+    dayS === "병" || dayS === "정" ? "화" :
+    dayS === "무" || dayS === "기" ? "토" :
+    dayS === "경" || dayS === "신" ? "금" : "수";
+
+  const brs = ko.map(gz => gzBranch(gz));
+
+  // 기본 틀
+  const empty: DeukFlagsSub = { 령: false, 지: false, 세: false };
+  const flags: DeukFlags10 = {
+    비견:{...empty}, 겁재:{...empty},
+    식신:{...empty}, 상관:{...empty},
+    정재:{...empty}, 편재:{...empty},
+    정관:{...empty}, 편관:{...empty},
+    정인:{...empty}, 편인:{...empty},
+  };
+
+  // ── 득령: 월지가 DEUK_MAP[일간] 안에 있으면 비겁/인성 계열 인정
+  const allowBranches = DEUK_MAP[dayS] ?? [];
+  const monthB = brs[1]!;
+  if (allowBranches.includes(monthB)) {
+    flags.비견.령 = true;
+    flags.겁재.령 = true;
+    flags.정인.령 = true;
+    flags.편인.령 = true;
+  }
+
+  // ── 득지: 일지 포함 여부
+  const dayBranch = brs[2]!;
+  if (allowBranches.includes(dayBranch)) {
+    flags.비견.지 = true;
+    flags.겁재.지 = true;
+    flags.정인.지 = true;
+    flags.편인.지 = true;
+  }
+
+  // ── 득세: 오행 점수 기준 → 일간 오행에 해당하는 비겁/인성 계열
+  const biElement = getCategoryElementMap(dayEl)["비겁"]; 
+  const biScore = elementScoreRaw[biElement] ?? 0;
+  const strong = biScore >= 30;
+  if (strong) {
+    flags.비견.세 = true;
+    flags.겁재.세 = true;
+    flags.정인.세 = true;
+    flags.편인.세 = true;
+  }
+
+  return { flags, monthBranch: monthB, dayEl };
+}
