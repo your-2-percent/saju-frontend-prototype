@@ -141,6 +141,7 @@ type PerTenGodSub = {
 
 
 export interface UnifiedPowerResult {
+  elementScoreRaw: Record<string, number>;
   perStemElementScaled: Record<string, number>;
   perTenGod: PerTenGodAggregated;   // <- 여기 타입을 바꿈
   perTenGodSub: Record<string, number>;
@@ -371,11 +372,19 @@ export function computeUnifiedPower(args: {
   const perStemAugFull = bareToFullStemMap(mergedNorm);
 
   return {
-    ...detailed,
+    elementScoreRaw: detailed.elementScoreRaw,
+    elementPercent100: detailed.elementPercent100,
+    totals: detailed.totals,
+    perStemElementScaled: detailed.perStemElementScaled,
     dayStem,
+
     mergedStems: mergedNorm,
     perTenGodSub: totalsSub,
     perTenGod: totalsMain,
-    overlay: { totalsSub, perStemAugBare: merged, perStemAugFull }
+    overlay: {
+      totalsSub,
+      perStemAugBare: merged,
+      perStemAugFull,
+    },
   };
 }

@@ -210,7 +210,7 @@ export default function PromptCopyCard({
   }
 
   const [useDST] = useState<boolean>(false);
-  const [parsed] = useState<Parsed>(() => makeParsed(ms, useDST));
+  const parsed = useMemo(() => makeParsed(ms, useDST), [ms, useDST]);
 
   const predHour = useHourPredictionStore((s) => s.manualHour);
 
@@ -238,7 +238,7 @@ export default function PromptCopyCard({
               toGZ(parsed.year),
               toGZ(parsed.month),
               toGZ(parsed.day),
-              predHour ? toGZ(predHour) : ""   // ✅ 여기 수정
+              predHour ? toGZ(predHour) : toGZ(parsed.hour)   // ✅ 여기 수정
             ] as Pillars4,
             chain: fallbackChain,
             basis,
@@ -257,6 +257,7 @@ export default function PromptCopyCard({
       fallbackChain,
       unified,
       predHour,
+      parsed.hour,
       parsed.day,
       parsed.month,
       parsed.year,

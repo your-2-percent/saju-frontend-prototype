@@ -8,7 +8,7 @@ import { useSajuSettingsStore } from "@/shared/lib/hooks/useSajuSettingsStore";
 import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
 import { getDaewoonList } from "../luck/daewoonList";
 import { ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
-import { computeDeukFlags } from "@/features/AnalysisReport/utils/strength";
+import { computeDeukFlags10 } from "@/features/AnalysisReport/utils/strength";
 import { type LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
 
 // ─────────────────────────────────────────────
@@ -292,6 +292,8 @@ export function buildChatPrompt(params: {
     normalizeGZ(natalRaw[3] ?? ""),
   ];
 
+  console.log('natalRaw', natalRaw);
+
   const daeList = getDaewoonList(ms).slice(0, 10);
 
   // 형충회합(원국/운)
@@ -316,15 +318,14 @@ export function buildChatPrompt(params: {
   const overlay = makeOverlayByLuck(unified, tab, chain);
   const elemPercentObj = overlay.elementPercent;
   const totalsSub = overlay.totalsSub;
-
   // 신강도/득령·득지·득세
   //const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
   
-  const { flags: deukFlags0 } = computeDeukFlags(natal, elemPercentObj);
+  const { flags: deukFlags0 } = computeDeukFlags10(natal, unified.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
-    `득령 ${deukFlags0.비겁.령 || deukFlags0.인성.령 ? "인정" : "불인정"}`,
-    `득지 ${deukFlags0.비겁.지 || deukFlags0.인성.지 ? "인정" : "불인정"}`,
-    `득세 ${deukFlags0.비겁.세 ? "인정" : "불인정"}`,
+    `득령 ${deukFlags0.비견.령 || deukFlags0.겁재.령 || deukFlags0.편인.령 || deukFlags0.정인.령 ? "인정" : "불인정"}`,
+    `득지 ${deukFlags0.비견.지 || deukFlags0.겁재.지 || deukFlags0.편인.지 || deukFlags0.정인.지 ? "인정" : "불인정"}`,
+    `득세 ${deukFlags0.비견.세 || deukFlags0.겁재.세 ? "인정" : "불인정"}`,
   ].join(", ")}`;
 
   function formatBirth(ms: MyeongSik): string {
