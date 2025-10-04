@@ -2,13 +2,12 @@
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { Pillars4, RelationTags } from "@/features/AnalysisReport/logic/relations";
 import { buildHarmonyTags, buildAllRelationTags, normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { natalShinPercent } from "@/features/AnalysisReport/logic/powerPercent";
 import { buildShinsalTags, type ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
 import { useSajuSettingsStore } from "@/shared/lib/hooks/useSajuSettingsStore";
 import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
 import { getDaewoonList } from "../luck/daewoonList";
-import { getShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
+import { ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
 import { computeDeukFlags } from "@/features/AnalysisReport/utils/strength";
 import { type LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
 
@@ -281,8 +280,10 @@ export function buildChatPrompt(params: {
   tab: BlendTab;
   includeTenGod?: boolean;
   unified: UnifiedPowerResult;
+  percent: number,
+  category: ShinCategory;
 }): string {
-  const { ms, natal: natalRaw, chain, basis, tab, unified } = params;
+  const { ms, natal: natalRaw, chain, basis, tab, unified, percent, category } = params;
 
   const natal: Pillars4 = [
     normalizeGZ(natalRaw[0] ?? ""),
@@ -317,10 +318,10 @@ export function buildChatPrompt(params: {
   const totalsSub = overlay.totalsSub;
 
   // 신강도/득령·득지·득세
-  const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
-  const shinCategory = getShinCategory(shinPct);
+  //const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
+  
   const { flags: deukFlags0 } = computeDeukFlags(natal, elemPercentObj);
-  const shinLine = `${shinCategory} (${shinPct.toFixed(1)}%) · ${[
+  const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${deukFlags0.비겁.령 || deukFlags0.인성.령 ? "인정" : "불인정"}`,
     `득지 ${deukFlags0.비겁.지 || deukFlags0.인성.지 ? "인정" : "불인정"}`,
     `득세 ${deukFlags0.비겁.세 ? "인정" : "불인정"}`,

@@ -12,6 +12,8 @@ import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStor
 import type { DayBoundaryRule } from "@/shared/type";
 import { lunarToSolarStrict }  from "@/shared/lib/calendar/lunar";
 import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
+import { clamp01, getShinCategory, ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
+import { natalShinPercent } from "@/features/AnalysisReport/logic/powerPercent";
 
 type Props = {
   ms: MyeongSik;
@@ -217,6 +219,16 @@ export default function PromptCopyCard({
     return `${p.stem}${p.branch}`;
   }
 
+  function getDayElementPercent(natal: string[]): number {
+    const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
+    return shinPct;
+  }
+
+  const value = getDayElementPercent(natal);
+
+  const percent = useMemo(() => clamp01(value), [value]);
+  const category: ShinCategory = useMemo(() => getShinCategory(percent), [percent]);
+
   const text = useMemo(
     () =>
       ms
@@ -233,6 +245,8 @@ export default function PromptCopyCard({
             includeTenGod,
             tab: activeTab,
             unified,
+            percent,
+            category
           })
         : "",
     [
@@ -246,9 +260,10 @@ export default function PromptCopyCard({
       parsed.day,
       parsed.month,
       parsed.year,
+      percent,
+      category
     ]
   );
-
 
   const [copied, setCopied] = useState(false);
   async function onCopy() {
