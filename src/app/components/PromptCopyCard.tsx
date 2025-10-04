@@ -7,9 +7,11 @@ import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
 import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import type { DayBoundaryRule } from "@/shared/type";
+import { lunarToSolarStrict }  from "@/shared/lib/calendar/lunar";
+import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
 
 type Props = {
   ms: MyeongSik;
@@ -73,6 +75,14 @@ function normalizePillars(input?: string[] | null): string[] {
     return idx <= 2 ? "--" : "";
   });
 }
+
+type Parsed = {
+  corrected: Date;
+  year: { stem: string; branch: string };
+  month: { stem: string; branch: string };
+  day: { stem: string; branch: string };
+  hour: { stem: string; branch: string } | null;
+};
 
 export default function PromptCopyCard({
   ms,
@@ -162,13 +172,83 @@ export default function PromptCopyCard({
     });
   }, [activePillars, activeTab, chain, hourKey]);
 
+  function makeParsed(d: MyeongSik, useDSTFlag: boolean): Parsed {
+    const unknown = !d.birthTime || d.birthTime === "모름";
+
+    let y = Number(d.birthDay!.slice(0, 4));
+    let mo = Number(d.birthDay!.slice(4, 6));
+    let da = Number(d.birthDay!.slice(6, 8));
+    if (d.calendarType === "lunar") {
+      const solar = lunarToSolarStrict(y, mo, da);
+      y = solar.getFullYear(); mo = solar.getMonth() + 1; da = solar.getDate();
+    }
+
+    const hh = unknown ? 4 : Number(d.birthTime!.slice(0, 2));
+    const mi = unknown ? 30 : Number(d.birthTime!.slice(2, 4));
+    const rawBirth = new Date(y, mo - 1, da, hh, mi, 0, 0);
+
+    const lonVal = !d.birthPlace || d.birthPlace.lon === 0 ? 127.5 : d.birthPlace.lon;
+    const corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
+    const corrected = useDSTFlag ? new Date(corrected0.getTime() - 60 * 60 * 1000) : corrected0;
+
+    const hourRule: DayBoundaryRule = (d.mingSikType ?? "야자시") as DayBoundaryRule;
+
+    const yGZ = getYearGanZhi(corrected, lonVal);
+    const mGZ = getMonthGanZhi(corrected, lonVal);
+    const dGZ = getDayGanZhi(corrected, hourRule);
+    const hGZ = unknown ? null : getHourGanZhi(corrected, hourRule);
+
+    return {
+      corrected,
+      year:  { stem: yGZ.charAt(0), branch: yGZ.charAt(1) },
+      month: { stem: mGZ.charAt(0), branch: mGZ.charAt(1) },
+      day:   { stem: dGZ.charAt(0), branch: dGZ.charAt(1) },
+      hour:  hGZ ? { stem: hGZ.charAt(0), branch: hGZ.charAt(1) } : null,
+    };
+  }
+
+  const [useDST] = useState<boolean>(false);
+  const [parsed] = useState<Parsed>(() => makeParsed(ms, useDST));
+
+  const predHour = useHourPredictionStore((s) => s.manualHour);
+
+  function toGZ(p: { stem: string; branch: string } | null | undefined): string {
+    if (!p || !p.stem || !p.branch) return "";
+    return `${p.stem}${p.branch}`;
+  }
+
   const text = useMemo(
-    () => ms
-      ? buildChatPrompt({ ms, natal, chain: fallbackChain, basis, includeTenGod, tab: activeTab, unified })
-      : "",
-    
-    [ms, natal, basis, includeTenGod, activeTab, fallbackChain, unified]
+    () =>
+      ms
+        ? buildChatPrompt({
+            ms,
+            natal: [
+              toGZ(parsed.year),
+              toGZ(parsed.month),
+              toGZ(parsed.day),
+              predHour ? toGZ(predHour) : ""   // ✅ 여기 수정
+            ] as Pillars4,
+            chain: fallbackChain,
+            basis,
+            includeTenGod,
+            tab: activeTab,
+            unified,
+          })
+        : "",
+    [
+      ms,
+      basis,
+      includeTenGod,
+      activeTab,
+      fallbackChain,
+      unified,
+      predHour,
+      parsed.day,
+      parsed.month,
+      parsed.year,
+    ]
   );
+
 
   const [copied, setCopied] = useState(false);
   async function onCopy() {

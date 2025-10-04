@@ -155,7 +155,7 @@ function stemsScaledToSubTotals(
     acc[sub] += v;
   }
   // ✅ 여기서만 normalize
-  return normalizeTo100(acc) as Record<TenGodSubtype, number>;
+  return acc as Record<TenGodSubtype, number>;
 }
 
 /** 대분류(5) 계산 — 소분류 합계 그대로 */
