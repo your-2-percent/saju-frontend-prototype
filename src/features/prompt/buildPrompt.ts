@@ -19,7 +19,17 @@ import { type LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/ut
 import type { Element } from "@/features/AnalysisReport/utils/types";
 
 /* ===== 맵/상수 ===== */
-const POS_LABELS = ["연", "월", "일", "시"] as const;
+//const POS_LABELS = ["연", "월", "일", "시"] as const;
+
+function getActivePosLabels(natal: Pillars4, ms: MyeongSik): string[] {
+  if (natal[3] && natal[3] !== "") {
+    const hourLabel =
+      !ms.birthTime || ms.birthTime === "모름" ? "시(예측)" : "시";
+    return ["연", "월", "일", hourLabel];
+  }
+  return ["연", "월", "일"];
+}
+
 const STEM_H2K: Record<string, string> = { 甲:"갑", 乙:"을", 丙:"병", 丁:"정", 戊:"무", 己:"기", 庚:"경", 辛:"신", 壬:"임", 癸:"계" };
 const BRANCH_H2K: Record<string, string> = { 子:"자", 丑:"축", 寅:"인", 卯:"묘", 辰:"진", 巳:"사", 午:"오", 未:"미", 申:"신", 酉:"유", 戌:"술", 亥:"해" };
 const STEM_TO_ELEMENT: Record<string, Element> = {
@@ -246,6 +256,20 @@ function makeOverlayByLuck(unified: UnifiedPowerResult, tab: BlendTab, chain?: L
   };
 }
 
+function elementToTenGod(dayEl: Element, targetEl: Element): string {
+  const SHENG_NEXT: Record<Element, Element> = { 목:"화", 화:"토", 토:"금", 금:"수", 수:"목" };
+  const KE:         Record<Element, Element> = { 목:"토", 화:"금", 토:"수", 금:"목", 수:"화" };
+  const KE_REV:     Record<Element, Element> = { 토:"목", 금:"화", 수:"토", 목:"금", 화:"수" };
+  const SHENG_PREV: Record<Element, Element> = { 화:"목", 토:"화", 금:"토", 수:"금", 목:"수" };
+
+  if (targetEl === dayEl) return "비겁";
+  if (targetEl === SHENG_NEXT[dayEl]) return "식상";
+  if (targetEl === KE[dayEl]) return "재성";
+  if (targetEl === KE_REV[dayEl]) return "관성";
+  if (targetEl === SHENG_PREV[dayEl]) return "인성";
+  return "";
+}
+
 // ─────────────────────────────────────────────
 // 메인 프롬프트 빌더
 // ─────────────────────────────────────────────
@@ -270,7 +294,7 @@ export function buildChatPrompt(params: {
   const daeList = getDaewoonList(ms).slice(0, 10);
 
   // 형충회합(원국/운)
-  const relNatal: RelationTags = buildHarmonyTags(natal);
+  //const relNatal: RelationTags = buildHarmonyTags(natal);
   const relWithLuck: RelationTags = buildAllRelationTags({
     natal,
     daewoon: tab !== "원국" ? chain?.dae ?? undefined : undefined,
@@ -282,10 +306,10 @@ export function buildChatPrompt(params: {
   // 십이신살(설정 반영)
   const { shinsalEra, shinsalGaehwa, shinsalBase } = useSajuSettingsStore.getState();
   const baseBranch = shinsalBase === "연지" ? (natal[0]?.charAt(1) ?? "") : (natal[2]?.charAt(1) ?? "");
-  const shinsalResult = natal.map((gz, i) => ({
-    pos: POS_LABELS[i], gz,
-    shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: gz.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }),
-  }));
+  // const shinsalResult = natal.map((gz, i) => ({
+  //   pos: POS_LABELS[i], gz,
+  //   shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: gz.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }),
+  // }));
 
   // 🚩 AnalysisReport와 동일 계산으로 overlay 구성
   const overlay = makeOverlayByLuck(unified, tab, chain);
@@ -323,9 +347,14 @@ export function buildChatPrompt(params: {
     return parts.length > 0 ? parts.join(" / ") : "(없음)";
   }
 
+  const posLabels = getActivePosLabels(natal, ms);
+  const dayStem = unified.dayStem;  // ex) "정"
+  const dayEl = STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT];
+
   const header = [
     `📌 명식: ${ms.name ?? "이름없음"} (${formatBirth(ms)}) 성별: ${ms.gender}`,
-    `원국 4주: ${natal.map((gz, i) => (gz ? `${gz}${["년","월","일","시"][i]}` : "")).filter(Boolean).join(" ") || "(계산 실패)"}`,
+    `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` +
+      (natal[3] ? ` ${natal[3]}시${!ms.birthTime || ms.birthTime === "모름" ? "(시주예측)" : ""}` : ""),
     `운: ${formatLuckChain(tab, chain)}`,
   ].join("\n");
 
@@ -333,11 +362,50 @@ export function buildChatPrompt(params: {
     section("대운 리스트 (10개)", daeList),
     section("신강도", shinLine),
     // 🚩 펜타곤과 완전 동기화된 수치
-    section(`오행강약(퍼센트·탭=${tab})`, elemPercentObj),
+    section(
+      `오행강약(퍼센트·탭=${tab})`,
+      Object.fromEntries(
+        Object.entries(elemPercentObj).map(([el, val]) => [
+          `${el}(${elementToTenGod(dayEl, el as Element)})`,
+          val,
+        ])
+      )
+    ),
     section(`십신 강약(소분류 10개·탭=${tab}·합계 100)`, totalsSub),
-    section("십이운성(원국)", natal.map((gz, i) => ({ pos: POS_LABELS[i], gz, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)) }))),
-    section("십이신살(원국·설정 반영)", natal.map((x, i) => x && { pos: POS_LABELS[i], gz: x, shinsal: shinsalResult[i]?.shinsal })),
-    section("형충회합(원국)", relNatal),
+    // 십이운성(원국)
+    section("십이운성(원국)",
+      natal.map((gz, i) => {
+        if (!gz || i >= posLabels.length) return null;
+        return {
+          pos: posLabels[i],
+          gz,
+          unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
+        };
+      }).filter(Boolean)
+    ),
+
+    // 십이신살(원국·설정 반영)
+    section("십이신살(원국·설정 반영)",
+      natal.map((gz, i) => {
+        if (!gz || i >= posLabels.length) return null;
+        return {
+          pos: posLabels[i],
+          gz,
+          shinsal: getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: gz.charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          }),
+        };
+      }).filter(Boolean)
+    ),
+    // 형충회합(원국)
+    section("형충회합(원국)",
+      buildHarmonyTags(
+        natal.filter((_, i) => i < posLabels.length) as Pillars4
+      )
+    ),
     section("형충회합(운 포함: 탭 연동)", relWithLuck),
     section("신살(원국 전용)", {
       good: buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).good,
