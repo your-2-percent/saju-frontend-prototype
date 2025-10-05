@@ -15,6 +15,7 @@ import type { DayBoundaryRule } from "@/shared/type";
 import { clamp01, getShinCategory, ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
 import { natalShinPercent } from "@/features/AnalysisReport/logic/powerPercent";
 import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
+import DateInput from "@/features/luck/ui/DateTimePicker";
 
 type Props = {
   ms: MyeongSik;
@@ -87,6 +88,7 @@ export default function PromptCopyCard({
   lunarPillars,
   includeTenGod = false,
 }: Props) {
+  const { date, setDate } = useLuckPickerStore();
   const [activeTab, setActiveTab] = useState<BlendTab>("원국");
   const { yearGZ, monthGZ, dayGZ } = useLuckPickerStore();
   const fallbackChain = useMemo<LuckChain>(() => ({
@@ -268,7 +270,8 @@ export default function PromptCopyCard({
         </button>
       </div>
 
-      {/* 탭 버튼 */}
+      {/* 탭 버튼 + 피커 */}
+      <div className="flex desk:justify-between flex-col desk:flex-row gap-2">
       <div className="flex gap-1 flex-wrap">
         {TABS.map((t) => (
           <button
@@ -285,6 +288,11 @@ export default function PromptCopyCard({
             {t}
           </button>
         ))}
+      </div>
+        <DateInput
+          date={date ?? new Date()}
+          onChange={setDate}
+        />
       </div>
 
       {/* 안내: 오행강약은 원국 기준 고정 */}
