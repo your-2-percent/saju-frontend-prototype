@@ -139,14 +139,23 @@ export function blendElementStrength(params: {
 }
 
 /** 절대 스코어 누적(원국 전용) */
-export function elementScoreFromPillars(
-  pillars: Readonly<[string, string, string, string]> | ReadonlyArray<string>
-): Record<Element, number> {
-  const acc: Record<Element, number> = { ...ZERO };
-  for (const gz of pillars) {
-    if (!gz) continue;
-    const v = elementScoreFromGZ(gz);
-    acc.목 += v.목; acc.화 += v.화; acc.토 += v.토; acc.금 += v.금; acc.수 += v.수;
+export function elementScoreFromPillars(pillars: (string | undefined)[]): Record<Element, number> {
+  const out: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+  const valid = pillars.filter((p): p is string => !!p && p.length >= 2);
+  for (const gz of valid) {
+    const sc = elementScoreFromGZ(gz);
+    console.log("🔥", gz, sc);
+    for (const el of Object.keys(out) as Element[]) {
+      out[el] += sc[el];
+    }
   }
-  return acc;
+
+  // ✅ 주수만큼 나누기 (시주 없으면 3으로 나눔)
+  const divisor = valid.length;
+  for (const el of Object.keys(out) as Element[]) {
+    out[el] = +(out[el] / divisor).toFixed(1);
+  }
+
+  return out;
 }
+

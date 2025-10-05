@@ -292,8 +292,6 @@ export function buildChatPrompt(params: {
     normalizeGZ(natalRaw[3] ?? ""),
   ];
 
-  console.log('natalRaw', natalRaw);
-
   const daeList = getDaewoonList(ms).slice(0, 10);
 
   // 형충회합(원국/운)
@@ -328,6 +326,8 @@ export function buildChatPrompt(params: {
     `득세 ${deukFlags0.비견.세 || deukFlags0.겁재.세 ? "인정" : "불인정"}`,
   ].join(", ")}`;
 
+  const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
+
   function formatBirth(ms: MyeongSik): string {
     const rawDay = ms.birthDay ?? "";
     const year = rawDay.slice(0, 4), month = rawDay.slice(4, 6), day = rawDay.slice(6, 8);
@@ -335,7 +335,7 @@ export function buildChatPrompt(params: {
     if (ms.corrected instanceof Date && !isNaN(ms.corrected.getTime())) {
       const hh = String(ms.corrected.getHours()).padStart(2, "0");
       const mm = String(ms.corrected.getMinutes()).padStart(2, "0");
-      correctedTime = `${hh}:${mm}`;
+      correctedTime = isUnknownTime ? "모름" : `${hh}:${mm}`;
     }
     return `${year}년 ${month}월 ${day}일 보정시 ${correctedTime}`;
   }

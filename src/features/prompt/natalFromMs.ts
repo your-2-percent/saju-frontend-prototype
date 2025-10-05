@@ -35,36 +35,40 @@ export function buildNatalPillarsFromMs(ms: MyeongSik | null): Pillars4 {
     d = solar.getDate();
   }
 
+  // ✅ 시각 정보: 모르면 4시 30분 기준으로 “날짜 경계”만 유지
   const unknownTime = !ms.birthTime || ms.birthTime === "모름";
   const hh = unknownTime ? 4 : Number(ms.birthTime!.slice(0, 2));
   const mi = unknownTime ? 30 : Number(ms.birthTime!.slice(2, 4));
 
-  // 2) 기본(표준시) 보정시각
+  // 2) 표준시 기준 시간
   const raw = new Date(y, m - 1, d, hh, mi, 0, 0);
 
-  // 3) 경도
+  // 3) 경도 보정
   const lon =
     !ms.birthPlace || ms.birthPlace.name === "모름" || !ms.birthPlace.lon
       ? 127.5
       : ms.birthPlace.lon;
 
-  // 4) 경도 보정
   const corrected = getCorrectedDate(raw, lon, unknownTime);
 
-  // 5) 시주 규칙
+  // 4) 시주 계산 규칙
   const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "야자시";
 
-  // 6) 만세력 간지 계산
+  // 5) 만세력 간지 계산
   const yGZ = getYearGanZhi(corrected, lon);
   const mGZ = getMonthGanZhi(corrected, lon);
   const dGZ = getDayGanZhi(corrected, rule);
-  const hGZ = unknownTime ? "" : getHourGanZhi(corrected, rule);
 
-  // 7) 한글 2글자 정규화
+  // ✅ 시주: 모르면 null로 남김 (병오 강제 X)
+  const hGZ = unknownTime ? null : getHourGanZhi(corrected, rule);
+
+  // 6) 한글 간지 정규화
   const year = normalizeGZ(yGZ);
   const month = normalizeGZ(mGZ);
   const day = normalizeGZ(dGZ);
-  const hour = normalizeGZ(hGZ);
+  const hour = hGZ ? normalizeGZ(hGZ) : "";
 
+  // ✅ 항상 4자리 배열 반환하되, 시주 모를 땐 ""로
   return [year, month, day, hour];
 }
+
