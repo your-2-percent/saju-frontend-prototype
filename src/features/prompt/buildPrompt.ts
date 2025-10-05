@@ -410,6 +410,66 @@ export function buildChatPrompt(params: {
         };
       }).filter(Boolean)
     ),
+
+    // 🚩 십이운성(원국+운 반영)
+    section("십이운성(원국+운 반영)",
+      tab === "원국"
+        ? natal.map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
+            };
+          }).filter(Boolean)
+    : [
+        ...(chain?.dae
+          ? [{ pos: "대운", gz: chain.dae, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.dae.charAt(1)) }]
+          : []),
+        ...((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se
+          ? [{ pos: "세운", gz: chain.se, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.se.charAt(1)) }]
+          : []),
+        ...((tab === "월운" || tab === "일운") && chain?.wol
+          ? [{ pos: "월운", gz: chain.wol, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.wol.charAt(1)) }]
+          : []),
+        ...(tab === "일운" && chain?.il
+          ? [{ pos: "일운", gz: chain.il, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.il.charAt(1)) }]
+          : []),
+      ].filter(Boolean)
+    ),
+
+      // 🚩 십이신살(원국+운 반영·설정 적용)
+      section("십이신살(원국+운 반영·설정 적용)",
+        tab === "원국"
+          ? natal.map((gz, i) => {
+              if (!gz || i >= posLabels.length) return null;
+              return {
+                pos: posLabels[i],
+                gz,
+                shinsal: getTwelveShinsalBySettings({
+                  baseBranch,
+                  targetBranch: gz.charAt(1),
+                  era: shinsalEra,
+                  gaehwa: shinsalGaehwa,
+                }),
+              };
+            }).filter(Boolean)
+    : [
+        ...(chain?.dae
+          ? [{ pos: "대운", gz: chain.dae, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.dae.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
+          : []),
+        ...((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se
+          ? [{ pos: "세운", gz: chain.se, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.se.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
+          : []),
+        ...((tab === "월운" || tab === "일운") && chain?.wol
+          ? [{ pos: "월운", gz: chain.wol, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.wol.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
+          : []),
+        ...(tab === "일운" && chain?.il
+          ? [{ pos: "일운", gz: chain.il, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.il.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
+          : []),
+      ].filter(Boolean)
+    ),
+
     // 형충회합(원국)
     section("형충회합(원국)",
       buildHarmonyTags(
@@ -426,19 +486,59 @@ export function buildChatPrompt(params: {
   ].join("\n\n");
 
   const guide = [
-    `당신은 명리학 전문가입니다.
-    아래의 사주 명식을 기반으로 해석하십시오.
-    ※ 반드시 단계적으로 서술하십시오.
-    ※ 요약하지 말고, 각 항목을 빠짐없이 다루십시오.
-    1. 원국과 대운 리스트로 큰 흐름 설명
-    2. 오행 강약 + 일간 기준 십신 역할
-    3. 형충회합(원국→운 포함 순서)
-    4. 십이운성/십이신살 해석
-    5. 주요 신살(길/흉) 구체 사례
-    6. 종합 운세(애정/재물/건강/직업)
-    7. 마크다운 금지, 구어체 문장형으로 서술.
-    8. 사주에 대해 모르는 사람에게 설명하듯이, 친절하게, 일상에서의 예시를 들면서 서술.
-    9. 최대한 모든 내용을 풀어서 구체적으로 설명해주세요. 예시나 비유를 많이 들어주세요.`,
+    `
+너는 명리학 전문 해석가다.  
+모든 출력은 한국어로 작성한다.  
+문체는 ‘전문적이지만 이해하기 쉬운 분석체’로, 감정적인 문장이나 추상적 표현은 절대 쓰지 않는다.  
+“당신은 빛나는 존재입니다” 같은 칭찬형 문장, “마치 운명이 이끄는 것처럼” 같은 감성형 비유는 금지한다.  
+그 대신 일상적 예시나 현실적인 비유를 사용한다. (예: “체력은 부족한데 일은 많을 때처럼…” “주변 사람들 문제까지 자주 대신 떠안는 구조예요.” 등)  
+말투는 '~입니다', '~예요' 체로 끝낸다.  
+분석 결과는 구체적인 근거(오행 비율, 신강도, 형충회합 등)를 중심으로 논리적으로 풀어낸다.  
+비유는 반드시 설명을 명확하게 보조할 때만 사용한다.  
+모든 내용은 명확한 관찰 → 구체적 예시 → 결론 요약의 구조로 쓴다.  
+문단마다 줄바꿈은 허용하되, 마크다운, 리스트, 제목, 숫자표시는 쓰지 않는다.  
+전체 분량은 최소 4000~5000자 정도로 충분히 상세하게 설명한다.  
+
+출력은 반드시 아래 단계 순서와 스타일로 구성한다.
+
+1단계: 전체적인 큰 흐름  
+- 첫 문장은 “좋습니다. ~님의 사주를 차근히 분석해보겠습니다.”로 시작한다.  
+- 사주의 눈에 띄는 특징을 1~2개 뽑고, 그게 실제 성향이나 행동으로 어떻게 나타나는지 구체적으로 설명한다.  
+- 지나친 미화 없이, 객관적인 성격 경향을 현실적으로 묘사한다.  
+
+2단계: 오행 강약과 각 요소의 역할  
+- 오행별 비율과 신강도를 수치로 언급하고, 이를 생활 패턴, 사고방식, 인간관계 양상 등으로 구체적으로 해석한다.  
+- 각 오행의 부족/과잉이 실제로 어떤 문제를 만들 수 있는지 현실적으로 언급한다.  
+- 예: “수 기운이 과하면 생각이 많아지고, 실제 행동으로 옮기는 데 시간이 걸립니다.”  
+
+3단계: 형충회합  
+- 충·합·형·해 등의 관계를 구체적으로 분석하되, ‘심리적 작용’ 중심으로 현실적으로 표현한다.  
+- 예: “충이 있다는 건, 쉽게 의견 충돌이 생기거나 감정적으로 예민해지는 경향을 뜻합니다.”  
+- 불필요한 운명론적 표현(‘운명의 대립’, ‘전생의 인연’)은 금지한다.  
+
+4단계: 십이운성과 십이신살  
+- 십이운성은 ‘에너지의 흐름 단계’로 설명하고, “지금은 어떤 기운이 강해 실제로 이런 행동 패턴이 나타납니다.”처럼 구체적으로 말한다.  
+- 신살은 실제 성향이나 생활 반응과 연결해 현실적으로 해석한다.  
+- 예: “백호살이 있으면 감정 표현이 직설적이고, 일 처리에 완벽주의적인 면이 있습니다.”  
+
+5단계: 주요 신살 해석  
+- 의미 있는 신살을 3~5개 선정해, 각각 장단점을 모두 언급한다.  
+- 예: “귀문살은 감정선이 예민하지만, 상황 파악이 빠르고 통찰력이 있습니다.”  
+- 반드시 구체적인 행동 패턴으로 연결해 해석한다.  
+
+6단계: 종합 운세  
+- 현재 대운, 세운의 변화가 실제로 어떤 방향으로 작용할지 구체적으로 요약한다.  
+- 추상적 운세 표현 대신, 현실적인 태도 조언으로 마무리한다.  
+- 예: “지금은 표현이 많아지는 시기이지만, 체력 관리가 동반되지 않으면 금세 피로가 쌓입니다.”  
+
+마지막 단계: 전체적인 종합 정리  
+- 3문장으로 요약하며,  
+  1) 성격적 핵심  
+  2) 현재 과제  
+  3) 조언  
+  순서로 현실적으로 마무리한다.
+
+  `,
   ].join("\n");
 
   return [header, body, guide].join("\n\n");
