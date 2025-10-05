@@ -461,9 +461,6 @@ function applyDayStemRules(
   }
 }
 
-/* ────────────────────────────────────────────────────────────────────────────
- * 메인
- * ──────────────────────────────────────────────────────────────────────────── */
 export function buildShinsalTags({
   natal,
   daewoon,
@@ -479,7 +476,6 @@ export function buildShinsalTags({
   ilwoon?: string | null;
   basis?: ShinsalBasis;
 }): {
-  title: string;
   good: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[], ilun: string[] };
   bad: TagBucketsByPos & { dae: string[]; se: string[]; wolun: string[], ilun: string[] };
   meta: {
@@ -488,7 +484,6 @@ export function buildShinsalTags({
     currentBasis: { voidBasis: "day" | "year"; samjaeBasis: "day" | "year" };
   };
 } {
-  const title = `원국 ${natal.join(" · ")}`;
   const dStem = getStemAt(natal[idx.day]);
   const dBranch = getBranchAt(natal[idx.day]);
   const mBranch = getBranchAt(natal[idx.month]);
@@ -863,7 +858,6 @@ export function buildShinsalTags({
   matchLuckOne("il", ilwoon ?? null);
 
   return {
-    title,
     good: { ...({ si: [], il: [], yeon: [], wol: [] } as TagBucketsByPos), ...(() => {
       const res: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
       for (const it of goodPosDedup) res[posToKey(it.pos)].push(it.name);
