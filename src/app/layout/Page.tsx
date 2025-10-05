@@ -40,7 +40,6 @@ export default function Page() {
     [list, currentId]
   );
   
-
   useEffect(() => {
     setShowToday(true);
     setShowCouple(false);
