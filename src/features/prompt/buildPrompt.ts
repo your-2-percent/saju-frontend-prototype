@@ -304,6 +304,14 @@ export function buildChatPrompt(params: {
     ilwoon:  (tab === "일운") ? chain?.il ?? undefined : undefined,
   });
 
+  const sinsalWithLuck = buildShinsalTags({
+    natal,
+    daewoon: tab !== "원국" ? chain?.dae ?? undefined : undefined,
+    sewoon:  (tab === "세운" || tab === "월운" || tab === "일운") ? chain?.se ?? undefined : undefined,
+    wolwoon: (tab === "월운" || tab === "일운") ? chain?.wol ?? undefined : undefined,
+    ilwoon:  (tab === "일운") ? chain?.il ?? undefined : undefined,
+  });
+
   // 십이신살(설정 반영)
   const { shinsalEra, shinsalGaehwa, shinsalBase } = useSajuSettingsStore.getState();
   const baseBranch = shinsalBase === "연지" ? (natal[0]?.charAt(1) ?? "") : (natal[2]?.charAt(1) ?? "");
@@ -360,17 +368,6 @@ export function buildChatPrompt(params: {
     `운: ${formatLuckChain(tab, chain)}`,
   ].join("\n");
 
-  const emptyNatal: Pillars4 = ["", "", "", ""] as const;
-
-  const {...shinsalClean } = buildShinsalTags({
-    natal: emptyNatal,
-    daewoon: chain?.dae ?? null,
-    sewoon: (tab === "세운" || tab === "월운" || tab === "일운") ? chain?.se ?? null : null,
-    wolwoon: (tab === "월운" || tab === "일운") ? chain?.wol ?? null : null,
-    ilwoon: tab === "일운" ? chain?.il ?? null : null,
-    basis,
-  });
-
   const body = [
     section("대운 리스트 (10개)", daeList),
     section("신강도", shinLine),
@@ -420,36 +417,12 @@ export function buildChatPrompt(params: {
       )
     ),
     section("형충회합(운 포함: 탭 연동)", relWithLuck),
-    // ✅ 1) 원국 전용 신살 (항상 표시)
+    tab === "원국" ?
     section("신살(원국 전용)", {
-      good: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).good,
-      bad: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).bad,
-      meta: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).meta,
-    }),
-
-    section(`신살(운 포함·탭=${tab})`, shinsalClean)
-
+      good: buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).good,
+      bad:  buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).bad,
+      meta: buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).meta,
+    }) : section(`신살(운 포함·탭=${tab})`, sinsalWithLuck),
   ].join("\n\n");
 
   const guide = [
