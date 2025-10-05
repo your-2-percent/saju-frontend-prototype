@@ -193,7 +193,7 @@ export default function IlwoonCalendar({
             const dayLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 4, 30, 0, 0);
 
             const idx = days.findIndex(x => x.getTime() === d.getTime());
-            const isActive = idx === activeIndex;
+            const isActive = idx === activeIndex + 1;
 
             const gz = getDayGanZhi(dayLocal, rule);
             const stem = gz.charAt(0) as Stem10sin;

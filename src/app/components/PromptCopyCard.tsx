@@ -79,25 +79,6 @@ function normalizePillars(input?: string[] | null): string[] {
   });
 }
 
-// type Parsed = {
-//   corrected: Date;
-//   year: { stem: string; branch: string };
-//   month: { stem: string; branch: string };
-//   day: { stem: string; branch: string };
-//   hour: { stem: string; branch: string } | null;
-// };
-
-// function buildNatalPillarsWithPrediction(ms: MyeongSik | null): Pillars4 {
-//   const pillars = buildNatalPillarsFromMs(ms);
-//   const { manualHour } = useHourPredictionStore.getState();
-
-//   if (manualHour && manualHour.stem && manualHour.branch) {
-//     pillars[3] = manualHour.stem + manualHour.branch; // ✅ 시주 예측 반영
-//   }
-
-//   return pillars;
-// }
-
 export default function PromptCopyCard({
   ms,
   natal,
@@ -202,44 +183,6 @@ export default function PromptCopyCard({
       hourKey,
     });
   }, [natalWithPrediction, activeTab, chain, hourKey]);
-
-  // function makeParsed(d: MyeongSik, useDSTFlag: boolean): Parsed {
-  //   const unknown = !d.birthTime || d.birthTime === "모름";
-
-  //   let y = Number(d.birthDay!.slice(0, 4));
-  //   let mo = Number(d.birthDay!.slice(4, 6));
-  //   let da = Number(d.birthDay!.slice(6, 8));
-  //   if (d.calendarType === "lunar") {
-  //     const solar = lunarToSolarStrict(y, mo, da);
-  //     y = solar.getFullYear(); mo = solar.getMonth() + 1; da = solar.getDate();
-  //   }
-
-  //   const hh = unknown ? 4 : Number(d.birthTime!.slice(0, 2));
-  //   const mi = unknown ? 30 : Number(d.birthTime!.slice(2, 4));
-  //   const rawBirth = new Date(y, mo - 1, da, hh, mi, 0, 0);
-
-  //   const lonVal = !d.birthPlace || d.birthPlace.lon === 0 ? 127.5 : d.birthPlace.lon;
-  //   const corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
-  //   const corrected = useDSTFlag ? new Date(corrected0.getTime() - 60 * 60 * 1000) : corrected0;
-
-  //   const hourRule: DayBoundaryRule = (d.mingSikType ?? "야자시") as DayBoundaryRule;
-
-  //   const yGZ = getYearGanZhi(corrected, lonVal);
-  //   const mGZ = getMonthGanZhi(corrected, lonVal);
-  //   const dGZ = getDayGanZhi(corrected, hourRule);
-  //   const hGZ = unknown ? null : getHourGanZhi(corrected, hourRule);
-
-  //   return {
-  //     corrected,
-  //     year:  { stem: yGZ.charAt(0), branch: yGZ.charAt(1) },
-  //     month: { stem: mGZ.charAt(0), branch: mGZ.charAt(1) },
-  //     day:   { stem: dGZ.charAt(0), branch: dGZ.charAt(1) },
-  //     hour:  hGZ ? { stem: hGZ.charAt(0), branch: hGZ.charAt(1) } : null,
-  //   };
-  // }
-
-  //const [useDST] = useState<boolean>(false);
-  //const parsed = useMemo(() => makeParsed(ms, useDST), [ms, useDST]);
 
   function getDayElementPercent(natal: string[]): number {
     const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
