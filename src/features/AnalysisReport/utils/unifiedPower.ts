@@ -1,4 +1,5 @@
 // features/AnalysisReport/utils/computeUnifiedPower.ts
+//import { PerTenGodSub } from './tenGodSubStrength';
 import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
 import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
 import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
@@ -7,7 +8,7 @@ import { computePowerDataDetailed } from "./computePowerData";
 import type { Element, PowerData, TenGod } from "./types";
 
 /* =========================
- * 십신 소분류 타입
+ * 유틸/상수
  * ========================= */
 const STEM_H2K: Record<string, string> = {
   甲: "갑", 乙: "을", 丙: "병", 丁: "정", 戊: "무",
@@ -17,7 +18,6 @@ const BRANCH_H2K: Record<string, string> = {
   子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
   午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해",
 };
-
 /** 지지 → 본기 천간(한글) */
 const BRANCH_MAIN_STEM: Record<string, string> = {
   자: "계", 축: "기", 인: "갑", 묘: "을", 진: "무", 사: "병",
@@ -39,6 +39,77 @@ type TenGodSubtype =
   | "정관" | "편관"
   | "정인" | "편인";
 
+const STEM_TO_ELEMENT: Record<string, Element> = {
+  갑:"목", 을:"목", 병:"화", 정:"화", 무:"토",
+  기:"토", 경:"금", 신:"금", 임:"수", 계:"수",
+};
+
+const STEMS_BARE = ["갑","을","병","정","무","기","경","신","임","계"] as const;
+
+/* =========================
+ * 타입
+ * ========================= */
+export type LuckChain = {
+  dae: string | null;
+  se: string | null;
+  wol: string | null;
+  il: string | null;
+};
+
+type PerTenGodAggregated = {
+  비겁: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
+  식상: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
+  재성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
+  관성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
+  인성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
+};
+
+type PerTenGodSub = {
+  비견: number; 겁재: number; 식신: number; 상관: number;
+  정재: number; 편재: number; 정관: number; 편관: number;
+  정인: number; 편인: number;
+};
+
+export interface UnifiedPowerResult {
+  elementScoreRaw: Record<string, number>;
+  perStemElementScaled: Record<string, number>;
+  perTenGod: PerTenGodAggregated;
+  perTenGodSub: PerTenGodSub;
+  mergedStems: Record<string, number>;
+  elementPercent100: Record<Element, number>;
+  totals: PowerData[];
+  dayStem: string;
+  overlay: {
+    totalsSub: PerTenGodSub;
+    perStemAugBare: Record<string, number>;
+    perStemAugFull: Record<"갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수", number>;
+  };
+  natalFixed: {
+    elementScoreRaw: Record<Element, number>;
+    elementPercent100: Record<Element, number>;
+    totalsSub: PerTenGodSub;
+    overlay: {
+      totalsSub : PerTenGodSub;
+      perStemAugBare: Record<string, number>;
+      perStemAugFull: Record<"갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수", number>;
+    },
+  }
+}
+
+/* =========================
+ * 가중치
+ * ========================= */
+const LUCK_RATIO = {
+  natal: 50,
+  dae: 30,
+  se: 20,
+  wol: 7,
+  il: 3,
+} as const;
+
+/* =========================
+ * 헬퍼
+ * ========================= */
 function normalizeStemLike(token: string): string | null {
   if (!token) return null;
   const s = token.trim();
@@ -93,7 +164,6 @@ function stemsScaledToSubTotals(
   perStemScaled: Record<string, number>,
   dayStem: string
 ): Record<TenGodSubtype, number> {
-
   const acc: Record<TenGodSubtype, number> = {
     비견:0, 겁재:0, 식신:0, 상관:0, 정재:0, 편재:0, 정관:0, 편관:0, 정인:0, 편인:0
   };
@@ -104,7 +174,6 @@ function stemsScaledToSubTotals(
     const sub = mapStemToTenGodSub(dayStem, stemKo);
     acc[sub] += v;
   }
-  // ✅ 여기서만 normalize
   return normalizeTo100(acc) as Record<TenGodSubtype, number>;
 }
 
@@ -118,69 +187,74 @@ function aggregateMainFromSubPercent(sub: PerTenGodSub): PerTenGodAggregated {
   };
 }
 
-export type LuckChain = {
-  dae: string | null;
-  se: string | null;
-  wol: string | null;
-  il: string | null;
-};
-
-type PerTenGodAggregated = {
-  비겁: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
-  식상: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
-  재성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
-  관성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
-  인성: { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number },
-};
-
-type PerTenGodSub = {
-  비견: number; 겁재: number; 식신: number; 상관: number;
-  정재: number; 편재: number; 정관: number; 편관: number;
-  정인: number; 편인: number;
-};
-
-
-export interface UnifiedPowerResult {
-  elementScoreRaw: Record<string, number>;
-  perStemElementScaled: Record<string, number>;
-  perTenGod: PerTenGodAggregated;   // <- 여기 타입을 바꿈
-  perTenGodSub: Record<string, number>;
-  mergedStems: Record<string, number>;
-  elementPercent100: Record<Element, number>;
-  totals: PowerData[];
-  dayStem: string;
-  overlay: {
-    totalsSub: PerTenGodSub;
-    perStemAugBare: Record<string, number>;
-    perStemAugFull: Record<string, number>;
-  };
+/** perStemElementScaled → '갑','을',… 단일천간 맵 */
+function toBareStemMap(input: Record<string, number> | undefined): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const [k, v] of Object.entries(input ?? {})) {
+    if (v <= 0) continue;
+    const stemKo = normalizeStemLike(k);
+    if (!stemKo) continue;
+    out[stemKo] = (out[stemKo] ?? 0) + v;
+  }
+  return out;
 }
 
-// 가중치 상수
-const LUCK_RATIO = {
-  natal: 50,
-  dae: 30,
-  se: 20,
-  wol: 7,
-  il: 3,
-} as const;
+/** '갑','을' bare → '갑목','을목',… 풀라벨 맵 */
+function bareToFullStemMap(
+  bare: Record<string, number>
+): Record<"갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수", number> {
+  const zero: Record<"갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수", number>
+    = { 갑목:0, 을목:0, 병화:0, 정화:0, 무토:0, 기토:0, 경금:0, 신금:0, 임수:0, 계수:0 };
+  const out: Record<"갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수", number> = { ...zero };
+  for (const s of STEMS_BARE) {
+    const el = STEM_TO_ELEMENT[s];
+    const label = `${s}${el}` as keyof typeof out;
+    out[label] = Math.max(0, Math.round(bare[s] ?? 0));
+  }
+  return out;
+}
 
-/**
- * 여러 소스 bare stems를 가중치로 합산 후 normalize
- */
+/** Element 맵만 추출 (타입 안전) */
+function pickElementMap(src: Record<string, number>): Record<Element, number> {
+  const keys: Element[] = ["목","화","토","금","수"];
+  const out: Record<Element, number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
+  for (const k of keys) if (typeof src[k] === "number") out[k] = src[k];
+  return out;
+}
+
+/* =========================
+ * 오행→십신(대분류)
+ * ========================= */
+export function mapElementToTenGod(
+  dayStem: string,
+  targetEl: Element,
+): TenGod {
+  const dayEl = STEM_TO_ELEMENT[dayStem];
+  if (!dayEl) return "비겁";
+  let main: TenGod;
+  if (targetEl === dayEl) main = "비겁";
+  else if (targetEl === SHENG_NEXT[dayEl]) main = "식상";
+  else if (targetEl === KE[dayEl]) main = "재성";
+  else if (targetEl === KE_REV[dayEl]) main = "관성";
+  else if (targetEl === SHENG_PREV[dayEl]) main = "인성";
+  else main = "비겁";
+  // 대분류는 편/정 안 나눔
+  return main;
+}
+
+/* =========================
+ * 운 합성 (bare stems)
+ * ========================= */
 export function mergeStemsWithLuck(
   natalBare: Record<string, number>,
   chain?: LuckChain
 ): Record<string, number> {
-  // 운 bare stems 추출
   const daeBare = chain?.dae ? toBareFromGZ(chain.dae) : {};
   const seBare  = chain?.se  ? toBareFromGZ(chain.se)  : {};
   const wolBare = chain?.wol ? toBareFromGZ(chain.wol) : {};
   const ilBare  = chain?.il  ? toBareFromGZ(chain.il)  : {};
 
-  // 비율 합산
   const acc: Record<string, number> = {};
-
   const parts: { kind: keyof typeof LUCK_RATIO; bare: Record<string, number> }[] = [
     { kind: "natal", bare: natalBare },
     { kind: "dae",   bare: daeBare },
@@ -192,8 +266,7 @@ export function mergeStemsWithLuck(
   for (const { kind, bare } of parts) {
     const ratio = LUCK_RATIO[kind];
     if (!bare || Object.keys(bare).length === 0) continue;
-
-    const norm = normalizeTo100(bare); // 소스 합100으로 스케일
+    const norm = normalizeTo100(bare); // 각 소스 합100
     for (const [stem, val] of Object.entries(norm)) {
       acc[stem] = (acc[stem] ?? 0) + val * ratio;
     }
@@ -202,30 +275,18 @@ export function mergeStemsWithLuck(
   // 최종 normalize (합100)
   const sum = Object.values(acc).reduce((a, b) => a + b, 0);
   if (sum > 0) {
-    for (const k of Object.keys(acc)) {
-      acc[k] = (acc[k] / sum) * 100;
-    }
+    for (const k of Object.keys(acc)) acc[k] = (acc[k] / sum) * 100;
   }
-
   return acc;
 }
 
-/* =========================
- * 기본 매핑
- * ========================= */
-const STEM_TO_ELEMENT: Record<string, Element> = {
-  갑:"목", 을:"목", 병:"화", 정:"화", 무:"토",
-  기:"토", 경:"금", 신:"금", 임:"수", 계:"수",
-};
-
-/** GZ → bare stems (천간 + 지지본기천간) */
+/** GZ → bare stems (천간 + 지지 본기천간) */
 function stemsFromGZ(gz: string): string[] {
   if (!gz) return [];
-  const s = normalizeStemLike(gz.charAt(0)); // 천간
-  const b = normalizeStemLike(gz.charAt(1)); // 지지→본기천간
+  const s = normalizeStemLike(gz.charAt(0));
+  const b = normalizeStemLike(gz.charAt(1));
   return [s, b].filter(Boolean) as string[];
 }
-
 function toBareFromGZ(gz: string): Record<string, number> {
   const stems = stemsFromGZ(gz);
   const out: Record<string, number> = {};
@@ -233,85 +294,8 @@ function toBareFromGZ(gz: string): Record<string, number> {
   return out;
 }
 
-/**
- * 오행(Element) → 십신(TenGod) 변환
- * @param dayStem 기준 일간(천간)
- * @param targetEl 판정할 대상 오행
- * @param targetStem (optional) 대상 천간 (음양 판별용)
- */
-export function mapElementToTenGod(
-  dayStem: string,
-  targetEl: Element,
-  targetStem?: string
-): TenGod {
-  const dayEl = STEM_TO_ELEMENT[dayStem];
-  if (!dayEl) return "비겁";
-
-  let main: TenGod;
-  if (targetEl === dayEl) main = "비겁";
-  else if (targetEl === SHENG_NEXT[dayEl]) main = "식상";
-  else if (targetEl === KE[dayEl]) main = "재성";
-  else if (targetEl === KE_REV[dayEl]) main = "관성";
-  else if (targetEl === SHENG_PREV[dayEl]) main = "인성";
-  else main = "비겁";
-
-  // 음양 판정 → 편/정 갈라줌
-  if (targetStem) {
-    const same = isYang(dayStem) === isYang(targetStem);
-    switch (main) {
-      case "비겁": return same ? "비겁" : "비겁"; // 비겁은 보통 편/정 안 나눔
-      case "식상": return same ? "식상" : "식상";
-      case "재성": return same ? "재성" : "재성";
-      case "관성": return same ? "관성" : "관성";
-      case "인성": return same ? "인성" : "인성";
-    }
-  }
-  return main;
-}
-
-/** perStemElementScaled(키가 '갑목/신금' 또는 '갑/신' 섞여있어도) → '갑','을',… 단일천간 맵으로 통일 */
-function toBareStemMap(input: Record<string, number> | undefined): Record<string, number> {
-  const out: Record<string, number> = {};
-  for (const [k, v] of Object.entries(input ?? {})) {
-    if (v <= 0) continue;
-    // "갑목" → "갑", "辛" → "신", "酉" → "신"(본기), 등등을 모두 단일 천간으로 정규화
-    const stemKo = normalizeStemLike(k);
-    if (!stemKo) continue;
-    out[stemKo] = (out[stemKo] ?? 0) + v;
-  }
-  return out;
-}
-
-const STEMS_BARE = ["갑","을","병","정","무","기","경","신","임","계"] as const;
-function bareToFullStemMap(
-  bare: Record<string, number>
-): Record<
-  "갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수",
-  number
-> {
-  const zero: Record<
-    "갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수",
-    number
-  > = { 
-    갑목:0, 을목:0, 병화:0, 정화:0, 무토:0, 기토:0, 경금:0, 신금:0, 임수:0, 계수:0 
-  };
-
-  // 여기서 타입 명시
-  const out: Record<
-    "갑목"|"을목"|"병화"|"정화"|"무토"|"기토"|"경금"|"신금"|"임수"|"계수",
-    number
-  > = { ...zero };
-
-  for (const s of STEMS_BARE) {
-    const el = STEM_TO_ELEMENT[s];          // 예: '신' → '금'
-    const label = `${s}${el}` as keyof typeof out; // keyof로 안전하게
-    out[label] = Math.max(0, Math.round(bare[s] ?? 0));
-  }
-  return out;
-}
-
 /* =========================
- * 메인 함수
+ * 메인
  * ========================= */
 export function computeUnifiedPower(args: {
   natal: Pillars4;
@@ -327,13 +311,13 @@ export function computeUnifiedPower(args: {
     normalizeGZ(natal[2] ?? ""),
     normalizeGZ(natal[3] ?? ""),
   ];
-
   const dayStem = ko4[2]?.charAt(0) ?? "";
 
   const { hiddenStemMode, hiddenStem } = defaultSettings;
   const mode   = hiddenStemMode === "classic" ? "classic" : "hgc";
   const hidden = hiddenStem === "regular" ? "regular" : "all";
 
+  // ① 운 입력
   const luck = chain ? {
     tab,
     dae: chain.dae ? normalizeGZ(chain.dae) : undefined,
@@ -342,6 +326,7 @@ export function computeUnifiedPower(args: {
     il:  (tab === "일운")                                     ? (chain.il  ? normalizeGZ(chain.il)  : undefined) : undefined,
   } : { tab };
 
+  // ② “탭 반영” 상세
   const detailed = computePowerDataDetailed({
     pillars: ko4,
     dayStem,
@@ -353,24 +338,33 @@ export function computeUnifiedPower(args: {
     hourKey,
   });
 
-  // overlay 생성
-  const natalBare = toBareStemMap(detailed.perStemElementScaled);
+  // ③ “원국만” 상세 (운/탭 영향 제외)
+  const natalOnly = computePowerDataDetailed({
+    pillars: ko4,
+    dayStem,
+    mode,
+    hidden,
+    criteriaMode: "modern",
+    useHarmonyOverlay: true, // 필요 시 false로 바꿔도 됨 (원국 오버레이 배제 원하면)
+    luck: { tab: "원국", dae: undefined, se: undefined, wol: undefined, il: undefined },
+    hourKey
+  });
 
-    // const merged = mergeWithRatio([
-    //   { kind: "natal", bare: natalBare },
-    //   { kind: "dae",   bare: daeBare },
-    //   { kind: "se",    bare: seBare },
-    //   { kind: "wol",   bare: wolBare },
-    //   { kind: "il",    bare: ilBare },
-    // ]);
-
-  const merged = mergeStemsWithLuck(natalBare, chain);
+  // ④ 오버레이(탭 기준)
+  const natalBareFromDetailed = toBareStemMap(detailed.perStemElementScaled); // 원자료는 항상 perStemElementScaled에서
+  const merged = tab === "원국" ? natalBareFromDetailed : mergeStemsWithLuck(natalBareFromDetailed, chain);
   const mergedNorm = normalizeTo100(merged);
-
   const totalsSub = stemsScaledToSubTotals(merged, dayStem) as PerTenGodSub;
   const totalsMain = aggregateMainFromSubPercent(totalsSub);
   const perStemAugFull = bareToFullStemMap(mergedNorm);
 
+  // ⑤ “원국 고정” 세트 (운 영향 X) — ★여기가 핵심 수정
+  const natalBareFixed = toBareStemMap(natalOnly.perStemElementScaled);
+  const natalTotalsSub = stemsScaledToSubTotals(natalBareFixed, dayStem) as PerTenGodSub;
+  const natalBareFixedNorm = normalizeTo100(natalBareFixed);
+  const natalPerStemAugFull = bareToFullStemMap(natalBareFixedNorm);
+
+  // ⑥ 결과
   return {
     elementScoreRaw: detailed.elementScoreRaw,
     elementPercent100: detailed.elementPercent100,
@@ -384,7 +378,19 @@ export function computeUnifiedPower(args: {
     overlay: {
       totalsSub,
       perStemAugBare: merged,
-      perStemAugFull,
+      perStemAugFull: perStemAugFull,
+    },
+
+    // ✅ 원국 고정: 전부 'natalOnly' 기반으로 분리 저장
+    natalFixed: {
+      elementScoreRaw: pickElementMap(natalOnly.elementScoreRaw as Record<string, number>),
+      elementPercent100: pickElementMap(natalOnly.elementPercent100 as Record<string, number>),
+      totalsSub: natalTotalsSub, // ← 오타 수정: natalOnly.perTenGodSub 사용해야 함. 위에서 직접 계산해 대입.
+      overlay: {
+        totalsSub: natalTotalsSub,            // ← 운 섞이지 않은 순수 원국 소분류
+        perStemAugBare: natalBareFixed,      // ← 원국 bare
+        perStemAugFull: natalPerStemAugFull, // ← 원국 풀라벨
+      },
     },
   };
 }
