@@ -395,34 +395,6 @@ export function buildChatPrompt(params: {
     section(`십신 강약(소분류 10개·탭=원국·합계 100)`, unified.natalFixed.totalsSub),
     tab === "원국" ? "십신 강약(소분류 10개 운 없음)" :
     section(`십신 강약(소분류 10개·탭=${tab}·합계 100)`, totalsSub),
-    // 십이운성(원국)
-    section("십이운성(원국)",
-      natal.map((gz, i) => {
-        if (!gz || i >= posLabels.length) return null;
-        return {
-          pos: posLabels[i],
-          gz,
-          unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
-        };
-      }).filter(Boolean)
-    ),
-
-    // 십이신살(원국·설정 반영)
-    section("십이신살(원국·설정 반영)",
-      natal.map((gz, i) => {
-        if (!gz || i >= posLabels.length) return null;
-        return {
-          pos: posLabels[i],
-          gz,
-          shinsal: getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: gz.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          }),
-        };
-      }).filter(Boolean)
-    ),
 
     // 🚩 십이운성(원국+운 반영)
     section("십이운성(원국+운 반영)",
@@ -434,8 +406,16 @@ export function buildChatPrompt(params: {
               gz,
               unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
             };
-          }).filter(Boolean)
-    : [
+          }).filter(Boolean) : 
+          [...natal.map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
+            };
+          }).filter(Boolean),
+      
         ...(chain?.dae
           ? [{ pos: "대운", gz: chain.dae, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.dae.charAt(1)) }]
           : []),
@@ -466,8 +446,20 @@ export function buildChatPrompt(params: {
                   gaehwa: shinsalGaehwa,
                 }),
               };
-            }).filter(Boolean)
-    : [
+            }).filter(Boolean) : 
+            [natal.map((gz, i) => {
+              if (!gz || i >= posLabels.length) return null;
+              return {
+                pos: posLabels[i],
+                gz,
+                shinsal: getTwelveShinsalBySettings({
+                  baseBranch,
+                  targetBranch: gz.charAt(1),
+                  era: shinsalEra,
+                  gaehwa: shinsalGaehwa,
+                }),
+              };
+            }).filter(Boolean),
         ...(chain?.dae
           ? [{ pos: "대운", gz: chain.dae, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.dae.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
           : []),
