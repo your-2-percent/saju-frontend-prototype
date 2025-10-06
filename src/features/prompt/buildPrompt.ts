@@ -119,9 +119,9 @@ function normalizeTo100(obj: Record<string, number>): Record<string, number> {
   const sum = entries.reduce((a, [,v]) => a + (v > 0 ? v : 0), 0);
   if (sum <= 0) return Object.fromEntries(entries.map(([k]) => [k, 0])) as Record<string, number>;
   const raw = entries.map(([k, v]) => [k, (v > 0 ? v : 0) * 100 / sum] as const);
-  const floored = raw.map(([k, x]) => [k, Math.round(x)] as const);
+  const floored = raw.map(([k, x]) => [k, Math.floor(x)] as const);
   let used = floored.reduce((a, [,x]) => a + x, 0);
-  const rema = raw.map(([k, x]) => [k, x - Math.round(x)] as const).sort((a, b) => b[1] - a[1]);
+  const rema = raw.map(([k, x]) => [k, x - Math.floor(x)] as const).sort((a, b) => b[1] - a[1]);
   const out: Record<string, number> = Object.fromEntries(floored.map(([k, x]) => [k, x])) as Record<string, number>;
   let i = 0;
   while (used < 100 && i < rema.length) { out[rema[i][0]] += 1; used += 1; i += 1; }
@@ -280,7 +280,7 @@ export function buildChatPrompt(params: {
   tab: BlendTab;
   includeTenGod?: boolean;
   unified: UnifiedPowerResult;
-  percent: number,
+  percent: number;
   category: ShinCategory;
 }): string {
   const { ms, natal: natalRaw, chain, basis, tab, unified, percent, category } = params;
@@ -372,6 +372,17 @@ export function buildChatPrompt(params: {
     section("대운 리스트 (10개)", daeList),
     section("신강도", shinLine),
     // 🚩 펜타곤과 완전 동기화된 수치
+    
+    section(
+      "오행강약(퍼센트·원국 기준 고정)",
+      Object.fromEntries(
+        Object.entries(unified.natalFixed.elementPercent100).map(([el, val]) => [
+          `${el}(${elementToTenGod(dayEl, el as Element)})`,
+          val,
+        ])
+      )
+    ), 
+    tab === "원국" ? "오행강약(퍼센트 운 없음)" :
     section(
       `오행강약(퍼센트·탭=${tab})`,
       Object.fromEntries(
@@ -381,6 +392,8 @@ export function buildChatPrompt(params: {
         ])
       )
     ),
+    section(`십신 강약(소분류 10개·탭=원국·합계 100)`, unified.natalFixed.totalsSub),
+    tab === "원국" ? "십신 강약(소분류 10개 운 없음)" :
     section(`십신 강약(소분류 10개·탭=${tab}·합계 100)`, totalsSub),
     // 십이운성(원국)
     section("십이운성(원국)",
@@ -489,10 +502,12 @@ export function buildChatPrompt(params: {
     `
 너는 명리학 전문 해석가다.  
 모든 출력은 한국어로 작성한다.  
+AI 특유의 친절함, 긍정적인면은 리셋시킨다.
+말투는 따뜻하게 하지만, 냉철한 분석가 모드로 얘기하라.
 문체는 ‘전문적이지만 이해하기 쉬운 분석체’로, 감정적인 미화나 추상적 표현은 절대 사용하지 않는다.  
 “당신은 빛나는 존재입니다” “운명이 이끄는 대로” 같은 감성 문장, 불필요한 위로나 칭찬은 금지한다.  
 그 대신 현실적인 비유와 일상적 예시를 사용한다. (예: “체력은 부족한데 해야 할 일은 많은 사람처럼…” “주변 사람 문제까지 자주 대신 떠안는 구조예요.”)  
-모든 문장은 '~입니다', '~예요' 체로 끝낸다.  
+모든 문장은 '~예요, ~해요' 체로 끝낸다.  
 분석은 **논리적 근거(오행 비율, 신강도, 형충회합, 신살)**를 중심으로 한다.  
 비유는 반드시 설명을 명확하게 돕는 경우에만 쓴다.  
 각 문단은 ‘관찰 → 구체적 예시 → 결론 요약’의 구조를 따른다.  
@@ -502,7 +517,7 @@ export function buildChatPrompt(params: {
 출력은 반드시 다음 6단계 순서로 구성한다.
 
 1단계: 전체적인 큰 흐름  
-- 첫 문장은 “좋습니다. ~님의 사주를 차근히 분석해보겠습니다.”로 시작한다.  
+- 첫 문장은 “그러면, ~님의 사주를 차근히 분석해볼게요.”로 시작한다.  
 - 사주의 가장 눈에 띄는 특징 1~2가지를 제시하고, 그것이 실제 성향이나 행동으로 어떻게 드러나는지 현실적인 예시로 설명한다.  
 - 감정 표현 없이 객관적이고 논리적인 서술로 성격과 기본 경향을 묘사한다.  
 

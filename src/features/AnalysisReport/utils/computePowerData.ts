@@ -211,7 +211,22 @@ export interface ComputeOptions {
   hourKey: string; // UI 트리거용
 }
 
+type PerTenGodSub = {
+  비견: number; 겁재: number; 식신: number; 상관: number;
+  정재: number; 편재: number; 정관: number; 편관: number;
+  정인: number; 편인: number;
+};
+
 export interface ComputeResult {
+  overlay: {
+    /** 십신 소분류 10개 (비견~편인) */
+    totalsSub: PerTenGodSub;
+    /** 천간별 세부 오행 기여 (예: 경금, 신금, 임수 등) */
+    perStemAugBare: Record<string, number>;
+    /** 해밀턴 배분 완료된 오행별 정규화 수치 */
+    perStemAugFull: Record<string, number>;
+  };
+  PerTenGodSub: PerTenGodSub;
   totals: PowerData[]; // 대분류(비겁·식상·재성·관성·인성) — 합 100 정수
   perTenGod: Record<TenGod, { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number }>;
   elementScoreRaw: Record<Element, number>;
@@ -273,6 +288,7 @@ export function elementOfGodMajor(god: TenGod, dEl: Element): Element {
  * 메인 계산기
  * ========================= */
 export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
+  
   const {
     pillars,
     dayStem: dayStemOverride,
@@ -329,6 +345,17 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     pillarsKo[2] &&
     pillarsKo[2].length >= 2;
 
+  const emptyOverlay = {
+    totalsSub: {
+      비견: 0, 겁재: 0, 식신: 0, 상관: 0,
+      정재: 0, 편재: 0, 정관: 0, 편관: 0,
+      정인: 0, 편인: 0,
+    },
+    perStemAugBare: {},
+    perStemAugFull: {},
+  };
+
+
   if (!requiredOK) {
     const zeros: PowerData[] = (["비겁", "식상", "재성", "관성", "인성"] as TenGod[]).map((n) => ({
       name: n,
@@ -336,6 +363,7 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
       color: "#999999",
     }));
     return {
+      overlay: emptyOverlay,
       totals: zeros,
       perTenGod: {
         비겁: { a: "비견", b: "겁재", aVal: 0, bVal: 0 },
@@ -343,6 +371,18 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
         재성: { a: "정재", b: "편재", aVal: 0, bVal: 0 },
         관성: { a: "정관", b: "편관", aVal: 0, bVal: 0 },
         인성: { a: "정인", b: "편인", aVal: 0, bVal: 0 },
+      },
+      PerTenGodSub : {
+        비견: 0,
+        겁재: 0,
+        식신: 0,
+        상관: 0,
+        정재: 0,
+        편재: 0,
+        정관: 0,
+        편관: 0,
+        정인: 0,
+        편인: 0
       },
       elementScoreRaw: elementScore,
       deukFlags: {
@@ -542,6 +582,9 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   type LuckPart = { stem?: string; el: Element; pol: YinYang; val: number };
   const luckSubs: LuckPart[] = [];
 
+  if (!luck || luck.tab === "원국") {
+    // 운이 없거나 원국 탭일 경우 → Luck 가산 로직 전부 무시하고 바로 아래 단계로 이동
+  } else {
   function addLuckGZ(raw: string | null | undefined, kind: LuckKind) {
     const ko = raw ? normalizeGZ(raw) : "";
     if (!ko || ko.length < 2) return;
@@ -571,7 +614,6 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     }
   }
 
-  if (luck && luck.tab !== "원국") {
     addLuckGZ(luck.dae, "dae");
     if (luck.tab === "세운" || luck.tab === "월운" || luck.tab === "일운") addLuckGZ(luck.se, "se");
     if (luck.tab === "월운" || luck.tab === "일운") addLuckGZ(luck.wol, "wol");
@@ -774,9 +816,16 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     });
   }
 
+  const overlay = {
+    totalsSub: subAcc,                         // 십신 소분류 10개 (비견~편인)
+    perStemAugBare: perStemRaw,                // 천간별 세부 오행 기여 (예: 경금, 신금)
+    perStemAugFull: perStemElementScaled,      // 해밀턴 분배 완료된 오행별 정규값
+  };
   return {
+    overlay,
     totals,
     perTenGod,
+    PerTenGodSub: subAcc,
     stemScoreRaw,
     elementScoreRaw: elementScore,
     deukFlags,

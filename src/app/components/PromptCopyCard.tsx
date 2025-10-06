@@ -199,15 +199,6 @@ export default function PromptCopyCard({
   const text = useMemo(() => {
   if (!ms) return "";
 
-  // const hourGz =
-  //   predHour && typeof predHour === "object"
-  //     ? toGZ(predHour)
-  //     : predHour
-  //     ? toGZ(predHour)
-  //     : parsed.hour
-  //     ? toGZ(parsed.hour)
-  //     : undefined;
-
   return buildChatPrompt({
       ms,
       natal: natalWithPrediction,
