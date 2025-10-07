@@ -18,6 +18,7 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
 import { getSolarTermBoundaries } from "@/features/myoun";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
+import { getJieRangeByDate } from "../utils/solarTermUtils";
 
 /* ===== 한자/한글 변환 + 음간/음지 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -122,10 +123,12 @@ export default function WolwoonList({
   data,
   activeYear,
   onSelect,
+  onSelectMonth 
 }: {
   data: MyeongSik;
   activeYear: number | null;
   onSelect?: (year: number, month: number) => void;
+  onSelectMonth: (d: Date) => void
 }) {
   const settings = useSettingsStore((s) => s.settings);
 
@@ -134,7 +137,7 @@ export default function WolwoonList({
       ? 127.5
       : data.birthPlace.lon;
 
-    const birthRaw = toCorrected(data);
+  const birthRaw = toCorrected(data);
   const birth = useMemo(
     () => withSafeClockForUnknownTime(data, birthRaw),
     [data, birthRaw]
@@ -204,9 +207,10 @@ export default function WolwoonList({
             <div
               key={`${ev.term}-${ev.at.toISOString()}`}
               onClick={() => {
+                onSelectMonth(ev.at);
                 const delayed = new Date(ev.at);
-                delayed.setDate(delayed.getDate() + 1);
-                onSelect?.(delayed.getFullYear(), delayed.getMonth() + 1);
+                const { start } = getJieRangeByDate(delayed); // ✅ 클릭된 절입 구간 기준
+                onSelect?.(start.getFullYear(), start.getMonth()); // 이 월이 IlwoonCalendar에 전달됨
                 setFromEvent({ at: delayed, gz: getMonthGanZhi(delayed, lon) }, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
