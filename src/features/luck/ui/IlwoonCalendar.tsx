@@ -1,5 +1,5 @@
 // features/luck/IlwoonCalendar.tsx
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { getDayGanZhi, getYearGanZhi } from "@/shared/domain/간지/공통";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
@@ -11,8 +11,8 @@ import * as Twelve from "@/shared/domain/간지/twelve";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { findActiveIndexByDate } from "@/features/luck/utils/active";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
+import { getJieRangeByDate } from "../utils/solarTermUtils";
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -59,32 +59,21 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
   return (mode as unknown) as Twelve.EraType;
 }
 
-/* ===== 유틸: 월 범위(1일~다음달 1일) @ 로컬정오 고정 (DST/오프셋 튐 방지) ===== */
-function monthRangeNoon(year: number, month: number) {
-  // month: 1~12
-  const start = new Date(year, month - 1, 1, 12, 0, 0, 0);
-  const end = new Date(month === 12 ? year + 1 : year, month === 12 ? 0 : month, 1, 12, 0, 0, 0);
-  return { start, end };
-}
-
-/* ===== 절기 앵커: 1월은 전년도 태양년 테이블 사용 ===== */
-function solarYearAnchorDate(year: number, month: number) {
-  const anchorYear = month === 1 ? year - 1 : year;
-  // 태양년 내부 확정일(6/15 정오)로 테이블 생성 → 경계 이슈 배제
-  return new Date(anchorYear, 5, 15, 12, 0, 0, 0);
-}
-
 export default function IlwoonCalendar({
   data,
   year,
   month,
   hourTable,
+  selectedMonth
 }: {
   data?: MyeongSik | null;
   year: number;   // 그레고리안 연도
   month: number;  // 1~12
   hourTable?: DayBoundaryRule;
+  selectedMonth: Date | null;
 }) {
+  const { date, setFromEvent } = useLuckPickerStore();
+
   const settings = useSettingsStore((s) => s.settings);
 
   const rule: DayBoundaryRule =
@@ -98,48 +87,81 @@ export default function IlwoonCalendar({
     const gz = getDayGanZhi(birthSafe, rule);
     return gz.charAt(0) as Stem10sin;
   }, [birthSafe, rule]);
+
   const lon =
     data && data.birthPlace && data.birthPlace.name !== "모름" && data.birthPlace.lon !== 0
       ? data.birthPlace.lon
       : 127.5;
 
   const baseBranch: Branch10sin | null =
-   data && birthSafe
-     ? ((settings.sinsalBase === "일지"
-         ? getDayGanZhi(birthSafe, rule).charAt(1)
-         : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
-     : null;
+    data && birthSafe
+      ? ((settings.sinsalBase === "일지"
+          ? getDayGanZhi(birthSafe, rule).charAt(1)
+          : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
+      : null;
 
-  // 월 범위(정오 고정)
-  const { start: monthStart, end: monthEnd } = useMemo(
-    () => monthRangeNoon(year, month),
-    [year, month]
-  );
+  /* ===== 절입 구간 범위 ===== */
+  // ✅ year/month 기준으로 anchor 날짜 생성 (0-based)
+  const anchor = useMemo(() => 
+    !selectedMonth ? new Date(year, month - 1, 15, 12, 0, 0, 0) : new Date(year, month + 1, 15, 12, 0, 0, 0), 
+  [selectedMonth, year, month]) ;
 
-  // 절기 테이블(표시만)
-  const termMarks = useMemo(() => {
-    const anchor = solarYearAnchorDate(year, month);
-    const terms = (getSolarTermBoundaries(anchor) ?? []).slice()
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    return terms.filter(t => t.date >= monthStart && t.date < monthEnd);
-  }, [year, month, monthStart, monthEnd]);
+  // ✅ 절입 구간은 anchor 기준으로 계산
+  const jie = useMemo(() => getJieRangeByDate(anchor), [anchor]);
+  const monthStart = jie.start;
+  const monthEnd = jie.end;
 
-  // 월 전체 날짜 생성(정오 고정)
-  const days: Date[] = useMemo(() => {
-    const acc: Date[] = [];
-    const cur = new Date(monthStart);
-    while (cur < monthEnd) {
-      acc.push(new Date(cur));
-      cur.setDate(cur.getDate() + 1);
-    }
-    return acc;
+  const [termMarks, setTermMarks] = useState<{ name: string; date: Date }[]>([]);
+
+  const days = useMemo(() => { 
+    const arr: Date[] = []; 
+    const cur = new Date(monthStart); 
+    while (cur < monthEnd) { 
+      arr.push(new Date(cur)); 
+      cur.setDate(cur.getDate() + 1); 
+    } return arr; 
   }, [monthStart, monthEnd]);
 
-  // 7열 행렬화
+  // ✅ 1) 로드시 (초기 1회)
+  useEffect(() => {
+    const tables = [
+      ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
+      ...(getSolarTermBoundaries(new Date(year, 5, 15, 12, 0)) ?? []),
+      ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
+    ]
+      .map(t => ({ name: String(t.name), date: new Date(t.date) }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const inRange = tables.filter(t => t.date >= new Date(monthStart) && t.date <= new Date(monthEnd));
+    const nextTerm = tables.find(t => t.date > new Date(monthEnd));
+    setTermMarks(nextTerm ? [...inRange, nextTerm] : inRange);
+    console.log("로드시");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // ✅ 빈 배열: 마운트 시 1회만
+
+
+  // ✅ 2) 월운리스트 클릭 시 (따로 트리거)
+  useEffect(() => {
+    if (!selectedMonth) return;
+    const tables = [
+      ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
+      ...(getSolarTermBoundaries(new Date(year, 5, 15, 12, 0)) ?? []),
+      ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
+    ]
+      .map(t => ({ name: String(t.name), date: new Date(t.date) }))
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const inRange = tables.filter(t => t.date >= monthStart && t.date <= monthEnd);
+    const nextTerm = tables.find(t => t.date > monthEnd);
+    setTermMarks(nextTerm ? [...inRange, nextTerm] : inRange);
+    console.log("월운 클릭 시");
+  }, [selectedMonth, monthEnd, monthStart, year]);
+
+  /* ===== 7열 행렬화: 시작 요일은 'monthStart' 기준 ===== */
   const weeks = useMemo(() => {
     const rows: (Date | null)[][] = [];
     let row: (Date | null)[] = [];
-    const firstWeekDay = new Date(year, month - 1, 1).getDay();
+    const firstWeekDay = new Date(monthStart).getDay();
     for (let i = 0; i < firstWeekDay; i++) row.push(null);
     for (const d of days) {
       if (row.length === 7) {
@@ -151,20 +173,41 @@ export default function IlwoonCalendar({
     while (row.length < 7) row.push(null);
     rows.push(row);
     return rows;
-  }, [days, year, month]);
+  }, [days, monthStart]);
 
-  const { date, setFromEvent } = useLuckPickerStore();
-  const activeIndex = useMemo(() => {
-    const events = days.map(d => ({ at: d }));
-    return findActiveIndexByDate(events, date);
-  }, [days, date]);
+  // 선택일 하이라이트(전역)
+  const pickerNoon = useMemo(() => {
+    if (!date) return null;
+    const d = new Date(date);
+    const parts = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    }).formatToParts(d);
+
+    const y = Number(parts.find(p => p.type === "year")?.value ?? d.getFullYear());
+    const m = Number(parts.find(p => p.type === "month")?.value ?? (d.getMonth() + 1));
+    const day = Number(parts.find(p => p.type === "day")?.value ?? d.getDate());
+
+    return new Date(y, m - 1, day, 12, 0, 0, 0);
+  }, [date]);
 
   return (
-    <div className="w-full max-w={[800]} mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+    <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       {/* 헤더 */}
       <div className="flex justify-center items-center px-2 desk:px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60">
         <div className="text-center text-[11px] desk:text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-          {year}년 {month}월
+          {/* 절입 기준 라벨 */}
+          {jie?.cur?.name ? (
+            <>
+              {jie.cur.name}
+              {" ~ "}
+              {jie?.next?.name ?? ""}
+            </>
+          ) : (
+            `${year}년 ${month}월`
+          )}
           {termMarks.length > 0 && (
             <div className="mt-0.5 text-[10px] desk:text-xs font-normal text-neutral-500 dark:text-neutral-400">
               [
@@ -190,11 +233,30 @@ export default function IlwoonCalendar({
         {weeks.map((week, wi) =>
           week.map((d, di) => {
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
-            const dayLocal = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 4, 30, 0, 0);
 
-            const idx = days.findIndex(x => x.getTime() === d.getTime());
-            const isActive = idx === activeIndex + 1;
+            // 셀 샘플 시각 = 그 날의 로컬 정오 (경계 안전)
+            const dayLocal = new Date(d);
+            dayLocal.setHours(12, 0, 0, 0);
 
+            // 오늘 하이라이트
+            const today = new Date();
+            // 오늘 날짜인지
+            const isToday =
+              dayLocal.getFullYear() === today.getFullYear() &&
+              dayLocal.getMonth() === today.getMonth() &&
+              dayLocal.getDate() === today.getDate();
+
+            // 선택된 날짜인지
+            const isSelected =
+              !!pickerNoon &&
+              dayLocal.getFullYear() === pickerNoon.getFullYear() &&
+              dayLocal.getMonth() === pickerNoon.getMonth() &&
+              dayLocal.getDate() === pickerNoon.getDate();
+
+            // ✅ active는 무조건 1개: 선택이 있으면 오늘은 비활성
+            const isActive = isSelected || (!pickerNoon && isToday);
+
+            // ✅ 일주 계산도 정오로
             const gz = getDayGanZhi(dayLocal, rule);
             const stem = gz.charAt(0) as Stem10sin;
             const branch = gz.charAt(1) as Branch10sin;
@@ -229,8 +291,8 @@ export default function IlwoonCalendar({
               <div
                 key={d.toISOString()}
                 onClick={() => {
-                  // ✅ 일운 클릭 시 글로벌 날짜 갱신 → 월운 리스트는 절입 경계 기준으로 자동 active 변경
-                  setFromEvent({ at: d }, "일운");
+                  // 클릭 시에도 정오로 전달 (경계 안전)
+                  setFromEvent({ at: dayLocal }, "일운");
                 }}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
@@ -265,7 +327,7 @@ export default function IlwoonCalendar({
                   </div>
                 )}
               </div>
-            )
+            );
           })
         )}
       </div>

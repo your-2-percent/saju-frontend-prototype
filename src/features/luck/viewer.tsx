@@ -14,11 +14,11 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
   const daeList = useDaewoonList(data);
 
   const [activeDaeIndex, setActiveDaeIndex] = useState<number | null>(null);
-  //const [/*activeYear,*/ setActiveYear] = useState<number | null>(null);
   const [ilwoonTarget, setIlwoonTarget] = useState<{ year: number; month: number } | null>(null);
 
   // 처음에는 일운까지 전부 보이게
   const [visibleLevel, setVisibleLevel] = useState<"dae" | "se" | "wol" | "il">("il");
+  const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
 
   // 로드 시 현재 대운 자동 선택
   useEffect(() => {
@@ -46,9 +46,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
     });
 
     if (idx !== -1) {
-      //const y = sewoonList[idx].at.getFullYear();
-      //setActiveYear(y);
-      setIlwoonTarget({ year: now.getFullYear(), month: now.getMonth() + 1 });
+      setIlwoonTarget({ year: now.getFullYear(), month: now.getMonth() });
     }
   }, [activeDaeIndex, daeList]);
 
@@ -57,7 +55,6 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
   const activeYear = date.getMonth() + 1 === 1
     ? date.getFullYear() - 1
     : date.getFullYear();
-  //const activeMonth = date.getMonth() + 1;
 
   const seList = useMemo(() => {
     if (!luck?.dae?.gz) return [];
@@ -99,6 +96,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
             setIlwoonTarget({ year: y, month: m });
             setVisibleLevel("il"); // 월운 클릭 → 일운까지 보임
           }}
+          onSelectMonth={setSelectedMonth}
         />
       ) : null}
 
@@ -106,9 +104,10 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       {visibleLevel === "il" && ilwoonTarget && (
         <IlwoonCalendar
           data={data}
-          year={date.getFullYear()}
-          month={date.getMonth() + 1}
+          year={ilwoonTarget.year}
+          month={ilwoonTarget.month}
           hourTable={data?.mingSikType as DayBoundaryRule}
+          selectedMonth={selectedMonth}
         />
       )}
     </div>
