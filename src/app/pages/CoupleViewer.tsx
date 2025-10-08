@@ -486,8 +486,8 @@ function PersonSlot({
   const birthFixed = useMemo(() => (data ? baseSolarDate(data) : null), [data]);
 
   // ✅ 원국 4주 (보정된 Date 기준)
-  const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "야자시") : undefined);
-  const natalDay = ensureGZ(birthFixed ? getDayGanZhi(birthFixed, "야자시") : undefined);
+  const natalHour = ensureGZ(birthFixed ? getHourGanZhi(birthFixed, "조자시/야자시") : undefined);
+  const natalDay = ensureGZ(birthFixed ? getDayGanZhi(birthFixed, "조자시/야자시") : undefined);
   const natalMonth = ensureGZ(birthFixed ? getMonthGanZhi(birthFixed) : undefined);
   const natalYear = ensureGZ(birthFixed ? getYearGanZhi(birthFixed) : undefined);
 
@@ -505,7 +505,7 @@ function PersonSlot({
   }, [data]);
 
   const ruleForBase: DayBoundaryRule =
-    ((data?.mingSikType as DayBoundaryRule) ?? "야자시");
+    ((data?.mingSikType as DayBoundaryRule) ?? "조자시/야자시");
 
   const sinsalBaseBranch = useMemo<Branch10sin>(() => {
     const byDay = birthCorrected
@@ -564,8 +564,8 @@ function PersonSlot({
     if (mode !== "실시간") return null;
     const t = effectiveDate;
     return {
-      si: ensureGZ(getHourGanZhi(t, "야자시")),
-      il: ensureGZ(getDayGanZhi(t, "야자시")),
+      si: ensureGZ(getHourGanZhi(t, "조자시/야자시")),
+      il: ensureGZ(getDayGanZhi(t, "조자시/야자시")),
       wl: ensureGZ(getMonthGanZhi(t)),
       yn: ensureGZ(getYearGanZhi(t)),
     };
@@ -686,8 +686,8 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
     try {
       const birth = baseSolarDate(ms); // ✅ 보정시 반영된 출생 시각
       const natal = {
-        hour: ensureGZ(getHourGanZhi(birth, "야자시")),
-        day: ensureGZ(getDayGanZhi(birth, "야자시")),
+        hour: ensureGZ(getHourGanZhi(birth, "조자시/야자시")),
+        day: ensureGZ(getDayGanZhi(birth, "조자시/야자시")),
         month: ensureGZ(getMonthGanZhi(birth)),
         year: ensureGZ(getYearGanZhi(birth)),
       };

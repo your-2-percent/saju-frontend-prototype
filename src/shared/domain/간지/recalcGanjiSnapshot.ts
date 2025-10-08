@@ -39,7 +39,7 @@ const lunar2solarStrict = pickSL(solarlunar);
 
 /* --- 핵심: 간지/보정시 스냅샷 재계산 --- */
 export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLocal" | "ganji"> {
-  const hourRule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "야자시";
+  const hourRule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   // 날짜 파싱
   let y = Number(ms.birthDay.slice(0, 4));

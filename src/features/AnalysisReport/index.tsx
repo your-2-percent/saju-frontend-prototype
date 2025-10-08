@@ -379,7 +379,7 @@ export default function AnalysisReport({
   }, [daewoonGzProp, daeList, autoDaeIndex]);
 
   const { manualHour } = useHourPredictionStore();
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   const solarKo = useMemo(() => normalizePillars(pillars), [pillars]);
   const lunarKo = useMemo(() => normalizePillars(lunarPillars), [lunarPillars]);

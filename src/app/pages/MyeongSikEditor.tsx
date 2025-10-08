@@ -184,7 +184,7 @@ export default function MyeongSikEditor({
       folder: normalizedFolder,
       calendarType: form.calendarType ?? "solar",
       mingSikType: form.mingSikType ?? "조자시/야자시",
-      DayChangeRule: (form.mingSikType ?? "야자시") === "인시" ? "인시일수론" : "자시일수론",
+      DayChangeRule: (form.mingSikType ?? "조자시/야자시") === "인시" ? "인시일수론" : "자시일수론",
       dir,
       corrected,                 // ✅ 새로 계산한 보정 Date 반영
       // 아래 필드는 recalcGanjiSnapshot가 다시 채움

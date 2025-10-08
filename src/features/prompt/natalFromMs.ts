@@ -52,7 +52,7 @@ export function buildNatalPillarsFromMs(ms: MyeongSik | null): Pillars4 {
   const corrected = getCorrectedDate(raw, lon, unknownTime);
 
   // 4) 시주 계산 규칙
-  const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   // 5) 만세력 간지 계산
   const yGZ = getYearGanZhi(corrected, lon);

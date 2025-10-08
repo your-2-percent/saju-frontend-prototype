@@ -142,7 +142,7 @@ export default function WolwoonList({
     () => withSafeClockForUnknownTime(data, birthRaw),
     [data, birthRaw]
   );
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   // 안전한 일간(십신 계산용)
   const dayStem = useMemo<Stem10sin>(() => {
     const dayGz = getDayGanZhi(birth, rule);

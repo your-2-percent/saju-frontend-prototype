@@ -133,7 +133,7 @@ export default function SewoonList({
   const activeIndex = localIndex ?? storeIndex;
 
   /* 6) 도메인 파생값(표시/신살 등) — ✅ 안전한 일간/기준지지 */
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const dayStem = useMemo<Stem10sin>(() => {
     const dayGz = getDayGanZhi(birth, rule);
     return dayGz.charAt(0) as Stem10sin;

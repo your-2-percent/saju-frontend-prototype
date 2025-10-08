@@ -256,7 +256,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
       : form.birthPlace.lon;
 
     const corr = getCorrectedDate(rawBirth, lon, isUnknownPlace);
-    const hourRule: DayBoundaryRule = (form.mingSikType ?? "야자시") as DayBoundaryRule;
+    const hourRule: DayBoundaryRule = (form.mingSikType ?? "조자시/야자시") as DayBoundaryRule;
 
     const correctedLocal =
       !isUnknownTime
@@ -549,7 +549,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
             <fieldset role="radiogroup" aria-label="명식 기준" className="flex flex-wrap gap-3">
               {MING_OPTIONS.map((v) => {
                 const id = `ming_${v}`;
-                const selected = (form.mingSikType ?? "야자시") === v;
+                const selected = (form.mingSikType ?? "조자시/야자시") === v;
                 return (
                   <span key={v} className="inline-flex items-center gap-1">
                     <input id={id} name="mingSikType" type="radio" style={{ display: "none" }} />
@@ -577,7 +577,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
                         if (!keys.includes(e.key)) return;
 
                         e.preventDefault();
-                        const cur = (form.mingSikType ?? "야자시") as MingType;
+                        const cur = (form.mingSikType ?? "조자시/야자시") as MingType;
                         const idx = MING_OPTIONS.indexOf(cur);
                         const ni  = nextIndex(idx, MING_OPTIONS.length, e.key);
                         const nv  = MING_OPTIONS[ni];

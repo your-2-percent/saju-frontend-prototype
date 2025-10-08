@@ -87,7 +87,7 @@ export default function DaewoonList({
 
   // ✅ '대운 십신' 기준이 되는 일간을 안전하게 다시 산출 (toDayStem 쓰지 말자)
   const dayStem = useMemo<Stem10sin>(() => {
-    const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+    const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
     const dayGz = getDayGanZhi(birth, rule);           // ← 너가 이미 맞다고 확인한 그 로직
     return dayGz.charAt(0) as Stem10sin;               // ← 일간만 뽑기
   }, [birth, data.mingSikType]);
@@ -112,7 +112,7 @@ export default function DaewoonList({
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
       : data.birthPlace.lon;
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const baseBranchForShinsal: Branch10sin = (
     sinsalBase === "일지"
       ? getDayGanZhi(birth, rule).charAt(1)

@@ -136,8 +136,8 @@ export default function TodaySaju() {
                         text-neutral-900 dark:text-neutral-100
                         focus:outline-none focus:ring-2 focus:ring-amber-500/40"
             >
-              <option value="야자시">야자시 (전날 23시)</option>
-              <option value="조자시">조자시 (자정)</option>
+              <option value="자시">야자시 (전날 23시)</option>
+              <option value="조자시/야자시">조자시/야자시 (자정)</option>
               <option value="인시">인시 (새벽 3시)</option>
             </select>
 
