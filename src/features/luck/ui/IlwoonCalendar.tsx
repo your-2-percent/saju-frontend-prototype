@@ -72,11 +72,10 @@ export default function IlwoonCalendar({
   hourTable?: DayBoundaryRule;
   selectedMonth: Date | null;
 }) {
-  //const { date, setFromEvent } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
 
   const rule: DayBoundaryRule =
-    hourTable ?? ((data?.mingSikType as DayBoundaryRule | undefined) ?? "야자시");
+    hourTable ?? ((data?.mingSikType as DayBoundaryRule | undefined) ?? "조자시/야자시");
 
   const birthRaw = data ? toCorrected(data) : null;
   const birthSafe = data && birthRaw ? withSafeClockForUnknownTime(data, birthRaw) : null;
@@ -99,18 +98,12 @@ export default function IlwoonCalendar({
           : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
       : null;
 
-  /* ===== 앵커: “해당 월의 1일 정오” 또는 “선택일 정오” =====
-     - 10/7(절입 전) → 10/1 정오를 앵커로 → 9월 절기 구간 반환
-     - 10/8(절입 후) → 10/1 정오도 이미 절입 후? 아니, 10/1은 절입 전이므로
-       선택일이 있을 때는 선택일 자체 정오를 쓰는 게 더 직관적임
-  */
   const today = (() => {
     return new Date();
   })();
 
   const anchor = (() => {
     const base = new Date(year, month);
-    console.log(base);
     
     const jie = getJieRangeByDate(base);
     return new Date(jie.start);

@@ -576,7 +576,7 @@ export default function SajuChart({ data, hourTable }: Props) {
               onClick={() => setUseInsi((prev) => !prev)}
               className="px-2 py-1 text-xs rounded border bg-white dark:bg-neutral-900 border-neutral-300 dark:border-neutral-600 cursor-pointer"
             >
-              {useInsi ? "현재 : 인시 기준" : "현재 : 자시 기준"}
+              {useInsi ? "현재 : 인시" : "현재 : 자시"}
             </button>
           </div>
           <div className="grid grid-cols-4 gap-2">

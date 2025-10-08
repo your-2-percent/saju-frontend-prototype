@@ -183,7 +183,7 @@ export default function MyeongSikEditor({
       memo: form.memo ?? "",
       folder: normalizedFolder,
       calendarType: form.calendarType ?? "solar",
-      mingSikType: form.mingSikType ?? "야자시",
+      mingSikType: form.mingSikType ?? "조자시/야자시",
       DayChangeRule: (form.mingSikType ?? "야자시") === "인시" ? "인시일수론" : "자시일수론",
       dir,
       corrected,                 // ✅ 새로 계산한 보정 Date 반영
@@ -375,7 +375,7 @@ export default function MyeongSikEditor({
         <div>
           <label className={labelBase}>명식 기준</label>
           <div className="flex gap-4 text-sm">
-            {(["야자시", "조자시", "인시"] as const).map((v) => {
+            {(["자시", "조자시/야자시", "인시"] as const).map((v) => {
               const id = `editor_ming_${v}`;
               return (
                 <span key={v} className="inline-flex items-center gap-1">
@@ -383,7 +383,7 @@ export default function MyeongSikEditor({
                     type="radio"
                     className={radioAccent}
                     name="mingSikType"
-                    checked={(form.mingSikType ?? "조자시") === v}
+                    checked={(form.mingSikType ?? "자시") === v}
                     onChange={() => setForm({ ...form, mingSikType: v })}
                     id={id}
                   />

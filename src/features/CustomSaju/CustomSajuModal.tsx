@@ -13,7 +13,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { 간지_MAP } from "@/shared/domain/간지/const";
 
 // 프로젝트 규격에 맞춰 필요시 조정
-type DayBoundaryRule = "야자시" | "조자시" | "인시";
+type DayBoundaryRule = "자시" | "조자시/야자시" | "인시";
 
 type Pillars = {
   yearStem?: Stem;  yearBranch?: Branch;
@@ -134,7 +134,7 @@ export default function CustomSajuModal({
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
   const [form, setForm] = useState<FormState>({
     gender: "남자",
-    mingSikType: "야자시",
+    mingSikType: "조자시/야자시",
     DayChangeRule: "자시일수론",
     calendarType: "solar",
   });
@@ -173,7 +173,7 @@ export default function CustomSajuModal({
     return;
   }
 
-  const dayRule: DayBoundaryRule = hourRule === "자시" ? "야자시" : "인시";
+  const dayRule: DayBoundaryRule = hourRule === "자시" ? "조자시/야자시" : "인시";
 
   // 하나만 저장한다고 가정 (여러 개 처리하려면 map으로 돌리면 됨)
   const picked = chosen[0];
@@ -249,7 +249,7 @@ export default function CustomSajuModal({
     memo: form.memo ?? "",
     folder: normalizeFolderValue(form.folder),
 
-    mingSikType: form.mingSikType ?? "야자시",
+    mingSikType: form.mingSikType ?? "조자시/야자시",
     DayChangeRule: (form.mingSikType === "인시") ? "인시일수론" : "자시일수론",
     calendarType: form.calendarType ?? "solar",
 
@@ -280,7 +280,7 @@ export default function CustomSajuModal({
   onSave(payload);
 
   setToast("저장 완료!");
-  setForm({ gender: "남자", mingSikType: "야자시", calendarType: "solar" });
+  setForm({ gender: "남자", mingSikType: "조자시/야자시", calendarType: "solar" });
   setUnknownPlace(false);
 
   onClose();
@@ -515,7 +515,7 @@ export default function CustomSajuModal({
 
       for (let t = start.getTime(); t <= end.getTime(); t += 24*3600*1000) {
         const d = new Date(t);
-        const dayRule: DayBoundaryRule = hourRule === "자시" ? "야자시" : "인시";
+        const dayRule: DayBoundaryRule = hourRule === "자시" ? "조자시/야자시" : "인시";
 
         const yGZ = getYearGanZhi(d);
         if (yGZ !== targetYear) continue;

@@ -41,7 +41,7 @@ const CALENDAR_OPTIONS = [
   { value: "lunar" as const, label: "음력", id: "calendarType_lunar" },
 ];
 
-const MING_OPTIONS = ["야자시", "조자시", "인시"] as const;
+const MING_OPTIONS = ["자시", "조자시/야자시", "인시"] as const;
 type MingType = typeof MING_OPTIONS[number];
 
 const GENDER_OPTIONS = ["남자", "여자"] as const;
@@ -68,7 +68,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
   const [stepIndex, setStepIndex] = useState(0);
   const [form, setForm] = useState<FormState>({
     gender: "남자",
-    mingSikType: "야자시",
+    mingSikType: "조자시/야자시",
     DayChangeRule: "자시일수론",
     calendarType: "solar",
   });
@@ -298,7 +298,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
         : form.birthPlace ?? { name: "", lat: 0, lon: 127.5 },
       relationship: form.relationship ?? "",
       memo: form.memo ?? "",
-      mingSikType: form.mingSikType ?? "야자시",
+      mingSikType: form.mingSikType ?? "조자시/야자시",
       DayChangeRule: form.mingSikType === "인시" ? "인시일수론" : "자시일수론",
       folder: folderVal,
       correctedLocal,
@@ -315,7 +315,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
     onSave(payload);
 
     setToast("저장 완료!");
-    setForm({ gender: "남자", mingSikType: "야자시", calendarType: "solar" });
+    setForm({ gender: "남자", mingSikType: "조자시/야자시", calendarType: "solar" });
     setUnknownTime(false);
     setUnknownPlace(false);
     setStepIndex(0);

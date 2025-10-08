@@ -15,7 +15,7 @@ export type MyeongSik = {
   relationship?: string;
   memo?: string;
   folder?: string;
-  mingSikType: "야자시" | "조자시" | "인시";
+  mingSikType: "자시" | "조자시/야자시" | "인시";
   DayChangeRule: "자시일수론" | "인시일수론";
   favorite?: boolean;
 
@@ -63,7 +63,7 @@ export function makeEmptyMyeongSik(): MyeongSik {
     relationship: "",
     memo: "",
     folder: "미분류",
-    mingSikType: "야자시",
+    mingSikType: "조자시/야자시",
     DayChangeRule: "자시일수론",
     favorite: false,
 

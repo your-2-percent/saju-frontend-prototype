@@ -273,6 +273,7 @@ const MAP_D_HYUPROK = D({ 갑:"축·묘", 을:"인·진", 병:"진·오", 정:"�
 const MAP_D_GWANGUI  = D({ 갑:"사", 을:"사", 병:"사", 정:"신", 무:"해", 기:"해", 경:"인", 신:"인", 임:"신", 계:"신" });
 const MAP_D_MUNGOK  = D({ 갑:"해", 을:"자", 병:"인", 정:"묘", 무:"인", 기:"묘", 경:"사", 신:"오", 임:"신", 계:"유" });
 const MAP_D_HAKDANG = D({ 갑:"해", 을:"오", 병:"인", 정:"유", 무:"인", 기:"유", 경:"사", 신:"자", 임:"신", 계:"묘" });
+const MAP_D_SIPGANROK = D({ 갑: "인", 을: "묘", 병: "사", 정: "오", 무: "사", 기: "오", 경: "신", 신: "유", 임: "해", 계: "자" });
 
 // 흉신
 const MAP_D_HONGYEOM = D({ 갑:"신", 을:"오", 병:"인", 정:"미", 무:"진", 기:"진", 경:"술", 신:"유", 임:"자", 계:"신" });
@@ -537,7 +538,7 @@ export function buildShinsalTags({
   applyMonthIljuToNatal(natal, MAP_M_CHUNSA_ILJU,   "천사",    natalGoodPos);
   applyMonthIljuToNatal(natal, MAP_M_CHUNJEON_ILJU, "천전살",  natalBadPos);
   applyMonthIljuToNatal(natal, MAP_M_JIJEON_ILJU,   "지전살",  natalBadPos);
-  applyMonthIljuToNatal(natal, MAP_M_JINSIN_ILJU,   "진신",    natalBadPos);
+  applyMonthIljuToNatal(natal, MAP_M_JINSIN_ILJU,   "진신",    natalGoodPos);
 
   // 기타 지지 매핑
   applyMonthBranchToNatal(natal, MAP_M_GUPGAK_B,  "급각살",   natalBadPos, "ALL");
@@ -565,6 +566,7 @@ export function buildShinsalTags({
   applyDayStemRules(natal, MAP_D_GWANGUI, "관귀학관", natalGoodPos, "ALL");
   applyDayStemRules(natal, MAP_D_MUNGOK,  "문곡귀인", natalGoodPos, "ALL");
   applyDayStemRules(natal, MAP_D_HAKDANG, "학당귀인", natalGoodPos, "ALL");
+  applyDayStemRules(natal, MAP_D_SIPGANROK, "십간록", natalGoodPos, "ALL");
 
   // 흉
   applyDayStemRules(natal, MAP_D_HONGYEOM, "홍염",       natalBadPos, "ALL");
@@ -632,13 +634,80 @@ export function buildShinsalTags({
     }
   }
 
-  // (NEW) 십악대패살
+  // 절로공망 (일간기준 + 시지 조건)
   {
-    const 십악대패세트 = new Set(["갑진","을사","임신","병신","정해","경진","무술","계해","신사","기축"]);
-    if (십악대패세트.has(natal[idx.day])) {
-      natalBadPos.push({ name: labelIlju("십악대패살"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    const dStem = getStemAt(natal[idx.day]);
+    const hourPillar = natal[idx.hour];
+    const check = (stems: string[], hours: string[]) =>
+      stems.includes(dStem) && hours.includes(hourPillar);
+
+    if (check(["갑","기"], ["임신","계유"]))
+      natalBadPos.push({ name: labelIlju("절로공망"), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+    if (check(["을","경"], ["임오","계미"]))
+      natalBadPos.push({ name: labelIlju("절로공망"), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+    if (check(["병","신"], ["임진","계사"]))
+      natalBadPos.push({ name: labelIlju("절로공망"), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+    if (check(["정","임"], ["임인","계묘"]))
+      natalBadPos.push({ name: labelIlju("절로공망"), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+    if (check(["무","계"], ["임자","계축"]))
+      natalBadPos.push({ name: labelIlju("절로공망"), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+  }
+
+  // 편야도화 (지지기준)
+  {
+    const branches = natalBranches(natal);
+    const hasAll = ["자","오","묘","유"].every(b => branches.includes(b));
+    if (hasAll) {
+      natalGoodPos.push({ name: labelIlju("편야도화"), weight: POS_WEIGHT[idx.day], pos: idx.day });
     }
   }
+
+  // 곤랑도화
+  {
+    const ilju = natal[idx.day];
+    const hour = natal[idx.hour];
+    if ((ilju === "병자" && hour === "신묘") || (ilju === "기묘" && hour === "갑자")) {
+      natalBadPos.push({ name: labelPair_at("곤랑도화", idx.day, idx.hour), weight: POS_WEIGHT[idx.hour], pos: idx.hour });
+    }
+  }
+
+  // 도삽도화 (월일시 조합 + 년지)
+  {
+    const bYear = getBranchAt(natal[idx.year]);
+    const bSet = new Set(natalBranches(natal).slice(1)); // 월·일·시지
+    const checkCombo = (combo: string[], yearNeed: string) =>
+      combo.every(c => bSet.has(c)) && bYear === yearNeed;
+
+    if (checkCombo(["신","자","진"], "유") ||
+        checkCombo(["인","오","술"], "묘") ||
+        checkCombo(["사","유","축"], "묘") ||
+        checkCombo(["해","묘","미"], "자")) {
+      natalGoodPos.push({ name: labelIlju("도삽도화"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    }
+  }
+
+  // 녹마동향
+  {
+    if (["임오", "계사"].includes(natal[idx.day])) {
+      natalGoodPos.push({ name: labelIlju("녹마동향"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    }
+  }
+
+  // 평두살 (전체사주 + 대운)
+  {
+    const 평두세트 = new Set(["갑","병","정","임","자","진"]);
+    const stems = natal.map(getStemAt);
+    const branches = natal.map(getBranchAt);
+    const count = stems.concat(branches).filter(x => 평두세트.has(x)).length;
+    const daeStem = daewoon ? getStemAt(daewoon) : "";
+    const daeBranch = daewoon ? getBranchAt(daewoon) : "";
+    const daeHas = 평두세트.has(daeStem) || 평두세트.has(daeBranch);
+
+    if (count >= 4 || (count === 3 && daeHas)) {
+      natalBadPos.push({ name: labelIlju("평두살"), weight: POS_WEIGHT[idx.day], pos: idx.day });
+    }
+  }
+
 
   // (NEW) 곡각살
   {
