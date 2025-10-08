@@ -180,11 +180,11 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       return (
         <Section title="일운 달력 시간타입">
           <SegmentedControl
-            value={localSettings.ilunRule ?? "조자시"}
+            value={localSettings.ilunRule ?? "자시"}
             onChange={(v) => update("ilunRule", v)}
             options={[
-              { label: "야자시", value: "야자시" },
-              { label: "조자시", value: "조자시" },
+              { label: "자시", value: "자시" },
+              { label: "조자시/야자시", value: "조자시/야자시" },
               { label: "인시", value: "인시" },
             ]}
           />

@@ -100,7 +100,7 @@ export default function PromptCopyCard({
 
   // 시주 예측(미상 보정)
   const { manualHour } = useHourPredictionStore();
-  const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "야자시";
+  const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   // 1) props 정규화
   const solarKo = useMemo(() => normalizePillars(natal), [natal]);

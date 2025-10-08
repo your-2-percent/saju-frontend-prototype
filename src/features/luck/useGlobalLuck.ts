@@ -75,7 +75,7 @@ export function useGlobalLuck(
     try {
       const lon = storeLon ?? ms?.birthPlace?.lon ?? 127.5;
       const rule: DayBoundaryRule =
-        storeRule ?? (ms?.mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
+        storeRule ?? (ms?.mingSikType as DayBoundaryRule) ?? hourTable ?? "조자시/야자시";
 
       return {
         dae: { gz: daeGz, at: baseDate }, 

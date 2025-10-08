@@ -164,9 +164,6 @@ function getEffectiveDayOffset(dateObj: Date, rule: DayBoundaryRule): number {
     // 인시: 03:00 이전이면 전날로 -1
     return totalMinutes < 3 * 60 ? -1 : 0;
   }
-  // if (rule === "야자시" && (hourBranch ===  "자")) {
-  //   return totalMinutes >= 0 && totalMinutes < 3 * 60 ? 0 : 0;
-  // }
   
   // 야자시: 00:00 기준
   return totalMinutes < 0 ? 0 : 0; // 사실상 항상 0
@@ -242,7 +239,7 @@ function getHourStemByRule(
 
 export function getHourGanZhi(
   dateObj: Date,
-  rule: DayBoundaryRule,           // "야자시" | "조자시" | "인시"
+  rule: DayBoundaryRule,           // "자시" | "조자시/야자시" | "인시"
   dayPillarOverride?: string                // 있으면 이 일주로 강제
 ): string {
   if (!(dateObj instanceof Date)) dateObj = new Date(dateObj);

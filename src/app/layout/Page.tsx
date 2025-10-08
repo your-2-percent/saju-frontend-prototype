@@ -141,13 +141,13 @@ export default function Page() {
           <div className="pt-18 pb-4">
             <SajuChart
               data={current}
-              hourTable={current.mingSikType ?? "야자시"}
+              hourTable={current.mingSikType ?? "조자시/야자시"}
             />
           </div>
 
           <LuckGlobalPicker
             ms={current}
-            //hourTable={current.mingSikType ?? "야자시"}
+            //hourTable={current.mingSikType ?? "조자시/야자시"}
           />
 
           <div>

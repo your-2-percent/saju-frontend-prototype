@@ -135,7 +135,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   const settings = useSettingsStore((s) => s.settings);
 
   // ✅ 명식 기준 (data > prop > 기본)
-  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? hourTable ?? "야자시";
+  const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? hourTable ?? "조자시/야자시";
   const lon = !data.birthPlace || data.birthPlace.name === "모름" || !data.birthPlace.lon ? 127.5 : data.birthPlace.lon;
 
   // 1) 출생 ‘양력’ 날짜를 먼저 구해서 DST 기본값 판단
@@ -180,7 +180,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     const corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
     const corrected = useDSTFlag ? new Date(corrected0.getTime() - 60 * 60 * 1000) : corrected0;
 
-    const hourRule: DayBoundaryRule = (d.mingSikType ?? "야자시") as DayBoundaryRule;
+    const hourRule: DayBoundaryRule = (d.mingSikType ?? "조자시/야자시") as DayBoundaryRule;
 
     const yGZ = getYearGanZhi(corrected, lonVal);
     const mGZ = getMonthGanZhi(corrected, lonVal);
@@ -217,7 +217,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     if (!data.birthTime || data.birthTime === "모름") {
       solar.setDate(solar.getDate()); // 시간미상 보정
     }
-    const gz = getDayGanZhi(solar, "야자시" as DayBoundaryRule); // 일간 고정용: rule 영향 최소화
+    const gz = getDayGanZhi(solar, "조자시/야자시" as DayBoundaryRule); // 일간 고정용: rule 영향 최소화
     return gz.charAt(0) as Stem10sin;
   }, [data.birthDay, data.birthTime, data.calendarType]);
 

@@ -98,7 +98,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
   const birth = useMemo(() => parseBirthLocal(solarized), [solarized]);
-  const natal = useMemo(() => computeNatalPillars(solarized, "야자시"), [solarized]);
+  const natal = useMemo(() => computeNatalPillars(solarized, "조자시/야자시"), [solarized]);
 
   const natalDayStem = useMemo<Stem10sin>(
     () => toKoStemStrict(natal.day?.charAt(0) ?? "갑"),
@@ -107,7 +107,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   const isUnknownTime = !data.birthTime || data.birthTime === "모름";
 
-  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "야자시"), [birth, natal.hour, data.dir]);
+  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "조자시/야자시"), [birth, natal.hour, data.dir]);
   const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", "인시일수론"), [siju, natal.day, data.dir]);
   const wolju = useMemo(() => buildWolju(birth, natal.month, data.dir ?? "forward", 120, solarized.birthPlace?.lon ?? 127.5), [birth, natal.month, data.dir, solarized.birthPlace?.lon]);
   const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, data.dir ?? "forward", "인시일수론", birth), [wolju, natal.year, data.dir, birth]);
@@ -144,7 +144,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
       const hh = BRANCH_TO_HOUR[manualHour.branch] ?? 0;
 
       const pickedDate = new Date(y, m, d, hh, 0);
-      const gz = getDayGanZhi(pickedDate, (data.mingSikType ?? "야자시") as DayBoundaryRule);
+      const gz = getDayGanZhi(pickedDate, (data.mingSikType ?? "조자시/야자시") as DayBoundaryRule);
 
       il = ensureGZ(gz, natal.day);
     } else {
@@ -169,8 +169,8 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
     data.mingSikType
   ]);
   const live = useMemo(() => ({
-    si: ensureGZ(getHourGanZhi(date, "야자시")),
-    il: ensureGZ(getDayGanZhi(date, "야자시")),
+    si: ensureGZ(getHourGanZhi(date, "조자시/야자시")),
+    il: ensureGZ(getDayGanZhi(date, "조자시/야자시")),
     wl: ensureGZ(getMonthGanZhi(date)),
     yn: ensureGZ(getYearGanZhi(date)),
   }), [date]);
