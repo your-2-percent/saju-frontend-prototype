@@ -1,5 +1,5 @@
 // features/luck/IlwoonCalendar.tsx
-import { useMemo, useState, useEffect } from "react";
+import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { getDayGanZhi, getYearGanZhi } from "@/shared/domain/간지/공통";
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
@@ -72,8 +72,7 @@ export default function IlwoonCalendar({
   hourTable?: DayBoundaryRule;
   selectedMonth: Date | null;
 }) {
-  const { date, setFromEvent } = useLuckPickerStore();
-
+  //const { date, setFromEvent } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
 
   const rule: DayBoundaryRule =
@@ -100,62 +99,57 @@ export default function IlwoonCalendar({
           : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
       : null;
 
-  /* ===== 절입 구간 범위 ===== */
-  // ✅ year/month 기준으로 anchor 날짜 생성 (0-based)
-  const anchor = useMemo(() => 
-    !selectedMonth ? new Date(year, month - 1, 15, 12, 0, 0, 0) : new Date(year, month + 1, 15, 12, 0, 0, 0), 
-  [selectedMonth, year, month]) ;
+  /* ===== 앵커: “해당 월의 1일 정오” 또는 “선택일 정오” =====
+     - 10/7(절입 전) → 10/1 정오를 앵커로 → 9월 절기 구간 반환
+     - 10/8(절입 후) → 10/1 정오도 이미 절입 후? 아니, 10/1은 절입 전이므로
+       선택일이 있을 때는 선택일 자체 정오를 쓰는 게 더 직관적임
+  */
+  const today = (() => {
+    return new Date();
+  })();
+
+  const anchor = (() => {
+    const base = new Date(year, month);
+    console.log(base);
+    
+    const jie = getJieRangeByDate(base);
+    return new Date(jie.start);
+  })();
+
+  const anchorMemo = useMemo(() => getJieRangeByDate(anchor), [anchor])
 
   // ✅ 절입 구간은 anchor 기준으로 계산
-  const jie = useMemo(() => getJieRangeByDate(anchor), [anchor]);
+  const jie = !selectedMonth ? getJieRangeByDate(today) : anchorMemo;
   const monthStart = jie.start;
   const monthEnd = jie.end;
 
-  const [termMarks, setTermMarks] = useState<{ name: string; date: Date }[]>([]);
-
-  const days = useMemo(() => { 
-    const arr: Date[] = []; 
-    const cur = new Date(monthStart); 
-    while (cur < monthEnd) { 
-      arr.push(new Date(cur)); 
-      cur.setDate(cur.getDate() + 1); 
-    } return arr; 
+  const days = useMemo(() => {
+    const arr: Date[] = [];
+    const cur = new Date(monthStart);
+    while (cur < monthEnd) {
+      arr.push(new Date(cur));
+      cur.setDate(cur.getDate() + 1);
+    }
+    return arr;
   }, [monthStart, monthEnd]);
 
-  // ✅ 1) 로드시 (초기 1회)
-  useEffect(() => {
-    const tables = [
+  // ✅ 절입 마킹: 연도별 테이블은 year 의존, 표시 리스트는 절입 범위 의존
+  const termTable = useMemo(() => {
+    const t = [
       ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
-      ...(getSolarTermBoundaries(new Date(year, 5, 15, 12, 0)) ?? []),
+      ...(getSolarTermBoundaries(new Date(year,     5, 15, 12, 0)) ?? []),
       ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
     ]
       .map(t => ({ name: String(t.name), date: new Date(t.date) }))
       .sort((a, b) => a.date.getTime() - b.date.getTime());
+    return t;
+  }, [year]);
 
-    const inRange = tables.filter(t => t.date >= new Date(monthStart) && t.date <= new Date(monthEnd));
-    const nextTerm = tables.find(t => t.date > new Date(monthEnd));
-    setTermMarks(nextTerm ? [...inRange, nextTerm] : inRange);
-    console.log("로드시");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // ✅ 빈 배열: 마운트 시 1회만
-
-
-  // ✅ 2) 월운리스트 클릭 시 (따로 트리거)
-  useEffect(() => {
-    if (!selectedMonth) return;
-    const tables = [
-      ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
-      ...(getSolarTermBoundaries(new Date(year, 5, 15, 12, 0)) ?? []),
-      ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
-    ]
-      .map(t => ({ name: String(t.name), date: new Date(t.date) }))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    const inRange = tables.filter(t => t.date >= monthStart && t.date <= monthEnd);
-    const nextTerm = tables.find(t => t.date > monthEnd);
-    setTermMarks(nextTerm ? [...inRange, nextTerm] : inRange);
-    console.log("월운 클릭 시");
-  }, [selectedMonth, monthEnd, monthStart, year]);
+  const termMarks = useMemo(() => {
+    const inRange = termTable.filter(t => t.date >= monthStart && t.date < monthEnd); // end 배타
+    const nextTerm = termTable.find(t => t.date >= monthEnd);
+    return nextTerm ? [...inRange, nextTerm] : inRange;
+  }, [termTable, monthStart, monthEnd]);
 
   /* ===== 7열 행렬화: 시작 요일은 'monthStart' 기준 ===== */
   const weeks = useMemo(() => {
@@ -176,22 +170,12 @@ export default function IlwoonCalendar({
   }, [days, monthStart]);
 
   // 선택일 하이라이트(전역)
+  const { date: pickedDate, setFromEvent } = useLuckPickerStore();
   const pickerNoon = useMemo(() => {
-    if (!date) return null;
-    const d = new Date(date);
-    const parts = new Intl.DateTimeFormat("ko-KR", {
-      timeZone: "Asia/Seoul",
-      year: "numeric",
-      month: "numeric",
-      day: "numeric",
-    }).formatToParts(d);
-
-    const y = Number(parts.find(p => p.type === "year")?.value ?? d.getFullYear());
-    const m = Number(parts.find(p => p.type === "month")?.value ?? (d.getMonth() + 1));
-    const day = Number(parts.find(p => p.type === "day")?.value ?? d.getDate());
-
-    return new Date(y, m - 1, day, 12, 0, 0, 0);
-  }, [date]);
+    if (!pickedDate) return null;
+    const d = new Date(pickedDate);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  }, [pickedDate]);
 
   return (
     <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
@@ -234,29 +218,23 @@ export default function IlwoonCalendar({
           week.map((d, di) => {
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
 
-            // 셀 샘플 시각 = 그 날의 로컬 정오 (경계 안전)
             const dayLocal = new Date(d);
             dayLocal.setHours(12, 0, 0, 0);
 
-            // 오늘 하이라이트
             const today = new Date();
-            // 오늘 날짜인지
             const isToday =
               dayLocal.getFullYear() === today.getFullYear() &&
               dayLocal.getMonth() === today.getMonth() &&
               dayLocal.getDate() === today.getDate();
 
-            // 선택된 날짜인지
             const isSelected =
               !!pickerNoon &&
               dayLocal.getFullYear() === pickerNoon.getFullYear() &&
               dayLocal.getMonth() === pickerNoon.getMonth() &&
               dayLocal.getDate() === pickerNoon.getDate();
 
-            // ✅ active는 무조건 1개: 선택이 있으면 오늘은 비활성
             const isActive = isSelected || (!pickerNoon && isToday);
 
-            // ✅ 일주 계산도 정오로
             const gz = getDayGanZhi(dayLocal, rule);
             const stem = gz.charAt(0) as Stem10sin;
             const branch = gz.charAt(1) as Branch10sin;
@@ -290,10 +268,7 @@ export default function IlwoonCalendar({
             return (
               <div
                 key={d.toISOString()}
-                onClick={() => {
-                  // 클릭 시에도 정오로 전달 (경계 안전)
-                  setFromEvent({ at: dayLocal }, "일운");
-                }}
+                onClick={() => setFromEvent({ at: dayLocal }, "일운")}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}

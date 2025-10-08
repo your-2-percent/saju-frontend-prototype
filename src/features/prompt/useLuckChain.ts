@@ -17,7 +17,6 @@ import { type LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
 export function useLuckChain(ms: MyeongSik): LuckChain {
   const date = useLuckPickerStore((s) => s.date);
   const rule = useLuckPickerStore((s) => s.rule);
-  const lon = useLuckPickerStore((s) => s.lon) ?? 127.5;
 
   const daeList = useDaewoonList(ms);
 
@@ -27,10 +26,10 @@ export function useLuckChain(ms: MyeongSik): LuckChain {
     const activeIdx = findActiveIndexByDate(daeList, date);
     const dae = activeIdx >= 0 ? daeList[activeIdx]?.gz ?? null : null;
 
-    const se = getYearGanZhi(date, lon);
-    const wol = getMonthGanZhi(date, lon);
+    const se = getYearGanZhi(date);
+    const wol = getMonthGanZhi(date);
     const il = getDayGanZhi(date, rule);
 
     return { dae, se, wol, il };
-  }, [ms, daeList, date, rule, lon]);
+  }, [ms, daeList, date, rule]);
 }
