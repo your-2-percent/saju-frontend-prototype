@@ -391,7 +391,7 @@ export default function Sidebar({
                              border border-neutral-300 dark:border-neutral-700
                              text-neutral-900 dark:text-neutral-100
                              focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  value={m.mingSikType ?? "야자시"}
+                  value={m.mingSikType ?? "조자시/야자시"}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     e.stopPropagation();
@@ -405,8 +405,8 @@ export default function Sidebar({
                     onClose();
                   }}
                 >
-                  <option value="야자시">야자시명식</option>
-                  <option value="조자시">조자시명식</option>
+                  <option value="자시">야자시명식</option>
+                  <option value="조자시/야자시">조자시명식</option>
                   <option value="인시">인시명식</option>
                 </select>
               </div>
