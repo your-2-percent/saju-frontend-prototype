@@ -1,36 +1,7 @@
 // features/common/HiddenStems.tsx
 import { getSipSin } from "@/shared/domain/간지/utils";
+import { hiddenStemMappingClassic, hiddenStemMappingHGC } from './const';
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-
-const hiddenStemMappingClassic: Record<string, string[]> = {
-  자: ["임", "(-)", "계"],
-  축: ["계", "신", "기"],
-  인: ["무", "병", "갑"],
-  묘: ["갑", "(-)", "을"],
-  진: ["을", "계", "무"],
-  사: ["무", "경", "병"],
-  오: ["병", "기", "정"],
-  미: ["정", "을", "기"],
-  신: ["무", "임", "경"],
-  유: ["경", "(-)", "신"],
-  술: ["신", "정", "무"],
-  해: ["무", "갑", "임"],
-};
-
-const hiddenStemMappingHGC: Record<string, string[]> = {
-  자: ["(-)", "(-)", "계"],
-  축: ["계", "신", "기"],
-  인: ["(-)", "병", "갑"],
-  묘: ["(-)", "(-)", "을"],
-  진: ["을", "계", "무"],
-  사: ["(-)", "경", "병"],
-  오: ["(-)", "(-)", "정"],
-  미: ["정", "을", "기"],
-  신: ["(-)", "임", "경"],
-  유: ["(-)", "(-)", "신"],
-  술: ["신", "정", "무"],
-  해: ["(-)", "갑", "임"],
-};
 
 type Variant = "auto" | "white";
 
