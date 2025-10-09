@@ -1,5 +1,6 @@
 // features/AnalysisReport/logic/shinsal.ts
 import type { Pillars4 } from "./relations";
+import { hiddenStemMappingHGC, hiddenStemMappingClassic } from "@/shared/domain/hidden-stem/const";
 import { STEMS_KO, BRANCHES_KO, STEM_H2K, BRANCH_H2K } from "@/shared/domain/간지/const";
 
 /** 위치가중치: 일지(2)>월지(1)>시지(3)>연지(0) */
@@ -15,6 +16,20 @@ export type ShinsalBasis = {
   voidBasis: "day" | "year";
   samjaeBasis: "day" | "year";
 };
+
+export function hasStemOrHidden(
+  target: string,
+  ganZhi: string,
+  mapping: "classic" | "hgc" = "classic"
+): boolean {
+  const stem = getStemAt(ganZhi);
+  const branch = getBranchAt(ganZhi);
+  const stems =
+    (mapping === "hgc"
+      ? hiddenStemMappingHGC
+      : hiddenStemMappingClassic)[branch] ?? [];
+  return [stem, ...stems].includes(target);
+}
 
 /** 우선순위: 월(1) > 일(2) > 연(0) > 시(3) */
 const POS_PRIORITY: Record<PosIndex, number> = {
@@ -692,6 +707,83 @@ export function buildShinsalTags({
       natalGoodPos.push({ name: labelIlju("녹마동향"), weight: POS_WEIGHT[idx.day], pos: idx.day });
     }
   }
+
+  // 록마교치 (일주×시주)
+  {
+    const dStem = getStemAt(natal[idx.day]);
+
+    const map: Record<string, { rok: string; group: string[]; ma: string; maStem: string }> = {
+      "갑": { rok: "인", group: ["인","오","술"], ma: "신", maStem: "경" },
+      "을": { rok: "묘", group: ["해","묘","미"], ma: "사", maStem: "병" },
+      "병": { rok: "사", group: ["인","오","술"], ma: "해", maStem: "임" },
+      "정": { rok: "오", group: ["인","오","술"], ma: "해", maStem: "경" },
+      "무": { rok: "사", group: ["인","오","술"], ma: "해", maStem: "임" },
+      "기": { rok: "오", group: ["해","묘","미"], ma: "해", maStem: "경" },
+      "경": { rok: "신", group: ["신","자","진"], ma: "인", maStem: "갑" },
+      "신": { rok: "유", group: ["사","유","축"], ma: "해", maStem: "임" },
+      "임": { rok: "해", group: ["신","자","진"], ma: "사", maStem: "사" },
+      "계": { rok: "자", group: ["해","묘","미"], ma: "인", maStem: "갑" },
+    };
+
+    const rule = map[dStem];
+
+    // 원국 전체 지지에 건록지 포함되어 있는가?
+    const hasRok = natal.some(gz => getBranchAt(gz) === rule.rok);
+
+    // 시주 천간이 해당 역마천간인가?
+    const hourStem = getStemAt(natal[idx.hour]);
+    const hasMaStem = hourStem === rule.maStem;
+
+    if (hasRok && hasMaStem) {
+      natalGoodPos.push({
+        name: labelPair_at("록마교치", idx.day, idx.hour),
+        weight: POS_WEIGHT[idx.hour],
+        pos: idx.hour,
+      });
+    }
+  }
+
+  // 천록천마 (일주×시주)
+  {
+  const dStem = getStemAt(natal[idx.day]);
+  const dBranch = getBranchAt(natal[idx.day]);
+  const hBranch = getBranchAt(natal[idx.hour]);
+
+  const map: Record<string, { rok: string; ma: string; rokStem: string; maStem: string }> = {
+    "갑": { rok: "인", ma: "신", rokStem: "병", maStem: "임" },
+    "을": { rok: "묘", ma: "사", rokStem: "병", maStem: "임" },
+    "병": { rok: "사", ma: "해", rokStem: "임", maStem: "병" },
+    "정": { rok: "오", ma: "해", rokStem: "경", maStem: "병" },
+    "무": { rok: "사", ma: "해", rokStem: "임", maStem: "병" },
+    "기": { rok: "오", ma: "해", rokStem: "경", maStem: "병" },
+    "경": { rok: "신", ma: "인", rokStem: "갑", maStem: "경" },
+    "신": { rok: "유", ma: "해", rokStem: "임", maStem: "갑" },
+    "임": { rok: "해", ma: "사", rokStem: "사", maStem: "임" },
+    "계": { rok: "자", ma: "인", rokStem: "갑", maStem: "경" },
+  };
+
+  const rule = map[dStem];
+  if (rule) {
+    const hasRok = dBranch === rule.rok;
+    const hasMa = hBranch === rule.ma;
+
+    const hasRokStem =
+      hasStemOrHidden(rule.rokStem, natal[idx.day], "classic") ||
+      hasStemOrHidden(rule.rokStem, natal[idx.hour], "classic");
+
+    const hasMaStem =
+      hasStemOrHidden(rule.maStem, natal[idx.day], "classic") ||
+      hasStemOrHidden(rule.maStem, natal[idx.hour], "classic");
+
+    if (hasRok && hasMa && (hasRokStem || hasMaStem)) {
+      natalGoodPos.push({
+        name: labelPair_at("천록천마", idx.day, idx.hour),
+        weight: POS_WEIGHT[idx.hour],
+        pos: idx.hour,
+      });
+    }
+  }
+}
 
   // 평두살 (전체사주 + 대운)
   {
