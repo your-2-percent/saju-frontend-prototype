@@ -150,13 +150,13 @@ export function calendarGregorianToJD(
 }
 
 
-function getEffectiveDayOffset(dateObj: Date, rule: DayBoundaryRule): number {
+export function getEffectiveDayOffset(dateObj: Date, rule: DayBoundaryRule): number {
   const h = dateObj.getHours();
   const min = dateObj.getMinutes();
   const totalMinutes = h * 60 + min;
   const hourBranch = getHourBranchUsingArray(dateObj);
 
-  if (rule === "조자시/야자시" && hourBranch ===  "자") {
+  if (rule === "자시" && hourBranch ===  "자") {
     // 자시: 23:00 이후면 다음날로 +1
     return totalMinutes >= 23 * 60 ? 1 : 0;
   }
@@ -230,7 +230,7 @@ function getHourStemByRule(
   const dateObjTime = dateObj.getHours();
 
   // 🔁 인시 규칙: 자/축(0,1)에서만 ‘인시 매핑’ 효과 → +2 오프셋
-  if ((rule === "인시" || (rule === "자시" && dateObjTime >= 3)) && (hourBranchIndex === 0 || hourBranchIndex === 1)) {
+  if ((rule === "인시" || (rule === "조자시/야자시" && dateObjTime >= 3)) && (hourBranchIndex === 0 || hourBranchIndex === 1)) {
     idx = (idx + 2) % 10;
   }
 

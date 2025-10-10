@@ -207,19 +207,20 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   // ✅ 최초 일간 고정: 사람 바뀔 때만 갱신 (시간미상 +1일 보정 포함)
   const dayStem = useMemo<Stem10sin>(() => {
-    const y = Number(data.birthDay.slice(0, 4));
-    const m = Number(data.birthDay.slice(4, 6));
-    const d = Number(data.birthDay.slice(6, 8));
-    let solar = new Date(y, m - 1, d);
-    if (data.calendarType === "lunar") {
-      solar = lunarToSolarStrict(y, m, d);
-    }
-    if (!data.birthTime || data.birthTime === "모름") {
-      solar.setDate(solar.getDate()); // 시간미상 보정
-    }
-    const gz = getDayGanZhi(solar, "조자시/야자시" as DayBoundaryRule); // 일간 고정용: rule 영향 최소화
+    // const y = Number(data.birthDay.slice(0, 4));
+    // const m = Number(data.birthDay.slice(4, 6));
+    // const d = Number(data.birthDay.slice(6, 8));
+    // let solar = new Date(y, m - 1, d);
+    // if (data.calendarType === "lunar") {
+    //   solar = lunarToSolarStrict(y, m, d);
+    // }
+    // if (!data.birthTime || data.birthTime === "모름") {
+    //   solar.setDate(solar.getDate()); // 시간미상 보정
+    // }
+    const rule = data.mingSikType as DayBoundaryRule;
+    const gz = getDayGanZhi(data.corrected, rule); // 일간 고정용: rule 영향 최소화
     return gz.charAt(0) as Stem10sin;
-  }, [data.birthDay, data.birthTime, data.calendarType]);
+  }, [/*data.birthDay, data.birthTime, data.calendarType,*/ data.corrected, data.mingSikType]);
 
   // ✅ 시주예측 상태 (선택된 시주만 저장)
   type HourGZ = { stem: string; branch: string };
