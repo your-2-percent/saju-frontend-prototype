@@ -405,9 +405,9 @@ export default function Sidebar({
                     onClose();
                   }}
                 >
-                  <option value="자시">야자시명식</option>
-                  <option value="조자시/야자시">조자시명식</option>
-                  <option value="인시">인시명식</option>
+                  <option value="자시">자시</option>
+                  <option value="조자시/야자시">조자시/야자시</option>
+                  <option value="인시">인시</option>
                 </select>
               </div>
 

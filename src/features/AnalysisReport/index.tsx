@@ -18,6 +18,9 @@ import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/간
 import type { DayBoundaryRule } from "@/shared/type";
 import { natalShinPercent } from "@/features/AnalysisReport/logic/powerPercent";
 import { computeUnifiedPower } from "./utils/unifiedPower";
+import GyeokgukTagPanel from "./GyeokgukTagPanel";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+
 
 /* =========================
  * 상수/맵 (컴포넌트 밖)
@@ -351,7 +354,8 @@ export default function AnalysisReport({
   lunarPillars?: string[] | null;
   daewoonGz?: string | null;
 }) {
-  const [bigTab, setBigTab] = useState<"일간 · 오행 강약" | "형충회합" | "신살">("일간 · 오행 강약");
+  const settings = useSettingsStore((s) => s.settings);
+  const [bigTab, setBigTab] = useState<"격국 · 물상론" | "일간 · 오행 강약" | "형충회합" | "신살">("일간 · 오행 강약");
   const [blendTab, setBlendTab] = useState<BlendTab>("원국");
   const [demoteAbsent, setDemoteAbsent] = useState(true);
 
@@ -440,7 +444,6 @@ export default function AnalysisReport({
 
   // 기본 계산(원국/운 섞임 여부와 무관)
   const unified = useMemo(() => {
-    if (!hasValidYmd(activePillars)) return null;
     return computeUnifiedPower({ natal: activePillars, tab: blendTab, chain, hourKey });
   }, [activePillars, blendTab, chain, hourKey]);
 
@@ -627,8 +630,8 @@ export default function AnalysisReport({
       </div>
 
       {/* 섹션 탭 */}
-      <div className="flex gap-2 mb-2 justify-center flex-wrap">
-        {["일간 · 오행 강약", "형충회합", "신살"].map((t) => (
+      <div className="flex gap-2 mb-4 justify-center flex-wrap">
+        {["격국 · 물상론", "일간 · 오행 강약", "형충회합", "신살"].map((t) => (
           <button
             key={t}
             onClick={() => setBigTab(t as typeof bigTab)}
@@ -748,6 +751,16 @@ export default function AnalysisReport({
           wolwoon={wolGz || undefined}
           ilwoon={ilGz || undefined}
           tab={blendTab}
+        />
+      )}
+
+      {bigTab === "격국 · 물상론" && (
+        <GyeokgukTagPanel
+          key={`gyeok-${blendTab}-${hourKeyForUi}`}
+          unified={unified}
+          pillars={activePillars}
+          tab={blendTab}
+          mapping={settings.hiddenStemMode}
         />
       )}
     </div>
