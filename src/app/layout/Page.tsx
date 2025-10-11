@@ -90,7 +90,25 @@ export default function Page() {
           setShowSidebar(false);
           setShowToday(false);
           setShowCouple(false); // ← 궁합 끄기
-          useLuckPickerStore.getState().resetDate();
+          // ✅ 동일 id라도 강제로 리셋
+          const todayNoon = new Date();
+          todayNoon.setHours(12, 0, 0, 0);
+
+          const store = useLuckPickerStore.getState();
+          store.setDate(todayNoon); // 오늘로 리셋
+
+          // ‘보기’ 전환 시 원국 화면으로
+          if (currentId === m.id) {
+            // 같은 명식 클릭 시에도 강제 refresh
+            setShowToday(false);
+            setShowCouple(false);
+            setShowSidebar(false);
+          } else {
+            setCurrentId(m.id);
+            setShowSidebar(false);
+            setShowToday(false);
+            setShowCouple(false);
+          }
         }}
         onAddNew={openAdd}
         onEdit={(m) => {

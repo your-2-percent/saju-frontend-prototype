@@ -105,7 +105,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
         <IlwoonCalendar
           data={data}
           year={ilwoonTarget.year}
-          month={ilwoonTarget.month}
+          month={ilwoonTarget.month + 1}
           hourTable={data?.mingSikType as DayBoundaryRule}
           selectedMonth={selectedMonth}
         />
