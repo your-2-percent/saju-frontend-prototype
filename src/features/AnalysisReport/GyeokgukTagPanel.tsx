@@ -25,7 +25,7 @@ export default function GyeokgukTagPanel(props: {
   otherBranches?: string[];
   /** (선택) 격 후보 무력화(합/충 등) 여부 판단 콜백 */
   isNeutralized?: (stemKo: string) => boolean;
-  mapping?: string;
+  mapping: string;
   unified: UnifiedPowerResult;
 }) {
   const {

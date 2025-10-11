@@ -7,7 +7,10 @@ export const JIE_SET = new Set([
 ]);
 
 export function getJieRangeByDate(target: Date) {
-  const year = target.getFullYear();
+  // ✅ 전달받은 날짜를 다음 달로 보정
+  const shifted = new Date(target.getFullYear(), target.getMonth() + 1);
+
+  const year = shifted.getFullYear();
   const tables = [
     ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
     ...(getSolarTermBoundaries(new Date(year, 5, 15, 12, 0)) ?? []),
@@ -17,7 +20,7 @@ export function getJieRangeByDate(target: Date) {
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const jie = tables.filter(t => JIE_SET.has(t.name));
-  let i = jie.findIndex((_, k) => jie[k].date <= target && target < jie[k + 1]?.date);
+  let i = jie.findIndex((_, k) => jie[k].date <= shifted && shifted < jie[k + 1]?.date);
   if (i < 0) i = 0;
 
   const cur = jie[i];

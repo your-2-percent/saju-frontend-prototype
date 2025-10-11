@@ -3,7 +3,7 @@
 
 import { getSolarTermBoundaries } from "@/features/myoun";
 import { hiddenStemMappingHGC, hiddenStemMappingClassic } from "@/shared/domain/hidden-stem/const";
-import { getTwelveUnseong } from "@/shared/domain/간지/twelve";
+//import { getTwelveUnseong } from "@/shared/domain/간지/twelve";
 import { UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
 
 export type Element = "목" | "화" | "토" | "금" | "수";
@@ -18,9 +18,6 @@ export interface GyeokgukInner {
   reason: string[];   // 판정 사유 로그
 }
 
-/* =========================
- * 기본 맵/유틸
- * ========================= */
 const STEM_TO_ELEMENT: Record<string, Element> = {
   갑: "목", 을: "목", 병: "화", 정: "화", 무: "토", 기: "토", 경: "금", 신: "금", 임: "수", 계: "수",
 };
@@ -58,9 +55,6 @@ const stemOf = (gz?: string) => (gz && gz.length >= 1 ? gz.charAt(0) : "");
 const branchOf = (gz?: string) => (gz && gz.length >= 2 ? gz.charAt(1) : "");
 const uniq = <T,>(arr: T[]) => Array.from(new Set(arr));
 
-/* =========================
- * 월지 지장간 월률 분포표 (초/중/정 + 가중치)
- * ========================= */
 const DIST_MAP: Record<
   string,
   { 초기?: { stem: string; w: number }; 중기?: { stem: string; w: number }; 정기: { stem: string; w: number } }
@@ -79,9 +73,6 @@ const DIST_MAP: Record<
   해: { 초기: { stem: "임", w: 16 }, 중기: { stem: "갑", w: 7 }, 정기: { stem: "임", w: 16 } },
 };
 
-/* =========================
- * 절입일 +12일 판정 (고지용)
- * ========================= */
 const BRANCH_TO_TERM: Record<string, string> = {
   인: "입춘", 묘: "경칩", 진: "청명", 사: "입하", 오: "망종", 미: "소서",
   신: "입추", 유: "백로", 술: "한로", 해: "입동", 자: "대설", 축: "소한",
@@ -98,9 +89,6 @@ function isWithinEarlyPhase(branch: string, date: Date): boolean {
   return diffDays <= 12;
 }
 
-/* =========================
- * 삼합 (월지 기준 고지 보조)
- * ========================= */
 const SAMHAP_SETS: Record<string, string[]> = {
   진: ["신", "자", "진"], // 수국
   술: ["인", "오", "술"], // 화국
@@ -113,9 +101,6 @@ function hasSamHapWithMonth(monthBranch: string, otherBranches: string[]): boole
   return set.filter((b) => b !== monthBranch).every((b) => otherBranches.includes(b));
 }
 
-/* =========================
- * 십신 매핑(정/편 포함)
- * ========================= */
 function mapStemToTenGodSub(dayStem: string, targetStem: string):
   | "비견" | "겁재" | "식신" | "상관" | "정재" | "편재" | "정관" | "편관" | "정인" | "편인" {
   const d = STEM_TO_ELEMENT[dayStem], t = STEM_TO_ELEMENT[targetStem];
@@ -165,8 +150,7 @@ function mapBranchToTenGodSub(dayStem: string, branch: string):
   }
 }
 
-
-function mapBranchToElement(branch: string): Element {
+/*function mapBranchToElement(branch: string): Element {
   const branchElementMap: Record<string, Element> = {
     자: "수",
     축: "토",
@@ -182,9 +166,8 @@ function mapBranchToElement(branch: string): Element {
     해: "수",
   };
   return branchElementMap[branch] ?? "토"; // 기본값 안전장치
-}
+}*/
 
-/** 천간 → 오행 */
 function mapStemToElement(stem: string): Element {
   const stemElementMap: Record<string, Element> = {
     갑: "목",
@@ -268,47 +251,6 @@ function elementToStem(el: Element): string {
   return map[el];
 }
 
-// function hasAdjacencyAcrossPillars(
-//   groupA: TenGodSubtype[],
-//   groupB: TenGodSubtype[],
-//   tenGodList: TenGodSubtype[],
-//   gzList: string[], // ["갑자","병인","경오","임신"]
-//   dayStem: string,
-//   options?: { includeSamePillar?: boolean } // 🔥 옵션 추가
-// ): boolean {
-//   // ① 일반 인접 (천간↔천간, 지지↔지지, 기둥 간 인접)
-//   for (let i = 0; i < tenGodList.length - 1; i++) {
-//     const a = tenGodList[i];
-//     const b = tenGodList[i + 1];
-//     if (
-//       (groupA.includes(a) && groupB.includes(b)) ||
-//       (groupB.includes(a) && groupA.includes(b))
-//     ) {
-//       return true;
-//     }
-//   }
-
-//   // ② 같은 기둥(천간↔지지) 비교 — 옵션일 때만 활성
-//   if (options?.includeSamePillar) {
-//     for (const gz of gzList) {
-//       const gan = gz.charAt(0);
-//       const ji = gz.charAt(1);
-//       const tgGan = mapStemToTenGodSub(dayStem, gan);
-//       const tgJi = mapBranchToTenGodSub(dayStem, ji);
-//       if (
-//         (groupA.includes(tgGan) && groupB.includes(tgJi)) ||
-//         (groupB.includes(tgGan) && groupA.includes(tgJi))
-//       ) {
-//         return true;
-//       }
-//     }
-//   }
-
-//   return false;
-// }
-
-
-
 /* =========================
  * 외격 탐지 (특수격 다중 수집)
  * ========================= */
@@ -330,18 +272,6 @@ const STEM_COMB_PAIRS: Array<{ a: string; b: string; to: Element }> = [
   { a: "정", b: "임", to: "목" },
   { a: "무", b: "계", to: "화" },
 ];
-
-// 십성 대분류 헬퍼(러프)
-// const tgMain = (day: string, target: string): "비겁"|"식상"|"재성"|"관성"|"인성" => {
-//   const d = STEM_TO_ELEMENT[day], t = STEM_TO_ELEMENT[target];
-//   if (!d || !t) return "비겁";
-//   if (t === d) return "비겁";
-//   if (t === SHENG_NEXT[d]) return "식상";
-//   if (t === KE[d]) return "재성";
-//   if (t === KE_REV[d]) return "관성";
-//   if (t === SHENG_PREV[d]) return "인성";
-//   return "비겁";
-// };
 
 // 원소 강도 러프 추정(천간10 + 지지본기6)
 const roughElementStrength = (pillars: string[]) => {
@@ -367,41 +297,55 @@ function detectOuterGyeok(opts: {
   const { pillars, dayStem, monthBranch, mapping } = opts;
   const [yGZ, mGZ, dGZ, hGZ] = (pillars ?? []).slice(0, 4);
 
-  const stems = [stemOf(yGZ), stemOf(mGZ), stemOf(dGZ), stemOf(hGZ)].filter(Boolean);
+  const stems    = [stemOf(yGZ), stemOf(mGZ), stemOf(dGZ), stemOf(hGZ)].filter(Boolean);
   const branches = [branchOf(yGZ), branchOf(mGZ), branchOf(dGZ), branchOf(hGZ)].filter(Boolean);
   const dEl = STEM_TO_ELEMENT[dayStem];
   const subs = stems.map((s)=> mapStemToTenGodSub(dayStem, s));
 
   const out: string[] = [];
 
-  // ── 1) 양인/월지겁재/건록(전록/귀록)
-  // 양인: 일간 양간 + 월지가 동오행 음지(표준 매핑로직 사용)
+  // ─────────────────────────────────────────────────────
+  // 헬퍼들
+  // ─────────────────────────────────────────────────────
+  const cntStem = (ch: string) => stems.filter(s => s === ch).length;
+  const cntBr   = (br: string) => branches.filter(b => b === br).length;
+  const hasAll  = (need: string[]) => need.every((b)=> branches.includes(b));
+  //const hasAny  = (cands: string[]) => cands.some((b)=> branches.includes(b));
+  const hasSub  = (labels: string[]) => subs.some(x => labels.includes(x));
+  const monthStem = stemOf(mGZ);
+
+  const isYang  = (s: string) => isYangStem(s);
+  const sameElementAllStems = () => {
+    const els = stems.map(s => STEM_TO_ELEMENT[s]);
+    return els.length === 4 && els.every(e => e === els[0]);
+  };
+  const parityPatternAlt = () => {
+    if (stems.length !== 4) return false;
+    const ps = stems.map(isYang); // true=양, false=음
+    const p1 = (ps[0] && !ps[1] &&  ps[2] && !ps[3]); // 양음양음
+    const p2 = (!ps[0] && ps[1] && !ps[2] && ps[3]); // 음양음양
+    return p1 || p2;
+  };
+
+  // ─────────────────────────────────────────────────────
+  // 1) 양인/월지겁재/건록(전록/귀록)
+  // ─────────────────────────────────────────────────────
   if (isYangStem(dayStem) && YANGIN_MAP[dayStem] === monthBranch) {
     out.push("양인격");
   }
-  // ── 1-1) 건록격 (일간과 오행이 같고 음양도 같은 경우)
-  const GEONLOK_SET: Array<[string, string]> = [
-    ["을", "묘"],
-    ["병", "사"],
-    ["정", "오"],
-    ["경", "신"],
-    ["임", "해"],
-    ["계", "자"],
-    ["무", "사"],
-    ["기", "오"],
-  ];
 
+  const GEONLOK_SET: Array<[string, string]> = [
+    ["을", "묘"], ["병", "사"], ["정", "오"], ["경", "신"], ["임", "해"], ["계", "자"],
+    ["무", "사"], ["기", "오"],
+  ];
   for (const [stem, branch] of GEONLOK_SET) {
-    if (dayStem === stem && monthBranch === branch) {
-      out.push("건록격");
-      break;
-    }
+    if (dayStem === stem && monthBranch === branch) { out.push("건록격"); break; }
   }
-  // 월지겁재: 일간 음간 + 월지가 同五行 양지(표준 매핑)
+
   if (!isYangStem(dayStem) && WOLGEOP_MAP[dayStem] === monthBranch) {
     out.push("월지겁재격");
   }
-  // 전록/귀록: 일지/시지가 건록지이며 오행도 일간과 일치
+
   const dayLok = LOK_BRANCH[dayStem];
   if (dayLok && branchOf(dGZ) === dayLok && dEl === BRANCH_MAIN_ELEMENT[branchOf(dGZ)]) {
     out.push("전록격");
@@ -410,22 +354,19 @@ function detectOuterGyeok(opts: {
     out.push("귀록격");
   }
 
-  // pillars: [년간지, 월간지, 일간지, 시간지] 형식 가정 예) "경자"
-
-  // ── 원국만 사용 (운 영향 없음) ──
-  const stemsOnly = [yGZ, mGZ, dGZ, hGZ].map(firstChar);
-  const branchOnly  = [yGZ, mGZ, dGZ, hGZ].map(secondChar);
-
+  // ─────────────────────────────────────────────────────
+  // 2) 원국 강도 기초(간10/지지본기6)
+  // ─────────────────────────────────────────────────────
+  const stemsOnly  = [yGZ, mGZ, dGZ, hGZ].map(firstChar);
+  const branchOnly = [yGZ, mGZ, dGZ, hGZ].map(secondChar);
   const elCount: Record<Element, number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
 
-  // 천간 가산
   for (const s of stemsOnly) {
     if (!s) continue;
     const e = STEM_TO_ELEMENT[s as keyof typeof STEM_TO_ELEMENT];
     if (e) elCount[e] += 10;
   }
 
-  // 지지 본기 가산(정기만 반영)
   const hiddenMainStems: string[] = [];
   for (const b of branchOnly) {
     if (!b) continue;
@@ -435,132 +376,75 @@ function detectOuterGyeok(opts: {
     if (e) elCount[e] += 6;
   }
 
-  //const allStemsFor10God = [...stemsOnly, ...hiddenMainStems].filter(Boolean) as string[];
-  //const subList = allStemsFor10God.map((s) => mapStemToTenGodSub(dayStem, s));
-  
-  // const cntMain = (main: "비겁"|"식상"|"재성"|"관성"|"인성") => {
-  //   const group: Record<typeof main, TenGodSubtype[]> = {
-  //     비겁: ["비견", "겁재"],
-  //     식상: ["식신", "상관"],
-  //     재성: ["편재", "정재"],
-  //     관성: ["편관", "정관"],
-  //     인성: ["편인", "정인"],
-  //   };
-  //   return subList.filter(x => group[main].includes(x)).length;
-  // };
-
-  // // 관인격 판별 (인접 조건 추가)
-  // if (cntMain("관성") && cntMain("인성")) {
-  //   const pos = stems.map((s, idx) => ({
-  //     s,
-  //     kind: tgMain(dayStem, s),
-  //     idx,
-  //   }));
-
-  //   // 관·인 위치 찾기
-  //   const gPos = pos.filter(p => p.kind === "관성");
-  //   const iPos = pos.filter(p => p.kind === "인성");
-
-  //   // 인접 여부 체크: |idx 차이| <= 1이면 인접
-  //   const isAdjacent = gPos.some(g => iPos.some(i => Math.abs(g.idx - i.idx) <= 1));
-
-  //   if (isAdjacent) {
-  //     const anyGwan = gPos[0]?.s;
-  //     const anyIn = iPos[0]?.s;
-  //     const gEl = STEM_TO_ELEMENT[anyGwan];
-  //     const iEl = STEM_TO_ELEMENT[anyIn];
-  //     if (gEl && iEl && SHENG_NEXT[gEl] === iEl && dEl && SHENG_NEXT[iEl] === dEl) {
-  //       out.push("관인상생격");
-  //     } else {
-  //       out.push("관인격");
-  //     }
-  //   }
-  // }
   const HIDDEN_MAP = (mapping === "hgc"
-  ? hiddenStemMappingHGC
-  : hiddenStemMappingClassic) as typeof hiddenStemMappingClassic;
+    ? hiddenStemMappingHGC
+    : hiddenStemMappingClassic) as typeof hiddenStemMappingClassic;
 
   function getHiddenStems(branch: string): string[] {
-    return HIDDEN_MAP[branch] ?? [];
+    return (HIDDEN_MAP[branch] ?? []).filter(h => ["갑","을","병","정","무","기","경","신","임","계"].includes(h));
   }
 
   const validGZ = [yGZ, mGZ, dGZ, hGZ].filter(Boolean) as string[];
   const allPillars = validGZ.flatMap(gz => [gz.charAt(0), gz.charAt(1)]);
 
+  // 십신 플랫(간+지지표면+지장간 전체) — 존재성 판단용
   const tenGodList: TenGodSubtype[] = allPillars.flatMap(item => {
     try {
-      // 천간인 경우
       if (["갑","을","병","정","무","기","경","신","임","계"].includes(item)) {
         return [mapStemToTenGodSub(dayStem, item)];
       }
-      // 지지인 경우
       if (["자","축","인","묘","진","사","오","미","신","유","술","해"].includes(item)) {
-        // 지지 자체 + 지장간까지 포함
         const tgBranch = mapBranchToTenGodSub(dayStem, item);
         const hidden = getHiddenStems(item).map(h => mapStemToTenGodSub(dayStem, h));
         return [tgBranch, ...hidden];
       }
       return [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
-  const hasType = (target: TenGodSubtype[]) =>
-    tenGodList.some(tg => target.includes(tg));
+  const hasType = (target: TenGodSubtype[]) => tenGodList.some(tg => target.includes(tg));
 
+  // 인접/흐름(지장간 배제: 간 + 지지표면만)
   const hasAdjacency = (groupA: TenGodSubtype[], groupB: TenGodSubtype[]) => {
-    // 동적 기둥 구간 탐색용
-    const pillarStarts: number[] = []; // 각 기둥 시작 인덱스
-    for (let i = 0; i < tenGodList.length; i++) {
-      const tg = tenGodList[i];
-      // 천간은 무조건 기둥 시작점
-      if (["비견","겁재","식신","상관","편재","정재","편관","정관","편인","정인"].includes(tg)) {
-        // 맨 처음은 무조건 추가, 이후엔 "간-지-지장" 패턴 뒤에 새 간이 오면 새로운 기둥 시작
-        if (i === 0 || (i > 0 && tenGodList[i-1] !== tg)) {
-          pillarStarts.push(i);
-        }
+    const stemSeq: TenGodSubtype[] = [];
+    const branchSeq: (TenGodSubtype | null)[] = [];
+
+    // 각 기둥을 [간TG], [지지표면TG]로 분리
+    for (const gz of validGZ) {
+      const gan = gz.charAt(0);
+      const ji  = gz.charAt(1);
+
+      // 천간 → 십신
+      stemSeq.push(mapStemToTenGodSub(dayStem, gan));
+
+      // 지지 '표면(본기 오행)' → 십신 (지장간 배제)
+      const mainEl = BRANCH_MAIN_ELEMENT[ji as keyof typeof BRANCH_MAIN_ELEMENT];
+      if (!mainEl) {
+        branchSeq.push(null);
+      } else {
+        branchSeq.push(elementToTenGod(dayStem, mainEl));
       }
     }
 
-    // 각 기둥을 배열로 자르기
-    const pillars: TenGodSubtype[][] = [];
-    for (let p = 0; p < pillarStarts.length; p++) {
-      const start = pillarStarts[p];
-      const end = pillarStarts[p + 1] ?? tenGodList.length;
-      pillars.push(tenGodList.slice(start, end));
+    const pairOK = (a?: TenGodSubtype | null, b?: TenGodSubtype | null) =>
+      !!a && !!b && ((groupA.includes(a) && groupB.includes(b)) || (groupB.includes(a) && groupA.includes(b)));
+
+    // 1) 같은 기둥 수직 인접: 간 ↔ 지지표면
+    for (let i = 0; i < stemSeq.length; i++) {
+      if (pairOK(stemSeq[i], branchSeq[i])) return true;
     }
 
-    // 같은 기둥 내부 인접 쌍 검사
-    for (const pillar of pillars) {
-      for (let i = 0; i < pillar.length - 1; i++) {
-        const a = pillar[i];
-        const b = pillar[i + 1];
-        if (
-          (groupA.includes(a) && groupB.includes(b)) ||
-          (groupB.includes(a) && groupA.includes(b))
-        ) {
-          return true;
-        }
-      }
+    // 2) 수평 인접(같은 행): 간 ↔ 다음 간, 지지표면 ↔ 다음 지지표면
+    for (let i = 0; i < stemSeq.length - 1; i++) {
+      if (pairOK(stemSeq[i], stemSeq[i + 1])) return true;           // 간-간
+      if (pairOK(branchSeq[i], branchSeq[i + 1])) return true;       // 지지표면-지지표면
     }
 
-    // 기둥 간 인접: 현재 기둥 마지막 ↔ 다음 기둥 첫
-    for (let p = 0; p < pillars.length - 1; p++) {
-      const last = pillars[p][pillars[p].length - 1];
-      const next = pillars[p + 1][0];
-      if (
-        (groupA.includes(last) && groupB.includes(next)) ||
-        (groupB.includes(last) && groupA.includes(next))
-      ) {
-        return true;
-      }
-    }
-
+    // ❌ 대각선 금지: (지지표면[i] ↔ 간[i+1]) 또는 (간[i] ↔ 지지표면[i+1])는 검사하지 않음
     return false;
   };
 
-  // ===== 십신 그룹 매핑 =====
+  // 십신 그룹
   const groupMap = {
     식상: ["식신", "상관"] as const,
     재성: ["편재", "정재"] as const,
@@ -570,196 +454,183 @@ function detectOuterGyeok(opts: {
   };
 
   // 관인상생격
-  if (
-    hasType([...groupMap.관성]) &&
-    hasType([...groupMap.인성]) &&
-    hasAdjacency([...groupMap.관성], [...groupMap.인성])
-  ) {
+  if (hasType([...groupMap.관성]) && hasType([...groupMap.인성]) && hasAdjacency([...groupMap.관성], [...groupMap.인성])) {
     out.push("관인상생격");
   }
 
-  // ===== 격국 판별 =====
-
-  // 식상생재격: 식상이 재성을 생하고, 인접(간↔지 or 옆기둥)해야 성립
-  if (
-    hasType([...groupMap.식상]) &&
-    hasType([...groupMap.재성]) &&
-    hasAdjacency([...groupMap.식상], [...groupMap.재성])
-  ) {
+  // 식상생재격
+  if (hasType([...groupMap.식상]) && hasType([...groupMap.재성]) && hasAdjacency([...groupMap.식상], [...groupMap.재성])) {
     out.push("식상생재격");
   }
 
-
-  // dayStem = 일간 (기준)
-  const tenGodUnseongList: TenGodOrUnseong[] = [];
-
-  for (let i = 0; i < allPillars.length; i++) {
-    const item = allPillars[i];
-    const isStem = i % 2 === 0;
-
-    try {
-      if (isStem) {
-        const tg = mapStemToTenGodSub(dayStem, item);
-        tenGodUnseongList.push(tg);
-      } else {
-        const tgBranch = mapBranchToTenGodSub(dayStem, item);
-        const unseong = getTwelveUnseong(dayStem, item); // now typed as TwelveUnseong | ""
-        tenGodUnseongList.push(tgBranch);
-        if (unseong) tenGodUnseongList.push(unseong as TwelveUnseong);
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  // 식상생재
-  if (
-    hasType([...groupMap.식상]) &&
-    hasType([...groupMap.재성]) &&
-    hasAdjacency([...groupMap.식상], [...groupMap.재성])
-  ) {
-    out.push("식상생재격");
-  }
-
-  // 식상제살격: 식상이 칠살(편관)을 제어 — (편관 존재 + 정관 과다 X + 식상 수 ≥ 살 수)
+  // 식상제살/상관패인/칠살/살인상생
   const cnt = (labels: string[]) => subs.filter((x)=> labels.includes(x)).length;
   const nSiksang = cnt(["식신","상관"]);
   const nCheolsal = cnt(["편관"]);
   const nJeonggwan = cnt(["정관"]);
-  if (nCheolsal>=1 && nSiksang>=1 && nSiksang >= nCheolsal && nJeonggwan <= nCheolsal) {
-    out.push("식상제살격");
-  }
-  // 상관패인격: 상관이 인성을 패함 — 상관≥인성 & 둘 다 존재
-  const nSanggan = cnt(["상관"]);
   const nInseong = cnt(["정인","편인"]);
-  if (nSanggan>=1 && nInseong>=1 && nSanggan >= nInseong) {
-    out.push("상관패인격");
-  }
+  const nJae = cnt(["정재","편재"]);
+  const nGwan = cnt(["정관","편관"]);
 
-  // ── 3) 칠살/살인상생
+  if (nCheolsal>=1 && nSiksang>=1 && nSiksang >= nCheolsal && nJeonggwan <= nCheolsal) out.push("식상제살격");
+  const nSanggan = cnt(["상관"]);
+  if (nSanggan>=1 && nInseong>=1 && nSanggan >= nInseong) out.push("상관패인격");
   const hasCheolsal = subs.includes("편관");
-  if (hasCheolsal) out.push("칠살격");
   if (hasCheolsal && nInseong>=1) out.push("살인상생격");
 
-  // ── 4) 전왕/종격 (전부 원국 강도 기준으로 엄격화)
+  // 전왕/종격
   const str = roughElementStrength(pillars);
   const sortedEl = Object.entries(str).sort((a,b)=>b[1]-a[1]);
   const top = sortedEl[0];
   if (top && top[1] >= 60) out.push(`전왕격(${top[0]})`);
-  // 종격: 최강 원소 75↑ & 2등과 격차 ≥12 & 일간 오행 ≠ 최강
   if (sortedEl.length >= 2) {
     const [firstEl, firstVal] = sortedEl[0];
     const [, secondVal] = sortedEl[1];
-    if (firstVal >= 75 && firstVal - secondVal >= 12 && dEl !== firstEl) {
-      out.push(`종격(${firstEl})`);
-    }
+    if (firstVal >= 75 && firstVal - secondVal >= 12 && dEl !== firstEl) out.push(`종격(${firstEl})`);
   }
 
-  // ── 5) 간합 화기 (가화/진화/화기) — 합화 오행 강도 반영
+  // 간합 화기(가화/진화/화기)
   for (const p of STEM_COMB_PAIRS) {
-  const hasA = stems.includes(p.a);
-  const hasB = stems.includes(p.b);
-  if (!hasA || !hasB) continue;
+    const hasA = stems.includes(p.a);
+    const hasB = stems.includes(p.b);
+    if (!hasA || !hasB) continue;
 
-  const toEl = p.to;
-  const toStr = (str[toEl] ?? 0);
+    const toEl = p.to;
+    const toStr = (str[toEl] ?? 0);
 
-  const aEl = STEM_TO_ELEMENT[p.a];
-  const bEl = STEM_TO_ELEMENT[p.b];
-  const origMax = Math.max(str[aEl] ?? 0, str[bEl] ?? 0);
+    const aEl = STEM_TO_ELEMENT[p.a];
+    const bEl = STEM_TO_ELEMENT[p.b];
+    const origMax = Math.max(str[aEl] ?? 0, str[bEl] ?? 0);
 
-  // 계절(월지 본기)이 합화 오행을 지지하는지
-  const seasonFav = BRANCH_MAIN_ELEMENT[monthBranch] === toEl;
+    const seasonFav = BRANCH_MAIN_ELEMENT[monthBranch] === toEl;
+    const sortedForTop = Object.entries(str).sort((x, y) => y[1] - x[1]);
+    const isTop = sortedForTop[0]?.[0] === toEl;
 
-  // 합화 오행이 원국 최강인지
-  const sortedForTop = Object.entries(str).sort((x, y) => y[1] - x[1]);
-  const isTop = sortedForTop[0]?.[0] === toEl;
-
-  // 중복 태깅 방지 플래그
-  let tagged = false;
-
-  // 🔥 화기격(化氣格): "완전 변환"으로 간주
-  // - 합화 오행 강도 높음(≥60)
-  // - 계절 지지(seasonFav) 또는 최강(isTop)
-  // - 원래 두 오행의 강도 약함(≤20)
-  // - 합화 오행과 원래 오행 간 격차 큼(≥20)
-  if (toStr >= 60 && (seasonFav || isTop) && origMax <= 20 && (toStr - origMax >= 20)) {
-    out.push(`화기격(${toEl})`);
-    tagged = true;
-  }
-
-  // 🌡️ 진화격(眞化格): 강하게 변환되었으나 완전변환까진 아님
-  // - 합화 오행 강도(≥50)
-  // - 계절 지지 또는 최강
-  // - 원래 두 오행 약함(≤25)
-  if (!tagged && toStr >= 50 && (seasonFav || isTop) && origMax <= 25) {
-    out.push(`진화격(${toEl})`);
-    tagged = true;
-  }
-
-  // 💧 가화격(假化格): 합화 조짐만 있음
-  // - 합화 오행 보통 이상(≥35)
-  // - 위 조건들 미충족 시에만
-  if (!tagged && toStr >= 35) {
+    let tagged = false;
+    if (toStr >= 60 && (seasonFav || isTop) && origMax <= 20 && (toStr - origMax >= 20)) {
+      out.push(`화기격(${toEl})`); tagged = true;
+    }
+    if (!tagged && toStr >= 50 && (seasonFav || isTop) && origMax <= 25) {
+      out.push(`진화격(${toEl})`); tagged = true;
+    }
+    if (!tagged && toStr >= 35) {
       out.push(`가화격(${toEl})`);
     }
   }
 
-  // ── 6) 금신/시묘/록마류 및 비천록마 (화기 완전 부재 조건 강화)
+  // 금신/시묘/록마/비천록마
   const hPair = `${stemOf(hGZ)}${branchOf(hGZ)}`;
   if (["갑","기"].includes(dayStem) && ["기사","계유","을축"].includes(hPair)) out.push("금신격");
   if (["진","술","축","미"].includes(branchOf(hGZ))) out.push("시묘격");
   if (["병","정"].includes(dayStem) && (branchOf(dGZ)==="오" || branchOf(mGZ)==="오") && !branches.includes("자")) out.push("도충록마격");
-  // 비천록마격: 자/해 일주 + 화기운(병·정 / 사·오) **완전 부재**
   const hasFireStem = stems.some((s) => s==="병" || s==="정");
   const hasFireBranch = branches.some((b) => b==="사" || b==="오");
-  if (["자","해"].includes(branchOf(dGZ)) && !hasFireStem && !hasFireBranch) {
-    out.push("비천록마격");
-  }
+  if (["자","해"].includes(branchOf(dGZ)) && !hasFireStem && !hasFireBranch) out.push("비천록마격");
 
-  // ── 7) 삼기/삼상/재관쌍미
-  // 천상삼기: 갑·무·경 모두 존재
+  // 삼기/삼상/재관쌍미
   if (["갑","무","경"].every((s)=> stems.includes(s))) out.push("천상삼기격");
-  // 인중삼기: 임·계·신 모두
   if (["임","계","신"].every((s)=> stems.includes(s))) out.push("인중삼기격");
-  // 지하삼기: 을·병·정 모두
   if (["을","병","정"].every((s)=> stems.includes(s))) out.push("지하삼기격");
-  // 삼상격: 상위 3원소가 근접(Top-3차이 ≤ 8) + 상위3 합 ≥ 80
   const topVals = Object.values(str).sort((a,b)=>b-a);
-  if (topVals.length>=3 && topVals[0]-topVals[2] <= 8 && (topVals[0]+topVals[1]+topVals[2] >= 80)) {
-    out.push("삼상격");
-  }
-  // 재관쌍미: 재성과 관성이 균형적으로 공존 (수량 균형)
-  const nJae = cnt(["정재","편재"]);
-  const nGwan = cnt(["정관","편관"]);
-  if (nJae>=1 && nGwan>=1 && Math.abs(nJae - nGwan) <= 1) {
-    out.push("재관쌍미격");
-  }
+  if (topVals.length>=3 && topVals[0]-topVals[2] <= 8 && (topVals[0]+topVals[1]+topVals[2] >= 80)) out.push("삼상격");
+  if (nJae>=1 && nGwan>=1 && Math.abs(nJae - nGwan) <= 1) out.push("재관쌍미격");
 
-  // ── 8) 지지세트/동체/일기류
-  const hasAll = (need: string[]) => need.every((b)=> branches.includes(b));
+  // 지지세트/동체/일기류
   if (hasAll(["진","술","축","미"])) out.push("사고격");
   if (hasAll(["인","신","사","해"])) out.push("사생격");
   if (hasAll(["자","오","묘","유"])) out.push("사정격");
 
   if (branches.length===4 && branches.every((b)=> b === branches[0])) out.push("지지원일기격");
-  if (stems.length===4 && stems.every((s)=> s === stems[0])) out.push("천원일기격");
-  if (stems.length===4 && stems.every((s)=> isYangStem(s))) out.push("양간부잡격");
-  if (stems.length===4 && stems.every((s)=> !isYangStem(s))) out.push("음간부잡격");
+  // 🔧 양간부잡격(수정): 천간 ‘동일 오행’ + 양음양음/음양음양 패턴
+  if (stems.length===4 && sameElementAllStems() && parityPatternAlt()) {
+    out.push("양간부잡격");
+  }
 
+  // 봉황지격: 4주 간지 모두 동일
   if (pillars.every((gz)=> gz && gz === pillars[0])) out.push("봉황지격");
-  if (stems.length===4 && stems.every((s)=> s===stems[0]) && branches.length===4 && branches.every((b)=> b===branches[0])) {
+
+  // 간지동체격: 4주 모두 동일 간 + 동일 지 (사실상 봉황지격과 동격이지만 별도 표기 유지)
+  if (stems.length===4 && stems.every((s)=> s===stems[0]) &&
+      branches.length===4 && branches.every((b)=> b===branches[0])) {
     out.push("간지동체격");
   }
 
-  // 전식록: 식상 존재 + 일지/시지 건록
-  const hasSiksang = cnt(["식신","상관"])>=1;
+  // 전식록: 식상 + 일지/시지 건록
+  const hasSiksang = nSiksang>=1;
   if (hasSiksang && (branchOf(dGZ)===LOK_BRANCH[dayStem] || branchOf(hGZ)===LOK_BRANCH[dayStem])) {
     out.push("전식록격");
   }
 
+  // ─────────────────────────────────────────────────────
+  // ★ 추가 격들
+  // ─────────────────────────────────────────────────────
+
+  // ① 복덕수기격: 천간 을 3개 이상 + 사유축 금국(세 지지 모두) + (사/유/축 중 하나는 반드시 일지)
+  if (cntStem("을") >= 3 && hasAll(["사","유","축"]) && ["사","유","축"].includes(branchOf(dGZ))) {
+    out.push("복덕수기격");
+  }
+
+  // ② 구진득위격: 일간 무/기(토) + (해묘미 방합 or 인묘진 삼합 = 목국) or (해자축/신자진 = 수국)
+  const isToDay = (dayStem === "무" || dayStem === "기");
+  const woodSets = [ ["해","묘","미"], ["인","묘","진"] ];
+  const waterSets = [ ["해","자","축"], ["신","자","진"] ];
+  if (isToDay && (woodSets.some(set => hasAll(set)) || waterSets.some(set => hasAll(set)))) {
+    out.push("구진득위격");
+  }
+
+  // ③ 육갑추건격: 일주 ∈ {갑자,갑인,갑진,갑오,갑신,갑술} + 해 2개↑
+  //   단, 원국에 관살(정/편관) 있거나, 사(巳) 있거나, 인(寅) 있거나, 재성(정/편재) 있으면 성립 어렵다 → 제외 처리
+  const SIX_GAP = new Set(["갑자","갑인","갑진","갑오","갑신","갑술"]);
+  const dPair = `${stemOf(dGZ)}${branchOf(dGZ)}`;
+  if (SIX_GAP.has(dPair) && cntBr("해") >= 2) {
+    const disq = hasSub(["정관","편관"]) || branches.includes("사") || branches.includes("인") || hasSub(["정재","편재"]);
+    if (!disq) out.push("육갑추건격");
+  }
+
+  // ④ 육임추간격(합록격): 일주 ∈ {임자,임인,임진,임오,임신,임술} + 인(寅) 다수(≥2) + 해(亥) 존재(인해합)
+  const SIX_IM = new Set(["임자","임인","임진","임오","임신","임술"]);
+  if (SIX_IM.has(dPair) && cntBr("인") >= 2 && branches.includes("해")) {
+    out.push("육임추간격");
+  }
+
+  // ⑤ 육을서귀격: 을일주 + 병자시, (재성 必), 월지에 재/관 없어야, 자-오 충 회피(오 불가), 인목 회피
+  if (dayStem === "을" && `${stemOf(hGZ)}${branchOf(hGZ)}` === "병자") {
+    const monthSub = mapStemToTenGodSub(dayStem, monthStem);
+    const monthHasJaeOrGwan = ["정재","편재","정관","편관"].includes(monthSub as string);
+    if (!monthHasJaeOrGwan && hasSub(["정재","편재"]) && !branches.includes("오") && !branches.includes("인")) {
+      out.push("육을서귀격");
+    }
+  }
+
+  // ⑥ 육음조양격: 일주 ∈ {신해,신축,신유} + 무자시, 자-오 충 회피, 원국에 관성 없을 것(엄격)
+  const SIX_YIN_SET = new Set(["신해","신축","신유"]);
+  if (SIX_YIN_SET.has(dPair) && `${stemOf(hGZ)}${branchOf(hGZ)}` === "무자" && !branches.includes("오") && !hasSub(["정관","편관"])) {
+    out.push("육음조양격");
+  }
+
+  // ⑦ 임기용배격: 임진 일주 + (진/인 합계) ≥ 2
+  if (dPair === "임진" && (cntBr("진") + cntBr("인")) >= 2) {
+    out.push("임기용배격");
+  }
+
+  // ⑧ 축요사격: 계축/신축 일주 + 축 다수(≥2) + 원국에 관성 전무 + 자수 없음
+  if ((dPair === "계축" || dPair === "신축") && cntBr("축") >= 2 && !hasSub(["정관","편관"]) && !branches.includes("자")) {
+    out.push("축요사격");
+  }
+
+  // ⑨ 정란차격: 경금 일주 + 지지 신자진 삼합(수국)
+  if (dayStem === "경" && hasAll(["신","자","진"])) {
+    out.push("정란차격");
+  }
+
+  // ⑩ 자요사격: 갑자 일주 + 갑자시
+  if (dPair === "갑자" && `${stemOf(hGZ)}${branchOf(hGZ)}` === "갑자") {
+    out.push("자요사격");
+  }
+
   return uniq(out);
 }
+
 
 // ▲▲▲ 이 블록만 갈아끼우면 됩니다 ▲▲▲
 
@@ -873,6 +744,8 @@ if (sub === "비견" || sub === "겁재") {
   } else {
     rsn.push("예외: 비견/겁재는 내격에서 제외됨");
   }
+} else if (sub === "편관") {
+  naegyeok = "편관격(칠살격)";
 } else {
   const nameMap: Record<string, string> = {
     식신: "식신격", 상관: "상관격",
@@ -1073,7 +946,6 @@ function transformMulsangTags() {
   return { newPairs, newTris };
 }
 
-
 // 실행 예시
 const { newPairs, newTris } = transformMulsangTags();
 
@@ -1139,180 +1011,65 @@ function firstChar(s: string | undefined | null): string { return s?.charAt(0) ?
 function secondChar(s: string | undefined | null): string { return s?.charAt(1) ?? ""; }
 
 /** 메인: 원국 4주에서 구조 태그 산출 */
-export function detectStructureTags(pillars: [string, string, string, string], mapping = "classic", unified: UnifiedPowerResult) {
-  // pillars: [년간지, 월간지, 일간지, 시간지] 형식 가정 예) "경자"
+export function detectStructureTags(
+  pillars: [string, string, string, string],
+  mapping: string,
+  unified: UnifiedPowerResult
+) {
+  // pillars: [년간지, 월간지, 일간지, 시간지] (예: "경자")
   const [yGZ, mGZ, dGZ, hGZ] = (pillars ?? []).slice(0, 4);
 
-  // ── 원국만 사용 (운 영향 없음) ──
-  const stemsOnly = [yGZ, mGZ, dGZ, hGZ].map(firstChar);
-  const branchOnly  = [yGZ, mGZ, dGZ, hGZ].map(secondChar);
+  // ── 안전 파서 ──
+  const first = (s?: string) => (s?.length ?? 0) >= 1 ? s!.charAt(0) : "";
+  const second = (s?: string) => (s?.length ?? 0) >= 2 ? s!.charAt(1) : "";
 
-  const dayStem   = firstChar(dGZ);
+  // ── 원국만 사용 ──
+  const stemsOnly  = [yGZ, mGZ, dGZ, hGZ].map(first).filter(Boolean) as string[];
+  const branchOnly = [yGZ, mGZ, dGZ, hGZ].map(second).filter(Boolean) as string[];
+
+  const dayStem   = first(dGZ);
   const isYangDay = STEM_IS_YANG[dayStem as keyof typeof STEM_IS_YANG] ?? false;
 
   const tags = new Set<string>();
 
-  // ── 1) 오행 강도(천간 10, 지지본기 6) ─────────────────
+  // ── 지장간 매핑 선택 ──
+  const HIDDEN_MAP = mapping === "classic" ? hiddenStemMappingClassic : hiddenStemMappingHGC;
+  const VALID_STEM_SET = new Set(["갑","을","병","정","무","기","경","신","임","계"]);
+
+  const getHiddenStemsAll = (branch: string): string[] =>
+    (HIDDEN_MAP[branch] ?? []).filter((s) => VALID_STEM_SET.has(s));
+
+  // ✅ “표면 전용” 지지→십신 (지장간 전혀 사용 안 함)
+  const tgOfBranchSurface = (day: string, branch: string): TenGodSubtype => {
+    const el = BRANCH_MAIN_ELEMENT[branch as keyof typeof BRANCH_MAIN_ELEMENT];
+    // branch 표면 오행이 없으면 안전탈출
+    if (!el) throw new Error(`Unknown branch main element: ${branch}`);
+    return elementToTenGod(day, el);
+  };
+
+  // ── 1) 오행 강도(천간 10, 지지본기 6) ──
   const elCount: Record<Element, number> = { 목:0, 화:0, 토:0, 금:0, 수:0 };
 
-  // 천간 가산
   for (const s of stemsOnly) {
-    if (!s) continue;
     const e = STEM_TO_ELEMENT[s as keyof typeof STEM_TO_ELEMENT];
     if (e) elCount[e] += 10;
   }
 
-  // 지지 본기 가산(정기만 반영)
   const hiddenMainStems: string[] = [];
   for (const b of branchOnly) {
-    if (!b) continue;
     const mainStem = BRANCH_MAIN_STEM[b as keyof typeof BRANCH_MAIN_STEM];
-    if (mainStem) hiddenMainStems.push(mainStem);
+    if (mainStem) hiddenMainStems.push(mainStem); // 본기만 축적 (집계용)
     const e = BRANCH_MAIN_ELEMENT[b as keyof typeof BRANCH_MAIN_ELEMENT];
     if (e) elCount[e] += 6;
   }
 
-  const HIDDEN_MAP = (mapping === "classic"
-    ? hiddenStemMappingHGC
-    : hiddenStemMappingClassic) as typeof hiddenStemMappingClassic;
-
-  function getHiddenStems(branch: string): string[] {
-    return HIDDEN_MAP[branch] ?? [];
-  }
-
-  // ── 2) 십신 리스트(천간 + 지지 본기=정기 포함) ─────────
-  const allStemsFor10God = [...stemsOnly, ...hiddenMainStems].filter(Boolean) as string[];
+  // ── 2) 십신 집계 리스트(천간 + 지지 본기=정기만) ──
+  //    ※ 요청사항대로 집계는 “본기만” 사용 (초기/중기 불포함)
+  const allStemsFor10God = [...stemsOnly, ...hiddenMainStems] as string[];
   const subList = allStemsFor10God.map((s) => mapStemToTenGodSub(dayStem, s));
 
-  const cntSub = (sub: TenGodSubtype) => subList.filter(x => x === sub).length;
-  const cntMain = (main: "비겁"|"식상"|"재성"|"관성"|"인성") => {
-    const group: Record<typeof main, TenGodSubtype[]> = {
-      비겁: ["비견", "겁재"],
-      식상: ["식신", "상관"],
-      재성: ["편재", "정재"],
-      관성: ["편관", "정관"],
-      인성: ["편인", "정인"],
-    };
-    return subList.filter(x => group[main].includes(x)).length;
-  };
-
-  // 월지 양인(陽刃) 판정: 정확 테이블 사용
-  const monthBranch = branchOnly[1];
-  const hasYangin =
-    !!dayStem &&
-    YANGIN_MONTH_BY_DAY_STEM[dayStem as keyof typeof YANGIN_MONTH_BY_DAY_STEM] === monthBranch;
-
-  // ──────────────────────────────────────────────────────
-  // A) 조화·상생형 구조
-  // ──────────────────────────────────────────────────────
-
-  // 감리상지: 水·火 공존 + 木/土 통관  (둘 다 강해야)
-  const elPct = unified.elementPercent100;
-  if (
-    elPct["수"] >= 20 &&
-    elPct["화"] >= 20 &&
-    elPct["토"] >= 15
-  ) {
-    tags.add("감리상지");
-  }
-
-  const validGZ = [yGZ, mGZ, dGZ, hGZ].filter(Boolean) as string[];
-  const allPillars = validGZ.flatMap(gz => [gz.charAt(0), gz.charAt(1)]);
-
-  const tenGodList: TenGodSubtype[] = allPillars.flatMap(item => {
-    try {
-      // 천간인 경우
-      if (["갑","을","병","정","무","기","경","신","임","계"].includes(item)) {
-        return [mapStemToTenGodSub(dayStem, item)];
-      }
-      // 지지인 경우
-      if (["자","축","인","묘","진","사","오","미","신","유","술","해"].includes(item)) {
-        // 지지 자체 + 지장간까지 포함
-        const tgBranch = mapBranchToTenGodSub(dayStem, item);
-        const hidden = getHiddenStems(item).map(h => mapStemToTenGodSub(dayStem, h));
-        return [tgBranch, ...hidden];
-      }
-      return [];
-    } catch {
-      return [];
-    }
-  });
-
-  const hasAdjacency = (
-    groupA: (TenGodSubtype | TwelveUnseong)[],
-    groupB: (TenGodSubtype | TwelveUnseong)[]
-  )  => {
-    // 1️⃣ 기둥 단위로 자르기 (천간이 나오면 새 기둥 시작)
-    const pillars: TenGodOrUnseong[][] = [];
-    let current: TenGodOrUnseong[] = [];
-
-    for (const tg of tenGodList) {
-      if (
-        ["비견","겁재","식신","상관","편재","정재","편관","정관","편인","정인"].includes(tg)
-      ) {
-        if (current.length > 0) pillars.push(current);
-        current = [tg];
-      } else {
-        current.push(tg);
-      }
-    }
-    if (current.length > 0) pillars.push(current);
-
-    // 2️⃣ 같은 기둥 내부 인접
-    for (const pillar of pillars) {
-      for (let i = 0; i < pillar.length - 1; i++) {
-        const a = pillar[i];
-        const b = pillar[i + 1];
-        if (
-          (groupA.includes(a) && groupB.includes(b)) ||
-          (groupB.includes(a) && groupA.includes(b))
-        ) return true;
-      }
-    }
-
-    // 3️⃣ 기둥 간 인접 (현재 기둥 전체 ↔ 다음 기둥 전체)
-    for (let p = 0; p < pillars.length - 1; p++) {
-      const A = pillars[p];
-      const B = pillars[p + 1];
-      for (const a of A) {
-        for (const b of B) {
-          if (
-            (groupA.includes(a) && groupB.includes(b)) ||
-            (groupB.includes(a) && groupA.includes(b))
-          ) return true;
-        }
-      }
-    }
-
-    return false;
-  };
-
-  // 화상위재: 상관이 존재하고 재성과 상생 관계이며 관성이 약함
-  const cntSiksang = cntSub("식신") + cntSub("상관");
-  const cntSanggan = cntSub("상관");
-  const cntJaesung = cntMain("재성");
-  const cntGwan = cntMain("관성");
-
-  // 인접 또는 흐름(식상→재성) 판정
-  const hasAdjacencySR = hasAdjacency(["식신", "상관"], ["편재", "정재"]); // 위에서 만든 함수 재활용
-
-  if (
-    // (1) 상관 존재 (또는 식상이 2 이상)
-    (cntSanggan >= 1 || cntSiksang >= 2) &&
-    // (2) 재성 존재
-    cntJaesung >= 1 &&
-    // (3) 식상 세력이 재성보다 큼
-    cntSiksang > cntJaesung &&
-    // (4) 관성이 약하거나 없음
-    cntGwan <= 1 &&
-    // (5) 식상과 재성이 연결(혹은 인접)
-    hasAdjacencySR
-  ) {
-    tags.add("화상위재");
-  }
-
-  const hasType = (target: TenGodSubtype[]) =>
-    tenGodList.some(tg => target.includes(tg));
+  type MainGroup = "비겁" | "식상" | "재성" | "관성" | "인성";
+  type TenGodSubtype = "비견" | "겁재" | "식신" | "상관" | "편재" | "정재" | "편관" | "정관" | "편인" | "정인";
 
   const groupMap: Record<MainGroup, TenGodSubtype[]> = {
     비겁: ["비견", "겁재"],
@@ -1322,17 +1079,90 @@ export function detectStructureTags(pillars: [string, string, string, string], m
     인성: ["편인", "정인"],
   };
 
-  // 재생관 / 재생관살: 재성과 관성이 동시에 강함
+  const cntSub  = (sub: TenGodSubtype) => subList.filter((x) => x === sub).length;
+  const cntMain = (main: MainGroup) => subList.filter((x) => groupMap[main].includes(x)).length;
+
+  // 월지 양인
+  const monthBranch = branchOnly[1];
+  const hasYangin = !!dayStem && YANGIN_MONTH_BY_DAY_STEM[dayStem as keyof typeof YANGIN_MONTH_BY_DAY_STEM] === monthBranch;
+
+  // ─────────────────────────
+  // A) 조화·상생형 구조
+  // ─────────────────────────
+
+  // 감리상지
+  const elPct = unified.elementPercent100;
+  if (elPct["수"] >= 20 && elPct["화"] >= 20 && elPct["토"] >= 15) {
+    tags.add("감리상지");
+  }
+
+  // ✅ 인접/흐름 판정 시퀀스 (지장간 완전 배제: 천간 + 지지 ‘표면’만)
+  const validGZ = [yGZ, mGZ, dGZ, hGZ].filter(Boolean) as string[];
+  const seq: TenGodSubtype[] = [];
+  for (const gz of validGZ) {
+    const gan = gz.charAt(0);
+    const ji  = gz.charAt(1);
+    // 천간 십신
+    seq.push(mapStemToTenGodSub(dayStem, gan));
+    // 지지 표면 십신 (지장간 NO)
+    seq.push(tgOfBranchSurface(dayStem, ji));
+  }
+
+  // 인접 판정
+  const hasAdjacency = (
+    groupA: (TenGodSubtype | TwelveUnseong)[],
+    groupB: (TenGodSubtype | TwelveUnseong)[]
+  ) => {
+    // seq = [간, 지, 간, 지, ...] 전제 (지장간 미포함)
+    const pairOK = (x?: TenGodSubtype | TwelveUnseong, y?: TenGodSubtype | TwelveUnseong) =>
+      !!x && !!y &&
+      (
+        (groupA as unknown as string[]).includes(x as unknown as string) &&
+        (groupB as unknown as string[]).includes(y as unknown as string)
+      ) ||
+      (
+        (groupB as unknown as string[]).includes(x as unknown as string) &&
+        (groupA as unknown as string[]).includes(y as unknown as string)
+      );
+
+    // 1) 같은 기둥 수직 인접만 체크: (간[i] ↔ 지[i])
+    for (let i = 0; i + 1 < seq.length; i += 2) {
+      if (pairOK(seq[i], seq[i + 1])) return true;
+    }
+
+    // ❌ 기둥 경계/대각선은 검사하지 않음
+    //    (지[i] ↔ 간[i+1]) / (간[i] ↔ 지[i+1]) / 수평 등 전부 무시
+
+    return false;
+  };
+
+
+  const hasType = (targets: TenGodSubtype[]) => seq.some((tg) => targets.includes(tg));
+
+  // 화상위재
+  const cntSiksang = cntSub("식신") + cntSub("상관");
+  const cntSanggan = cntSub("상관");
+  const cntJaesung = cntMain("재성");
+  const cntGwan    = cntMain("관성");
+  const hasAdjacencySR = hasAdjacency(["식신", "상관"], ["편재", "정재"]);
+
   if (
-    hasType([...groupMap.재성]) &&
-    hasType([...groupMap.관성]) &&
-    hasAdjacency([...groupMap.재성], [...groupMap.관성])
+    (cntSanggan >= 1 || cntSiksang >= 2) &&
+    cntJaesung >= 1 &&
+    cntSiksang > cntJaesung &&
+    cntGwan <= 1 &&
+    hasAdjacencySR
   ) {
-    const hasCheolSal = subList.includes("편관");
+    tags.add("화상위재");
+  }
+
+  // 재생관 / 재생관살
+  if (hasType(groupMap.재성) && hasType(groupMap.관성) && hasAdjacency(groupMap.재성, groupMap.관성)) {
+    const hasCheolSal = subList.includes("편관"); // 집계: 본기만
     tags.add(hasCheolSal ? "재생관살" : "재생관");
   }
 
-  // 재인불애: 재성·인성 모두 강하고 균형(±1), 식상/관성은 과다하지 않음
+  // 재인불애
   if (
     cntMain("재성") >= 2 &&
     cntMain("인성") >= 2 &&
@@ -1343,256 +1173,141 @@ export function detectStructureTags(pillars: [string, string, string, string], m
     tags.add("재인불애");
   }
 
-  // 화겁/화록 위생·위재 (다수 + 상생 환경)
-  const biCnt    = cntSub("비견");
-  const geobCnt  = cntSub("겁재");
-  const sikCnt   = cntSub("식신") + cntSub("상관");
-  const jaeCnt   = cntSub("정재") + cntSub("편재");
+  // 화겁/화록 위생·위재 (예시)
+  const biCnt   = cntSub("비견");
+  const geobCnt = cntSub("겁재");
+  const sikCnt  = cntSub("식신") + cntSub("상관");
+  const jaeCnt  = cntSub("정재") + cntSub("편재");
+  const gwanCnt = cntMain("관성");
 
   if (geobCnt >= 2 && sikCnt >= 1 && elCount["화"] + elCount["목"] >= 20) tags.add("화겁위생");
   if (geobCnt >= 2 && jaeCnt >= 1 && elCount["화"] + elCount["토"] >= 20) tags.add("화겁위재");
-  
-  const gwanCnt = cntMain("관성");
 
-  // 화겁위재 예시
   if (
-    geobCnt >= 2 &&
-    jaeCnt >= 1 &&
-    // 화 + 토 비중 충분
+    geobCnt >= 2 && jaeCnt >= 1 &&
     elCount["화"] + elCount["토"] >= 20 &&
-    // 변화 흐름: 겁재 인접 재성 혹은 인접 → 변화 가능성
-    hasAdjacency(["겁재"], ["정재", "편재"]) &&
-    // 관성 억제 조건
+    hasAdjacency(["겁재"], ["정재","편재"]) &&
     gwanCnt <= 1
-  ) {
-    tags.add("화겁위재");
-  }
+  ) tags.add("화겁위재");
 
-  // 화록위재 예시
   if (
-    biCnt >= 2 && 
-    jaeCnt >= 1 &&
+    biCnt >= 2 && jaeCnt >= 1 &&
     elCount["화"] + elCount["토"] >= 20 &&
-    // “록지(건록 지지)”와 재성 인접 혹은 변화 흐름
     hasAdjacency(["건록"], ["정재","편재"]) &&
     gwanCnt <= 1
-  ) {
-    tags.add("화록위재");
-  }
+  ) tags.add("화록위재");
 
-  // 재명유기: 일간 오행 & 재성 오행이 둘 다 충분히 강함(≥20)
+  // 재명유기 (본기 기준 통근)
+  const hasStemRootedInBranch = (stem: string, branch: string): boolean => {
+    const stemEl   = STEM_TO_ELEMENT[stem];
+    const branchEl = BRANCH_MAIN_ELEMENT[branch as keyof typeof BRANCH_MAIN_ELEMENT];
+    return !!stemEl && !!branchEl && stemEl === branchEl;
+  };
 
-  function hasStemRootedInBranch(stem: string, branch: string): boolean {
-    const stemEl = STEM_TO_ELEMENT[stem];
-    const branchMainEl = BRANCH_MAIN_ELEMENT[branch];
-    return stemEl === branchMainEl;
-  }
-
-  const gzList = [yGZ, mGZ, dGZ, hGZ].filter(Boolean);
-  const dayBranch = dGZ.charAt(1);
-
-  // 일간 득근 여부 (자기 일지 본기 기준)
+  const gzList = [yGZ, mGZ, dGZ, hGZ].filter(Boolean) as string[];
+  const dayBranch = second(dGZ);
   const dayHasRoot = hasStemRootedInBranch(dayStem, dayBranch);
 
-  // 천간 중 재성 찾기
   const jaeStems = gzList
-    .map(gz => gz.charAt(0))
-    .filter(stem => {
-      const tg = mapStemToTenGodSub(dayStem, stem);
-      return tg === "편재" || tg === "정재";
-    });
+    .map((gz) => gz.charAt(0))
+    .filter((stem) => ["편재","정재"].includes(mapStemToTenGodSub(dayStem, stem)));
 
-  // 재성 천간이 통근했는가?
   let jaeHasRoot = false;
   for (const gz of gzList) {
-    const gan = gz.charAt(0);
-    const branch = gz.charAt(1);
-
-    if (jaeStems.includes(gan)) {
-      if (hasStemRootedInBranch(gan, branch)) {
-        jaeHasRoot = true;
-        break;
-      }
-    }
+    const gan = gz.charAt(0), br = gz.charAt(1);
+    if (jaeStems.includes(gan) && hasStemRootedInBranch(gan, br)) { jaeHasRoot = true; break; }
   }
+  if (dayHasRoot && jaeHasRoot) tags.add("재명유기");
 
-  // 최종 판정
-  if (dayHasRoot && jaeHasRoot) {
-    tags.add("재명유기");
-  }
-
-  // ──────────────────────────────────────────────────────
-  // B) 과다/불균형·억제/설기류
-  // ──────────────────────────────────────────────────────
-
-  // 관살과다: 관성이 과잉(≥3)이고 비중도 절반 이상
-  if (
-    cntMain("관성") >= 3 &&
-    cntMain("관성") >= 0.5 * (cntMain("비겁") + cntMain("식상") + cntMain("재성") + cntMain("인성"))
-  ) {
+  // ─────────────────────────
+  // B) 과다/불균형·억제/설기
+  // ─────────────────────────
+  if (cntMain("관성") >= 3 && cntMain("관성") >= 0.5 * (cntMain("비겁")+cntMain("식상")+cntMain("재성")+cntMain("인성"))) {
     tags.add("관살과다");
   }
-
-  // 인수과다: 인성 과잉(≥3)이고 비중도 절반 이상
-  if (
-    cntMain("인성") >= 3 &&
-    cntMain("인성") >= 0.5 * (cntMain("비겁") + cntMain("식상") + cntMain("재성") + cntMain("관성"))
-  ) {
+  if (cntMain("인성") >= 3 && cntMain("인성") >= 0.5 * (cntMain("비겁")+cntMain("식상")+cntMain("재성")+cntMain("관성"))) {
     tags.add("인수과다");
   }
+  if (cntMain("인성") >= 3 && cntMain("관성") >= 1) tags.add("인다관설");
+  if (cntMain("재성") >= 3 && (cntMain("비겁")+cntMain("인성")) <= 1) tags.add("재다신약");
 
-  // 인다관설: 인성이 관을 설(인성≥2 & 관성≥1)
-  if (cntMain("인성") >= 2 && cntMain("관성") >= 1) {
-    tags.add("인다관설");
-  }
-
-  // 재다신약: 재성 강(≥3) + 비겁+인성 약(≤1)
-  if (cntMain("재성") >= 3 && (cntMain("비겁") + cntMain("인성")) <= 1) {
-    tags.add("재다신약");
-  }
-
-  // 재자약살: 신강(비겁+인성≥2) + 편관=1 + 재성≥1
   const cheolsalCnt = cntSub("편관");
-  if (
-    (cntMain("비겁") + cntMain("인성")) >= 2 &&
-    cheolsalCnt === 1 &&
-    cntMain("재성") >= 1
-  ) {
-    tags.add("재자약살");
-  }
+  if ((cntMain("비겁")+cntMain("인성")) >= 2 && cheolsalCnt === 1 && cntMain("재성") >= 1) tags.add("재자약살");
+  if (cheolsalCnt >= 2 && (sikCnt + cntMain("인성")) >= 3) tags.add("제살태과");
 
-  // 제살태과: 편관≥2 + (식상+인성)≥3 → 과제어
-  if (cheolsalCnt >= 2 && (sikCnt + cntMain("인성")) >= 3) {
-    tags.add("제살태과");
-  }
-
-  // 군비쟁재 / 군겁쟁재: 비겁(비견+겁재) 다수 + 재성 존재 + 비겁 > 재성
   const totalBigup = biCnt + geobCnt;
+  if ((biCnt >= 2 || totalBigup >= 2) && jaeCnt >= 1 && totalBigup > jaeCnt) tags.add("군비쟁재");
+  if (geobCnt >= 2 && jaeCnt >= 1 && totalBigup > jaeCnt) tags.add("군겁쟁재");
 
-  // 군비쟁재
-  if (
-    (biCnt >= 2 || totalBigup >= 2) &&
-    jaeCnt >= 1 &&
-    totalBigup > jaeCnt // ✅ 재성보다 비겁이 더 많을 때만
-  ) {
-    tags.add("군비쟁재");
-  }
-
-  // 군겁쟁재
-  if (
-    geobCnt >= 2 &&
-    jaeCnt >= 1 &&
-    totalBigup > jaeCnt // ✅ 재성보다 비겁이 더 많을 때만
-  ) {
-    tags.add("군겁쟁재");
-  }
-
-  // ──────────────────────────────────────────────────────
-  // C) 상관·관살 상호작용류
-  // ──────────────────────────────────────────────────────
+  // ─────────────────────────
+  // C) 상관·관살 상호작용
+  // ─────────────────────────
   const sanggwanCnt = cntSub("상관");
   const jeonggwanCnt = cntSub("정관");
 
-  // 상관견관: 상관≥2 + 관성≥1
-  if (sanggwanCnt >= 2 && (cheolsalCnt + jeonggwanCnt) >= 1) {
-    tags.add("상관견관");
-  }
+  if (sanggwanCnt >= 2 && (cheolsalCnt + jeonggwanCnt) >= 1) tags.add("상관견관");
+  if (sanggwanCnt >= 2 && (cheolsalCnt + jeonggwanCnt) === 0) tags.add("상관상진");
+  if (isYangDay && sanggwanCnt >= 2 && cheolsalCnt >= 1) tags.add("상관대살");
+  if (!isYangDay && sanggwanCnt >= 2 && cheolsalCnt >= 1) tags.add("상관합살");
+  if (cntSub("식신") >= 2 && cntSub("편인") >= 1) tags.add("식신봉효");
+  if (cntSub("정관") >= 1 && cntSub("정인") >= 1 &&
+      hasAdjacency(["정관"], ["정인"])) tags.add("관인쌍전");
+  if (hasYangin && cheolsalCnt >= 1 && (cntMain("비겁")+cntMain("인성")) >= 2) tags.add("양인합살");
 
-  // 상관상진: 상관≥2 + 관성=0
-  if (sanggwanCnt >= 2 && (cheolsalCnt + jeonggwanCnt) === 0) {
-    tags.add("상관상진");
-  }
+  // ─────────────────────────
+  // D) 천지 무십신 전용 검사
+  //     → 여기서만 ‘지장간 전체(정/중/초기)’ 사용
+  // ─────────────────────────
+  const safeBranchOnly = [second(yGZ), second(mGZ), second(dGZ), second(hGZ)].filter(Boolean) as string[];
 
-  // 상관대살(양간): 양간일 + 상관≥2 + 편관≥1
-  if (isYangDay && sanggwanCnt >= 2 && cheolsalCnt >= 1) {
-    tags.add("상관대살");
-  }
-  // 상관합살(음간): 음간일 + 상관≥2 + 편관≥1
-  if (!isYangDay && sanggwanCnt >= 2 && cheolsalCnt >= 1) {
-    tags.add("상관합살");
-  }
+  // ✅ 지장간 전체(정/중/초기) — 오직 여기서만 사용
+  // 1) 천간(일간 제외) → 십신 집합
+  const stemsToCheck = [
+    yGZ?.charAt(0),   // 연간
+    mGZ?.charAt(0),   // 월간
+    /* dGZ?.charAt(0) — 일간은 제외 */
+    hGZ?.charAt(0),   // 시간
+  ].filter(Boolean) as string[];
 
-  // 식신봉효: 식신≥2 + 편인≥1
-  if (cntSub("식신") >= 2 && cntSub("편인") >= 1) {
-    tags.add("식신봉효");
-  }
+  const stemTGSet = new Set<TenGodSubtype>(
+    stemsToCheck.map(s => mapStemToTenGodSub(dayStem, s))
+  );
 
-  // 관인쌍전: 관성≥2 + 인성≥2
-  if (cntMain("관성") >= 2 && cntMain("인성") >= 2) {
-    tags.add("관인쌍전");
-  }
+  // 2) 지지 "표면(본기 오행)" → 십신 집합  ※ 지장간 배제
+  const surfaceTGSet = new Set<TenGodSubtype>(
+    safeBranchOnly.flatMap((b) => {
+      const el = BRANCH_MAIN_ELEMENT[b as keyof typeof BRANCH_MAIN_ELEMENT];
+      if (!el) return [];
+      return [elementToTenGod(dayStem, el)];
+    })
+  );
 
-  // 양인합살: 월지 양인 + 편관≥1 + (일간 강=비겁+인성≥2)
-  if (hasYangin && cheolsalCnt >= 1 && (cntMain("비겁") + cntMain("인성")) >= 2) {
-    tags.add("양인합살");
-  }
+  // 3) 지장간 전체(정/중/초기) → 십신 집합  ※ 여기서만 지장간 사용
+  const hiddenAllTGSet = new Set<TenGodSubtype>(
+    safeBranchOnly.flatMap(b =>
+      getHiddenStemsAll(b).map(h => mapStemToTenGodSub(dayStem, h))
+    )
+  );
 
-  const safeStemsOnly = [yGZ?.charAt(0), mGZ?.charAt(0), dGZ?.charAt(0), hGZ?.charAt(0)]
-    .filter(Boolean); // ✅ undefined, 빈문자 제거
+  // 4) 그룹별 존재여부 계산 (인접/흐름 무관, 전역 포함)
+  (["비겁","식상","재성","관성","인성"] as const).forEach((main) => {
+    const targets = groupMap[main]; // 예: ["편재","정재"]
 
-  const safeBranchOnly = [yGZ?.charAt(1), mGZ?.charAt(1), dGZ?.charAt(1), hGZ?.charAt(1)]
-    .filter(Boolean); // ✅ undefined, 빈문자 제거
+    // 어디서든 하나라도 존재하면 true
+    const existStem    = targets.some((t) => stemTGSet.has(t));
+    const existSurface = targets.some((t) => surfaceTGSet.has(t));
+    const existHidden  = targets.some((t) => hiddenAllTGSet.has(t));
 
-
-  // 십신 그룹 매핑
-  type MainGroup = "비겁" | "식상" | "재성" | "관성" | "인성";
-  type TenGodSubtype = "비견" | "겁재" | "식신" | "상관" | "편재" | "정재" | "편관" | "정관" | "편인" | "정인";
-
-  // 천간 검사 (일간 제외)
-  const hasTypeInStem = (main: keyof typeof groupMap) => {
-    const stemsToCheck = safeStemsOnly.filter(s => s !== dayStem);
-    return stemsToCheck.some(s => {
-      try {
-        const tg = mapStemToTenGodSub(dayStem, s!);
-        return groupMap[main].includes(tg);
-      } catch {
-        return false;
-      }
-    });
-  };
-
-  // 지지 표면 검사
-  const hasTypeInBranch = (main: keyof typeof groupMap) =>
-    safeBranchOnly.some(b => {
-      try {
-        const branchElement = mapBranchToElement(b!);
-        const tg = elementToTenGod(dayStem, branchElement);
-        return groupMap[main].includes(tg);
-      } catch {
-        return false;
-      }
-    });
-
-  // 지장간 검사
-  const hasTypeInHidden = (main: keyof typeof groupMap) =>
-    safeBranchOnly.some(b => {
-      try {
-        const hiddenStems = getHiddenStems(b!).filter(h => h !== dayStem);
-        return hiddenStems.some(h => {
-          const tg = mapStemToTenGodSub(dayStem, h);
-          return groupMap[main].includes(tg);
-        });
-      } catch {
-        return false;
-      }
-    });
-
-  // 전체 검사
-  (["비겁", "식상", "재성", "관성", "인성"] as const).forEach(main => {
-    const existStem = hasTypeInStem(main);
-    const existBranch = hasTypeInBranch(main);
-    const existHidden = hasTypeInHidden(main);
-
-    // 1️⃣ 완전 없음 → 천지무
-    if (!existStem && !existBranch && !existHidden) {
+    // 정의:
+    // - 천지무X: 천간X & 지지표면X & 지장간전체X
+    // - 무X:     천간X & 지지표면X & 지장간전체O
+    if (!existStem && !existSurface && !existHidden) {
       tags.add(`천지무${main}`);
-    }
-    // 2️⃣ 천간X + 지지X + 지장간O → 무
-    else if (!existStem && !existBranch && existHidden) {
+    } else if (!existStem && !existSurface && existHidden) {
       tags.add(`무${main}`);
     }
   });
 
   return Array.from(tags);
-
 }
+

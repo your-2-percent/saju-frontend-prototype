@@ -98,12 +98,11 @@ export default function IlwoonCalendar({
           : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
       : null;
 
-  const today = (() => {
-    return new Date();
-  })();
+  const { date: pickedDate, setFromEvent } = useLuckPickerStore();
+  const today = new Date(year, month + 1);
 
   const anchor = (() => {
-    const base = new Date(year, month);
+    const base = new Date(year, month + 1);
     
     const jie = getJieRangeByDate(base);
     return new Date(jie.start);
@@ -113,8 +112,25 @@ export default function IlwoonCalendar({
 
   // ✅ 절입 구간은 anchor 기준으로 계산
   const jie = !selectedMonth ? getJieRangeByDate(today) : anchorMemo;
-  const monthStart = jie.start;
-  const monthEnd = jie.end;
+  //const monthStart = jie.start;
+  //const monthEnd = jie.end;
+
+  // 선택일 하이라이트(전역)
+  const pickerNoon = useMemo(() => {
+    if (!pickedDate) return null;
+    const d = new Date(pickedDate);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  }, [pickedDate]);
+
+  const baseForJie = useMemo(() => {
+    if (pickerNoon) return pickerNoon;          // 전역 선택일(사이드바에서 setDate 한 값)
+    const todays = new Date(year, month + 1);
+    return selectedMonth ? anchor : todays;      // 선택월 있으면 anchor, 없으면 오늘
+  }, [pickerNoon, selectedMonth, anchor, year, month]);
+
+  const { start: monthStart, end: monthEnd } = useMemo(() => {
+    return getJieRangeByDate(baseForJie);
+  }, [baseForJie]);
 
   const days = useMemo(() => {
     const arr: Date[] = [];
@@ -125,6 +141,7 @@ export default function IlwoonCalendar({
     }
     return arr;
   }, [monthStart, monthEnd]);
+  
 
   // ✅ 절입 마킹: 연도별 테이블은 year 의존, 표시 리스트는 절입 범위 의존
   const termTable = useMemo(() => {
@@ -162,14 +179,6 @@ export default function IlwoonCalendar({
     return rows;
   }, [days, monthStart]);
 
-  // 선택일 하이라이트(전역)
-  const { date: pickedDate, setFromEvent } = useLuckPickerStore();
-  const pickerNoon = useMemo(() => {
-    if (!pickedDate) return null;
-    const d = new Date(pickedDate);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
-  }, [pickedDate]);
-
   return (
     <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       {/* 헤더 */}
@@ -178,7 +187,7 @@ export default function IlwoonCalendar({
           {/* 절입 기준 라벨 */}
           {jie?.cur?.name ? (
             <>
-              {jie.cur.name}
+              {jie?.cur.name}
               {" ~ "}
               {jie?.next?.name ?? ""}
             </>

@@ -21,6 +21,8 @@ export interface LuckPickerState {
   setLon: (next: number | null) => void;
   setFromEvent: (ev: { at: Date; gz?: string }, scope: LuckScope) => void;
   resetDate: () => void;
+  resetMonth: () => void;
+  forceKey: Date;
 }
 
 export const useLuckPickerStore = create<LuckPickerState>()(
@@ -68,6 +70,16 @@ export const useLuckPickerStore = create<LuckPickerState>()(
           });
         },
 
+        resetMonth: () => {
+          const { lon } = get();
+          const today = new Date();
+          const lng = typeof lon === "number" ? lon : undefined;
+          set({
+            date: today,
+            monthGZ: getMonthGanZhi(today, lng),
+          });
+        },
+
         setScope: (next) => set({ scope: next }),
 
         setRule: (next) => {
@@ -103,6 +115,7 @@ export const useLuckPickerStore = create<LuckPickerState>()(
             dayGZ: getDayGanZhi(ev.at, rule),
           });
         },
+        forceKey: new Date(),
       };
     },
     {

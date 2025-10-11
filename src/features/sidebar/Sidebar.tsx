@@ -58,7 +58,7 @@ export default function Sidebar({
   onView,
   onAddNew,
   onEdit,
-  onDeleteView,
+  onDeleteView
 }: SidebarProps) {
   const { list, remove, update } = useMyeongSikStore();
 
@@ -418,6 +418,7 @@ export default function Sidebar({
                     onView(m);
                     onClose();
                   }}
+
                   className="px-3 py-1 rounded text-white text-sm cursor-pointer
                              bg-indigo-600 hover:bg-indigo-500"
                 >
