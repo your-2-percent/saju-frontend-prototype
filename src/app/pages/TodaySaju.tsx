@@ -94,7 +94,7 @@ export default function TodaySaju() {
 
   const [pick, setPick] = useState<Date>(new Date());
   const [isLive, setIsLive] = useState(true);
-  const [dayBoundaryRule, setDayBoundaryRule] = useState<DayBoundaryRule>("자시");
+  const [dayBoundaryRule, setDayBoundaryRule] = useState<DayBoundaryRule>("조자시/야자시");
 
   const [blankHour, setBlankHour] = useState(false);
 
@@ -107,7 +107,7 @@ export default function TodaySaju() {
   const year  = getYearGanZhi(pick);
   const month = getMonthGanZhi(pick);
   const day   = getDayGanZhi(pick, dayBoundaryRule);
-  const hour  = getHourGanZhi(pick, "자시"); // 필요시 dayBoundaryRule로 교체 가능
+  const hour  = getHourGanZhi(pick, "조자시/야자시"); // 필요시 dayBoundaryRule로 교체 가능
 
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
