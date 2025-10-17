@@ -89,6 +89,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
+
   // 테마 클래스 적용(실시간 미리보기)
   useApplyTheme(localSettings.theme ?? "dark");
 
@@ -180,7 +182,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       return (
         <Section title="일운 달력 시간타입">
           <SegmentedControl
-            value={localSettings.ilunRule ?? "자시"}
+            value={ilunRuleValue}
             onChange={(v) => update("ilunRule", v)}
             options={[
               { label: "자시", value: "자시" },
