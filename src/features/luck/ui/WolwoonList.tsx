@@ -73,7 +73,7 @@ const JIE_SET = new Set([
 
 /* ===== KST 보정 유틸 ===== */
 function startOfLocalDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 0, 0);
 }
 function monthNumberKST(d: Date): number {
   const parts = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "numeric" }).formatToParts(d);
