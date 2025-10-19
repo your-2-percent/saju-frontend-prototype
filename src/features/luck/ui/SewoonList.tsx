@@ -52,21 +52,6 @@ function toSafeMiddleOfYear(y: number): Date {
   return new Date(y, 6, 2, 12, 0, 0, 0);
 }
 
-function buildDateKeepingMonth(targetYear: number, prev?: Date): Date {
-  const base = prev ?? new Date();
-  const m = base.getMonth();             // 0~11
-  const hh = base.getHours();
-  const mm = base.getMinutes();
-
-  // 월운 리스트는 "해당 해 2월 ~ 다음 해 1월" 구조.
-  // 기존 월이 1월(0)이면, targetYear의 "다음해 1월"에 매핑해야 맞음.
-  if (m === 0) {
-    return new Date(targetYear + 1, 0, 10, hh, mm, 0, 0); // 다음해 1월 10일
-  }
-  // 그 외엔 targetYear의 같은 달 10일로 고정(경계 회피)
-  return new Date(targetYear, m, 10, hh, mm, 0, 0);
-}
-
 /** 현재나이(한국식, 연도 기준 +1). 만 나이 말고 “올해 나이”로 계산 */
 function koreanAgeByYear(birthYear: number, targetYear: number): number {
   return targetYear - birthYear + 1;
@@ -190,25 +175,25 @@ export default function SewoonList({
           return (
             <div
               key={`${year}-${ev.gz || i}`}
-              onClick={() => {
-                // 1) 화면 플리커 방지용(선택 표시 즉시 반영)
-                setLocalIndex(i);
+            onClick={() => {
+              // 1) 선택 즉시 표시
+              setLocalIndex(i);
 
-                // 2) 현재 store의 month를 유지한 채 연도만 targetYear로 교체
-                const targetAt = buildDateKeepingMonth(year, date);
+              // ✅ 2) 세운 앵커: 'at'과 'gz'를 동일한 연중간 날짜로 고정
+              const anchorAt = toSafeMiddleOfYear(year);
+              const anchorGz = getYearGanZhi(anchorAt, lon);
 
-                // 3) 전역 상태 업데이트 (gz는 해당 targetAt 기준 연간지)
-                setFromEvent({ at: targetAt, gz: getYearGanZhi(targetAt, lon) }, "세운");
+              setFromEvent({ at: anchorAt, gz: anchorGz }, "세운");
 
-                // 4) 부모 콜백은 한 틱 뒤(레이스 방지)
-                if (onSelect) {
-                  if (typeof queueMicrotask !== "undefined") queueMicrotask(() => onSelect(year));
-                  else Promise.resolve().then(() => onSelect(year));
-                }
-              }}
-              className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
-                isActive ? "border border-yellow-500" : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
-              }`}
+              // 3) 부모 콜백은 한 틱 뒤
+              if (onSelect) {
+                if (typeof queueMicrotask !== "undefined") queueMicrotask(() => onSelect(year));
+                else Promise.resolve().then(() => onSelect(year));
+              }
+            }}
+            className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
+              isActive ? "border border-yellow-500" : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
+            }`}
               title={`${yearGZ} · ${ev.at.toLocaleDateString()} · ${age}세`}
             >
               {/* ✅ 나이(현재나이) 표시: 년도 위에 */}

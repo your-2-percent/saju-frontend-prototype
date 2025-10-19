@@ -122,7 +122,7 @@ const BR_GWIMUN_LABELS: Array<{ pair: [string, string]; label: string }> = [
 ];
 
 // 형
-const TRIAD_SHAPE_GROUPS: Array<{ name: string; members: [string, string, string] }> = [
+const TRIAD_SHAPE_GROUPS: Array<{ name: string; members: [KoBranch, KoBranch, KoBranch] }> = [
   { name: "인사신", members: ["인","사","신"] },
   { name: "축술미", members: ["축","술","미"] },
 ];
@@ -251,12 +251,39 @@ function finalizeBuckets(out: RelationTags): RelationTags {
     const raw = (out[k] ?? []) as string[];
     const cleaned = raw
       .map(s => s && s.normalize("NFKC"))
-      .filter((t): t is string => !!t && !isNoneTag(t)); // ← '#없음' 전부 제거
-    // 데이터 단계에서는 절대 '#없음'을 넣지 않는다(빈 배열 유지)
-    out[k] = cleaned;
+      .filter((t): t is string => !!t && !isNoneTag(t));
+
+    // 중복 제거
+    (out)[k] = Array.from(new Set(cleaned));
   }
+
+  // ✅ 여기서 최종적으로 지지형에서 '삼형' 있으면 해당 '상형' 전부 제거
+  out.jijiHyeong = suppressPairHyeongWhenTriad(out.jijiHyeong);
+
   return out;
 }
+
+// 운 표기 정렬(원국 포지션 먼저, 운은 대운>세운>월운>일운)
+const LUCK_ORDER: Array<"대운" | "세운" | "월운" | "일운"> = ["대운", "세운", "월운", "일운"];
+
+// 삼형이 있으면 해당 그룹의 상형은 숨김
+function suppressPairHyeongWhenTriad(hyeongTags: string[]): string[] {
+  if (!hyeongTags || hyeongTags.length === 0) return hyeongTags;
+
+  // 정규화 + 중복 제거 먼저
+  const tags = Array.from(new Set(hyeongTags.map(t => t?.normalize("NFKC") ?? ""))).filter(Boolean);
+
+  const hasInsasinTriad  = tags.some(t => t.includes("인사신삼형") || t.includes("삼형(인사신)"));
+  const hasChuksulmiTriad = tags.some(t => t.includes("축술미삼형") || t.includes("삼형(축술미)"));
+
+  return tags.filter(t => {
+    // 뒤에 _매우약함 같은 접미어가 있어도 문자열 포함으로 컷
+    if (hasInsasinTriad  && (t.includes("인신상형") || t.includes("인사상형") || t.includes("사신상형"))) return false;
+    if (hasChuksulmiTriad && (t.includes("축술상형") || t.includes("술미상형") || t.includes("축미상형"))) return false;
+    return true;
+  });
+}
+
 /* ============================================================
  * ① 원국 전용: buildHarmonyTags
  *    - 같은 기둥 간지암합을 여기서 1회만 생성
@@ -422,6 +449,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
     }
   }
 
+  out.jijiHyeong = suppressPairHyeongWhenTriad(out.jijiHyeong);
   return finalizeBuckets(out);
 }
 
@@ -492,6 +520,9 @@ export function buildAllRelationTags(input: {
     ["월운", input.wolwoon],
     ["일운", input.ilwoon],
   ];
+
+  let hasTriadInsasin = false;   // 인사신삼형 존재?
+  let hasTriadChuksulmi = false; // 축술미삼형 존재?
 
   // ✅ 원국 × 운만 산출 (운끼리 조합 삭제)
   for (const [kind, rawLuck] of lucks) {
@@ -590,21 +621,74 @@ export function buildAllRelationTags(input: {
     }
 
     for (const g of TRIAD_SHAPE_GROUPS) {
-      if (!g.members.includes(lb)) continue;
-      const others = g.members.filter(x => x !== lb);
+      if (!g.members.includes(lb as KoBranch)) continue;
+      const others = g.members.filter(x => x !== (lb as KoBranch));
       const hits = natalBranches
         .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
-        .filter(o => others.includes(o.b));
+        .filter(o => others.includes(o.b as KoBranch));
       if (new Set(hits.map(h => h.b)).size === 2) {
         const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>([
           "시","일","월","연"
         ].indexOf(a) - ["시","일","월","연"].indexOf(b))) as [PosLabel,PosLabel];
-        pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}삼형(${g.name})`);
+
+        pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}_${g.name}삼형`);
+        if (g.name === "인사신") hasTriadInsasin = true;
+        if (g.name === "축술미") hasTriadChuksulmi = true;
       }
     }
   }
 
-  // ❌ 운끼리 상호작용(대운X세운/대운X월운/세운X월운/… 일체 제거)
+  {
+    const luckBranches: Array<{ kind: LuckKind; b: KoBranch }> = [];
+    const maybeLuck: Array<[LuckKind, string | undefined | null]> = [
+      ["대운", input.daewoon],
+      ["세운", input.sewoon],
+      ["월운", input.wolwoon],
+      ["일운", input.ilwoon],
+    ];
+    for (const [k, raw] of maybeLuck) {
+      const g = normalizeGZ(raw ?? "");
+      if (g.length >= 2) {
+        luckBranches.push({ kind: k, b: gzBranch(g) as KoBranch });
+      }
+    }
+
+    if (luckBranches.length >= 2) {
+      const natalEntries = natalKo.map((gz, i) => ({
+        pos: POS_LABELS[i]!,
+        b: gzBranch(gz) as KoBranch,
+      }));
+
+      for (const g of TRIAD_SHAPE_GROUPS) {
+        for (let x = 0; x < luckBranches.length; x++) {
+          for (let y = x + 1; y < luckBranches.length; y++) {
+            const L1 = luckBranches[x]!;
+            const L2 = luckBranches[y]!;
+            for (const n of natalEntries) {
+              const set3 = new Set<KoBranch>([n.b, L1.b, L2.b] as KoBranch[]);
+              if (set3.size === 3 && g.members.every(m => set3.has(m))) {
+                const luckMask = [L1.kind, L2.kind]
+                  .sort((a, b) => LUCK_ORDER.indexOf(a) - LUCK_ORDER.indexOf(b))
+                  .join("X");
+                const mask = `${n.pos}X${luckMask}`;
+                pushUnique(out.jijiHyeong, `#${mask}_${g.name}삼형`);
+                if (g.name === "인사신") hasTriadInsasin = true;
+                if (g.name === "축술미") hasTriadChuksulmi = true;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  if (hasTriadInsasin || hasTriadChuksulmi) {
+    out.jijiHyeong = out.jijiHyeong.filter(t => {
+      if (hasTriadInsasin && /(인신상형|인사상형|사신상형)/.test(t)) return false;
+      if (hasTriadChuksulmi && /(축술상형|술미상형|축미상형)/.test(t)) return false;
+      return true;
+    });
+  }
 
   return finalizeBuckets(out);
 }
@@ -713,7 +797,16 @@ export function mergeRelationTags(...entries: RelationTags[]): RelationTags {
     pushAll("ganjiAmhap",    e.ganjiAmhap);
   }
 
-  // 최종 한 번만: 진짜 비었을 때만 '#없음'
+  const hasTriadInsasin  = base.jijiHyeong.some(t => t.includes("인사신삼형") || t.includes("삼형(인사신)"));
+  const hasTriadChuksulmi = base.jijiHyeong.some(t => t.includes("축술미삼형") || t.includes("삼형(축술미)"));
+
+  if (hasTriadInsasin || hasTriadChuksulmi) {
+    base.jijiHyeong = base.jijiHyeong.filter(t => {
+      if (hasTriadInsasin && /(인신상형|인사상형|사신상형)/.test(t)) return false;
+      if (hasTriadChuksulmi && /(축술상형|술미상형|축미상형)/.test(t)) return false;
+      return true;
+    });
+  }
   return finalizeBuckets(base, /* fillNone */);
 }
 
