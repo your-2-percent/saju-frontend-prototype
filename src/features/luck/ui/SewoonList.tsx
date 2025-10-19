@@ -67,6 +67,11 @@ function buildDateKeepingMonth(targetYear: number, prev?: Date): Date {
   return new Date(targetYear, m, 10, hh, mm, 0, 0);
 }
 
+/** 현재나이(한국식, 연도 기준 +1). 만 나이 말고 “올해 나이”로 계산 */
+function koreanAgeByYear(birthYear: number, targetYear: number): number {
+  return targetYear - birthYear + 1;
+}
+
 export default function SewoonList({
   data,
   list,
@@ -92,6 +97,8 @@ export default function SewoonList({
     () => withSafeClockForUnknownTime(data, birthRaw),
     [data, birthRaw]
   );
+  const birthYear = useMemo(() => birth.getFullYear(), [birth]);
+
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
@@ -177,6 +184,9 @@ export default function SewoonList({
             ? getTwelveShinsalBySettings({ baseBranch, targetBranch: branch, era: mapEra(settings.sinsalMode), gaehwa: !!settings.sinsalBloom })
             : null;
 
+          // ✅ 현재나이(한국식, 연도 기준 +1) 계산
+          const age = koreanAgeByYear(birthYear, year);
+
           return (
             <div
               key={`${year}-${ev.gz || i}`}
@@ -199,8 +209,13 @@ export default function SewoonList({
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive ? "border border-yellow-500" : "border border-neutral-200 dark:border-neutral-800 hover:border-yellow-500"
               }`}
-              title={`${yearGZ} · ${ev.at.toLocaleDateString()}`}
+              title={`${yearGZ} · ${ev.at.toLocaleDateString()} · ${age}세`}
             >
+              {/* ✅ 나이(현재나이) 표시: 년도 위에 */}
+              <div className="desk:px-2 py-1 text-center text-[10px] bg-neutral-100 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-200">
+                {age}세
+              </div>
+
               <div className="desk:px-2 py-1 text-center text-[10px] bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300">
                 {year}
               </div>

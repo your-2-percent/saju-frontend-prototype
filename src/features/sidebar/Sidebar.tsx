@@ -19,7 +19,6 @@ import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
 import {
   fmtBirthKR,
   formatPlaceDisplay,
-  calcAgeFromBirthDay,
   getGanjiString,
 } from "@/features/sidebar/lib/sidebarUtils";
 import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
@@ -27,6 +26,8 @@ import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot"
 import { formatLocalHM } from "@/shared/utils";
 import { isDST } from "@/shared/lib/core/timeCorrection";
 import type { DayBoundaryRule } from "@/shared/type";
+//import { toCorrected } from "@/shared/domain/meongsik";
+//import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 type MemoOpenMap = Record<string, boolean>;
 type OrderMap = Record<string, string[]>; // droppableId -> itemId[]
@@ -80,6 +81,8 @@ export default function Sidebar({
     UNASSIGNED_LABEL,
     displayFolderLabel,
   } = useSidebarLogic(list, update);
+
+  
 
   /** 폴더 렌더 순서 (로컬 유지) */
   const [folderOrder, setFolderOrder] = useState<string[]>([]);
@@ -245,6 +248,30 @@ export default function Sidebar({
 
   const isUnknownTime = !m.birthTime || m.birthTime === "모름";
 
+    const rawBirth = String(m.birthDay).trim();
+
+  let birthYear = NaN;
+  if (/^\d{8}$/.test(rawBirth)) {
+    const formatted = `${rawBirth.slice(0, 4)}-${rawBirth.slice(4, 6)}-${rawBirth.slice(6, 8)}`;
+    const date = new Date(formatted);
+    if (!isNaN(date.getTime())) {
+      birthYear = date.getFullYear();
+    }
+  } else {
+    const date = new Date(rawBirth);
+    if (!isNaN(date.getTime())) {
+      birthYear = date.getFullYear();
+    }
+  }
+
+  function koreanAgeByYear(birthYear: number, targetYear: number): number {
+    if (isNaN(birthYear)) return 0;
+    return targetYear - birthYear + 1;
+  }
+
+  const thisYear = new Date().getFullYear();
+  const age = koreanAgeByYear(birthYear, thisYear);
+
     return (
       <Draggable draggableId={keyId} index={index} key={keyId}>
         {(prov) => (
@@ -262,7 +289,7 @@ export default function Sidebar({
             <div className="p-3">
               <div className="flex items-center gap-2">
                 <div className="font-semibold text-sm desk:text-base">
-                  {m.name} ({calcAgeFromBirthDay(m.birthDay)}세, {m.gender})
+                  {m.name} ({age}세, {m.gender})
                 </div>
                 <span className="opacity-40">｜</span>
                 <div className="text-sm text-neutral-600 dark:text-neutral-300">
