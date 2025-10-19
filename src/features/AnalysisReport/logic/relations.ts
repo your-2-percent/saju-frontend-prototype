@@ -429,6 +429,7 @@ export function buildHarmonyTags(pillarsRaw: string[], opts: HarmonyOptions = {}
  * ② 운 포함: buildAllRelationTags
  *    - 기본값 emitNatalGanjiAmhap=false (원국 중복 방지)
  *    - 운이 실제 있을 때만 원국 간지암합 생성 가능(hasLuck 가드)
+ *    - ✅ 운끼리 조합(대운X세운 등)은 전부 제외. 원국X운만 산출.
  * ============================================================ */
 type LuckKind = "대운" | "세운" | "월운" | "일운";
 export interface LuckOptions {
@@ -492,6 +493,7 @@ export function buildAllRelationTags(input: {
     ["일운", input.ilwoon],
   ];
 
+  // ✅ 원국 × 운만 산출 (운끼리 조합 삭제)
   for (const [kind, rawLuck] of lucks) {
     if (!rawLuck) continue;
     const luckKo = normalizeGZ(rawLuck);
@@ -506,7 +508,7 @@ export function buildAllRelationTags(input: {
       if (GANJI_AMHAP_SET.has(pair)) pushUnique(out.ganjiAmhap, `#${kind}_${pair}암합`);
     }
 
-    // 포지션별 1:1 상호작용
+    // 포지션별 1:1 상호작용 (원국 × 운)
     for (let i=0;i<4;i++) {
       const gz = natalKo[i] ?? ""; if (gz.length<2) continue;
       const pos = POS_LABELS[i]!;
@@ -554,7 +556,7 @@ export function buildAllRelationTags(input: {
       if (amhap) pushUnique(out.amhap, `#${kind}X${pos}_${amhap}`);
     }
 
-    // 운 포함 3자 완성(삼합/방합/삼형)
+    // 운 포함 3자 완성(삼합/방합/삼형) — 운 1개 + 원국 2개만 허용
     const natalBranches = natalKo.map(gz => {
       const br = gzBranch(gz ?? "");
       return BRANCH_H2K[br] ?? br;  // ← 한자면 한글로 변환
@@ -566,26 +568,24 @@ export function buildAllRelationTags(input: {
         .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
         .filter(o => others.includes(o.b as KoBranch));
       if (new Set(hits.map(h => h.b)).size === 2) {
-        const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>(
-          ["시","일","월","연"].indexOf(a) - ["시","일","월","연"].indexOf(b)
-        )) as [PosLabel,PosLabel];
+        const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>([
+          "시","일","월","연"
+        ].indexOf(a) - ["시","일","월","연"].indexOf(b))) as [PosLabel,PosLabel];
         pushUnique(out.jijiSamhap, `#${kind}X${p1}X${p2}_삼합(${g.name})`);
       }
     }
 
     const allBranches: { b: KoBranch, pos: string }[] = [
       ...natalKo.map((gz,i)=>({ b: gzBranch(gz) as KoBranch, pos: POS_LABELS[i]! })),
-      ...(input.daewoon ? [{ b: gzBranch(normalizeGZ(input.daewoon)) as KoBranch, pos: "대운" }] : []),
-      ...(input.sewoon ? [{ b: gzBranch(normalizeGZ(input.sewoon)) as KoBranch, pos: "세운" }] : []),
-      ...(input.wolwoon ? [{ b: gzBranch(normalizeGZ(input.wolwoon)) as KoBranch, pos: "월운" }] : []),
-      ...(input.ilwoon ? [{ b: gzBranch(normalizeGZ(input.ilwoon)) as KoBranch, pos: "일운" }] : []),
+      // 운끼리 제외: 여기서는 운 1개만 사용
     ];
 
     for (const g of BANGHAP_GROUPS) {
       const hits = allBranches.filter(o => g.members.includes(o.b));
+      // 방합 3지 모두가 원국+운 조합으로만 충족되어야 함(운끼리 금지) → allBranches가 이미 운 1개만 포함
       if (new Set(hits.map(h => h.b)).size === 3) {
-        const posMask = hits.map(h => h.pos).join("X");
-        pushUnique(out.jijiBanghap, `#${posMask}_방합(${g.name})`);
+        const mask = hits.map(h => h.pos).join("X");
+        pushUnique(out.jijiBanghap, `#${mask}_방합(${g.name})`);
       }
     }
 
@@ -596,85 +596,15 @@ export function buildAllRelationTags(input: {
         .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
         .filter(o => others.includes(o.b));
       if (new Set(hits.map(h => h.b)).size === 2) {
-        const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>(
-          ["시","일","월","연"].indexOf(a) - ["시","일","월","연"].indexOf(b)
-        )) as [PosLabel,PosLabel];
+        const [p1, p2] = hits.map(h => h.pos).sort((a,b)=>([
+          "시","일","월","연"
+        ].indexOf(a) - ["시","일","월","연"].indexOf(b))) as [PosLabel,PosLabel];
         pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}삼형(${g.name})`);
       }
     }
   }
 
-  // ── 운끼리 상호작용 ──
-  const luckPairs: Array<[LuckKind, string, LuckKind, string]> = [];
-
-  if (input.daewoon && input.sewoon)
-    luckPairs.push(["대운", input.daewoon, "세운", input.sewoon]);
-
-  if (input.sewoon && input.wolwoon)
-    luckPairs.push(["세운", input.sewoon, "월운", input.wolwoon]);
-
-  if (input.daewoon && input.wolwoon)
-    luckPairs.push(["대운", input.daewoon, "월운", input.wolwoon]);
-
-  // ✅ 일운 추가
-  if (input.ilwoon && input.daewoon)
-    luckPairs.push(["일운", input.ilwoon, "대운", input.daewoon]);
-
-  if (input.ilwoon && input.sewoon)
-    luckPairs.push(["일운", input.ilwoon, "세운", input.sewoon]);
-
-  if (input.ilwoon && input.wolwoon)
-    luckPairs.push(["일운", input.ilwoon, "월운", input.wolwoon]);
-
-  for (const [k1, raw1, k2, raw2] of luckPairs) {
-    const g1 = normalizeGZ(raw1);
-    const g2 = normalizeGZ(raw2);
-    if (g1.length < 2 || g2.length < 2) continue;
-
-    const s1 = gzStem(g1), b1 = gzBranch(g1);
-    const s2 = gzStem(g2), b2 = gzBranch(g2);
-
-    // 천간 합/충
-    const hap = labelForPair(STEM_HAP_LABELS, s1, s2);
-    if (hap) pushUnique(out.cheonganHap, `#${k1}X${k2}_${hap}`);
-    const chung = labelForPair(STEM_CHUNG_LABELS, s1, s2);
-    if (chung) pushUnique(out.cheonganChung, `#${k1}X${k2}_${chung}`);
-
-    // 지지 육합/충/파/해/원진/귀문
-    const yukhap = labelForPair(BR_YUKHAP_LABELS, b1, b2);
-    if (yukhap) pushUnique(out.jijiYukhap, `#${k1}X${k2}_${yukhap}`);
-    const brChung = labelForPair(BR_CHUNG_LABELS, b1, b2);
-    if (brChung) pushUnique(out.jijiChung, `#${k1}X${k2}_${brChung}`);
-    const pa = labelForPair(BR_PA_LABELS, b1, b2);
-    if (pa) pushUnique(out.jijiPa, `#${k1}X${k2}_${pa}`);
-    const hae = labelForPair(BR_HAE_LABELS, b1, b2);
-    if (hae) pushUnique(out.jijiHae, `#${k1}X${k2}_${hae}`);
-    const wonjin = labelForPair(BR_WONJIN_LABELS, b1, b2);
-    if (wonjin) pushUnique(out.jijiWonjin, `#${k1}X${k2}_${wonjin}`);
-    const gwimun = labelForPair(BR_GWIMUN_LABELS, b1, b2);
-    if (gwimun) pushUnique(out.jijiGwimun, `#${k1}X${k2}_${gwimun}`);
-
-    // 형
-    const sang = labelForPair(BR_SANGHYEONG_LABELS, b1, b2);
-    if (sang) pushUnique(out.jijiHyeong, `#${k1}X${k2}_${sang}`);
-    else {
-      const zamyo = labelForPair(BR_ZAMYO_HYEONG_LABELS, b1, b2);
-      if (zamyo) pushUnique(out.jijiHyeong, `#${k1}X${k2}_${zamyo}`);
-      else if (b1 === b2 && BR_SELF_HYEONG_ALLOWED.has(b1)) {
-        pushUnique(out.jijiHyeong, `#${k1}X${k2}_${b1}${b2}자형`);
-      }
-    }
-
-    // 지지 암합
-    const amhap = labelForPair([
-      { pair:["자","술"], label:"자술암합" },
-      { pair:["축","인"], label:"축인암합" },
-      { pair:["묘","신"], label:"묘신암합" },
-      { pair:["인","미"], label:"인미암합" },
-      { pair:["오","해"], label:"오해암합" },
-    ], b1, b2);
-    if (amhap) pushUnique(out.amhap, `#${k1}X${k2}_${amhap}`);
-  }
+  // ❌ 운끼리 상호작용(대운X세운/대운X월운/세운X월운/… 일체 제거)
 
   return finalizeBuckets(out);
 }
