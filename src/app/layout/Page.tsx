@@ -20,44 +20,79 @@ import PromptCopyCard from "@/app/components/PromptCopyCard";
 import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
 import { useLuckChain } from "@/features/prompt/useLuckChain";
 
+/** 훅은 항상 같은 순서로 호출해야 하므로, 데이터 없을 때도 안전하게 돌릴 더미 명식 */
+const EMPTY_MS: MyeongSik = {
+  id: "empty",
+  name: "",
+  birthDay: "",  // YYYY-MM-DD
+  birthTime: "",  // HH:MM
+  gender: "",
+  birthPlace: { name: "", lat: 0, lon: 0 },
+  relationship: "",
+  memo: "",
+  folder: "",
+  mingSikType: "자시",
+  DayChangeRule: "자시일수론",
+  favorite: false,
+
+  // 계산/보정 필드
+  dateObj: new Date(),          // 원본 Date 객체
+  corrected: new Date(),       // 보정된 Date
+  correctedLocal: "", // 보정시 "HH:MM"
+  // 간지 관련
+  dayStem: "",       // 일간
+  ganjiText: "",      // 간지 전체 문자열
+  ganji: "",          // (호환용) 간지 전체 문자열
+  calendarType: "solar",
+  dir: "forward",
+};
+
 export default function Page() {
   const { list } = useMyeongSikStore();
-  const [currentId, setCurrentId] = useState<string>(
+
+  // 초기 currentId는 존재할 때만 세팅
+  const [currentId, setCurrentId] = useState<string>(() =>
     list.length > 0 ? list[0].id : ""
   );
 
-  // ▼ 추가: Wizard 전용 스위치
+  // 오버레이/화면 상태
   const [wizardOpen, setWizardOpen] = useState(false);
-
-  // 기존 UI 상태
   const [showSidebar, setShowSidebar] = useState(false);
   const [editing, setEditing] = useState<MyeongSik | null>(null);
   const [showToday, setShowToday] = useState(false);
   const [showCouple, setShowCouple] = useState(false);
-  
-  const current = useMemo<MyeongSik>(
-    () => list.find((m) => m.id === currentId) ?? list[0],
-    [list, currentId]
-  );
-  
+  const [openCustom, setOpenCustom] = useState(false);
+
+  // 최초 진입 시 Today 우선
   useEffect(() => {
     setShowToday(true);
     setShowCouple(false);
   }, []);
 
-  // 새 명식 추가
-  const openAdd = () => {
-    setWizardOpen(true);      // ← Wizard만 키기
-  };
+  // 현재 선택
+  const current = useMemo<MyeongSik>(
+    () => list.find((m) => m.id === currentId) ?? list[0],
+    [list, currentId]
+  );
 
-  const natal = useMemo(() => buildNatalPillarsFromMs(current), [current]);
-  const chain = useLuckChain(current);
+  // 데이터 유효성 (타입 유지 + 런타임 가드)
+  const hasCurrent =
+    list.length > 0 &&
+    !!current &&
+    typeof current.birthDay === "string";
 
-  const [openCustom, setOpenCustom] = useState(false);
+  // 훅은 항상 호출: 데이터 없을 땐 더미로 계산
+  const msForHooks = hasCurrent ? current : EMPTY_MS;
+  const natal = useMemo(() => buildNatalPillarsFromMs(msForHooks), [msForHooks]);
+  const chain = useLuckChain(msForHooks);
 
+  // 유틸 가드
   const isGZ = (s: unknown): s is string => typeof s === "string" && s.length >= 2;
-  const isValidPillars = (arr: unknown): arr is [string, string, string, string] => 
-  Array.isArray(arr) && arr.length === 4 && arr.every(isGZ); 
+  const isValidPillars = (arr: unknown): arr is [string, string, string, string] =>
+    Array.isArray(arr) && arr.length === 4 && arr.every(isGZ);
+
+  // 새 명식 추가
+  const openAdd = () => setWizardOpen(true);
 
   return (
     <div className="min-h-screen pb-16">
@@ -71,11 +106,10 @@ export default function Page() {
         open={openCustom}
         onClose={() => setOpenCustom(false)}
         onSave={(m) => {
-        // 1) 먼저 currentId를 세팅해서 Detail을 백그라운드에 마운트
-        setCurrentId(m.id);
-        setShowToday(false);
-        setShowCouple(false);
-        setShowSidebar(false);
+          setCurrentId(m.id);
+          setShowToday(false);
+          setShowCouple(false);
+          setShowSidebar(false);
         }}
       />
 
@@ -85,21 +119,18 @@ export default function Page() {
         open={showSidebar}
         onClose={() => setShowSidebar(false)}
         onView={(m) => {
-          // ‘보기’ 전환 시 원국 화면으로
           setCurrentId(m.id);
           setShowSidebar(false);
           setShowToday(false);
-          setShowCouple(false); // ← 궁합 끄기
-          // ✅ 동일 id라도 강제로 리셋
+          setShowCouple(false);
+
+          // 보기 전환 시 날짜 리셋
           const todayNoon = new Date();
           todayNoon.setHours(12, 0, 0, 0);
-
           const store = useLuckPickerStore.getState();
-          store.setDate(todayNoon); // 오늘로 리셋
+          store.setDate(todayNoon);
 
-          // ‘보기’ 전환 시 원국 화면으로
-          if (currentId === m.id) {
-            // 같은 명식 클릭 시에도 강제 refresh
+          if (hasCurrent && current.id === m.id) {
             setShowToday(false);
             setShowCouple(false);
             setShowSidebar(false);
@@ -112,16 +143,16 @@ export default function Page() {
         }}
         onAddNew={openAdd}
         onEdit={(m) => {
-          // 수정 진입 시에도 원국 화면으로
           setEditing(m);
           setCurrentId(m.id);
           setShowSidebar(false);
           setShowToday(false);
-          setShowCouple(false); // ← 궁합 끄기
+          setShowCouple(false);
         }}
         onDeleteView={() => {
-          setCurrentId(list.length > 0 ? list[0].id : "");
-          setShowToday(true);   // ✅ 오늘의 사주로 fallback
+          const nextId = useMyeongSikStore.getState().list[0]?.id ?? "";
+          setCurrentId(nextId);
+          setShowToday(true);
           setShowCouple(false);
         }}
       />
@@ -129,21 +160,21 @@ export default function Page() {
       {/* 오늘의 사주 */}
       {showToday && <TodaySaju />}
 
-      {/* Wizard — 항상 overlay 로 띄움(absolute) */}
+      {/* Wizard 오버레이 */}
       {wizardOpen && (
         <>
-          <div id="wizard-dim" className="bg-black opacity-80 absolute inset-0 w-full h-full z-99" />
-          <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-100">
+          <div
+            id="wizard-dim"
+            className="bg-black opacity-80 absolute inset-0 w-full h-full z-50"
+          />
+          <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-50">
             <div className="py-6">
               <InputWizard
                 onSave={(m) => {
-                  // 1) 먼저 currentId를 세팅해서 Detail을 백그라운드에 마운트
                   setCurrentId(m.id);
                   setShowToday(false);
                   setShowCouple(false);
                   setShowSidebar(false);
-
-                  // 2) 다음 프레임에서 Wizard를 끄면(겹침 해제) 깜빡임 없음
                   requestAnimationFrame(() => setWizardOpen(false));
                 }}
                 onClose={() => setWizardOpen(false)}
@@ -153,8 +184,8 @@ export default function Page() {
         </>
       )}
 
-      {/* 원국 UI: 선택이 있고, Today/Couple이 아닐 때 */}
-      {current && !showToday && !showCouple && (
+      {/* 원국 UI: current 유효 + Today/Couple 아님 */}
+      {hasCurrent && !showToday && !showCouple && (
         <>
           <div className="pt-18 pb-4">
             <SajuChart
@@ -163,10 +194,7 @@ export default function Page() {
             />
           </div>
 
-          <LuckGlobalPicker
-            ms={current}
-            //hourTable={current.mingSikType ?? "조자시/야자시"}
-          />
+          <LuckGlobalPicker ms={current} />
 
           <div>
             <UnMyounTabs data={current} />
@@ -178,12 +206,21 @@ export default function Page() {
               natal={isValidPillars(natal) ? natal : []}
               chain={chain}
               basis={{ voidBasis: "day", samjaeBasis: "day" }}
-              includeTenGod lunarPillars={[]}            />
+              includeTenGod
+              lunarPillars={[]}
+            />
           </div>
         </>
       )}
 
-      {/* 궁합 뷰어: 리스트 넘겨서 플러스에서 선택 가능 */}
+      {/* 빈 상태 안내 */}
+      {!hasCurrent && (
+        <div className="flex items-center justify-center py-24 text-neutral-500">
+          등록된 명식이 없습니다. 상단의 “+” 버튼으로 새 명식을 추가하세요.
+        </div>
+      )}
+
+      {/* 궁합 뷰어 */}
       {showCouple && (
         <div className="pt-18 pb-4">
           <CoupleViewer people={list} />
@@ -197,7 +234,6 @@ export default function Page() {
             <MyeongSikEditor
               item={editing}
               onClose={() => {
-                // 저장/취소 → 오버레이만 닫기
                 setEditing(null);
               }}
             />
@@ -205,7 +241,7 @@ export default function Page() {
         </div>
       )}
 
-      {/* 하단 네비: Today / Couple 토글 연결 */}
+      {/* 하단 네비 */}
       <BottomNav
         onShowToday={() => {
           setShowToday(true);
@@ -214,13 +250,9 @@ export default function Page() {
         onShowCouple={() => {
           setShowCouple(true);
           setShowToday(false);
-          // 필요시 현재 선택 해제하고 순수 궁합만 보고싶다면:
-          // setCurrentId(null);
-          // setEditing(null);
         }}
       />
 
-      {/* 푸터 */}
       <Footer />
     </div>
   );
