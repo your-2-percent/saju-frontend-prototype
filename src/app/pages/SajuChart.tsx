@@ -417,8 +417,23 @@ export default function SajuChart({ data, hourTable }: Props) {
                   }`}
                 >
                   {filteredCards.map((c) => {
-                    const stem = c.data.stem as Stem10sin;
-                    const branch = c.data.branch as Branch10sin;
+                    let stem = c.data.stem as Stem10sin;
+                    let branch = c.data.branch as Branch10sin;
+
+                    // ✅ 피커 전역 간지로 덮어쓰기
+                    if (c.label.includes("대운") && daeGz) {
+                      stem = daeGz.charAt(0) as Stem10sin;
+                      branch = daeGz.charAt(1) as Branch10sin;
+                    }
+                    if (c.label.includes("세운") && seGz) {
+                      stem = seGz.charAt(0) as Stem10sin;
+                      branch = seGz.charAt(1) as Branch10sin;
+                    }
+                    if (c.label.includes("월운") && wolGz) {
+                      stem = wolGz.charAt(0) as Stem10sin;
+                      branch = wolGz.charAt(1) as Branch10sin;
+                    }
+
                     const unseong = calcUnseong(branch);
                     const shinsal = calcShinsal(branch);
                     return (
