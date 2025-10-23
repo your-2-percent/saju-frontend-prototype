@@ -279,7 +279,7 @@ export default function IlwoonCalendar({
                 <div className="text-neutral-600 dark:text-neutral-400 flex items-center gap-1">
                   <span>{dayLocal.getDate()}</span>
                   {mark && (
-                    <span className="px-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+                    <span className="text-[10px] text-nowrap px-1 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
                       {mark.name}
                     </span>
                   )}
