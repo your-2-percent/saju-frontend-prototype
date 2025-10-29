@@ -13,6 +13,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 import { getJieRangeByDate } from "../utils/solarTermUtils";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
@@ -59,6 +60,71 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
   return (mode as unknown) as Twelve.EraType;
 }
 
+const DEBUG = false;
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+/** data가 음력이라면 반드시 ‘양력 birthDay(YYYYMMDD)’로 치환한 사본을 반환 */
+function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
+  const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
+
+  const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
+  const calType = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+
+  if (birthDay.length < 8) return data;
+
+  const y = Number(birthDay.slice(0, 4));
+  const m = Number(birthDay.slice(4, 6));
+  const d = Number(birthDay.slice(6, 8));
+
+  // 프로젝트에 있을 수 있는 다양한 윤달 필드 케이스를 모두 수용
+  const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
+  let isLeap = false;
+  for (const k of leapFlags) {
+    const v = any[k];
+    if (typeof v === "boolean") {
+      isLeap = v;
+      break;
+    }
+    if (typeof v === "number") {
+      isLeap = v === 1;
+      break;
+    }
+    if (typeof v === "string") {
+      isLeap = v === "1" || v.toLowerCase() === "true";
+      break;
+    }
+  }
+
+  if (calType === "lunar") {
+    try {
+      // ✅ lunarToSolarStrict 사용
+      const solarDate = lunarToSolarStrict(y, m, d, 0, 0);
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(
+        solarDate.getMonth() + 1
+      )}${pad2(solarDate.getDate())}`;
+
+      const out: MyeongSik = {
+        ...data,
+        birthDay: newBirthDay,
+        calendarType: "solar",
+      } as MyeongSik;
+
+      if (DEBUG) {
+        console.debug("[UnMyounTabs] lunar→solar:", {
+          in: { y, m, d, isLeap },
+          out: newBirthDay,
+        });
+      }
+      return out;
+    } catch (e) {
+      if (DEBUG) console.warn("[UnMyounTabs] lunar2solar 실패 → 원본 유지", e);
+      return data;
+    }
+  }
+
+  return data; // 이미 양력
+}
+
 export default function IlwoonCalendar({
   data,
   year,
@@ -66,7 +132,7 @@ export default function IlwoonCalendar({
   hourTable,
   selectedMonth
 }: {
-  data?: MyeongSik | null;
+  data: MyeongSik;
   year: number;   // 그레고리안 연도
   month: number;  // 1~12
   hourTable?: DayBoundaryRule;
@@ -80,11 +146,16 @@ export default function IlwoonCalendar({
   const birthRaw = data ? toCorrected(data) : null;
   const birthSafe = data && birthRaw ? withSafeClockForUnknownTime(data, birthRaw) : null;
 
+  const solarBirth = useMemo<Date>(() => {
+    const ensured = ensureSolarBirthDay(data);
+    return toCorrected(ensured);
+  }, [data]);
+
   const dayStem: Stem10sin | undefined = useMemo(() => {
-    if (!birthSafe) return undefined;
-    const gz = getDayGanZhi(birthSafe, rule);
+    if (!solarBirth) return undefined;
+    const gz = getDayGanZhi(solarBirth, rule);
     return gz.charAt(0) as Stem10sin;
-  }, [birthSafe, rule]);
+  }, [solarBirth, rule]);
 
   const lon =
     data && data.birthPlace && data.birthPlace.name !== "모름" && data.birthPlace.lon !== 0

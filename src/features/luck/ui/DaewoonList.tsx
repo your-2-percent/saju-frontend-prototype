@@ -7,8 +7,8 @@ import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { toCorrected } from "@/shared/domain/meongsik";
 import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import type { DayBoundaryRule } from "@/shared/type";
-import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
-//import { buildWolju } from "@/features/myoun"
+//import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
 // 십이운성/십이신살
 import * as Twelve from "@/shared/domain/간지/twelve";
@@ -22,27 +22,31 @@ import { findActiveIndexByDate } from "@/features/luck/utils/active";
 
 /* ===== 한자/한글 변환 + 음간/음지 판별 ===== */
 const STEM_H2K: Record<string, string> = {
-  "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무",
-  "己":"기","庚":"경","辛":"신","壬":"임","癸":"계",
+  "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
+  "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계",
 };
 const BRANCH_H2K: Record<string, string> = {
-  "子":"자","丑":"축","寅":"인","卯":"묘","辰":"진","巳":"사",
-  "午":"오","未":"미","申":"신","酉":"유","戌":"술","亥":"해",
+  "子": "자", "丑": "축", "寅": "인", "卯": "묘", "辰": "진", "巳": "사",
+  "午": "오", "未": "미", "申": "신", "酉": "유", "戌": "술", "亥": "해",
 };
 const STEM_K2H: Record<string, string> =
-  Object.fromEntries(Object.entries(STEM_H2K).map(([h,k]) => [k,h]));
+  Object.fromEntries(Object.entries(STEM_H2K).map(([h, k]) => [k, h]));
 const BRANCH_K2H: Record<string, string> =
-  Object.fromEntries(Object.entries(BRANCH_H2K).map(([h,k]) => [k,h]));
+  Object.fromEntries(Object.entries(BRANCH_H2K).map(([h, k]) => [k, h]));
 
-function toDisplayChar(value: string, kind: "stem" | "branch", charType: "한자" | "한글") {
+function toDisplayChar(
+  value: string,
+  kind: "stem" | "branch",
+  charType: "한자" | "한글"
+) {
   if (charType === "한글") {
     return kind === "stem" ? (STEM_H2K[value] ?? value) : (BRANCH_H2K[value] ?? value);
   }
   return kind === "stem" ? (STEM_K2H[value] ?? value) : (BRANCH_K2H[value] ?? value);
 }
 
-const YIN_STEMS_ALL = new Set<string>(["乙","丁","己","辛","癸","을","정","기","신","계"]);
-const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]);
+const YIN_STEMS_ALL = new Set<string>(["乙", "丁", "己", "辛", "癸", "을", "정", "기", "신", "계"]);
+const YIN_BRANCHES_ALL = new Set<string>(["丑", "卯", "巳", "未", "酉", "亥", "축", "묘", "사", "미", "유", "해"]);
 function isYinUnified(value: string, kind: "stem" | "branch") {
   return kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
 }
@@ -51,7 +55,12 @@ function isYinUnified(value: string, kind: "stem" | "branch") {
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
-type EraRuntime = { Classic?: Twelve.EraType; Modern?: Twelve.EraType; classic?: Twelve.EraType; modern?: Twelve.EraType };
+type EraRuntime = {
+  Classic?: Twelve.EraType;
+  Modern?: Twelve.EraType;
+  classic?: Twelve.EraType;
+  modern?: Twelve.EraType;
+};
 function isEraRuntime(v: unknown): v is EraRuntime {
   return isRecord(v) && ("Classic" in v || "Modern" in v || "classic" in v || "modern" in v);
 }
@@ -63,35 +72,95 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
       : (exported.Modern ?? exported.modern)!;
   }
   // union string 타입인 경우 그대로 호환
-  return (mode as unknown) as Twelve.EraType;
+  return mode as unknown as Twelve.EraType;
+}
+
+const DEBUG = false;
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+/** data가 음력이라면 반드시 ‘양력 birthDay(YYYYMMDD)’로 치환한 사본을 반환 */
+function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
+  const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
+
+  const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
+  const calType = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+
+  if (birthDay.length < 8) return data;
+
+  const y = Number(birthDay.slice(0, 4));
+  const m = Number(birthDay.slice(4, 6));
+  const d = Number(birthDay.slice(6, 8));
+
+  // 프로젝트에 있을 수 있는 다양한 윤달 필드 케이스를 모두 수용
+  const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
+  let isLeap = false;
+  for (const k of leapFlags) {
+    const v = any[k];
+    if (typeof v === "boolean") {
+      isLeap = v;
+      break;
+    }
+    if (typeof v === "number") {
+      isLeap = v === 1;
+      break;
+    }
+    if (typeof v === "string") {
+      isLeap = v === "1" || v.toLowerCase() === "true";
+      break;
+    }
+  }
+
+  if (calType === "lunar") {
+    try {
+      // ✅ lunarToSolarStrict 사용
+      const solarDate = lunarToSolarStrict(y, m, d, 0, 0);
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(
+        solarDate.getMonth() + 1
+      )}${pad2(solarDate.getDate())}`;
+
+      const out: MyeongSik = {
+        ...data,
+        birthDay: newBirthDay,
+        calendarType: "solar",
+      } as MyeongSik;
+
+      if (DEBUG) {
+        console.debug("[UnMyounTabs] lunar→solar:", {
+          in: { y, m, d, isLeap },
+          out: newBirthDay,
+        });
+      }
+      return out;
+    } catch (e) {
+      if (DEBUG) console.warn("[UnMyounTabs] lunar2solar 실패 → 원본 유지", e);
+      return data;
+    }
+  }
+
+  return data; // 이미 양력
 }
 
 /* ===== 컴포넌트 ===== */
 export default function DaewoonList({
   data,
-  //activeIndex,
-  //onSelect,
 }: {
   data: MyeongSik;
-  //activeIndex: number | null;
-  //onSelect: (i: number) => void;
 }) {
   const list = useDaewoonList(data);
 
-  // ✅ 출생시각 교정 + (시간 미상 시) 정오 보정
-  const birthRaw = toCorrected(data);
-  const birth = useMemo(
-    () => withSafeClockForUnknownTime(data, birthRaw),
-    [data, birthRaw]
-  );
+  const solarBirth = useMemo<Date>(() => {
+    const ensured = ensureSolarBirthDay(data);
+    return toCorrected(ensured);
+  }, [data]);
 
-  // ✅ '대운 십신' 기준이 되는 일간을 안전하게 다시 산출 (toDayStem 쓰지 말자)
+  // 4) 일간(대운 십신 기준) 재산출 — 반드시 양력(solarBirth) + 규칙(rule)
   const dayStem = useMemo<Stem10sin>(() => {
     const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
-    const dayGz = getDayGanZhi(birth, rule);           // ← 너가 이미 맞다고 확인한 그 로직
-    return dayGz.charAt(0) as Stem10sin;               // ← 일간만 뽑기
-  }, [birth, data.mingSikType]);
-  
+    const dayGz = getDayGanZhi(solarBirth, rule);
+    console.log(dayGz);
+    return dayGz.charAt(0) as Stem10sin;
+  }, [solarBirth, data.mingSikType]);
+
   const { date, setFromEvent } = useLuckPickerStore();
   const activeIndex = useMemo(() => findActiveIndexByDate(list, date), [list, date]);
 
@@ -108,15 +177,17 @@ export default function DaewoonList({
     sinsalBloom,  // boolean
   } = settings;
 
+  // 경도(연간/연지 산출에 필요 시)
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
       : data.birthPlace.lon;
+
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const baseBranchForShinsal: Branch10sin = (
     sinsalBase === "일지"
-      ? getDayGanZhi(birth, rule).charAt(1)
-      : getYearGanZhi(birth, lon).charAt(1)
+      ? getDayGanZhi(solarBirth, rule).charAt(1)
+      : getYearGanZhi(solarBirth, lon).charAt(1)
   ) as Branch10sin;
 
   const calcUnseong = (branch: Branch10sin) =>
@@ -132,8 +203,6 @@ export default function DaewoonList({
         })
       : null;
 
-  
-
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       <div className="px-3 py-2 text-sm font-semibold tracking-wider bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300">
@@ -144,7 +213,7 @@ export default function DaewoonList({
         {list.map((ev, i) => {
           const stem = ev.gz.charAt(0) as Stem10sin;
           const branch = ev.gz.charAt(1) as Branch10sin;
-          const age = getAge(birth, ev.at);
+          const age = getAge(solarBirth, ev.at);
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", charType);
@@ -160,8 +229,7 @@ export default function DaewoonList({
 
           return (
             <div
-              key={ev.gz}
-              //className={i === activeIndex ? "is-active ..." : "..."}
+              key={`${ev.gz}-${i}`}
               onClick={() => setFromEvent(ev, "대운")}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive
@@ -232,7 +300,6 @@ export default function DaewoonList({
 }
 
 function getAge(birth: Date, target: Date): number {
-  //console.log(birth, target);
   const diffMs = target.getTime() - birth.getTime();
   const age = diffMs / (365.2425 * 24 * 60 * 60 * 1000);
   return Math.max(0, Math.round(age));
