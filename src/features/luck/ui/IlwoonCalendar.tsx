@@ -12,17 +12,16 @@ import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/�
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
-import { getJieRangeByDate } from "../utils/solarTermUtils";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
 /* ===== 한자/한글 변환 + 음양 판별 ===== */
 const STEM_H2K: Record<string, string> = {
-  "甲": "갑", "乙": "을", "丙": "병", "丁": "정", "戊": "무",
-  "己": "기", "庚": "경", "辛": "신", "壬": "임", "癸": "계",
+  "甲": "갑","乙": "을","丙": "병","丁": "정","戊": "무",
+  "己": "기","庚": "경","辛": "신","壬": "임","癸": "계",
 };
 const BRANCH_H2K: Record<string, string> = {
-  "子": "자", "丑": "축", "寅": "인", "卯": "묘", "辰": "진", "巳": "사",
-  "午": "오", "未": "미", "申": "신", "酉": "유", "戌": "술", "亥": "해",
+  "子": "자","丑": "축","寅": "인","卯": "묘","辰": "진","巳": "사",
+  "午": "오","未": "미","申": "신","酉": "유","戌": "술","亥": "해",
 };
 const STEM_K2H: Record<string, string> =
   Object.fromEntries(Object.entries(STEM_H2K).map(([h,k]) => [k,h]));
@@ -63,66 +62,86 @@ function mapEra(mode: "classic" | "modern"): Twelve.EraType {
 const DEBUG = false;
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
-/** data가 음력이라면 반드시 ‘양력 birthDay(YYYYMMDD)’로 치환한 사본을 반환 */
+/* ===== 음력 → 양력 보정 ===== */
 function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
   const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
-
   const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
   const calType = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
-
   if (birthDay.length < 8) return data;
 
   const y = Number(birthDay.slice(0, 4));
   const m = Number(birthDay.slice(4, 6));
   const d = Number(birthDay.slice(6, 8));
 
-  // 프로젝트에 있을 수 있는 다양한 윤달 필드 케이스를 모두 수용
-  const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
-  let isLeap = false;
-  for (const k of leapFlags) {
-    const v = any[k];
-    if (typeof v === "boolean") {
-      isLeap = v;
-      break;
-    }
-    if (typeof v === "number") {
-      isLeap = v === 1;
-      break;
-    }
-    if (typeof v === "string") {
-      isLeap = v === "1" || v.toLowerCase() === "true";
-      break;
-    }
-  }
-
   if (calType === "lunar") {
     try {
-      // ✅ lunarToSolarStrict 사용
       const solarDate = lunarToSolarStrict(y, m, d, 0, 0);
-      const newBirthDay = `${solarDate.getFullYear()}${pad2(
-        solarDate.getMonth() + 1
-      )}${pad2(solarDate.getDate())}`;
-
-      const out: MyeongSik = {
-        ...data,
-        birthDay: newBirthDay,
-        calendarType: "solar",
-      } as MyeongSik;
-
-      if (DEBUG) {
-        console.debug("[UnMyounTabs] lunar→solar:", {
-          in: { y, m, d, isLeap },
-          out: newBirthDay,
-        });
-      }
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(solarDate.getMonth() + 1)}${pad2(solarDate.getDate())}`;
+      const out: MyeongSik = { ...data, birthDay: newBirthDay, calendarType: "solar" } as MyeongSik;
+      if (DEBUG) console.debug("[IlwoonCalendar] lunar→solar:", { y, m, d, newBirthDay });
       return out;
-    } catch (e) {
-      if (DEBUG) console.warn("[UnMyounTabs] lunar2solar 실패 → 원본 유지", e);
+    } catch {
       return data;
     }
   }
+  return data;
+}
 
-  return data; // 이미 양력
+/* ===== 달(1~12) → Date(정오) ===== */
+function fromPropMonth(year: number, month1to12: number) {
+  return new Date(year, month1to12, 15, 12, 0, 0, 0);
+}
+function toNoon(d: Date) {
+  const x = new Date(d);
+  x.setHours(23, 59, 0, 0);
+  return x;
+}
+
+/* =========================================================
+ * 절월 구간 로컬 엄격판
+ * - 12절만(절入)으로 월 경계 산출: 소한→입춘→경칩→…→입동→대설
+ * - getSolarTermBoundaries 반환값만 신뢰하고 이름 매칭으로 절만 필터
+ * ========================================================= */
+const JIE_NAMES = new Set([
+  "소한","입춘","경칩","청명","입하","망종","소서","입추","백로","한로","입동","대설",
+]);
+type TermRow = { name: string; date: Date };
+function collectTermsAround(year: number): TermRow[] {
+  const buckets = [
+    ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
+    ...(getSolarTermBoundaries(new Date(year,     5, 15, 12, 0)) ?? []),
+    ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
+  ];
+  return buckets
+    .map((t) => ({ name: String(t.name), date: new Date(t.date) }))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+}
+function getJieRangeByDateStrict(target: Date) {
+  const terms = collectTermsAround(target.getFullYear());
+  const jies = terms.filter(t => JIE_NAMES.has(t.name));
+  if (jies.length < 12) {
+    // 안전장치: 실패 시 전체 term에서 target 이전/이후로 근사
+    const idxAny = terms.findIndex(t => t.date > target);
+    const prev = terms[Math.max(0, idxAny - 1)];
+    const next = terms[Math.min(terms.length - 1, idxAny)];
+    return {
+      start: new Date(prev.date),
+      end: new Date(next.date),
+      cur: prev,
+      next,
+    };
+  }
+  // target 이전 ‘마지막 절’ 찾기
+  let i = jies.findIndex(t => t.date > target) - 1;
+  if (i < 0) i = jies.length - 1; // 맨 앞 이전이면 직전 해의 대설~소한
+  const cur = jies[i];
+  const next = jies[(i + 1) % jies.length];
+  return {
+    start: new Date(cur.date),
+    end: new Date(next.date),
+    cur,
+    next,
+  };
 }
 
 export default function IlwoonCalendar({
@@ -170,67 +189,35 @@ export default function IlwoonCalendar({
       : null;
 
   const { date: pickedDate, setFromEvent } = useLuckPickerStore();
-  const today = new Date(year, month + 1);
 
-  const anchor = (() => {
-    const base = new Date(year, month + 1);
-    
-    const jie = getJieRangeByDate(base);
-    return new Date(jie.start);
-  })();
+  // 기준일: picker → selectedMonth → props
+  const propBase = useMemo(() => fromPropMonth(year, month), [year, month]);
+  const pickerNoon = useMemo(() => (pickedDate ? toNoon(new Date(pickedDate)) : null), [pickedDate]);
+  const selectedNoon = useMemo(() => (selectedMonth ? toNoon(selectedMonth) : null), [selectedMonth]);
+  const baseDate = useMemo(() => pickerNoon ?? selectedNoon ?? propBase, [pickerNoon, selectedNoon, propBase]);
 
-  const anchorMemo = useMemo(() => getJieRangeByDate(anchor), [anchor])
-
-  // ✅ 절입 구간은 anchor 기준으로 계산
-  const jie = !selectedMonth ? getJieRangeByDate(today) : anchorMemo;
-  //const monthStart = jie.start;
-  //const monthEnd = jie.end;
-
-  // 선택일 하이라이트(전역)
-  const pickerNoon = useMemo(() => {
-    if (!pickedDate) return null;
-    const d = new Date(pickedDate);
-    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
-  }, [pickedDate]);
-
-  const baseForJie = useMemo(() => {
-    if (pickerNoon) return pickerNoon;          // 전역 선택일(사이드바에서 setDate 한 값)
-    const todays = new Date(year, month + 1);
-    return selectedMonth ? anchor : todays;      // 선택월 있으면 anchor, 없으면 오늘
-  }, [pickerNoon, selectedMonth, anchor, year, month]);
-
-  const { start: monthStart, end: monthEnd } = useMemo(() => {
-    return getJieRangeByDate(baseForJie);
-  }, [baseForJie]);
+  // 절월 구간(로컬 엄격판)
+  const { start: monthStart, end: monthEnd, cur, next } = useMemo(() => {
+    return getJieRangeByDateStrict(baseDate);
+  }, [baseDate]);
 
   const days = useMemo(() => {
     const arr: Date[] = [];
-    const cur = new Date(monthStart);
-    while (cur < monthEnd) {
-      arr.push(new Date(cur));
-      cur.setDate(cur.getDate() + 1);
+    const curD = new Date(monthStart);
+    while (curD < monthEnd) {
+      arr.push(new Date(curD));
+      curD.setDate(curD.getDate() + 1);
     }
     return arr;
   }, [monthStart, monthEnd]);
-  
 
-  // ✅ 절입 마킹: 연도별 테이블은 year 의존, 표시 리스트는 절입 범위 의존
-  const termTable = useMemo(() => {
-    const t = [
-      ...(getSolarTermBoundaries(new Date(year - 1, 5, 15, 12, 0)) ?? []),
-      ...(getSolarTermBoundaries(new Date(year,     5, 15, 12, 0)) ?? []),
-      ...(getSolarTermBoundaries(new Date(year + 1, 5, 15, 12, 0)) ?? []),
-    ]
-      .map(t => ({ name: String(t.name), date: new Date(t.date) }))
-      .sort((a, b) => a.date.getTime() - b.date.getTime());
-    return t;
-  }, [year]);
-
+  // 절입 표시용 테이블(표시는 year가 아니라 실제 구간 기준으로 좁혀 표기)
   const termMarks = useMemo(() => {
-    const inRange = termTable.filter(t => t.date >= monthStart && t.date < monthEnd); // end 배타
-    const nextTerm = termTable.find(t => t.date >= monthEnd);
+    const table = collectTermsAround(baseDate.getFullYear());
+    const inRange = table.filter(t => t.date >= monthStart && t.date < monthEnd);
+    const nextTerm = table.find(t => t.date >= monthEnd);
     return nextTerm ? [...inRange, nextTerm] : inRange;
-  }, [termTable, monthStart, monthEnd]);
+  }, [baseDate, monthStart, monthEnd]);
 
   /* ===== 7열 행렬화: 시작 요일은 'monthStart' 기준 ===== */
   const weeks = useMemo(() => {
@@ -256,11 +243,9 @@ export default function IlwoonCalendar({
       <div className="flex justify-center items-center px-2 desk:px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60">
         <div className="text-center text-[11px] desk:text-sm font-semibold text-neutral-700 dark:text-neutral-200">
           {/* 절입 기준 라벨 */}
-          {jie?.cur?.name ? (
+          {cur?.name ? (
             <>
-              {jie?.cur.name}
-              {" ~ "}
-              {jie?.next?.name ?? ""}
+              {cur.name}{" ~ "}{next?.name ?? ""}
             </>
           ) : (
             `${year}년 ${month}월`
@@ -269,7 +254,7 @@ export default function IlwoonCalendar({
             <div className="mt-0.5 text-[10px] desk:text-xs font-normal text-neutral-500 dark:text-neutral-400">
               [
                 {termMarks.map((t, i) => (
-                  <span key={t.name + i}>
+                  <span key={`${t.name}_${t.date.getTime()}_${i}`}>
                     {t.name} {formatStartKST(t.date)}
                     {i < termMarks.length - 1 ? " · " : ""}
                   </span>
@@ -291,14 +276,13 @@ export default function IlwoonCalendar({
           week.map((d, di) => {
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
 
-            const dayLocal = new Date(d);
-            dayLocal.setHours(12, 0, 0, 0);
+            const dayLocal = toNoon(d);
 
-            const today = new Date();
+            const now = new Date();
             const isToday =
-              dayLocal.getFullYear() === today.getFullYear() &&
-              dayLocal.getMonth() === today.getMonth() &&
-              dayLocal.getDate() === today.getDate();
+              dayLocal.getFullYear() === now.getFullYear() &&
+              dayLocal.getMonth() === now.getMonth() &&
+              dayLocal.getDate() === now.getDate();
 
             const isSelected =
               !!pickerNoon &&
