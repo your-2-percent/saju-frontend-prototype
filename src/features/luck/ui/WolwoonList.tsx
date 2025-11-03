@@ -193,7 +193,7 @@ export default function WolwoonList({
 }: {
   data: MyeongSik;
   activeYear: number | null;
-  onSelect?: (year: number, month: number) => void;
+  onSelect?: (year: number, month0: number) => void;
   onSelectMonth: (d: Date) => void
 }) {
   const settings = useSettingsStore((s) => s.settings);
@@ -241,6 +241,7 @@ export default function WolwoonList({
 
   const { date, setFromEvent } = useLuckPickerStore();
   const activeIndex = findActiveIndexByDate(list, date);
+  
 
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
@@ -280,7 +281,8 @@ export default function WolwoonList({
                 onSelectMonth(ev.at);
                 const delayed = new Date(ev.at);
                 const { start } = getJieRangeByDate(delayed); // ✅ 클릭된 절입 구간 기준
-                onSelect?.(start.getFullYear(), start.getMonth() + 1); // 이 월이 IlwoonCalendar에 전달됨
+                onSelect?.(start.getFullYear(), start.getMonth()); // 이 월이 IlwoonCalendar에 전달됨
+                console.log("[WolwoonList] onSelect ->", start.getFullYear(), start.getMonth());
                 setFromEvent({ at: delayed, gz: getMonthGanZhi(delayed, lon) }, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
