@@ -1,4 +1,3 @@
-// components/SettingsDrawer.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   DragDropContext,
@@ -6,7 +5,6 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-//import { X } from "lucide-react";
 import Toast from "@/shared/ui/feedback/Toast";
 import {
   useSettingsStore,
@@ -14,11 +12,6 @@ import {
 } from "@/shared/lib/hooks/useSettingsStore";
 import { useApplyTheme } from "@/shared/lib/hooks/useTheme";
 import { setStoredTheme, type ThemeMode } from "@/shared/lib/theme";
-
-/* ─────────────────────────────────────────────────────────────
- * 로컬스토리지 키
- * ──────────────────────────────────────────────────────────── */
-const LS_KEY = "harim.settings.v1";
 
 /* 섹션 ID 고정 목록(렌더 키) */
 const DEFAULT_SECTION_KEYS = [
@@ -38,7 +31,6 @@ const DEFAULT_SECTION_KEYS = [
 
 type SectionKey = (typeof DEFAULT_SECTION_KEYS)[number];
 
-/* 유효 키 가드 */
 function isSectionKey(v: unknown): v is SectionKey {
   return typeof v === "string" && (DEFAULT_SECTION_KEYS as readonly string[]).includes(v);
 }
@@ -50,34 +42,12 @@ function normalizeOrder(saved: unknown): SectionKey[] {
   return [...base, ...missing] as SectionKey[];
 }
 
-type PersistPayload = Partial<Settings> & { sectionOrder?: SectionKey[] };
-
-/* LS read/write */
-function readLS(): PersistPayload | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as PersistPayload;
-  } catch {
-    return null;
-  }
-}
-function writeLS(payload: Record<string, unknown>) {
-  if (typeof window === "undefined") return;
-  try {
-    const prev = readLS() ?? {};
-    const next = { ...prev, ...payload };
-    localStorage.setItem(LS_KEY, JSON.stringify(next));
-  } catch {/* noop */}
-}
-
 type Props = { open: boolean; onClose: () => void };
 
 export default function SettingsDrawer({ open, onClose }: Props) {
   const { settings, setSettings } = useSettingsStore();
 
-  // 섹션 순서 (기본은 스토어, 열 때 LS 있으면 덮어씀)
+  // 섹션 순서 (기본은 스토어)
   const initialOrder = useMemo<SectionKey[]>(
     () => normalizeOrder(settings.sectionOrder),
     [settings.sectionOrder]
@@ -87,32 +57,17 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // ✅ 납음 표시 로컬 토글(기본 true)
-  const [showNabeumLocal, setShowNabeumLocal] = useState<boolean>(true);
-
   const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
   // 테마 클래스 적용(실시간 미리보기)
   useApplyTheme(localSettings.theme ?? "dark");
 
-  // 드로어 열 때 LS값 우선 로드(있으면 스토어보다 최신으로 간주)
+  // 드로어 열 때 스토어 → 로컬로 스냅샷
   useEffect(() => {
     if (!open) return;
-    const ls = readLS();
-    if (ls) {
-      const merged: Settings = { ...settings, ...ls } as Settings;
-      setLocalSettings(merged);
-      setOrder(normalizeOrder(ls.sectionOrder ?? merged.sectionOrder));
-      // ✅ 납음 토글 초기화: 키가 없으면 true
-      const has = Object.prototype.hasOwnProperty.call(ls, "showNabeum");
-      setShowNabeumLocal(has ? Boolean((ls as Record<string, unknown>)["showNabeum"]) : true);
-    } else {
-      setLocalSettings(settings);
-      setOrder([...initialOrder]);
-      setShowNabeumLocal(true); // ✅ 기본값 true
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setLocalSettings(settings);
+    setOrder(normalizeOrder(settings.sectionOrder));
+  }, [open, settings]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => {
@@ -123,13 +78,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   };
 
   const applyChanges = () => {
-    // 스토어에 반영(알려진 키만)
     setSettings({ ...localSettings, sectionOrder: order });
     if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
-
-    // ✅ 납음 표시(커스텀 키)는 LS에 저장
-    writeLS({ ...localSettings, sectionOrder: order, showNabeum: showNabeumLocal });
-
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };
@@ -300,11 +250,11 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                 checked={Boolean(localSettings.showSibiSinsal)}
                 onChange={(v) => update("showSibiSinsal", v)}
               />
-              {/* ✅ 납음 표시(스토어 타입 없어도 동작: LS에만 저장) */}
+              {/* ✅ 납음 표시: 스토어에 정식 반영 */}
               <Switch
                 label="납음 표시"
-                checked={showNabeumLocal}
-                onChange={setShowNabeumLocal}
+                checked={Boolean(localSettings.showNabeum)}
+                onChange={(v) => update("showNabeum", v)}
               />
             </div>
           </Section>
