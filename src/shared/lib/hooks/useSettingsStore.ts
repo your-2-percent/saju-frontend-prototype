@@ -58,6 +58,6 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: { ...get().settings, [key]: value } }),
       reset: () => set({ settings: defaultSettings }),
     }),
-    { name: "settings_v2" }
+    { name: "settings_v1" }
   )
 );

@@ -63,6 +63,14 @@ function readLS(): PersistPayload | null {
     return null;
   }
 }
+function writeLS(payload: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  try {
+    const prev = readLS() ?? {};
+    const next = { ...prev, ...payload };
+    localStorage.setItem(LS_KEY, JSON.stringify(next));
+  } catch {/* noop */}
+}
 
 type Props = { open: boolean; onClose: () => void };
 
@@ -80,6 +88,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // ✅ 납음 표시 로컬 토글(스토어 타입에 아직 없어도 동작)
+  const [showNabeumLocal, setShowNabeumLocal] = useState<boolean>(true);
 
   const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
@@ -95,8 +104,11 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       setLocalSettings(merged);
       setOrder(normalizeOrder(ls.sectionOrder ?? merged.sectionOrder));
       // 납음 토글 초기화
+      setShowNabeumLocal(Boolean((ls as Record<string, unknown>)["showNabeum"]));
+    } else {
       setLocalSettings(settings);
       setOrder([...initialOrder]);
+      setShowNabeumLocal(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -113,6 +125,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     // 스토어에 반영(알려진 키만)
     setSettings({ ...localSettings, sectionOrder: order });
     if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
+
+    // ✅ 납음 표시(커스텀 키)는 LS에 저장
+    writeLS({ ...localSettings, sectionOrder: order, showNabeum: showNabeumLocal });
 
     setToastMessage("설정이 적용되었습니다");
     onClose();
@@ -286,8 +301,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
               />
               <Switch
                 label="납음 표시"
-                checked={Boolean(localSettings.showNabeumLocal)}
-                onChange={(v) => update("showNabeumLocal", v)}
+                checked={showNabeumLocal}
+                onChange={setShowNabeumLocal}
               />
             </div>
           </Section>
