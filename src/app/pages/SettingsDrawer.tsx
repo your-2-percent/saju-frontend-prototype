@@ -6,7 +6,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { X } from "lucide-react";
+//import { X } from "lucide-react";
 import Toast from "@/shared/ui/feedback/Toast";
 import {
   useSettingsStore,
@@ -87,7 +87,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // ✅ 납음 표시 로컬 토글(스토어 타입에 아직 없어도 동작)
+  // ✅ 납음 표시 로컬 토글(기본 true)
   const [showNabeumLocal, setShowNabeumLocal] = useState<boolean>(true);
 
   const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
@@ -103,12 +103,13 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       const merged: Settings = { ...settings, ...ls } as Settings;
       setLocalSettings(merged);
       setOrder(normalizeOrder(ls.sectionOrder ?? merged.sectionOrder));
-      // 납음 토글 초기화
-      setShowNabeumLocal(Boolean((ls as Record<string, unknown>)["showNabeum"]));
+      // ✅ 납음 토글 초기화: 키가 없으면 true
+      const has = Object.prototype.hasOwnProperty.call(ls, "showNabeum");
+      setShowNabeumLocal(has ? Boolean((ls as Record<string, unknown>)["showNabeum"]) : true);
     } else {
       setLocalSettings(settings);
       setOrder([...initialOrder]);
-      setShowNabeumLocal(true);
+      setShowNabeumLocal(true); // ✅ 기본값 true
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -299,6 +300,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                 checked={Boolean(localSettings.showSibiSinsal)}
                 onChange={(v) => update("showSibiSinsal", v)}
               />
+              {/* ✅ 납음 표시(스토어 타입 없어도 동작: LS에만 저장) */}
               <Switch
                 label="납음 표시"
                 checked={showNabeumLocal}
@@ -354,12 +356,6 @@ export default function SettingsDrawer({ open, onClose }: Props) {
               적용하기
             </button>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 cursor-pointer"
-          >
-            <X size={22} />
-          </button>
         </div>
 
         {/* Content (드래그 가능) */}
