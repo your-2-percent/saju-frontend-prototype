@@ -15,6 +15,7 @@ export type Settings = {
   showSipSin: boolean;                  // 십신
   showSibiSinsal: boolean;              // 십이신살
   showSibiUnseong: boolean;             // 십이운성
+  showNabeumLocal: boolean;            // 납음 표시 (로컬 저장) 
   theme: "dark" | "light";
   sectionOrder?: string[];
   difficultyMode?: boolean;
@@ -33,6 +34,7 @@ export const defaultSettings: Settings = {
   showSipSin: true,
   showSibiSinsal: true,
   showSibiUnseong: true,
+  showNabeumLocal: true,
   theme: "dark",
   sectionOrder: [
     "hiddenStem","hiddenStemMode","ilunRule","sinsalMode","sinsalBase",

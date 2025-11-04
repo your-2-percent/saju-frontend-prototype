@@ -52,6 +52,7 @@ function normalizeOrder(saved: unknown): SectionKey[] {
 
 type PersistPayload = Partial<Settings> & { sectionOrder?: SectionKey[] };
 
+/* LS read/write */
 function readLS(): PersistPayload | null {
   if (typeof window === "undefined") return null;
   try {
@@ -60,17 +61,6 @@ function readLS(): PersistPayload | null {
     return JSON.parse(raw) as PersistPayload;
   } catch {
     return null;
-  }
-}
-
-function writeLS(payload: PersistPayload) {
-  if (typeof window === "undefined") return;
-  try {
-    const prev = readLS() ?? {};
-    const next = { ...prev, ...payload };
-    localStorage.setItem(LS_KEY, JSON.stringify(next));
-  } catch {
-    /* noop */
   }
 }
 
@@ -89,6 +79,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // ✅ 납음 표시 로컬 토글(스토어 타입에 아직 없어도 동작)
+
   const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
   // 테마 클래스 적용(실시간 미리보기)
@@ -102,11 +94,10 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       const merged: Settings = { ...settings, ...ls } as Settings;
       setLocalSettings(merged);
       setOrder(normalizeOrder(ls.sectionOrder ?? merged.sectionOrder));
-    } else {
+      // 납음 토글 초기화
       setLocalSettings(settings);
       setOrder([...initialOrder]);
     }
-    // 의도: 열릴 때 한 번만 초기화. open 변할 때만 실행.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -119,9 +110,10 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   };
 
   const applyChanges = () => {
+    // 스토어에 반영(알려진 키만)
     setSettings({ ...localSettings, sectionOrder: order });
     if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
-    writeLS({ ...localSettings, sectionOrder: order });
+
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };
@@ -179,19 +171,19 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         );
 
       case "ilunRule":
-      return (
-        <Section title="일운 달력 시간타입">
-          <SegmentedControl
-            value={ilunRuleValue}
-            onChange={(v) => update("ilunRule", v)}
-            options={[
-              { label: "자시", value: "자시" },
-              { label: "조자시/야자시", value: "조자시/야자시" },
-              { label: "인시", value: "인시" },
-            ]}
-          />
-        </Section>
-      );
+        return (
+          <Section title="일운 달력 시간타입">
+            <SegmentedControl
+              value={ilunRuleValue}
+              onChange={(v) => update("ilunRule", v)}
+              options={[
+                { label: "자시", value: "자시" },
+                { label: "조자시/야자시", value: "조자시/야자시" },
+                { label: "인시", value: "인시" },
+              ]}
+            />
+          </Section>
+        );
 
       case "sinsalMode":
         return (
@@ -276,7 +268,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       case "visibility":
         return (
           <Section title="표시 항목">
-            <div className="space-y-2 w-full max-w-[140px] mx-auto">
+            <div className="space-y-2 w-full max-w-[180px] mx-auto">
               <Switch
                 label="십신 표시"
                 checked={Boolean(localSettings.showSipSin)}
@@ -291,6 +283,11 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                 label="신살 표시"
                 checked={Boolean(localSettings.showSibiSinsal)}
                 onChange={(v) => update("showSibiSinsal", v)}
+              />
+              <Switch
+                label="납음 표시"
+                checked={Boolean(localSettings.showNabeumLocal)}
+                onChange={(v) => update("showNabeumLocal", v)}
               />
             </div>
           </Section>
@@ -366,10 +363,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                         <li
                           ref={prov.innerRef}
                           {...prov.draggableProps}
-                          {...prov.dragHandleProps}  // ← li 전체가 핸들!
+                          {...prov.dragHandleProps}
                           className="!flex justify-between items-center bg-white dark:bg-neutral-800 p-2 rounded border text-sm desk:text-base select-none cursor-grab active:cursor-grabbing"
                         >
-                          {/* 아이콘은 표시용 */}
                           <span className="mr-2 select-none">☰</span>
                           <div className="flex-1 min-w-0">{renderSection(id)}</div>
                         </li>
@@ -450,7 +446,7 @@ function SegmentedControl<T extends string>({
         return (
           <button
             key={opt.value}
-            type="button"                             
+            type="button"
             onClick={() => onChange(opt.value)}
             className={`px-3 py-1 text-sm transition-colors ${
               active
@@ -480,7 +476,7 @@ function Switch({
     <label
       data-no-drag
       htmlFor={id}
-      className="flex items-center justify-between w-full max-w-[160px] text-sm cursor-pointer"
+      className="flex items-center justify-between w-full max-w-[180px] text-sm cursor-pointer"
     >
       <span>{label}</span>
       <input
