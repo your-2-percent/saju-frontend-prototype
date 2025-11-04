@@ -116,7 +116,7 @@ function getNabeumBg(elem: ElemKR): string {
 
 /* 납음 표시 여부(스토어에 속성 없을 때 LS 폴백) */
 const LS_KEY = "harim.settings.v1";
-function readLSFlag(key: string, fallback = false): boolean {
+function readLSFlag(key: string, fallback = true): boolean {  // ✅ 기본값 true로 변경
   if (typeof window === "undefined") return fallback;
   try {
     const raw = localStorage.getItem(LS_KEY);
@@ -129,7 +129,7 @@ function readLSFlag(key: string, fallback = false): boolean {
     return fallback;
   }
 }
-function getDynamicBoolean(obj: unknown, key: string, fallback = false): boolean {
+function getDynamicBoolean(obj: unknown, key: string, fallback = true): boolean { // ✅ 기본값 true
   if (!isRecord(obj)) return fallback;
   const v = obj[key];
   return typeof v === "boolean" ? (v as boolean) : fallback;
@@ -216,8 +216,8 @@ export default function SajuChart({ data, hourTable }: Props) {
   const { date } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
 
-  // ✅ 납음 표시 여부(스토어 > LS 폴백)
-  const showNabeum = getDynamicBoolean(settings, "showNabeum", readLSFlag("showNabeum", false));
+  // ✅ 납음 표시 여부(스토어 > LS 폴백, 기본 true)
+  const showNabeum = getDynamicBoolean(settings, "showNabeum", readLSFlag("showNabeum", true));
 
   // ✅ 명식 기준 (data > prop > 기본)
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? hourTable ?? "조자시/야자시";
@@ -250,7 +250,9 @@ export default function SajuChart({ data, hourTable }: Props) {
     const unknown = !d.birthTime || d.birthTime === "모름";
 
     let y = Number(d.birthDay!.slice(0, 4));
-    let mo = Number(d.birthDay!.slice(4, 6));
+    let mo = Number(d.birthDay!.slice(0 + 4, 6));
+    // ↑ 오타 방지: slice(4,6)
+    mo = Number(d.birthDay!.slice(4, 6));
     let da = Number(d.birthDay!.slice(6, 8));
     if (d.calendarType === "lunar") {
       const solar = lunarToSolarStrict(y, mo, da);
@@ -315,7 +317,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   }, [useInsi, dayStem]);
 
   // ✅ 원국 표시용: 시주/일주 확정값
-  const hourData = manualHour ?? parsed.hour;
+  //const hourData = manualHour ?? parsed.hour;
 
   // ── 십이운성/십이신살 계산
   const baseBranchForShinsal =
@@ -553,7 +555,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="pb-2">
               <div className="grid grid-cols-4 gap-2 p-3">
                 {[
-                  { key: "hour",  label: "시주", data: hourData },
+                  { key: "hour",  label: "시주", data: manualHour ?? parsed.hour },
                   { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
@@ -608,7 +610,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="px-1 pb-2">
               <div className="grid grid-cols-4 gap-1">
                 {[
-                  { key: "hour",  label: "시주", data: hourData },
+                  { key: "hour",  label: "시주", data: manualHour ?? parsed.hour },
                   { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
@@ -712,7 +714,7 @@ function NabeumBadge({ stem, branch }: { stem: string; branch: string }) {
   const cls = getNabeumBg(entry.elem);
   return (
     <span
-      className={`inline-block py-[2px] px-1 desk:px-2 rounded ${cls} border border-white/10 whitespace-nowrap text-[10px]`}
+      className={`inline-block px-1.5 py-[2px] rounded ${cls} border border-white/10`}
       title={`${entry.label} · ${entry.elem}`}
     >
       {entry.label}
