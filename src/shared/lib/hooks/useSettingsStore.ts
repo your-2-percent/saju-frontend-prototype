@@ -1,4 +1,3 @@
-// shared/lib/hooks/useSettingsStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
@@ -15,7 +14,7 @@ export type Settings = {
   showSipSin: boolean;                  // 십신
   showSibiSinsal: boolean;              // 십이신살
   showSibiUnseong: boolean;             // 십이운성
-  showNabeumLocal: boolean;            // 납음 표시 (로컬 저장) 
+  showNabeum: boolean;                  // ✅ 납음 표시 (스토어에 정식 편입)
   theme: "dark" | "light";
   sectionOrder?: string[];
   difficultyMode?: boolean;
@@ -34,7 +33,7 @@ export const defaultSettings: Settings = {
   showSipSin: true,
   showSibiSinsal: true,
   showSibiUnseong: true,
-  showNabeumLocal: true,
+  showNabeum: true, // ✅ 기본 ON
   theme: "dark",
   sectionOrder: [
     "hiddenStem","hiddenStemMode","ilunRule","sinsalMode","sinsalBase",
@@ -58,6 +57,6 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: { ...get().settings, [key]: value } }),
       reset: () => set({ settings: defaultSettings }),
     }),
-    { name: "settings_v1" }
+    { name: "settings_v1" } // ✅ 한 군데로만 저장
   )
 );

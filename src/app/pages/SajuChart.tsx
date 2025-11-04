@@ -1,4 +1,3 @@
-// features/myeongsik/SajuChart.tsx
 import { useMemo, useState, useEffect } from "react";
 import { useMediaQuery } from "react-responsive";
 import type { MyeongSik } from "@/shared/lib/storage";
@@ -53,38 +52,32 @@ const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","�
 type ElemKR = "목" | "화" | "토" | "금" | "수";
 type Nabeum = { label: string; elem: ElemKR };
 
-/** 사용자 요청 표 기준(쌍 단위) */
 const NABEUM_PAIRS: Array<{ keys: [string, string]; label: string; elem: ElemKR }> = [
   { keys: ["갑자","을축"], label: "해중금", elem: "금" },
   { keys: ["병인","정묘"], label: "노중화", elem: "화" },
   { keys: ["무진","기사"], label: "대림목", elem: "목" },
   { keys: ["경오","신미"], label: "노방토", elem: "토" },
   { keys: ["임신","계유"], label: "검봉금", elem: "금" },
-
   { keys: ["갑술","을해"], label: "산두화", elem: "화" },
   { keys: ["병자","정축"], label: "간하수", elem: "수" },
   { keys: ["무인","기묘"], label: "성두토", elem: "토" },
   { keys: ["경진","신사"], label: "백납금", elem: "금" },
   { keys: ["임오","계미"], label: "양류목", elem: "목" },
-
   { keys: ["갑신","을유"], label: "천중수", elem: "수" },
   { keys: ["병술","정해"], label: "옥상토", elem: "토" },
   { keys: ["무자","기축"], label: "벽력화", elem: "화" },
   { keys: ["경인","신묘"], label: "송백목", elem: "목" },
   { keys: ["임진","계사"], label: "장류수", elem: "수" },
-
   { keys: ["갑오","을미"], label: "사중금", elem: "금" },
   { keys: ["병신","정유"], label: "산하화", elem: "화" },
   { keys: ["무술","기해"], label: "평지목", elem: "목" },
   { keys: ["경자","신축"], label: "벽상토", elem: "토" },
   { keys: ["임인","계묘"], label: "금박금", elem: "금" },
-
   { keys: ["갑진","을사"], label: "복등화", elem: "화" },
   { keys: ["병오","정미"], label: "천하수", elem: "수" },
   { keys: ["무신","기유"], label: "대역토", elem: "토" },
   { keys: ["경술","신해"], label: "채천금", elem: "금" },
   { keys: ["임자","계축"], label: "상자목", elem: "목" },
-
   { keys: ["갑인","을묘"], label: "대계수", elem: "수" },
   { keys: ["병진","정사"], label: "사중토", elem: "토" },
   { keys: ["무오","기미"], label: "천상화", elem: "화" },
@@ -102,7 +95,6 @@ const NABEUM_MAP: Record<string, Nabeum> = (() => {
   return o;
 })();
 
-/* 납음 배지 색상 */
 function getNabeumBg(elem: ElemKR): string {
   switch (elem) {
     case "목": return "bg-green-600 text-white";
@@ -112,53 +104,6 @@ function getNabeumBg(elem: ElemKR): string {
     case "수": return "bg-blue-700 text-white";
     default:   return "bg-neutral-700 text-white";
   }
-}
-
-/* 납음 표시 여부(스토어에 속성 없을 때 LS 폴백) */
-const LS_KEY = "harim.settings.v1";
-function readLSFlag(key: string, fallback = true): boolean {  // ✅ 기본값 true로 변경
-  if (typeof window === "undefined") return fallback;
-  try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return fallback;
-    const parsed = JSON.parse(raw);
-    if (!isRecord(parsed)) return fallback;
-    const v = parsed[key as keyof typeof parsed];
-    return typeof v === "boolean" ? v : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function getDynamicBoolean(obj: unknown, key: string, fallback = true): boolean { // ✅ 기본값 true
-  if (!isRecord(obj)) return fallback;
-  const v = obj[key];
-  return typeof v === "boolean" ? (v as boolean) : fallback;
-}
-
-function toDisplayChar(value: string, kind: "stem" | "branch", charType: "한자" | "한글") {
-  if (charType === "한글") {
-    return kind === "stem" ? (STEM_H2K[value] ?? value) : (BRANCH_H2K[value] ?? value);
-  } else {
-    return kind === "stem" ? (STEM_K2H[value] ?? value) : (BRANCH_K2H[value] ?? value);
-  }
-}
-function isYinUnified(value: string, kind: "stem" | "branch") {
-  return kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
-}
-
-/** EraType 안전 매핑: enum/union 모두 대응 (no 'as any') */
-type EraRuntime = { Classic?: EraType; Modern?: EraType; classic?: EraType; modern?: EraType };
-function isEraRuntime(v: unknown): v is EraRuntime {
-  return isRecord(v) && ("Classic" in v || "Modern" in v || "classic" in v || "modern" in v);
-}
-function mapEra(mode: "classic" | "modern"): EraType {
-  const exported = (Twelve as unknown as Record<string, unknown>)["EraType"];
-  if (isEraRuntime(exported)) {
-    return mode === "classic"
-      ? (exported.Classic ?? exported.classic)!
-      : (exported.Modern ?? exported.modern)!;
-  }
-  return (mode as unknown) as EraType;
 }
 
 /* ===== 상단 노출(원국/대운/세운/월운…까지) 필터 ===== */
@@ -171,19 +116,11 @@ function getCardLevel(label: string): number {
 }
 
 /* ===== 지지 → 오행 매핑 (시주 버튼 색상용) ===== */
-const BRANCH_TO_ELEMENT: Record<string, ElemKR> = {
-  자: "수",
-  축: "토",
-  인: "목",
-  묘: "목",
-  진: "토",
-  사: "화",
-  오: "화",
-  미: "토",
-  신: "금",
-  유: "금",
-  술: "토",
-  해: "수",
+type ElemKRMap = Record<string, ElemKR>;
+const BRANCH_TO_ELEMENT: ElemKRMap = {
+  자: "수", 축: "토", 인: "목", 묘: "목",
+  진: "토", 사: "화", 오: "화", 미: "토",
+  신: "금", 유: "금", 술: "토", 해: "수",
 };
 function getBranchBgColor(branch: string): string {
   const elem = BRANCH_TO_ELEMENT[branch];
@@ -199,7 +136,6 @@ function getBranchBgColor(branch: string): string {
 
 type Props = {
   data: MyeongSik;
-  /** 부모가 강제로 테이블을 지정하고 싶을 때만 넘김. 기본은 data.mingSikType */
   hourTable?: DayBoundaryRule;
 };
 
@@ -216,10 +152,10 @@ export default function SajuChart({ data, hourTable }: Props) {
   const { date } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
 
-  // ✅ 납음 표시 여부(스토어 > LS 폴백, 기본 true)
-  const showNabeum = getDynamicBoolean(settings, "showNabeum", readLSFlag("showNabeum", true));
+  // ✅ 납음 표시 여부(스토어에 통일, 기본 true)
+  const showNabeum = settings.showNabeum ?? true;
 
-  // ✅ 명식 기준 (data > prop > 기본)
+  // ✅ 명식 기준
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? hourTable ?? "조자시/야자시";
   const lon = !data.birthPlace || data.birthPlace.name === "모름" || !data.birthPlace.lon ? 127.5 : data.birthPlace.lon;
 
@@ -245,14 +181,12 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   const isUnknownTime = !data.birthTime || data.birthTime === "모름";
 
-  // ✅ 원국 계산 함수 (data + useDST만으로 계산, 시주예측과 분리)
+  // ✅ 원국 계산 함수
   function makeParsed(d: MyeongSik, useDSTFlag: boolean): Parsed {
     const unknown = !d.birthTime || d.birthTime === "모름";
 
     let y = Number(d.birthDay!.slice(0, 4));
-    let mo = Number(d.birthDay!.slice(0 + 4, 6));
-    // ↑ 오타 방지: slice(4,6)
-    mo = Number(d.birthDay!.slice(4, 6));
+    let mo = Number(d.birthDay!.slice(4, 6));
     let da = Number(d.birthDay!.slice(6, 8));
     if (d.calendarType === "lunar") {
       const solar = lunarToSolarStrict(y, mo, da);
@@ -292,12 +226,8 @@ export default function SajuChart({ data, hourTable }: Props) {
   // ✅ “사람 전환” 키 (상태 리셋 기준)
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
 
-  // ✅ 최초 일간 고정
-  const dayStem = useMemo<Stem10sin>(() => {
-    const rule = data.mingSikType as DayBoundaryRule;
-    const gz = getDayGanZhi(data.corrected, rule);
-    return gz.charAt(0) as Stem10sin;
-  }, [data.corrected, data.mingSikType]);
+  // ✅ 일간(문자 그대로)
+  const dayStem = parsed.day.stem as Stem10sin;
 
   // ✅ 시주예측 상태 (선택된 시주만 저장)
   type HourGZ = { stem: string; branch: string };
@@ -317,7 +247,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   }, [useInsi, dayStem]);
 
   // ✅ 원국 표시용: 시주/일주 확정값
-  //const hourData = manualHour ?? parsed.hour;
+  const hourData = manualHour ?? parsed.hour;
 
   // ── 십이운성/십이신살 계산
   const baseBranchForShinsal =
@@ -374,7 +304,6 @@ export default function SajuChart({ data, hourTable }: Props) {
           <div className="text-md desk:text-xl font-bold text-neutral-900 dark:text-neutral-100">
             {(data.name?.trim() || "이름없음") + " "}
             <span className="text-sm text-neutral-500 dark:text-neutral-400 mr-2">({data.gender})</span>
-            {/* ✅ DST 조건부 버튼 */}
             {showDSTButton && (
               <button
                 onClick={handleDSTToggle}
@@ -414,7 +343,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             : "grid-cols-[4fr_5fr]"
         }`}
       >
-        {/* 운 (노출 설정에 따라 필터링된 카드만) */}
+        {/* 운 */}
         {filteredCards.length > 0 && (
           isDesktop ? (
             <section className="rounded-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow">
@@ -433,19 +362,9 @@ export default function SajuChart({ data, hourTable }: Props) {
                     let stem = c.data.stem as Stem10sin;
                     let branch = c.data.branch as Branch10sin;
 
-                    // ✅ 피커 전역 간지로 덮어쓰기
-                    if (c.label.includes("대운") && daeGz) {
-                      stem = daeGz.charAt(0) as Stem10sin;
-                      branch = daeGz.charAt(1) as Branch10sin;
-                    }
-                    if (c.label.includes("세운") && seGz) {
-                      stem = seGz.charAt(0) as Stem10sin;
-                      branch = seGz.charAt(1) as Branch10sin;
-                    }
-                    if (c.label.includes("월운") && wolGz) {
-                      stem = wolGz.charAt(0) as Stem10sin;
-                      branch = wolGz.charAt(1) as Branch10sin;
-                    }
+                    if (c.label.includes("대운") && daeGz) { stem = daeGz.charAt(0) as Stem10sin; branch = daeGz.charAt(1) as Branch10sin; }
+                    if (c.label.includes("세운") && seGz)  { stem = seGz.charAt(0) as Stem10sin;  branch = seGz.charAt(1) as Branch10sin; }
+                    if (c.label.includes("월운") && wolGz) { stem = wolGz.charAt(0) as Stem10sin; branch = wolGz.charAt(1) as Branch10sin; }
 
                     const unseong = calcUnseong(branch);
                     const shinsal = calcShinsal(branch);
@@ -498,18 +417,9 @@ export default function SajuChart({ data, hourTable }: Props) {
                     let stem = c.data.stem as Stem10sin;
                     let branch = c.data.branch as Branch10sin;
 
-                    if (c.label.includes("대운") && daeGz) {
-                      stem = daeGz.charAt(0) as Stem10sin;
-                      branch = daeGz.charAt(1) as Branch10sin;
-                    }
-                    if (c.label.includes("세운") && seGz) {
-                      stem = seGz.charAt(0) as Stem10sin;
-                      branch = seGz.charAt(1) as Branch10sin;
-                    }
-                    if (c.label.includes("월운") && wolGz) {
-                      stem = wolGz.charAt(0) as Stem10sin;
-                      branch = wolGz.charAt(1) as Branch10sin;
-                    }
+                    if (c.label.includes("대운") && daeGz) { stem = daeGz.charAt(0) as Stem10sin; branch = daeGz.charAt(1) as Branch10sin; }
+                    if (c.label.includes("세운") && seGz)  { stem = seGz.charAt(0) as Stem10sin;  branch = seGz.charAt(1) as Branch10sin; }
+                    if (c.label.includes("월운") && wolGz) { stem = wolGz.charAt(0) as Stem10sin; branch = wolGz.charAt(1) as Branch10sin; }
 
                     const unseong = calcUnseong(branch);
                     const shinsal = calcShinsal(branch);
@@ -555,7 +465,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="pb-2">
               <div className="grid grid-cols-4 gap-2 p-3">
                 {[
-                  { key: "hour",  label: "시주", data: manualHour ?? parsed.hour },
+                  { key: "hour",  label: "시주", data: hourData },
                   { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
@@ -610,7 +520,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             <div className="px-1 pb-2">
               <div className="grid grid-cols-4 gap-1">
                 {[
-                  { key: "hour",  label: "시주", data: manualHour ?? parsed.hour },
+                  { key: "hour",  label: "시주", data: hourData },
                   { key: "day",   label: "일주", data: parsed.day },
                   { key: "month", label: "월주", data: parsed.month },
                   { key: "year",  label: "연주", data: parsed.year },
@@ -705,7 +615,6 @@ export default function SajuChart({ data, hourTable }: Props) {
 
 /** 납음오행 배지 */
 function NabeumBadge({ stem, branch }: { stem: string; branch: string }) {
-  // 납음 키는 한글 간지 기준으로 매칭
   const sK = STEM_H2K[stem] ?? stem;
   const bK = BRANCH_H2K[branch] ?? branch;
   const key = `${sK}${bK}`;
@@ -722,7 +631,22 @@ function NabeumBadge({ stem, branch }: { stem: string; branch: string }) {
   );
 }
 
-/** 셀: 글자 타입(한자/한글) + 음간/음지 얇게 */
+/** EraType 안전 매핑 */
+type EraRuntime = { Classic?: EraType; Modern?: EraType; classic?: EraType; modern?: EraType };
+function isEraRuntime(v: unknown): v is EraRuntime {
+  return isRecord(v) && ("Classic" in v || "Modern" in v || "classic" in v || "modern" in v);
+}
+function mapEra(mode: "classic" | "modern"): EraType {
+  const exported = (Twelve as unknown as Record<string, unknown>)["EraType"];
+  if (isEraRuntime(exported)) {
+    return mode === "classic"
+      ? (exported.Classic ?? exported.classic)!
+      : (exported.Modern ?? exported.modern)!;
+  }
+  return (mode as unknown) as EraType;
+}
+
+/** 셀 */
 function Cell({
   value,
   kind,
@@ -736,8 +660,10 @@ function Cell({
 }) {
   const { settings } = useSettingsStore();
   const color = getElementColor(value, kind, settings);
-  const display = toDisplayChar(value, kind, charType);
-  const isYin = isYinUnified(value, kind);
+  const display = charType === "한글"
+    ? (kind === "stem" ? (STEM_H2K[value] ?? value) : (BRANCH_H2K[value] ?? value))
+    : (kind === "stem" ? (STEM_K2H[value] ?? value) : (BRANCH_K2H[value] ?? value));
+  const isYin = kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
   const weight = thinEum && isYin ? "font-thin" : "font-bold";
 
   return (
