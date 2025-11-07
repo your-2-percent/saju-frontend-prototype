@@ -269,6 +269,99 @@ function elementToTenGod(dayEl: Element, targetEl: Element): string {
   return "";
 }
 
+/* ─────────────────────────────────────────────
+ * 납음오행 매핑 (60갑자)
+ * ──────────────────────────────────────────── */
+type NabeumInfo = { name: string; element: Element; brief: string; keywords: string };
+const NAEUM_MAP: Record<string, NabeumInfo> = {
+  // 1
+  "갑자": { name:"해중금", element:"금", brief:"바다 속의 금속", keywords:"잠재·매몰·드러나기 어려움" },
+  "을축": { name:"해중금", element:"금", brief:"바다 속의 금속", keywords:"잠재·매몰·드러나기 어려움" },
+  "병인": { name:"노중화", element:"화", brief:"화로 속 불", keywords:"제련·내열·지속적 연소" },
+  "정묘": { name:"노중화", element:"화", brief:"화로 속 불", keywords:"제련·내열·지속적 연소" },
+  "무진": { name:"대림목", element:"목", brief:"큰 숲의 나무", keywords:"울창·성장력·보호림" },
+  "기사": { name:"대림목", element:"목", brief:"큰 숲의 나무", keywords:"울창·성장력·보호림" },
+  "경오": { name:"노방토", element:"토", brief:"길가의 흙", keywords:"노출·부서짐·실용/교통" },
+  "신미": { name:"노방토", element:"토", brief:"길가의 흙", keywords:"노출·부서짐·실용/교통" },
+  "임신": { name:"검봉금", element:"금", brief:"칼끝의 금", keywords:"예리함·강경·절단력" },
+  "계유": { name:"검봉금", element:"금", brief:"칼끝의 금", keywords:"예리함·강경·절단력" },
+
+  // 2
+  "갑술": { name:"산두화", element:"화", brief:"산머리의 불(석양빛)", keywords:"높이·표면·불광" },
+  "을해": { name:"산두화", element:"화", brief:"산머리의 불(석양빛)", keywords:"높이·표면·불광" },
+  "병자": { name:"간하수", element:"수", brief:"골짜기 아래 물", keywords:"계류·낙수·유연한 흐름" },
+  "정축": { name:"간하수", element:"수", brief:"골짜기 아래 물", keywords:"계류·낙수·유연한 흐름" },
+  "무인": { name:"성두토", element:"토", brief:"성곽의 흙", keywords:"다져짐·성벽·방어/지지" },
+  "기묘": { name:"성두토", element:"토", brief:"성곽의 흙", keywords:"다져짐·성벽·방어/지지" },
+  "경진": { name:"백납금", element:"금", brief:"흰 밀랍 같은 금", keywords:"미완·연성·가공 전 금속" },
+  "신사": { name:"백납금", element:"금", brief:"흰 밀랍 같은 금", keywords:"미완·연성·가공 전 금속" },
+  "임오": { name:"양류목", element:"목", brief:"버드나무", keywords:"유연·수분·여름쇠약" },
+  "계미": { name:"양류목", element:"목", brief:"버드나무", keywords:"유연·수분·여름쇠약" },
+
+  // 3
+  "갑신": { name:"천중수", element:"수", brief:"샘/우물의 물", keywords:"정수·원천·지하수" },
+  "을유": { name:"천중수", element:"수", brief:"샘/우물의 물", keywords:"정수·원천·지하수" },
+  "병술": { name:"옥상토", element:"토", brief:"지붕 위의 흙", keywords:"높이 올린 토·마감/기단" },
+  "정해": { name:"옥상토", element:"토", brief:"지붕 위의 흙", keywords:"높이 올린 토·마감/기단" },
+  "무자": { name:"벽력화", element:"화", brief:"번개불", keywords:"돌발·폭발·전기/천뢰" },
+  "기축": { name:"벽력화", element:"화", brief:"번개불", keywords:"돌발·폭발·전기/천뢰" },
+  "경인": { name:"송백목", element:"목", brief:"소나무·측백", keywords:"상록·한서견딤·절개" },
+  "신묘": { name:"송백목", element:"목", brief:"소나무·측백", keywords:"상록·한서견딤·절개" },
+  "임진": { name:"장류수", element:"수", brief:"길게 흐르는 물", keywords:"강줄기·연속성·지속흐름" },
+  "계사": { name:"장류수", element:"수", brief:"길게 흐르는 물", keywords:"강줄기·연속성·지속흐름" },
+
+  // 4
+  "갑오": { name:"사중금", element:"금", brief:"모랫속의 금", keywords:"사금·선별/세척·정련 필요" },
+  "을미": { name:"사중금", element:"금", brief:"모랫속의 금", keywords:"사금·선별/세척·정련 필요" },
+  "병신": { name:"산하화", element:"화", brief:"산 아래의 불", keywords:"그늘·야영불·잔불/은화" },
+  "정유": { name:"산하화", element:"화", brief:"산 아래의 불", keywords:"그늘·야영불·잔불/은화" },
+  "무술": { name:"평지목", element:"목", brief:"평야의 나무", keywords:"뿌리깊음·안정적 성장" },
+  "기해": { name:"평지목", element:"목", brief:"평야의 나무", keywords:"뿌리깊음·안정적 성장" },
+  "경자": { name:"벽상토", element:"토", brief:"벽 위의 흙(회벽)", keywords:"미장·표면·가림/보호" },
+  "신축": { name:"벽상토", element:"토", brief:"벽 위의 흙(회벽)", keywords:"미장·표면·가림/보호" },
+  "임인": { name:"금박금", element:"금", brief:"금박(금박잎)", keywords:"얇음·장식·겉보기 화려" },
+  "계묘": { name:"금박금", element:"금", brief:"금박(금박잎)", keywords:"얇음·장식·겉보기 화려" },
+
+  // 5
+  "갑진": { name:"복등화", element:"화", brief:"등불(덮인 등화)", keywords:"실내등·온화·지속 조명" },
+  "을사": { name:"복등화", element:"화", brief:"등불(덮인 등화)", keywords:"실내등·온화·지속 조명" },
+  "병오": { name:"천하수", element:"수", brief:"하늘의 강(은하수)", keywords:"높은 곳의 물·냉청" },
+  "정미": { name:"천하수", element:"수", brief:"하늘의 강(은하수)", keywords:"높은 곳의 물·냉청" },
+  "무신": { name:"대역토", element:"토", brief:"역참/도로의 토", keywords:"평탄·교통망·넓고 두터움" },
+  "기유": { name:"대역토", element:"토", brief:"역참/도로의 토", keywords:"평탄·교통망·넓고 두터움" },
+  "경술": { name:"채천금", element:"금", brief:"비녀·팔찌 금", keywords:"장식용·정교·연약/귀금" },
+  "신해": { name:"채천금", element:"금", brief:"비녀·팔찌 금", keywords:"장식용·정교·연약/귀금" },
+  "임자": { name:"상자목", element:"목", brief:"뽕·柘나무", keywords:"생활·양잠·실용·완만성장" },
+  "계축": { name:"상자목", element:"목", brief:"뽕·柘나무", keywords:"생활·양잠·실용·완만성장" },
+
+  // 6
+  "갑인": { name:"대계수", element:"수", brief:"큰 시내의 물", keywords:"골짜기·여울·산간 급류" },
+  "을묘": { name:"대계수", element:"수", brief:"큰 시내의 물", keywords:"골짜기·여울·산간 급류" },
+  "병진": { name:"사중토", element:"토", brief:"모래흙", keywords:"느슨·성형 필요·사토" },
+  "정사": { name:"사중토", element:"토", brief:"모래흙", keywords:"느슨·성형 필요·사토" },
+  "무오": { name:"천상화", element:"화", brief:"하늘의 불(태양광)", keywords:"직사광·정오·극양열" },
+  "기미": { name:"천상화", element:"화", brief:"하늘의 불(태양광)", keywords:"직사광·정오·극양열" },
+  "경신": { name:"석류목", element:"목", brief:"석류나무", keywords:"화과병개·화려" },
+  "신유": { name:"석류목", element:"목", brief:"석류나무", keywords:"화과병개·화려" },
+  "임술": { name:"대해수", element:"수", brief:"큰 바다의 물", keywords:"광활·심연·포섭/변동" },
+  "계해": { name:"대해수", element:"수", brief:"큰 바다의 물", keywords:"광활·심연·포섭/변동" },
+};
+
+/** GZ를 한글 ‘갑자’처럼 정규화 */
+function toKoGZ(gz: string): string {
+  if (!gz || gz.length < 2) return gz;
+  const sRaw = gz.charAt(0);
+  const bRaw = gz.charAt(1);
+  const s = STEM_H2K[sRaw] ?? sRaw;
+  const b = BRANCH_H2K[bRaw] ?? bRaw;
+  return `${s}${b}`;
+}
+function getNabeum(gz: string): (NabeumInfo & { code: string }) | null {
+  const ko = toKoGZ(gz);
+  const info = NAEUM_MAP[ko];
+  return info ? { ...info, code: ko } : null;
+}
+
 // ─────────────────────────────────────────────
 // 메인 프롬프트 빌더
 // ─────────────────────────────────────────────
@@ -431,35 +524,35 @@ export function buildChatPrompt(params: {
       ].filter(Boolean)
     ),
 
-      // 🚩 십이신살(원국+운 반영·설정 적용)
-      section("십이신살(원국+운 반영·설정 적용)",
-        tab === "원국"
-          ? natal.map((gz, i) => {
-              if (!gz || i >= posLabels.length) return null;
-              return {
-                pos: posLabels[i],
-                gz,
-                shinsal: getTwelveShinsalBySettings({
-                  baseBranch,
-                  targetBranch: gz.charAt(1),
-                  era: shinsalEra,
-                  gaehwa: shinsalGaehwa,
-                }),
-              };
-            }).filter(Boolean) : 
-            [natal.map((gz, i) => {
-              if (!gz || i >= posLabels.length) return null;
-              return {
-                pos: posLabels[i],
-                gz,
-                shinsal: getTwelveShinsalBySettings({
-                  baseBranch,
-                  targetBranch: gz.charAt(1),
-                  era: shinsalEra,
-                  gaehwa: shinsalGaehwa,
-                }),
-              };
-            }).filter(Boolean),
+    // 🚩 십이신살(원국+운 반영·설정 적용)
+    section("십이신살(원국+운 반영·설정 적용)",
+      tab === "원국"
+        ? natal.map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              shinsal: getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: gz.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              }),
+            };
+          }).filter(Boolean) : 
+          [natal.map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              shinsal: getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: gz.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              }),
+            };
+          }).filter(Boolean),
         ...(chain?.dae
           ? [{ pos: "대운", gz: chain.dae, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.dae.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
           : []),
@@ -473,6 +566,39 @@ export function buildChatPrompt(params: {
           ? [{ pos: "일운", gz: chain.il, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.il.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
           : []),
       ].filter(Boolean)
+    ),
+
+    // 🚩 납음오행(원국+운 반영)
+    section("납음오행(원국+운 반영)",
+      tab === "원국"
+        ? natal.map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            const info = getNabeum(gz);
+            return info ? { pos: posLabels[i], gz, nabeum: info.name, element: info.element, code: info.code } : { pos: posLabels[i], gz, nabeum: null };
+          }).filter(Boolean)
+        : [
+            ...natal.map((gz, i) => {
+              if (!gz || i >= posLabels.length) return null;
+              const info = getNabeum(gz);
+              return info ? { pos: posLabels[i], gz, nabeum: info.name, element: info.element, code: info.code } : { pos: posLabels[i], gz, nabeum: null };
+            }).filter(Boolean),
+            ...(chain?.dae ? (() => {
+              const info = getNabeum(chain.dae);
+              return info ? [{ pos: "대운", gz: chain.dae, nabeum: info.name, element: info.element, code: info.code }] : [];
+            })() : []),
+            ...(((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se) ? (() => {
+              const info = getNabeum(chain.se!);
+              return info ? [{ pos: "세운", gz: chain.se!, nabeum: info.name, element: info.element, code: info.code }] : [];
+            })() : []),
+            ...(((tab === "월운" || tab === "일운") && chain?.wol) ? (() => {
+              const info = getNabeum(chain.wol!);
+              return info ? [{ pos: "월운", gz: chain.wol!, nabeum: info.name, element: info.element, code: info.code }] : [];
+            })() : []),
+            ...((tab === "일운" && chain?.il) ? (() => {
+              const info = getNabeum(chain.il!);
+              return info ? [{ pos: "일운", gz: chain.il!, nabeum: info.name, element: info.element, code: info.code }] : [];
+            })() : []),
+          ].filter(Boolean)
     ),
 
     // 형충회합(원국)
@@ -537,13 +663,22 @@ AI 특유의 친절함, 긍정적인면은 리셋시킨다.
 6단계: 종합 운세  
 - 현재 대운·세운이 실제로 어떤 영향을 주는지 설명한다.  
 - 추상적 ‘좋다/나쁘다’ 대신 구체적인 상황과 태도로 조언한다.  
-- 예: “표현력이 늘지만 체력이 약하면 금세 지칠 수 있으니, 페이스 조절이 필요합니다.”  
+- 예: “표현력이 늘지만 체력이 약하면 금세 지칠 수 있으니, 페이스 조절이 필요합니다.” 
+
+7단계: 납음오행  
+- 각 기둥의 납음오행을 기반으로 기운의 ‘상징적 물상’을 해석한다.  
+- 단순히 오행의 일치나 상극이 아니라, 납음이 가진 ‘형태적 이미지’를 통해 성격과 인생 패턴을 설명한다.  
+- 예: “해중금이면 겉으로 드러나지 않은 내면의 강철 같은 성향이에요.”  
+- 납음이 같은 오행끼리 반복되면 특정 에너지가 집중된 것으로 해석하고, 서로 다른 납음이 섞이면 다양한 역할이나 관심사로 분산된다고 본다.  
+- 납음의 ‘환경’(물·불·나무·흙·쇠)이 일상에서 어떤 상황으로 드러나는지 현실적인 예시로 설명한다.  
+- 예: “대해수는 큰 바다의 물이라 감정이 넓고 변화가 잦아요. 안정보단 경험을 추구하는 편이에요.”  
+- 해석은 반드시 오행강약과 신강도, 형충회합 맥락과 함께 통합적으로 설명한다.  
 
 마지막 단계: 전체적인 종합 정리  
-- 3문장으로 요약하며 다음 순서로 마무리한다.  
-  1) 성격적 핵심 요약  
-  2) 현재 과제나 문제의식  
-  3) 현실적인 조언  
+- 앞서 다룬 모든 요소를 통합해 전체적인 성격과 인생 경향을 요약한다.  
+- 구체적인 현실 예시와 함께, 실제 생활에서 어떻게 나타나는지 설명한다.  
+- 예: “이런 성향 때문에 직장에서는 ~한 패턴이 반복될 수 있어요.” 
+- 또한 조언이나 필요없는 말들은 배제하고, 객관적이고 논리적인 분석에 집중한다. 
 
 출력은 사람의 자연스러운 설명체로 쓰되, 항상 전문적 근거를 유지한다.  
 불필요한 감탄사, 주관적 감정어, 추상적 운명론은 절대 포함하지 않는다.
