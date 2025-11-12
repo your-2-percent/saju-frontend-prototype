@@ -21,8 +21,20 @@ function arrayMove<T>(arr: T[], from: number, to: number) {
   return a;
 }
 
-const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const LIST_PREFIX = "list:";
+const DROPPABLE_UNASSIGNED = "list:__unassigned__";
+const LS_ORDERMAP = "sidebar.orderMap.v1";
+
+type OrderMap = Record<string, string[]>;
+
+function toListId(folder?: string): string {
+  return folder ? `${LIST_PREFIX}${folder}` : DROPPABLE_UNASSIGNED;
+}
+function decodeListId(id: string): string | undefined {
+  if (!id.startsWith(LIST_PREFIX)) return undefined;
+  const key = id.slice(LIST_PREFIX.length);
+  return key === "__unassigned__" ? undefined : key;
+}
 
 export function useSidebarLogic(
   list: MyeongSik[],
@@ -49,19 +61,19 @@ export function useSidebarLogic(
   // Confirm 쓰로틀
   const lastConfirmAtRef = useRef(0);
   function confirmThrottled(
-  message: string,
-  onOk: () => void,
-  onCancel?: () => void
-) {
-  const now = Date.now();
-  if (now - lastConfirmAtRef.current < 450) return;
-  lastConfirmAtRef.current = now;
-  confirmToast(message, {
-    onConfirm: onOk,
-    onCancel,  // 👈 추가
-    duration: Number.POSITIVE_INFINITY,
-  });
-}
+    message: string,
+    onOk: () => void,
+    onCancel?: () => void
+  ) {
+    const now = Date.now();
+    if (now - lastConfirmAtRef.current < 450) return;
+    lastConfirmAtRef.current = now;
+    confirmToast(message, {
+      onConfirm: onOk,
+      onCancel,
+      duration: Number.POSITIVE_INFINITY,
+    });
+  }
 
   // ===== 폴더 레지스트리(등록된 폴더만): 파생 제거, 숨김 제외
   const presetsEffective = useMemo(
@@ -84,15 +96,19 @@ export function useSidebarLogic(
     });
   }, [allFoldersBase, setFolderOrder]);
 
-  // 즐겨/비즐겨
+  // 즐겨/비즐겨 + (리버스 저장 감지 시 자동 복구)
   const orderedFolders = useMemo(() => {
-    // 리버스된 폴더 순서 감지 및 자동 복원
-    const base = [...folderOrder];
-    const reversed = base.length >= 2 && base[0] === allFoldersBase[base.length - 1];
-    const effectiveOrder = reversed ? base.slice().reverse() : base;
+    const base = folderOrder.slice();
+    // 간단 리버스 휴리스틱: 첫/끝이 프리셋 배열과 거꾸로 맞물리면 리버스 추정
+    const looksReversed =
+      base.length >= 2 &&
+      allFoldersBase.length >= 2 &&
+      base[0] === allFoldersBase[allFoldersBase.length - 1] &&
+      base[base.length - 1] === allFoldersBase[0];
 
-    const favs = effectiveOrder.filter((f) => !!folderFavMap[f]);
-    const nonFavs = effectiveOrder.filter((f) => !folderFavMap[f]);
+    const effective = looksReversed ? base.reverse() : base;
+    const favs = effective.filter((f) => !!folderFavMap[f]);
+    const nonFavs = effective.filter((f) => !folderFavMap[f]);
     return [...favs, ...nonFavs];
   }, [folderOrder, folderFavMap, allFoldersBase]);
 
@@ -107,17 +123,30 @@ export function useSidebarLogic(
 
   // ===== 레거시/유령 폴더 정리
   useEffect(() => {
-    // "미분류" 문자열 저장 → undefined
     const legacy = list.filter((m) => m.folder === "미분류");
     legacy.forEach((m) => update(m.id, { folder: undefined }));
-    // 등록되지 않은 폴더는 undefined로
     const registry = new Set(allFoldersBase);
     const invalid = list.filter((m) => m.folder && !registry.has(m.folder));
     invalid.forEach((m) => update(m.id, { folder: undefined }));
   }, [list, allFoldersBase, update]);
 
-  // ===== 그룹/바깥 리스트
+  // ===== orderMap 최신 스냅샷 문자열 (렌더 시점에 읽음)
+  const orderMapRaw =
+    typeof window === "undefined" ? "" : localStorage.getItem(LS_ORDERMAP) ?? "";
+
+  // 파싱된 orderMap (문자열이 바뀌면 재계산)
+  const orderMap: OrderMap = useMemo(() => {
+    try {
+      return orderMapRaw ? (JSON.parse(orderMapRaw) as OrderMap) : {};
+    } catch {
+      console.log("[Sidebar] Failed to parse orderMap from localStorage.");
+      return {};
+    }
+  }, [orderMapRaw]);
+
+  // ===== 그룹/바깥 리스트 (orderMap 적용)
   const { grouped, unassignedItems } = useMemo(() => {
+    // 원본 분류
     const g: Record<string, MyeongSik[]> = {};
     for (const f of orderedFolders) g[f] = [];
     const outside: MyeongSik[] = [];
@@ -133,16 +162,37 @@ export function useSidebarLogic(
       }
     }
 
-    const byFav = (a: MyeongSik, b: MyeongSik) => {
-      if (a.favorite === b.favorite) return 0;
-      return b.favorite ? 1 : -1;
+    // 지역 함수: orderMap 순서 → 즐겨찾기 우선
+    const applyOrder = (arr: MyeongSik[], listId: string): MyeongSik[] => {
+      const ord = orderMap[listId] ?? [];
+      const byId = new Map(arr.map((it) => [it.id, it]));
+      const seq: MyeongSik[] = [];
+
+      // 1) orderMap 순서대로
+      for (const id of ord) {
+        const it = byId.get(id);
+        if (it) {
+          seq.push(it);
+          byId.delete(id);
+        }
+      }
+      // 2) orderMap에 없던 새 항목은 뒤에
+      for (const it of byId.values()) seq.push(it);
+
+      // 3) 즐겨찾기 우선(상대 순서 보존)
+      const favs = seq.filter((x) => !!x.favorite);
+      const rest = seq.filter((x) => !x.favorite);
+      return [...favs, ...rest];
     };
 
-    for (const k of Object.keys(g)) g[k] = g[k].slice().sort(byFav);
-    outside.sort(byFav);
+    const outsideOrdered = applyOrder(outside, DROPPABLE_UNASSIGNED);
+    const outGrouped: Record<string, MyeongSik[]> = {};
+    for (const f of orderedFolders) {
+      outGrouped[f] = applyOrder(g[f], toListId(f));
+    }
 
-    return { grouped: g, unassignedItems: outside };
-  }, [list, orderedFolders]);
+    return { grouped: outGrouped, unassignedItems: outsideOrdered };
+  }, [list, orderedFolders, orderMap]);
 
   // ===== 드래그
   function handleDragEnd(result: DropResult) {
@@ -162,7 +212,10 @@ export function useSidebarLogic(
         setFolderOrder([...arrayMove(favs, from, to), ...nonFavs]);
       } else {
         const from = nonFavs.indexOf(name);
-        const to = Math.min(nonFavs.length - 1, destination.index - favs.length);
+        const to = Math.min(
+          nonFavs.length - 1,
+          destination.index - favs.length
+        );
         setFolderOrder([...favs, ...arrayMove(nonFavs, from, to)]);
       }
       return;
@@ -174,17 +227,9 @@ export function useSidebarLogic(
       const srcDroppable = source?.droppableId ?? "";
       const dstDroppable = destination?.droppableId ?? "";
 
-      const decode = (id: string): string | undefined => {
-        if (!id.startsWith(LIST_PREFIX)) return undefined;
-        const key = id.slice(LIST_PREFIX.length);
-        return key === "__unassigned__" ? undefined : key;
-      };
-
-      const srcFolder = decode(srcDroppable);
-      const dstFolder = decode(dstDroppable);
-
-      // 같은 리스트 내 재정렬은 현재 별도 저장 안 함 (order 필드가 없어서)
-      if (srcFolder === dstFolder) return;
+      const srcFolder = decodeListId(srcDroppable);
+      const dstFolder = decodeListId(dstDroppable);
+      if (srcFolder === dstFolder) return; // 같은 리스트 내 재정렬은 상위에서 관리
 
       const item = list.find((x) => x.id === itemId);
       if (!item) return;
@@ -220,17 +265,29 @@ export function useSidebarLogic(
     }
 
     // 3) 상태 정리
-    setFolderOpenMap((s) => { const n = { ...s }; delete n[name]; return n; });
-    setFolderFavMap((s) => { const n = { ...s }; delete n[name]; return n; });
+    setFolderOpenMap((s) => {
+      const n = { ...s };
+      delete n[name];
+      return n;
+    });
+    setFolderFavMap((s) => {
+      const n = { ...s };
+      delete n[name];
+      return n;
+    });
     setFolderOrder((prev) => prev.filter((n) => n !== name));
   }
 
   return {
     // states
-    folderFavMap, setFolderFavMap,
-    folderOpenMap, setFolderOpenMap,
-    memoOpenMap, setMemoOpenMap,
-    newFolderName, setNewFolderName,
+    folderFavMap,
+    setFolderFavMap,
+    folderOpenMap,
+    setFolderOpenMap,
+    memoOpenMap,
+    setMemoOpenMap,
+    newFolderName,
+    setNewFolderName,
     orderedFolders,
     grouped,
     unassignedItems,
