@@ -86,10 +86,15 @@ export function useSidebarLogic(
 
   // 즐겨/비즐겨
   const orderedFolders = useMemo(() => {
-    const favs = folderOrder.filter((f) => !!folderFavMap[f]);
-    const nonFavs = folderOrder.filter((f) => !folderFavMap[f]);
+    // 리버스된 폴더 순서 감지 및 자동 복원
+    const base = [...folderOrder];
+    const reversed = base.length >= 2 && base[0] === allFoldersBase[base.length - 1];
+    const effectiveOrder = reversed ? base.slice().reverse() : base;
+
+    const favs = effectiveOrder.filter((f) => !!folderFavMap[f]);
+    const nonFavs = effectiveOrder.filter((f) => !folderFavMap[f]);
     return [...favs, ...nonFavs];
-  }, [folderOrder, folderFavMap]);
+  }, [folderOrder, folderFavMap, allFoldersBase]);
 
   // 기본 열림
   useEffect(() => {
@@ -128,8 +133,10 @@ export function useSidebarLogic(
       }
     }
 
-    const byFav = (a: MyeongSik, b: MyeongSik) =>
-      Number(!!b.favorite) - Number(!!a.favorite);
+    const byFav = (a: MyeongSik, b: MyeongSik) => {
+      if (a.favorite === b.favorite) return 0;
+      return b.favorite ? 1 : -1;
+    };
 
     for (const k of Object.keys(g)) g[k] = g[k].slice().sort(byFav);
     outside.sort(byFav);
