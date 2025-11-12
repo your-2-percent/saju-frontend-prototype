@@ -6,7 +6,6 @@ import {
   ChevronUp,
   Star,
   XCircle,
-  //Search,
 } from "lucide-react";
 import {
   DragDropContext,
@@ -35,6 +34,9 @@ type SearchMode = "name" | "ganji" | "birth";
 
 const LS_ORDER_KEY = "sidebar.orderMap.v1";
 const LS_FOLDER_ORDER_KEY = "sidebar.folderOrder.v1";
+// 마이그레이션 버전 키 (기존 리버스 흔적 제거용)
+const LS_ORDER_VERSION_KEY = "sidebar.orderMap.version";
+const ORDERMAP_VERSION = 2;
 
 // ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
@@ -76,7 +78,7 @@ export default function Sidebar({
     orderedFolders,
     grouped, // { [folderName]: MyeongSik[] }
     unassignedItems, // MyeongSik[]
-    handleDragEnd: handleFolderDragEnd, // 폴더 재정렬용 훅 내부 처리
+    handleDragEnd: handleFolderDragEnd,
     createFolder,
     deleteFolder,
     UNASSIGNED_LABEL,
@@ -84,12 +86,10 @@ export default function Sidebar({
   } = useSidebarLogic(list, update);
 
   /* --------------------------------
-  * 검색 상태
-  * -------------------------------- */
+   * 검색 상태
+   * -------------------------------- */
   const [search, setSearch] = useState<string>("");
   const [searchMode, setSearchMode] = useState<SearchMode>("name");
-
-  // 공백만 있으면 필터링 아님
   const isFiltering = /\S/.test(search);
 
   const {
@@ -101,7 +101,6 @@ export default function Sidebar({
     filteredGrouped: Record<string, MyeongSik[]>;
     totalMatches: number;
   } = useMemo(() => {
-    // normalize를 내부로 이동
     const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
 
     if (!isFiltering) {
@@ -116,10 +115,11 @@ export default function Sidebar({
 
     const q = norm(search);
 
-    // 생년월일 텍스트 생성(YYYYMMDD / YYYY-MM-DD / YYYY.MM.DD / fmtBirthKR)
     const birthText = (m: MyeongSik): string => {
       const raw = String(m.birthDay ?? "").trim();
-      let y = "", mm = "", dd = "";
+      let y = "",
+        mm = "",
+        dd = "";
 
       if (/^\d{8}$/.test(raw)) {
         y = raw.slice(0, 4);
@@ -141,14 +141,12 @@ export default function Sidebar({
       const dash = y && mm && dd ? `${y}-${mm}-${dd}` : "";
       const dot = y && mm && dd ? `${y}.${mm}.${dd}` : "";
       const kr = fmtBirthKR(m.birthDay, m.birthTime);
-
       return norm([compact, dash, dot, kr].filter(Boolean).join(" "));
     };
 
     const match = (m: MyeongSik) => {
-      if (searchMode === "name")  return norm(m.name ?? "").includes(q);
+      if (searchMode === "name") return norm(m.name ?? "").includes(q);
       if (searchMode === "ganji") return norm(getGanjiString(m) ?? "").includes(q);
-      // birth
       return birthText(m).includes(q);
     };
 
@@ -167,7 +165,6 @@ export default function Sidebar({
       filteredGrouped: nextGrouped,
       totalMatches: cnt,
     };
-    // deps에서 함수 레퍼런스 제거: 전부 원시값/배열만
   }, [search, searchMode, isFiltering, unassignedItems, grouped, orderedFolders]);
 
   /* --------------------------------
@@ -200,6 +197,7 @@ export default function Sidebar({
    * -------------------------------- */
   const [orderMap, setOrderMap] = useState<OrderMap>({});
 
+  // v1 로드
   useEffect(() => {
     try {
       const raw = localStorage.getItem(LS_ORDER_KEY);
@@ -214,6 +212,7 @@ export default function Sidebar({
     }
   }, []);
 
+  // v2 저장
   useEffect(() => {
     try {
       localStorage.setItem(LS_ORDER_KEY, JSON.stringify(orderMap));
@@ -237,19 +236,30 @@ export default function Sidebar({
         byId.delete(id);
       }
     }
-    // 누락 보강(새/정리되지 않은 항목)
+    // 누락 보강(새 항목은 "뒤에" 추가: 예전 정책)
     byId.forEach((it) => out.push(it));
     return out;
   };
 
-  /* 화면에 “현재 보이는 순서”의 id 배열(인덱스 일치 보장) */
-  const getDisplayOrder = (droppableId: string): string[] => {
+  /* 원본(필터 X) 기준 현재 보이는 순서 */
+  const getRawDisplayOrder = (droppableId: string): string[] => {
     const folder = decodeListIdToFolder(droppableId);
-    const baseArr = folder ? filteredGrouped[folder] || [] : filteredUnassigned;
+    const baseArr = folder ? grouped[folder] || [] : unassignedItems;
     return orderItems(droppableId, baseArr).map((it) => it.id);
   };
 
-  /* orderMap 초기화/보강: 누락 id 뒤에 추가, 새 폴더/항목 반영 */
+  // orderMap을 "원본 배열 순서"로 재구성
+  const rebuildOrderMapFromBase = (): OrderMap => {
+    const next: OrderMap = {};
+    next[DROPPABLE_UNASSIGNED] = unassignedItems.map((it) => it.id);
+    for (const folderName of orderedFolders) {
+      const listId = listDroppableId(folderName);
+      next[listId] = (grouped[folderName] || []).map((it) => it.id);
+    }
+    return next;
+  };
+
+  // 1) 항상 원본 배열 기준으로 누락/삭제 보강
   useEffect(() => {
     setOrderMap((prev) => {
       let changed = false;
@@ -258,14 +268,14 @@ export default function Sidebar({
       // 바깥(미지정)
       {
         const outId = DROPPABLE_UNASSIGNED;
-        const base = filteredUnassigned.map((it) => it.id);
+        const base = unassignedItems.map((it) => it.id);
         if (!next[outId]) {
           next[outId] = base;
           changed = true;
         } else {
           const missing = base.filter((id) => !next[outId].includes(id));
           if (missing.length) {
-            next[outId] = [...next[outId], ...missing];
+            next[outId] = [...next[outId], ...missing]; // 새 항목은 뒤에
             changed = true;
           }
           const gone = next[outId].filter((id) => !base.includes(id));
@@ -279,14 +289,14 @@ export default function Sidebar({
       // 각 폴더
       for (const folderName of orderedFolders) {
         const listId = listDroppableId(folderName);
-        const base = (filteredGrouped[folderName] || []).map((it) => it.id);
+        const base = (grouped[folderName] || []).map((it) => it.id);
         if (!next[listId]) {
           next[listId] = base;
           changed = true;
         } else {
           const missing = base.filter((id) => !next[listId].includes(id));
           if (missing.length) {
-            next[listId] = [...next[listId], ...missing];
+            next[listId] = [...next[listId], ...missing]; // 새 항목은 뒤에
             changed = true;
           }
           const gone = next[listId].filter((id) => !base.includes(id));
@@ -299,7 +309,49 @@ export default function Sidebar({
 
       return changed ? next : prev;
     });
-  }, [filteredUnassigned, filteredGrouped, orderedFolders]);
+  }, [unassignedItems, grouped, orderedFolders]);
+
+  // 2) 마이그레이션: 과거 리버스 흔적이 있으면 1회 원복
+  useEffect(() => {
+    try {
+      const v = Number(localStorage.getItem(LS_ORDER_VERSION_KEY) || "0");
+      if (v >= ORDERMAP_VERSION) return;
+
+      // 간단한 휴리스틱: orderMap이 비어있지 않으면 원본과 첫/끝 비교해보고 뒤집힌 느낌이면 재구성
+      const current = orderMap;
+      const base = rebuildOrderMapFromBase();
+
+      const checkIds = (idsA: string[], idsB: string[]) =>
+        idsA.length >= 2 && idsB.length >= 2 && (
+          (idsA[0] === idsB[idsB.length - 1] && idsA[idsA.length - 1] === idsB[0])
+        );
+
+      let needRebuild = false;
+      // 바깥
+      const a = current[DROPPABLE_UNASSIGNED] || [];
+      const b = base[DROPPABLE_UNASSIGNED] || [];
+      if (checkIds(a, b)) needRebuild = true;
+
+      // 각 폴더
+      if (!needRebuild) {
+        for (const f of orderedFolders) {
+          const id = listDroppableId(f);
+          const ca = current[id] || [];
+          const cb = base[id] || [];
+          if (checkIds(ca, cb)) { needRebuild = true; break; }
+        }
+      }
+
+      if (needRebuild) {
+        const rebuilt = base;
+        setOrderMap(rebuilt);
+      }
+      localStorage.setItem(LS_ORDER_VERSION_KEY, String(ORDERMAP_VERSION));
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderMap, orderedFolders, unassignedItems, grouped]);
 
   /* 폴더 렌더 순서: 저장된 순서 우선 + 신규 폴더 보강 */
   const foldersToRender = useMemo(
@@ -454,17 +506,19 @@ export default function Sidebar({
                       createFolder(normalized);
                     }
 
+                    // 예전 정책: dst "맨뒤"로
                     setOrderMap((prev) => {
                       const next: OrderMap = { ...prev };
-                      const srcDisplay = getDisplayOrder(srcListId);
-                      const dstDisplay = srcListId === dstListId ? srcDisplay.slice() : getDisplayOrder(dstListId).slice();
+                      const srcDisplay = getRawDisplayOrder(srcListId);
+                      const dstDisplay =
+                        srcListId === dstListId ? srcDisplay.slice() : getRawDisplayOrder(dstListId).slice();
 
                       const si = srcDisplay.indexOf(itemId);
                       if (si >= 0) srcDisplay.splice(si, 1);
 
                       const di = dstDisplay.indexOf(itemId);
                       if (di >= 0) dstDisplay.splice(di, 1);
-                      dstDisplay.unshift(itemId);
+                      dstDisplay.push(itemId);
 
                       next[srcListId] = srcDisplay;
                       next[dstListId] = dstDisplay;
@@ -543,11 +597,39 @@ export default function Sidebar({
                 >
                   삭제
                 </button>
+
+                {/* 즐겨찾기: ON → 맨앞, OFF → 즐겨찾기 구역 뒤 */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    update(m.id, { favorite: !m.favorite });
+                    const nextFav = !m.favorite;
+
+                    const listId = m.folder ? listDroppableId(m.folder) : DROPPABLE_UNASSIGNED;
+
+                    setOrderMap((prev) => {
+                      const next = { ...prev };
+                      const display = getRawDisplayOrder(listId);
+
+                      // 제거
+                      const curIdx = display.indexOf(m.id);
+                      if (curIdx >= 0) display.splice(curIdx, 1);
+
+                      // 같은 리스트의 다른 즐겨찾기 수
+                      const itemsInList = m.folder ? (grouped[m.folder] || []) : unassignedItems;
+                      const favCount = itemsInList.filter((x) => x.id !== m.id && x.favorite).length;
+
+                      if (nextFav) {
+                        display.unshift(m.id); // 맨앞
+                      } else {
+                        display.splice(favCount, 0, m.id); // 즐겨찾기 뒤
+                      }
+
+                      next[listId] = display;
+                      return next;
+                    });
+
+                    update(m.id, { favorite: nextFav });
                   }}
                   className={`ml-auto p-1 rounded cursor-pointer ${
                     m.favorite ? "text-yellow-400" : "text-neutral-400"
@@ -563,7 +645,7 @@ export default function Sidebar({
     );
   };
 
-  /* 드롭 처리: 폴더/아이템 모두 처리(보이는 순서 기반) */
+  /* 드롭 처리: 폴더/아이템 모두 처리(원본 순서 기반) */
   const handleDrop = (r: DropResult) => {
     const { source, destination, draggableId, type } = r;
     if (!destination) return;
@@ -572,10 +654,10 @@ export default function Sidebar({
     if (type === "FOLDER") {
       handleFolderDragEnd(r);
       setFolderOrder((prev) => {
-        const next = [...prev];
-        const [moved] = next.splice(source.index, 1);
-        next.splice(destination.index, 0, moved);
-        return next;
+        const base = prev.length ? [...prev] : [...orderedFolders];
+        const [moved] = base.splice(source.index, 1);
+        base.splice(destination.index, 0, moved);
+        return base;
       });
       return;
     }
@@ -587,8 +669,12 @@ export default function Sidebar({
 
       setOrderMap((prev) => {
         const next: OrderMap = { ...prev };
-        const srcDisplay = getDisplayOrder(srcListId);
-        const dstDisplay = srcListId === dstListId ? srcDisplay.slice() : getDisplayOrder(dstListId).slice();
+
+        const srcDisplay = getRawDisplayOrder(srcListId);
+        const dstDisplay =
+          srcListId === dstListId
+            ? srcDisplay.slice()
+            : getRawDisplayOrder(dstListId).slice();
 
         if (srcListId === dstListId) {
           const [moved] = dstDisplay.splice(source.index, 1);
@@ -689,9 +775,6 @@ export default function Sidebar({
                 </select>
 
                 <div className="relative flex-1">
-                  {/* {!search && (
-                  <Search size={14} className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60" />
-                  )} */}
                   <input
                     type="text"
                     value={search}
@@ -700,8 +783,8 @@ export default function Sidebar({
                       searchMode === "name"
                         ? "이름 검색"
                         : searchMode === "ganji"
-                        ? "간지 검색 (예: 경자·갑신 등)"
-                        : "생년월일 검색 (예: 19961229, 1996-12-29, 1996.12.29)"
+                        ? "간지 검색 (예: 경자·갑신)"
+                        : "생년월일 검색 (예: 19961229, 1996-12-29)"
                     }
                     className="w-full pl-7 pr-8 py-1 h-30 rounded
                                bg-white dark:bg-neutral-900
@@ -714,7 +797,7 @@ export default function Sidebar({
                     <button
                       type="button"
                       onClick={() => setSearch("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 cursor-pointer"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100"
                       aria-label="검색 지우기"
                       title="검색 지우기"
                     >
