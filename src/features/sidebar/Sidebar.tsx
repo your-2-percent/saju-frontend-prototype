@@ -789,7 +789,7 @@ export default function Sidebar({
                     className="w-full pl-7 pr-8 py-1 h-30 rounded
                                bg-white dark:bg-neutral-900
                                border border-neutral-300 dark:border-neutral-700
-                               text-sm text-neutral-900 dark:text-neutral-100
+                               text-[16px] text-neutral-900 dark:text-neutral-100
                                placeholder-neutral-400 dark:placeholder-neutral-500
                                focus:outline-none focus:ring-2 focus:ring-amber-500/40"
                   />
