@@ -36,7 +36,7 @@ const LS_ORDER_KEY = "sidebar.orderMap.v1";
 const LS_FOLDER_ORDER_KEY = "sidebar.folderOrder.v1";
 // 마이그레이션 버전 키 (기존 리버스 흔적 제거용)
 const LS_ORDER_VERSION_KEY = "sidebar.orderMap.version";
-const ORDERMAP_VERSION = 2;
+const ORDERMAP_VERSION = 3;
 
 // ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
