@@ -10,15 +10,39 @@ import { getDaewoonList } from "../luck/daewoonList";
 import { ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
 import { computeDeukFlags10 } from "@/features/AnalysisReport/utils/strength";
 import { type LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
-
-// ─────────────────────────────────────────────
-// AnalysisReport(컴포넌트) overlay 로직과 1:1 동일하게 복제
-// ─────────────────────────────────────────────
-
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 import type { Element } from "@/features/AnalysisReport/utils/types";
 
 /* ===== 맵/상수 ===== */
 //const POS_LABELS = ["연", "월", "일", "시"] as const;
+
+const DEBUG = false;
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+/* ===== 음력 → 양력 보정 ===== */
+function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
+  const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
+  const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
+  const calType = typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+  if (birthDay.length < 8) return data;
+
+  const y = Number(birthDay.slice(0, 4));
+  const m = Number(birthDay.slice(4, 6));
+  const d = Number(birthDay.slice(6, 8));
+
+  if (calType === "lunar") {
+    try {
+      const solarDate = lunarToSolarStrict(y, m, d, 0, 0);
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(solarDate.getMonth() + 1)}${pad2(solarDate.getDate())}`;
+      const out: MyeongSik = { ...data, birthDay: newBirthDay, calendarType: "solar" } as MyeongSik;
+      if (DEBUG) console.debug("[IlwoonCalendar] lunar→solar:", { y, m, d, newBirthDay });
+      return out;
+    } catch {
+      return data;
+    }
+  }
+  return data;
+}
 
 function getActivePosLabels(natal: Pillars4, ms: MyeongSik): string[] {
   if (natal[3] && natal[3] !== "") {
@@ -430,7 +454,8 @@ export function buildChatPrompt(params: {
   const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
 
   function formatBirth(ms: MyeongSik): string {
-    const rawDay = ms.birthDay ?? "";
+    const ensured = ensureSolarBirthDay(ms);
+    const rawDay = ensured.birthDay ?? "";
     const year = rawDay.slice(0, 4), month = rawDay.slice(4, 6), day = rawDay.slice(6, 8);
     let correctedTime = "";
     if (ms.corrected instanceof Date && !isNaN(ms.corrected.getTime())) {
@@ -616,7 +641,9 @@ export function buildChatPrompt(params: {
     }) : section(`신살(운 포함·탭=${tab})`, sinsalWithLuck),
   ].join("\n\n");
 
+  
   const guide = [
+    tab === "원국" ?
     `너는 명리학 전문 해석가다.  
 모든 출력은 한국어로 작성한다.  
 AI 특유의 친절함, 긍정적인면은 리셋시킨다.
@@ -683,8 +710,61 @@ AI 특유의 친절함, 긍정적인면은 리셋시킨다.
 불필요한 감탄사, 주관적 감정어, 추상적 운명론은 절대 포함하지 않는다.
 
 문장은 지나치게 학술적으로 쓰지 말고, 실제 사람의 말투처럼 자연스럽게 이어지게 하라.
-  `,
+  ` :
+  `
+너는 명리학을 기반으로 현실 사건을 분석하는 전문가다.
+이번 운세는 ‘새롭게 발생하거나 방향이 바뀌는 사건’을 중심으로 분석하라.
+분석 범위는 현실의 모든 가능성을 포함한다.
+일, 인간관계, 돈, 가족, 건강, 사회적 노출, 공간, 계약, 사고, 기계, 제도, 타인 사건 등
+현실에서 실제로 일어날 수 있는 모든 종류의 일을 다루어라.
+단, 뻔한 일반론은 배제하고, 예상하지 못한 이슈 위주로 구성하라.
+
+모든 설명은 **논리적 근거(오행 흐름, 형충회합, 신살, 납음 작용 등)**에 기반해야 하며,
+감정·조언·심리 서술은 절대 금지한다.
+비유나 상징(예: 불의 달, 끓는 물, 파도처럼 밀려온다 등)도 금지하고,
+현실에서 일어나는 사건의 형태로만 말하라.
+
+분석 구조는 다음과 같다:
+
+이번 달 전체 구조 요약
+오행 중심축 변화와 그로 인한 생활 흐름의 전환 설명
+(예: “이번 달엔 수가 줄고 화가 늘면서, 일 중심에서 사람 중심으로 구조가 바뀌어요.”)
+
+이슈별 구체 분석 (개수 자유)
+
+개수는 제한하지 않는다 (1~6개 내외, 많으면 모두 포함)
+
+이슈 주제는 카테고리화하지 않는다.
+대신 “이번 달에는 ○○한 일이 생길 수 있어요.” 형식으로 시작하라.
+(예: “이번 달에는 예상치 못한 수입이 생길 수 있어요.”
+“이번 달에는 사고수가 있으니, 주의해야합니다. 특히 다리쪽이 다치는 사고수를 조심해야해요 (낙상 등)”)
+
+각 이슈는 반드시
+① 왜 생기는가(명리적 원인) → ② 어떤 형태로 나타나는가(현상) → ③ 지속성 → ④ 긍정·부정 양면
+이 순서로 설명한다.
+
+종합 정리
+
+이번 달 전체 구조가 어떤 의미의 ‘전환기’인지 설명
+
+“좋게 보면 ○○, 나쁘게 보면 △△” 식의 이중 구조로 마무리
+
+금지:
+“조심해야 합니다”, “긴장될 수 있어요” 등 감정 유도 문장
+“몸이 피곤할 수 있어요”처럼 누구에게나 적용되는 일반적 문장
+“기회입니다, 긍정적으로 생각하세요” 같은 위로문
+상징적 비유, 문학적 표현
+
+문장 스타일 예시:
+“이번 달에는 갑자기 행정 일정이 빨라지거나, 그동안 미뤄졌던 서류가 한꺼번에 처리될 수 있어요.
+이건 월운의 화 기운이 강해지면서 관성 작용이 활성화된 결과예요.
+좋게 보면 일이 명확해지고, 나쁘게 보면 예상치 못한 일정 변경으로 혼선이 생길 수 있어요.”
+
+출력은 구어체 설명체로,
+마크다운 없이 긴 문단 형식으로 서술하라.
+  `
   ].join("\n");
+  
 
   return [header, body, guide].join("\n\n");
 }
