@@ -623,7 +623,7 @@ function NabeumBadge({ stem, branch }: { stem: string; branch: string }) {
   const cls = getNabeumBg(entry.elem);
   return (
     <span
-      className={`inline-block px-1.5 py-[2px] rounded ${cls} border border-white/10`}
+      className={`inline-block px-1.5 py-[2px] rounded ${cls} border border-white/10 text-nowrap`}
       title={`${entry.label} · ${entry.elem}`}
     >
       {entry.label}
