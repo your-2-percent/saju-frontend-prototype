@@ -157,7 +157,6 @@ export default function DaewoonList({
   const dayStem = useMemo<Stem10sin>(() => {
     const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
     const dayGz = getDayGanZhi(solarBirth, rule);
-    console.log(dayGz);
     return dayGz.charAt(0) as Stem10sin;
   }, [solarBirth, data.mingSikType]);
 

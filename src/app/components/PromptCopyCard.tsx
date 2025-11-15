@@ -1,21 +1,20 @@
 import { useMemo, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { buildChatPrompt } from "@/features/prompt/buildPrompt";
+import { buildChatPrompt, buildMultiLuckPrompt } from "@/features/prompt/buildPrompt";
 import { computeUnifiedPower, type LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
 import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
 import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, /*getHourGanZhi*/ } from "@/shared/domain/간지/공통";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import type { DayBoundaryRule } from "@/shared/type";
-//import { lunarToSolarStrict }  from "@/shared/lib/calendar/lunar";
-//import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
 import { clamp01, getShinCategory, ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
 import { natalShinPercent } from "@/features/AnalysisReport/logic/powerPercent";
 import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
 import DateInput from "@/features/luck/ui/DateTimePicker";
+import { getDaewoonList } from "@/features/luck/daewoonList";
 
 type Props = {
   ms: MyeongSik;
@@ -90,23 +89,125 @@ export default function PromptCopyCard({
 }: Props) {
   const { date, setDate } = useLuckPickerStore();
   const [activeTab, setActiveTab] = useState<BlendTab>("원국");
+  const [isMultiMode, setIsMultiMode] = useState(false);
+  const [multiTab, setMultiTab] = useState<"대운" | "세운" | "월운">("대운");
+  
+  // 임의기간 상태
+  const [selectedDaeIdx, setSelectedDaeIdx] = useState<number[]>([]);
+  const [seStartYear, setSeStartYear] = useState<number>(new Date().getFullYear());
+  const [seEndYear, setSeEndYear] = useState<number>(new Date().getFullYear());
+  const [wolStartYM, setWolStartYM] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [wolEndYM, setWolEndYM] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // 세운 범위 제약 (최대 10년)
+  const handleSeStartChange = (year: number) => {
+    setSeStartYear(year);
+
+    // 1) 종료 < 시작 → 종료를 시작으로 보정
+    if (seEndYear < year) {
+      setSeEndYear(year);
+      return;
+    }
+
+    // 2) 최대 10년 범위 초과 → 종료 보정
+    if (seEndYear - year > 9) {
+      setSeEndYear(year + 9);
+    }
+  };
+
+  const handleSeEndChange = (year: number) => {
+    setSeEndYear(year);
+
+    // 1) 종료 < 시작 → 시작을 종료로 보정
+    if (year < seStartYear) {
+      setSeStartYear(year);
+      return;
+    }
+
+    // 2) 최대 10년 범위 초과 → 시작 보정
+    if (year - seStartYear > 9) {
+      setSeStartYear(year - 9);
+    }
+  };
+
+  // 월운 범위 제약 (최대 12개월)
+  const handleWolStartChange = (ym: string) => {
+    setWolStartYM(ym);
+
+    const [sY, sM] = ym.split("-").map(Number);
+    const [eY, eM] = wolEndYM.split("-").map(Number);
+
+    const start = new Date(sY, sM - 1);
+    const end = new Date(eY, eM - 1);
+
+    // 1) 종료 < 시작 → 종료 = 시작
+    if (end < start) {
+      setWolEndYM(ym);
+      return;
+    }
+
+    // 2) 최대 12개월 초과
+    const diff = (end.getFullYear() - start.getFullYear()) * 12 +
+                (end.getMonth() - start.getMonth());
+
+    if (diff > 11) {
+      const newEnd = new Date(start);
+      newEnd.setMonth(start.getMonth() + 11);
+      setWolEndYM(
+        `${newEnd.getFullYear()}-${String(newEnd.getMonth() + 1).padStart(2, "0")}`
+      );
+    }
+  };
+
+  const handleWolEndChange = (ym: string) => {
+    setWolEndYM(ym);
+
+    const [sY, sM] = wolStartYM.split("-").map(Number);
+    const [eY, eM] = ym.split("-").map(Number);
+
+    const start = new Date(sY, sM - 1);
+    const end = new Date(eY, eM - 1);
+
+    // 1) 종료 < 시작 → 시작 = 종료
+    if (end < start) {
+      setWolStartYM(ym);
+      return;
+    }
+
+    // 2) 최대 12개월 초과
+    const diff = (end.getFullYear() - start.getFullYear()) * 12 +
+                (end.getMonth() - start.getMonth());
+
+    if (diff > 11) {
+      const newStart = new Date(end);
+      newStart.setMonth(end.getMonth() - 11);
+      setWolStartYM(
+        `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}`
+      );
+    }
+  };
+
+
   const { yearGZ, monthGZ, dayGZ } = useLuckPickerStore();
   const fallbackChain = useMemo<LuckChain>(() => ({
-    dae: chain?.dae ?? null, // 대운은 상위에서 넘겨주는 게 가장 정확 (없으면 null 유지)
+    dae: chain?.dae ?? null,
     se:  chain?.se  ?? (yearGZ  ? normalizeGZ(yearGZ)  : null),
     wol: chain?.wol ?? (monthGZ ? normalizeGZ(monthGZ) : null),
     il:  chain?.il  ?? (dayGZ   ? normalizeGZ(dayGZ)   : null),
   }), [chain, yearGZ, monthGZ, dayGZ]);
 
-  // 시주 예측(미상 보정)
   const { manualHour } = useHourPredictionStore();
   const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
-  // 1) props 정규화
   const solarKo = useMemo(() => normalizePillars(natal), [natal]);
   const lunarKo = useMemo(() => normalizePillars(lunarPillars), [lunarPillars]);
 
-  // 2) 시주 예측 주입
   const solarKoWithHour = useMemo(() => {
     const arr = [...solarKo] as [string, string, string, string];
     if ((!arr[3] || arr[3] === "") && manualHour) arr[3] = manualHour.stem + manualHour.branch;
@@ -119,7 +220,6 @@ export default function PromptCopyCard({
     return arr;
   }, [lunarKo, manualHour]);
 
-  // 3) props 깨졌을 때 data로 연/월/일 Fallback (정오 기준)
   const computedFallback = useMemo<[string, string, string, string] | null>(() => {
     const y = Number(ms.birthDay?.slice(0, 4));
     const m = Number(ms.birthDay?.slice(4, 6));
@@ -129,14 +229,13 @@ export default function PromptCopyCard({
     const yn = normalizeGZLocal(getYearGanZhi(base) || "");
     const wl = normalizeGZLocal(getMonthGanZhi(base) || "");
     const il = normalizeGZLocal(getDayGanZhi(base, rule) || "");
-    const si = ""; // 시간 미상
+    const si = "";
     return [yn, wl, il, si];
   }, [ms.birthDay, rule]);
 
   const solarValid = hasValidYmd(solarKoWithHour);
   const lunarValid = hasValidYmd(lunarKoWithHour);
 
-  // 4) 최종 activePillars (우선순위: props→fallback) + 수동시주 재주입
   const [basisMonth] = useState<"solar" | "lunar">("solar");
   const effectiveBasis: "solar" | "lunar" =
     basisMonth === "lunar"
@@ -153,14 +252,12 @@ export default function PromptCopyCard({
     return arr;
   }, [effectiveBasis, solarValid, lunarValid, solarKoWithHour, lunarKoWithHour, computedFallback, manualHour]);
 
-  // 시주 변경 트리거 키
   const hourKey = useMemo(
     () => (manualHour ? manualHour.stem + manualHour.branch : activePillars[3] || ""),
     [manualHour, activePillars]
   );
 
   if (!natal || natal.length === 0) {
-    //console.warn("⚠️ natal이 빈배열이라 buildNatalPillarsFromMs로 보정함");
     natal = buildNatalPillarsFromMs(ms);
   }
 
@@ -171,13 +268,12 @@ export default function PromptCopyCard({
   const natalWithPrediction = useMemo(() => {
     const pillars = buildNatalPillarsFromMs(ms);
     if (manualHourStr && manualHourStr.length === 2) {
-      pillars[3] = manualHourStr; // ✅ 시주 예측 덮어쓰기
+      pillars[3] = manualHourStr;
     }
     return pillars;
   }, [ms, manualHourStr]);
 
   const unified = useMemo(() => {
-    //if (!hasValidYmd(activePillars)) return null;
     return computeUnifiedPower({
       natal: natalWithPrediction,
       tab: activeTab,
@@ -192,14 +288,38 @@ export default function PromptCopyCard({
   }
 
   const value = getDayElementPercent(natalWithPrediction);
-
   const percent = useMemo(() => clamp01(value), [value]);
   const category: ShinCategory = useMemo(() => getShinCategory(percent), [percent]);
 
-  const text = useMemo(() => {
-  if (!ms) return "";
+  // 대운 리스트 - 문자열 배열을 파싱해서 객체로 변환
+  const daeList = useMemo(() => {
+    const rawList = getDaewoonList(ms).slice(0, 10);
+    const birthYear = ms.birthDay ? Number(ms.birthDay.slice(0, 4)) : 0;
+    
+    return rawList.map((str, idx) => {
+      // "2024년 11월 기해 대운 시작" 형식 파싱
+      const match = str.match(/(\d{4})년\s+(\d{1,2})월\s+([가-힣]{2})\s+대운/);
+      const startYear = match ? Number(match[1]) : 0;
+      const startMonth = match ? Number(match[2]) : 1;
+      const startDay = 1;
+      const gz = match ? match[3] : "";
+      const age = birthYear > 0 ? startYear - birthYear : idx * 10;
+      
+      return {
+        gz,
+        age,
+        startYear,
+        startMonth,
+        startDay,
+        endYear: startYear + 10,
+      };
+    });
+  }, [ms]);
 
-  return buildChatPrompt({
+  // 일반 모드 프롬프트
+  const normalText = useMemo(() => {
+    if (!ms) return "";
+    return buildChatPrompt({
       ms,
       natal: natalWithPrediction,
       chain: fallbackChain,
@@ -210,18 +330,53 @@ export default function PromptCopyCard({
       percent,
       category,
     });
-  }, [
-    ms,
-    basis,
-    includeTenGod,
-    activeTab,
-    fallbackChain,
-    unified,
-    percent,
-    category,
-    natalWithPrediction
-  ]);
+  }, [ms, basis, includeTenGod, activeTab, fallbackChain, unified, percent, category, natalWithPrediction]);
 
+  // 임의기간 모드 프롬프트
+  const multiText = useMemo(() => {
+    if (!ms || !isMultiMode) return "";
+    
+    const selectedDaeList = selectedDaeIdx.map(idx => daeList[idx]).filter(Boolean);
+    
+    const seYears = multiTab === "세운" ? (() => {
+      const years = [];
+      for (let y = seStartYear; y <= seEndYear && years.length < 10; y++) {
+        years.push(y);
+      }
+      return years;
+    })() : [];
+    
+    const wolMonths = multiTab === "월운" ? (() => {
+      const months: string[] = [];
+      const [startY, startM] = wolStartYM.split('-').map(Number);
+      const [endY, endM] = wolEndYM.split('-').map(Number);
+      const curDate = new Date(startY, startM - 1);
+      const endDate = new Date(endY, endM - 1);
+      
+      while (curDate <= endDate && months.length < 12) {
+        months.push(`${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`);
+        curDate.setMonth(curDate.getMonth() + 1);
+      }
+      return months;
+    })() : [];
+
+    return buildMultiLuckPrompt({
+      ms,
+      natal: natalWithPrediction,
+      basis,
+      includeTenGod,
+      unified,
+      percent,
+      category,
+      selectedDaeList,
+      daeList,
+      seYears,
+      wolMonths,
+    });
+  }, [ms, isMultiMode, multiTab, selectedDaeIdx, daeList, seStartYear, seEndYear, wolStartYM, wolEndYM, 
+      natalWithPrediction, basis, includeTenGod, unified, percent, category]);
+
+  const text = isMultiMode ? multiText : normalText;
 
   const [copied, setCopied] = useState(false);
   async function onCopy() {
@@ -261,37 +416,178 @@ export default function PromptCopyCard({
         </button>
       </div>
 
-      {/* 탭 버튼 + 피커 */}
-      <div className="flex desk:justify-between flex-col desk:flex-row gap-2">
-      <div className="flex gap-1 flex-wrap">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => {
-              setActiveTab(t);
-            }}
-            className={`px-2 py-1 text-xs rounded-md border cursor-pointer ${
-              activeTab === t
-                ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
-                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
-        <DateInput
-          date={date ?? new Date()}
-          onChange={setDate}
-        />
+      {/* 모드 전환 버튼 */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setIsMultiMode(false)}
+          className={`px-3 py-1.5 text-xs rounded-md border cursor-pointer ${
+            !isMultiMode
+              ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
+              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+          }`}
+        >
+          일반 모드
+        </button>
+        <button
+          onClick={() => setIsMultiMode(true)}
+          className={`px-3 py-1.5 text-xs rounded-md border cursor-pointer ${
+            isMultiMode
+              ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
+              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+          }`}
+        >
+          임의기간입력
+        </button>
       </div>
 
-      {/* 안내: 오행강약은 원국 기준 고정 */}
-      <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-        <p>위에 피커로 날짜를 조정할 수 있습니다.</p>
-        <p>각 탭에 따라서, 기준이 달라집니다.</p>
-        <p>프롬포트를 복사하여 마음껏 커스텀하여, 사용할 수 있습니다.</p>
-      </div>
+      {/* 일반 모드 */}
+      {!isMultiMode && (
+        <>
+          <div className="flex desk:justify-between flex-col desk:flex-row gap-2">
+            <div className="flex gap-1 flex-wrap">
+              {TABS.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTab(t)}
+                  className={`px-2 py-1 text-xs rounded-md border cursor-pointer ${
+                    activeTab === t
+                      ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
+                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+            <DateInput date={date ?? new Date()} onChange={setDate} />
+          </div>
+
+          <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+            <p>위에 피커로 날짜를 조정할 수 있습니다.</p>
+            <p>각 탭에 따라서, 기준이 달라집니다.</p>
+            <p>프롬포트를 복사하여 마음껏 커스텀하여, 사용할 수 있습니다.</p>
+          </div>
+        </>
+      )}
+
+      {/* 임의기간 모드 */}
+      {isMultiMode && (
+        <div className="space-y-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
+          {/* 대운/세운/월운 탭 */}
+          <div className="flex gap-1.5 border-b pb-2">
+            {(["대운", "세운", "월운"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setMultiTab(tab)}
+                className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
+                  multiTab === tab
+                    ? "bg-blue-600 text-white font-semibold"
+                    : "bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-600"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* 대운 선택 */}
+          {multiTab === "대운" && (
+            <div>
+              <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
+                대운 선택 (다중 선택 가능)
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {daeList.map((dae, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedDaeIdx(prev =>
+                        prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                      );
+                    }}
+                    className={`px-2 py-1.5 text-xs rounded border cursor-pointer text-left ${
+                      selectedDaeIdx.includes(idx)
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "bg-white dark:bg-neutral-700 border-neutral-300 dark:border-neutral-600"
+                    }`}
+                  >
+                    <div className="font-mono">{dae.gz}</div>
+                    <div className="text-[10px] opacity-80">
+                      {dae.age}세 ({dae.startYear}~{dae.endYear})
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 세운 범위 */}
+          {multiTab === "세운" && (
+            <div>
+              <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
+                세운 범위 (최대 10년)
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  value={seStartYear}
+                  onChange={(e) => handleSeStartChange(Number(e.target.value))}
+                  className="w-24 h-30 px-2 text-xs border rounded bg-white dark:bg-neutral-700"
+                  placeholder="시작년도"
+                />
+                <span className="text-xs">~</span>
+                <input
+                  type="number"
+                  value={seEndYear}
+                  onChange={(e) => handleSeEndChange(Number(e.target.value))}
+                  className="w-24 h-30 px-2 text-xs border rounded bg-white dark:bg-neutral-700"
+                  placeholder="종료년도"
+                />
+              </div>
+              <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                선택 범위: {seEndYear - seStartYear + 1}년
+              </div>
+            </div>
+          )}
+
+          {/* 월운 범위 */}
+          {multiTab === "월운" && (
+            <div>
+              <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
+                월운 범위 (최대 12개월)
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="month"
+                  value={wolStartYM}
+                  onChange={(e) => handleWolStartChange(e.target.value)}
+                  className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
+                />
+                <span className="text-xs">~</span>
+                <input
+                  type="month"
+                  value={wolEndYM}
+                  onChange={(e) => handleWolEndChange(e.target.value)}
+                  className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
+                />
+              </div>
+              <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                선택 범위: {(() => {
+                  const [startY, startM] = wolStartYM.split('-').map(Number);
+                  const [endY, endM] = wolEndYM.split('-').map(Number);
+                  const months = (endY - startY) * 12 + (endM - startM) + 1;
+                  return months;
+                })()}개월
+              </div>
+            </div>
+          )}
+
+          <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
+            <p>선택한 {multiTab}의 데이터가 프롬프트에 포함됩니다.</p>
+            <p>각 운마다 별도 섹션으로 출력됩니다.</p>
+          </div>
+        </div>
+      )}
 
       <textarea
         readOnly
