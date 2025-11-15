@@ -303,7 +303,7 @@ export default function PromptCopyCard({
       const startMonth = match ? Number(match[2]) : 1;
       const startDay = 1;
       const gz = match ? match[3] : "";
-      const age = birthYear > 0 ? startYear - birthYear : idx * 10;
+      const age = birthYear > 0 ? koreanAgeByYear(birthYear, startYear) : idx * 10;
       
       return {
         gz,
@@ -597,4 +597,8 @@ export default function PromptCopyCard({
       />
     </div>
   );
+}
+
+function koreanAgeByYear(birthYear: number, targetYear: number): number {
+  return targetYear - birthYear + 1;
 }
