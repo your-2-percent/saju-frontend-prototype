@@ -106,34 +106,34 @@ export default function PromptCopyCard({
   });
 
   // 세운 범위 제약 (최대 10년)
+  // --- raw 값만 업데이트 ---
   const handleSeStartChange = (year: number) => {
     setSeStartYear(year);
-
-    // 1) 종료 < 시작 → 종료를 시작으로 보정
-    if (seEndYear < year) {
-      setSeEndYear(year);
-      return;
-    }
-
-    // 2) 최대 10년 범위 초과 → 종료 보정
-    if (seEndYear - year > 9) {
-      setSeEndYear(year + 9);
-    }
   };
 
   const handleSeEndChange = (year: number) => {
     setSeEndYear(year);
+  };
 
-    // 1) 종료 < 시작 → 시작을 종료로 보정
-    if (year < seStartYear) {
-      setSeStartYear(year);
-      return;
-    }
+  // --- 보정은 입력이 끝났을 때만 ---
+  const fixStartYear = () => {
+    const s = seStartYear;
+    let e = seEndYear;
 
-    // 2) 최대 10년 범위 초과 → 시작 보정
-    if (year - seStartYear > 9) {
-      setSeStartYear(year - 9);
-    }
+    if (e < s) e = s;
+    if (e - s > 9) e = s + 9;
+
+    setSeEndYear(e);
+  };
+
+  const fixEndYear = () => {
+    let s = seStartYear;
+    const e = seEndYear;
+
+    if (e < s) s = e;
+    if (e - s > 9) s = e - 9;
+
+    setSeStartYear(s);
   };
 
   // 월운 범위 제약 (최대 12개월)
@@ -532,7 +532,8 @@ export default function PromptCopyCard({
                   type="number"
                   value={seStartYear}
                   onChange={(e) => handleSeStartChange(Number(e.target.value))}
-                  className="w-24 h-30 px-2 text-xs border rounded bg-white dark:bg-neutral-700"
+                  onBlur={fixStartYear}
+                  className="w-24 h-30 px-2 text-[16px] desk:text-xs border rounded bg-white dark:bg-neutral-700"
                   placeholder="시작년도"
                 />
                 <span className="text-xs">~</span>
@@ -540,7 +541,8 @@ export default function PromptCopyCard({
                   type="number"
                   value={seEndYear}
                   onChange={(e) => handleSeEndChange(Number(e.target.value))}
-                  className="w-24 h-30 px-2 text-xs border rounded bg-white dark:bg-neutral-700"
+                  onBlur={fixEndYear}
+                  className="w-24 h-30 px-2 text-[16px] desk:text-xs border rounded bg-white dark:bg-neutral-700"
                   placeholder="종료년도"
                 />
               </div>
