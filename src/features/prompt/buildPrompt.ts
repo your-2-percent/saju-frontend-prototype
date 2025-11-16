@@ -455,9 +455,6 @@ function findDaeForYearMulti(daeList: DaewoonInfo[], year: number): DaewoonInfo[
   return findDaeForYearRangeMulti(daeList, year, year);
 }
 
-/**
- * "특정 월 하나"에 걸치는 대운들 (월운 상위운용)
- */
 function findDaeForMonthMulti(
   daeList: DaewoonInfo[],
   year: number,
@@ -1304,9 +1301,6 @@ export function buildMultiLuckPrompt(params: {
         세운: {
           기본정보: `${year}년 ${normalizeGZ(seGZ || "")}`,
           간지: normalizeGZ(seGZ || ""),
-          상위운: {
-            대운: daesAtYear.map(d => d.gz), // 해당 연도에 걸치는 대운들 (보통 1개, 교운기면 2개)
-          },
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
@@ -1599,12 +1593,6 @@ export function buildMultiLuckPrompt(params: {
         월운: {
           기본정보: `${ym}월 ${normalizeGZ(wolGZ || "")}`,
           간지: normalizeGZ(wolGZ || ""),
-          // 이건 참고용으로 계속 두고 싶으면 그대로 두고,
-          // 지저분하면 상위운 필드는 아예 빼도 됨
-          상위운: {
-            대운: daes.map((d) => d.gz),
-            세운: ses,
-          },
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
