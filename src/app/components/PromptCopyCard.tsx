@@ -137,6 +137,7 @@ export default function PromptCopyCard({
   };
 
   // 월운 범위 제약 (최대 12개월)
+// 월운 범위 제약 (최대 12개월)
   const handleWolStartChange = (ym: string) => {
     setWolStartYM(ym);
 
@@ -146,19 +147,16 @@ export default function PromptCopyCard({
     const start = new Date(sY, sM - 1);
     const end = new Date(eY, eM - 1);
 
-    // 1) 종료 < 시작 → 종료 = 시작
-    if (end < start) {
-      setWolEndYM(ym);
-      return;
-    }
-
-    // 2) 최대 12개월 초과
-    const diff = (end.getFullYear() - start.getFullYear()) * 12 +
-                (end.getMonth() - start.getMonth());
+    // 종료 < 시작이어도 일단 건드리지 않음 (사용자 자유)
+    // 단, 12개월 초과일 때만 종료 보정
+    const diff =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
 
     if (diff > 11) {
       const newEnd = new Date(start);
       newEnd.setMonth(start.getMonth() + 11);
+
       setWolEndYM(
         `${newEnd.getFullYear()}-${String(newEnd.getMonth() + 1).padStart(2, "0")}`
       );
@@ -174,25 +172,21 @@ export default function PromptCopyCard({
     const start = new Date(sY, sM - 1);
     const end = new Date(eY, eM - 1);
 
-    // 1) 종료 < 시작 → 시작 = 종료
-    if (end < start) {
-      setWolStartYM(ym);
-      return;
-    }
-
-    // 2) 최대 12개월 초과
-    const diff = (end.getFullYear() - start.getFullYear()) * 12 +
-                (end.getMonth() - start.getMonth());
+    // 종료 < 시작이어도 건드리지 않음
+    // 단, 12개월 초과일 때만 시작 보정
+    const diff =
+      (end.getFullYear() - start.getFullYear()) * 12 +
+      (end.getMonth() - start.getMonth());
 
     if (diff > 11) {
       const newStart = new Date(end);
       newStart.setMonth(end.getMonth() - 11);
+
       setWolStartYM(
         `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}`
       );
     }
   };
-
 
   const { yearGZ, monthGZ, dayGZ } = useLuckPickerStore();
   const fallbackChain = useMemo<LuckChain>(() => ({
