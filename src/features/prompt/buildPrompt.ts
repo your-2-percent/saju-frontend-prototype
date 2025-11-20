@@ -1149,7 +1149,10 @@ export function buildMultiLuckPrompt(params: {
             ),
             십신강약: overlay.totalsSub,
             형충회합: relWithDae,
-            신살: shinsalWithDae,
+            신살: {
+              good: shinsalWithDae.good,
+              bad:  shinsalWithDae.bad,
+            },
             납음오행: daeNabeum
               ? {
                   gz: dae.gz,
@@ -1235,7 +1238,10 @@ export function buildMultiLuckPrompt(params: {
             ),
             십신강약: daeOverlay.totalsSub,
             형충회합: relWithDae,
-            신살: shinsalWithDae,
+            신살: {
+              good: shinsalWithDae.good,
+              bad:  shinsalWithDae.bad,
+            },
             납음오행: daeNabeum
               ? {
                   gz: daa.gz,
@@ -1309,7 +1315,10 @@ export function buildMultiLuckPrompt(params: {
           ),
           십신강약: overlay.totalsSub,
           형충회합: relWithSe,
-          신살: shinsalWithSe,
+          신살: {
+            good: shinsalWithSe.good,
+            bad:  shinsalWithSe.bad,
+          },
           납음오행: seNabeum
             ? {
                 gz: normalizeGZ(seGZ || ""),
@@ -1424,7 +1433,10 @@ export function buildMultiLuckPrompt(params: {
             ),
             십신강약: daeOverlay.totalsSub,
             형충회합: relWithDae,
-            신살: shinsalWithDae,
+            신살: {
+              good: shinsalWithDae.good,
+              bad:  shinsalWithDae.bad,
+            },
             납음오행: daeNabeum
               ? {
                   gz: daa.gz,
@@ -1512,7 +1524,10 @@ export function buildMultiLuckPrompt(params: {
             ),
             십신강약: seOverlay.totalsSub,
             형충회합: relWithSeTop,
-            신살: shinsalWithSeTop,
+            신살: {
+              good: shinsalWithSeTop.good,
+              bad:  shinsalWithSeTop.bad,
+            },
             납음오행: seNabeum
               ? {
                   gz: se,
@@ -1601,7 +1616,10 @@ export function buildMultiLuckPrompt(params: {
           ),
           십신강약: overlay.totalsSub,
           형충회합: relWithWol,
-          신살: shinsalWithWol,
+          신살: {
+            good: shinsalWithWol.good,
+            bad:  shinsalWithWol.bad,
+          },
           납음오행: wolNabeum
             ? {
                 gz: normalizeGZ(wolGZ || ""),

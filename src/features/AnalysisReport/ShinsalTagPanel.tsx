@@ -1,7 +1,8 @@
 // features/AnalysisReport/ShinsalTagPanel.tsx
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Pillars4 } from "./logic/relations";
 import { buildShinsalTags, type ShinsalBasis } from "./logic/shinsal";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
 type StageTab = "원국" | "대운" | "세운" | "월운" | "일운";
 
@@ -87,8 +88,22 @@ export default function ShinsalTagPanel({
   tab?: StageTab;
 }) {
   // ▼ 셀렉트 상태: 공망/삼재 기준
+
+  const { settings } = useSettingsStore();
+
   const [voidSel, setVoidSel] = useState<"일공망" | "연공망">("일공망");
   const [samjaeSel, setSamjaeSel] = useState<"일삼재" | "연삼재">("일삼재");
+
+  // 설정값 반영 (초기 및 설정 변경시 자동 변경)
+  useEffect(() => {
+    if (settings.sinsalBase === "일지") {
+      setVoidSel("일공망");
+      setSamjaeSel("일삼재");
+    } else {
+      setVoidSel("연공망");
+      setSamjaeSel("연삼재");
+    }
+  }, [settings.sinsalBase]);
 
   const basis: ShinsalBasis = useMemo(
     () => ({
