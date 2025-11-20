@@ -19,6 +19,7 @@ import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
 import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
 import { useLuckChain } from "@/features/prompt/useLuckChain";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
 /** 훅은 항상 같은 순서로 호출해야 하므로, 데이터 없을 때도 안전하게 돌릴 더미 명식 */
 const EMPTY_MS: MyeongSik = {
@@ -93,6 +94,11 @@ export default function Page() {
 
   // 새 명식 추가
   const openAdd = () => setWizardOpen(true);
+
+  const { settings } = useSettingsStore();
+
+  const voidBasis = settings.sinsalBase === "일지" ? "day" : "year";
+  const samjaeBasis = settings.sinsalBase === "일지" ? "day" : "year";
 
   return (
     <div className="min-h-screen pb-16">
@@ -205,7 +211,10 @@ export default function Page() {
               ms={current}
               natal={isValidPillars(natal) ? natal : []}
               chain={chain}
-              basis={{ voidBasis: "day", samjaeBasis: "day" }}
+              basis={{
+                voidBasis,
+                samjaeBasis,
+              }}
               includeTenGod
               lunarPillars={[]}
             />
