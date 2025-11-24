@@ -322,9 +322,10 @@ export default function Sidebar({
       const base = rebuildOrderMapFromBase();
 
       const checkIds = (idsA: string[], idsB: string[]) =>
-        idsA.length >= 2 && idsB.length >= 2 && (
-          (idsA[0] === idsB[idsB.length - 1] && idsA[idsA.length - 1] === idsB[0])
-        );
+        idsA.length >= 2 &&
+        idsB.length >= 2 &&
+        (idsA[0] === idsB[idsB.length - 1] &&
+          idsA[idsA.length - 1] === idsB[0]);
 
       let needRebuild = false;
       // 바깥
@@ -338,7 +339,10 @@ export default function Sidebar({
           const id = listDroppableId(f);
           const ca = current[id] || [];
           const cb = base[id] || [];
-          if (checkIds(ca, cb)) { needRebuild = true; break; }
+          if (checkIds(ca, cb)) {
+            needRebuild = true;
+            break;
+          }
         }
       }
 
@@ -374,6 +378,10 @@ export default function Sidebar({
     const keyId = `item:${m.id}`;
     const memoOpen = !!memoOpenMap[m.id];
 
+    // 성별 라벨 변환: (남) → (남자), (여) → (여자)
+    const genderLabel =
+      m.gender === "남" ? "남자" : m.gender === "여" ? "여자" : m.gender;
+
     let correctedDate = new Date(m.corrected);
     if (
       isDST(
@@ -391,7 +399,10 @@ export default function Sidebar({
 
     let birthYear = NaN;
     if (/^\d{8}$/.test(rawBirth)) {
-      const formatted = `${rawBirth.slice(0, 4)}-${rawBirth.slice(4, 6)}-${rawBirth.slice(6, 8)}`;
+      const formatted = `${rawBirth.slice(0, 4)}-${rawBirth.slice(
+        4,
+        6
+      )}-${rawBirth.slice(6, 8)}`;
       const date = new Date(formatted);
       if (!Number.isNaN(date.getTime())) {
         birthYear = date.getFullYear();
@@ -412,7 +423,12 @@ export default function Sidebar({
     const age = koreanAgeByYear(birthYear, thisYear);
 
     return (
-      <Draggable draggableId={keyId} index={index} key={keyId} isDragDisabled={isFiltering}>
+      <Draggable
+        draggableId={keyId}
+        index={index}
+        key={keyId}
+        isDragDisabled={isFiltering}
+      >
         {(prov) => (
           <li
             ref={prov.innerRef}
@@ -428,7 +444,7 @@ export default function Sidebar({
             <div className="p-3">
               <div className="flex items-center gap-2">
                 <div className="font-semibold text-sm desk:text-base">
-                  {m.name} ({age}세, {m.gender})
+                  {m.name} ({age}세, {genderLabel})
                 </div>
                 <span className="opacity-40">｜</span>
                 <div className="text-sm text-neutral-600 dark:text-neutral-300">
@@ -438,14 +454,19 @@ export default function Sidebar({
               </div>
 
               <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
-                {fmtBirthKR(m.birthDay, m.birthTime)}, {m.calendarType === "lunar" ? "음력" : "양력"}
+                {fmtBirthKR(m.birthDay, m.birthTime)},{" "}
+                {m.calendarType === "lunar" ? "음력" : "양력"}
               </div>
 
               {(placeDisplay || correctedDate) && (
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
                   {placeDisplay}
                   {correctedDate && (
-                    <span className="opacity-70"> · 보정시 {isUnknownTime ? "모름" : formatLocalHM(correctedDate)}</span>
+                    <span className="opacity-70">
+                      {" "}
+                      · 보정시{" "}
+                      {isUnknownTime ? "모름" : formatLocalHM(correctedDate)}
+                    </span>
                   )}
                 </div>
               )}
@@ -499,8 +520,12 @@ export default function Sidebar({
                     const normalized = normalizeFolderValue(raw);
                     const itemId = m.id;
 
-                    const srcListId = m.folder ? listDroppableId(m.folder) : DROPPABLE_UNASSIGNED;
-                    const dstListId = normalized ? listDroppableId(normalized) : DROPPABLE_UNASSIGNED;
+                    const srcListId = m.folder
+                      ? listDroppableId(m.folder)
+                      : DROPPABLE_UNASSIGNED;
+                    const dstListId = normalized
+                      ? listDroppableId(normalized)
+                      : DROPPABLE_UNASSIGNED;
 
                     if (normalized && !orderedFolders.includes(normalized)) {
                       createFolder(normalized);
@@ -511,7 +536,9 @@ export default function Sidebar({
                       const next: OrderMap = { ...prev };
                       const srcDisplay = getRawDisplayOrder(srcListId);
                       const dstDisplay =
-                        srcListId === dstListId ? srcDisplay.slice() : getRawDisplayOrder(dstListId).slice();
+                        srcListId === dstListId
+                          ? srcDisplay.slice()
+                          : getRawDisplayOrder(dstListId).slice();
 
                       const si = srcDisplay.indexOf(itemId);
                       if (si >= 0) srcDisplay.splice(si, 1);
@@ -605,7 +632,9 @@ export default function Sidebar({
                     e.stopPropagation();
                     const nextFav = !m.favorite;
 
-                    const listId = m.folder ? listDroppableId(m.folder) : DROPPABLE_UNASSIGNED;
+                    const listId = m.folder
+                      ? listDroppableId(m.folder)
+                      : DROPPABLE_UNASSIGNED;
 
                     setOrderMap((prev) => {
                       const next = { ...prev };
@@ -616,8 +645,12 @@ export default function Sidebar({
                       if (curIdx >= 0) display.splice(curIdx, 1);
 
                       // 같은 리스트의 다른 즐겨찾기 수
-                      const itemsInList = m.folder ? (grouped[m.folder] || []) : unassignedItems;
-                      const favCount = itemsInList.filter((x) => x.id !== m.id && x.favorite).length;
+                      const itemsInList = m.folder
+                        ? grouped[m.folder] || []
+                        : unassignedItems;
+                      const favCount = itemsInList.filter(
+                        (x) => x.id !== m.id && x.favorite
+                      ).length;
 
                       if (nextFav) {
                         display.unshift(m.id); // 맨앞
@@ -635,7 +668,10 @@ export default function Sidebar({
                     m.favorite ? "text-yellow-400" : "text-neutral-400"
                   } hover:text-yellow-400`}
                 >
-                  <Star size={16} fill={m.favorite ? "currentColor" : "none"} />
+                  <Star
+                    size={16}
+                    fill={m.favorite ? "currentColor" : "none"}
+                  />
                 </button>
               </div>
             </div>
@@ -708,7 +744,9 @@ export default function Sidebar({
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/70 transition-opacity duration-300 z-90 ${
-          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+          open
+            ? "opacity-100 pointer-events-auto"
+            : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
@@ -757,8 +795,8 @@ export default function Sidebar({
             className="p-4 h-[calc(100%-56px)] overflow-y-auto overscroll-contain"
             style={{ touchAction: "pan-y" }}
           >
-            {/* 검색 바 */}
-            <div className="mb-3">
+            {/* 검색 바 - 헤더처럼 고정되도록 sticky 처리 */}
+            <div className="mb-3 sticky top-[-16px] z-10 pb-2 pt-2 bg-white dark:bg-neutral-950 z-50">
               <div className="flex items-center gap-2">
                 <select
                   value={searchMode}
@@ -842,7 +880,9 @@ export default function Sidebar({
               </button>
             </div>
             <p className="text-xs text-neutral-600 dark:text-neutral-400 mb-2">
-              {isFiltering ? "필터링 중에는 드래그가 비활성화돼요." : "명식/폴더를 드래그 하여 순서를 바꿀 수 있어요."}
+              {isFiltering
+                ? "필터링 중에는 드래그가 비활성화돼요."
+                : "명식/폴더를 드래그 하여 순서를 바꿀 수 있어요."}
             </p>
 
             {/* 바깥(미지정) 드롭 영역 */}
@@ -854,9 +894,16 @@ export default function Sidebar({
               isDropDisabled={isFiltering}
             >
               {(prov) => {
-                const outItems = orderItems(DROPPABLE_UNASSIGNED, filteredUnassigned);
+                const outItems = orderItems(
+                  DROPPABLE_UNASSIGNED,
+                  filteredUnassigned
+                );
                 return (
-                  <div ref={prov.innerRef} {...prov.droppableProps} className="mb-6">
+                  <div
+                    ref={prov.innerRef}
+                    {...prov.droppableProps}
+                    className="mb-6"
+                  >
                     <ul className="flex flex-col gap-2">
                       {outItems.map((m, i) => renderCard(m, i))}
                       {prov.placeholder}
@@ -878,7 +925,10 @@ export default function Sidebar({
                 <div ref={foldersProv.innerRef} {...foldersProv.droppableProps}>
                   {foldersToRender.map((folderName, folderIndex) => {
                     const listId = listDroppableId(folderName);
-                    const inItemsOrdered = orderItems(listId, filteredGrouped[folderName] || []);
+                    const inItemsOrdered = orderItems(
+                      listId,
+                      filteredGrouped[folderName] || []
+                    );
                     const openF = !!folderOpenMap[folderName];
                     const isFavFolder = !!folderFavMap[folderName];
 
@@ -915,8 +965,14 @@ export default function Sidebar({
                                   }}
                                   className="inline-flex items-center gap-1 text-sm font-semibold cursor-pointer"
                                 >
-                                  {openF ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                                  <span className="text-sm font-semibold">{folderName}</span>
+                                  {openF ? (
+                                    <ChevronUp size={16} />
+                                  ) : (
+                                    <ChevronDown size={16} />
+                                  )}
+                                  <span className="text-sm font-semibold">
+                                    {folderName}
+                                  </span>
                                 </button>
 
                                 <button
@@ -929,25 +985,38 @@ export default function Sidebar({
                                     }));
                                   }}
                                   className={`p-1 rounded cursor-pointer ${
-                                    isFavFolder ? "text-yellow-400" : "text-neutral-400"
+                                    isFavFolder
+                                      ? "text-yellow-400"
+                                      : "text-neutral-400"
                                   } hover:text-yellow-400`}
                                 >
-                                  <Star size={16} fill={isFavFolder ? "currentColor" : "none"} />
+                                  <Star
+                                    size={16}
+                                    fill={isFavFolder ? "currentColor" : "none"}
+                                  />
                                 </button>
                               </div>
 
                               {/* 오른쪽 끝: 개수 + 삭제 */}
                               <div className="flex items-center gap-2">
-                                <span className="opacity-60 text-xs">{inItemsOrdered.length}개</span>
+                                <span className="opacity-60 text-xs">
+                                  {inItemsOrdered.length}개
+                                </span>
                                 <button
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     if (folderFavMap[folderName]) {
-                                      alert(`'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`);
+                                      alert(
+                                        `'${folderName}' 폴더는 즐겨찾기 되어 있습니다.\n즐겨찾기 해제 후 삭제해주세요.`
+                                      );
                                       return;
                                     }
-                                    if (confirm(`'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`)) {
+                                    if (
+                                      confirm(
+                                        `'${folderName}' 폴더를 삭제할까요?\n(소속 항목은 바깥으로 이동합니다)`
+                                      )
+                                    ) {
                                       deleteFolder(folderName);
                                     }
                                   }}
@@ -971,9 +1040,15 @@ export default function Sidebar({
                                 isDropDisabled={isFiltering}
                               >
                                 {(prov2) => (
-                                  <div ref={prov2.innerRef} {...prov2.droppableProps} className="mt-2">
+                                  <div
+                                    ref={prov2.innerRef}
+                                    {...prov2.droppableProps}
+                                    className="mt-2"
+                                  >
                                     <ul className="flex flex-col gap-2">
-                                      {inItemsOrdered.map((m, i) => renderCard(m, i))}
+                                      {inItemsOrdered.map((m, i) =>
+                                        renderCard(m, i)
+                                      )}
                                       {prov2.placeholder}
                                     </ul>
                                   </div>
