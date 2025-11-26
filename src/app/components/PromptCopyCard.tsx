@@ -28,13 +28,33 @@ type Props = {
 const TABS: BlendTab[] = ["원국", "대운", "세운", "월운", "일운"];
 
 const STEM_H2K: Record<string, string> = {
-  甲: "갑", 乙: "을", 丙: "병", 丁: "정", 戊: "무",
-  己: "기", 庚: "경", 辛: "신", 壬: "임", 癸: "계",
+  甲: "갑",
+  乙: "을",
+  丙: "병",
+  丁: "정",
+  戊: "무",
+  己: "기",
+  庚: "경",
+  辛: "신",
+  壬: "임",
+  癸: "계",
 };
 const BRANCH_H2K: Record<string, string> = {
-  子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
-  午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해",
+  子: "자",
+  丑: "축",
+  寅: "인",
+  卯: "묘",
+  辰: "진",
+  巳: "사",
+  午: "오",
+  未: "미",
+  申: "신",
+  酉: "유",
+  戌: "술",
+  亥: "해",
 };
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function normalizeGZLocal(raw: string): string {
   if (!raw) return "";
@@ -73,7 +93,9 @@ function normalizePillars(input?: string[] | null): string[] {
 
     const mHa = s.match(/([甲乙丙丁戊己庚辛壬癸]).*?([子丑寅卯辰巳午未申酉戌亥])/);
     if (mHa) {
-      return `${STEM_H2K[mHa[1] as keyof typeof STEM_H2K]}${BRANCH_H2K[mHa[2] as keyof typeof BRANCH_H2K]}`;
+      return `${STEM_H2K[mHa[1] as keyof typeof STEM_H2K]}${
+        BRANCH_H2K[mHa[2] as keyof typeof BRANCH_H2K]
+      }`;
     }
     return idx <= 2 ? "--" : "";
   });
@@ -90,19 +112,33 @@ export default function PromptCopyCard({
   const { date, setDate } = useLuckPickerStore();
   const [activeTab, setActiveTab] = useState<BlendTab>("원국");
   const [isMultiMode, setIsMultiMode] = useState(false);
-  const [multiTab, setMultiTab] = useState<"대운" | "세운" | "월운">("대운");
-  
+  const [multiTab, setMultiTab] = useState<"대운" | "세운" | "월운" | "일운">("대운");
+
   // 임의기간 상태
   const [selectedDaeIdx, setSelectedDaeIdx] = useState<number[]>([]);
   const [seStartYear, setSeStartYear] = useState<number>(new Date().getFullYear());
   const [seEndYear, setSeEndYear] = useState<number>(new Date().getFullYear());
   const [wolStartYM, setWolStartYM] = useState<string>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [wolEndYM, setWolEndYM] = useState<string>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [ilStartDate, setIlStartDate] = useState<string>(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  });
+  const [ilEndDate, setIlEndDate] = useState<string>(() => {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
   });
 
   // 세운 범위 제약 (최대 10년)
@@ -154,15 +190,14 @@ export default function PromptCopyCard({
 
     // 2) 최대 12개월 초과일 때만 종료 조정
     const diff =
-      (end.getFullYear() - start.getFullYear()) * 12 +
-      (end.getMonth() - start.getMonth());
+      (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
 
     if (diff > 11) {
       const newEnd = new Date(start);
       newEnd.setMonth(start.getMonth() + 11);
 
       setWolEndYM(
-        `${newEnd.getFullYear()}-${String(newEnd.getMonth() + 1).padStart(2, "0")}`
+        `${newEnd.getFullYear()}-${String(newEnd.getMonth() + 1).padStart(2, "0")}`,
       );
     }
   };
@@ -179,26 +214,89 @@ export default function PromptCopyCard({
     // 종료 < 시작이어도 건드리지 않음
     // 단, 12개월 초과일 때만 시작 보정
     const diff =
-      (end.getFullYear() - start.getFullYear()) * 12 +
-      (end.getMonth() - start.getMonth());
+      (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
 
     if (diff > 11) {
       const newStart = new Date(end);
       newStart.setMonth(end.getMonth() - 11);
 
       setWolStartYM(
-        `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}`
+        `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}`,
       );
     }
   };
 
+  // 일운 범위 제약 (최대 31일)
+  const handleIlStartChange = (dateStr: string) => {
+    setIlStartDate(dateStr);
+
+    if (!ilEndDate) return;
+
+    const [sY, sM, sD] = dateStr.split("-").map(Number);
+    const [eY, eM, eD] = ilEndDate.split("-").map(Number);
+
+    const start = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+
+    // 종료 < 시작 → 종료를 시작으로 맞춤
+    if (end < start) {
+      setIlEndDate(dateStr);
+      return;
+    }
+
+    const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
+    if (diffDays > 7) {
+      const newEnd = new Date(start);
+      newEnd.setDate(start.getDate() + 7);
+      const yyyy = newEnd.getFullYear();
+      const mm = String(newEnd.getMonth() + 1).padStart(2, "0");
+      const dd = String(newEnd.getDate()).padStart(2, "0");
+      setIlEndDate(`${yyyy}-${mm}-${dd}`);
+    }
+  };
+
+  const handleIlEndChange = (dateStr: string) => {
+    setIlEndDate(dateStr);
+
+    if (!ilStartDate) return;
+
+    const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+    const [eY, eM, eD] = dateStr.split("-").map(Number);
+
+    const start = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
+
+    // 시작 > 종료 → 시작을 종료로 맞춤
+    if (start > end) {
+      setIlStartDate(dateStr);
+      return;
+    }
+
+    const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
+    if (diffDays > 7) {
+      const newStart = new Date(end);
+      newStart.setDate(end.getDate() - 7);
+      const yyyy = newStart.getFullYear();
+      const mm = String(newStart.getMonth() + 1).padStart(2, "0");
+      const dd = String(newStart.getDate()).padStart(2, "0");
+      setIlStartDate(`${yyyy}-${mm}-${dd}`);
+    }
+  };
+
   const { yearGZ, monthGZ, dayGZ } = useLuckPickerStore();
-  const fallbackChain = useMemo<LuckChain>(() => ({
-    dae: chain?.dae ?? null,
-    se:  chain?.se  ?? (yearGZ  ? normalizeGZ(yearGZ)  : null),
-    wol: chain?.wol ?? (monthGZ ? normalizeGZ(monthGZ) : null),
-    il:  chain?.il  ?? (dayGZ   ? normalizeGZ(dayGZ)   : null),
-  }), [chain, yearGZ, monthGZ, dayGZ]);
+  const fallbackChain = useMemo<LuckChain>(
+    () => ({
+      dae: chain?.dae ?? null,
+      se: chain?.se ?? (yearGZ ? normalizeGZ(yearGZ) : null),
+      wol: chain?.wol ?? (monthGZ ? normalizeGZ(monthGZ) : null),
+      il: chain?.il ?? (dayGZ ? normalizeGZ(dayGZ) : null),
+    }),
+    [chain, yearGZ, monthGZ, dayGZ],
+  );
 
   const { manualHour } = useHourPredictionStore();
   const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
@@ -237,14 +335,30 @@ export default function PromptCopyCard({
   const [basisMonth] = useState<"solar" | "lunar">("solar");
   const effectiveBasis: "solar" | "lunar" =
     basisMonth === "lunar"
-      ? (lunarValid ? "lunar" : solarValid ? "solar" : "lunar")
-      : (solarValid ? "solar" : lunarValid ? "lunar" : "solar");
+      ? lunarValid
+        ? "lunar"
+        : solarValid
+        ? "solar"
+        : "lunar"
+      : solarValid
+      ? "solar"
+      : lunarValid
+      ? "lunar"
+      : "solar";
 
   const activePillars = useMemo<[string, string, string, string]>(() => {
     const source =
       effectiveBasis === "lunar"
-        ? (lunarValid ? lunarKoWithHour : solarValid ? solarKoWithHour : computedFallback ?? ["", "", "", ""])
-        : (solarValid ? solarKoWithHour : lunarValid ? lunarKoWithHour : computedFallback ?? ["", "", "", ""]);
+        ? lunarValid
+          ? lunarKoWithHour
+          : solarValid
+          ? solarKoWithHour
+          : computedFallback ?? ["", "", "", ""]
+        : solarValid
+        ? solarKoWithHour
+        : lunarValid
+        ? lunarKoWithHour
+        : computedFallback ?? ["", "", "", ""];
     const arr = [...source] as [string, string, string, string];
     if ((!arr[3] || arr[3] === "") && manualHour) arr[3] = manualHour.stem + manualHour.branch;
     return arr;
@@ -252,15 +366,15 @@ export default function PromptCopyCard({
 
   const hourKey = useMemo(
     () => (manualHour ? manualHour.stem + manualHour.branch : activePillars[3] || ""),
-    [manualHour, activePillars]
+    [manualHour, activePillars],
   );
 
   if (!natal || natal.length === 0) {
     natal = buildNatalPillarsFromMs(ms);
   }
 
-  const manualHourStr = useHourPredictionStore(
-    (s) => (s.manualHour ? s.manualHour.stem + s.manualHour.branch : "")
+  const manualHourStr = useHourPredictionStore((s) =>
+    s.manualHour ? s.manualHour.stem + s.manualHour.branch : "",
   );
 
   const natalWithPrediction = useMemo(() => {
@@ -280,8 +394,11 @@ export default function PromptCopyCard({
     });
   }, [natalWithPrediction, activeTab, chain, hourKey]);
 
-  function getDayElementPercent(natal: string[]): number {
-    const shinPct = natalShinPercent(natal, { criteriaMode: "modern", useHarmonyOverlay: true });
+  function getDayElementPercent(natalArr: string[]): number {
+    const shinPct = natalShinPercent(natalArr, {
+      criteriaMode: "modern",
+      useHarmonyOverlay: true,
+    });
     return shinPct;
   }
 
@@ -293,7 +410,7 @@ export default function PromptCopyCard({
   const daeList = useMemo(() => {
     const rawList = getDaewoonList(ms).slice(0, 10);
     const birthYear = ms.birthDay ? Number(ms.birthDay.slice(0, 4)) : 0;
-    
+
     return rawList.map((str, idx) => {
       // "2024년 11월 기해 대운 시작" 형식 파싱
       const match = str.match(/(\d{4})년\s+(\d{1,2})월\s+([가-힣]{2})\s+대운/);
@@ -302,7 +419,7 @@ export default function PromptCopyCard({
       const startDay = 1;
       const gz = match ? match[3] : "";
       const age = birthYear > 0 ? koreanAgeByYear(birthYear, startYear) : idx * 10;
-      
+
       return {
         gz,
         age,
@@ -333,30 +450,62 @@ export default function PromptCopyCard({
   // 임의기간 모드 프롬프트
   const multiText = useMemo(() => {
     if (!ms || !isMultiMode) return "";
-    
-    const selectedDaeList = selectedDaeIdx.map(idx => daeList[idx]).filter(Boolean);
-    
-    const seYears = multiTab === "세운" ? (() => {
-      const years = [];
-      for (let y = seStartYear; y <= seEndYear && years.length < 10; y++) {
-        years.push(y);
-      }
-      return years;
-    })() : [];
-    
-    const wolMonths = multiTab === "월운" ? (() => {
-      const months: string[] = [];
-      const [startY, startM] = wolStartYM.split('-').map(Number);
-      const [endY, endM] = wolEndYM.split('-').map(Number);
-      const curDate = new Date(startY, startM - 1);
-      const endDate = new Date(endY, endM - 1);
-      
-      while (curDate <= endDate && months.length < 12) {
-        months.push(`${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, '0')}`);
-        curDate.setMonth(curDate.getMonth() + 1);
-      }
-      return months;
-    })() : [];
+
+    const selectedDaeList = selectedDaeIdx.map((idx) => daeList[idx]).filter(Boolean);
+
+    const seYears =
+      multiTab === "세운"
+        ? (() => {
+            const years: number[] = [];
+            for (let y = seStartYear; y <= seEndYear && years.length < 10; y++) {
+              years.push(y);
+            }
+            return years;
+          })()
+        : [];
+
+    const wolMonths =
+      multiTab === "월운"
+        ? (() => {
+            const months: string[] = [];
+            const [startY, startM] = wolStartYM.split("-").map(Number);
+            const [endY, endM] = wolEndYM.split("-").map(Number);
+            const curDate = new Date(startY, startM - 1);
+            const endDate = new Date(endY, endM - 1);
+
+            while (curDate <= endDate && months.length < 12) {
+              months.push(
+                `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, "0")}`,
+              );
+              curDate.setMonth(curDate.getMonth() + 1);
+            }
+            return months;
+          })()
+        : [];
+
+    const ilDays: string[] =
+      multiTab === "일운"
+        ? (() => {
+            const days: string[] = [];
+            const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+            const [eY, eM, eD] = ilEndDate.split("-").map(Number);
+
+            const start = new Date(sY, sM - 1, sD);
+            const end = new Date(eY, eM - 1, eD);
+
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return days;
+
+            const cur = new Date(start);
+            while (cur <= end && days.length < 31) {
+              const yyyy = cur.getFullYear();
+              const mm = String(cur.getMonth() + 1).padStart(2, "0");
+              const dd = String(cur.getDate()).padStart(2, "0");
+              days.push(`${yyyy}-${mm}-${dd}`);
+              cur.setDate(cur.getDate() + 1);
+            }
+            return days;
+          })()
+        : [];
 
     return buildMultiLuckPrompt({
       ms,
@@ -370,9 +519,27 @@ export default function PromptCopyCard({
       daeList,
       seYears,
       wolMonths,
+      ilDays,
     });
-  }, [ms, isMultiMode, multiTab, selectedDaeIdx, daeList, seStartYear, seEndYear, wolStartYM, wolEndYM, 
-      natalWithPrediction, basis, includeTenGod, unified, percent, category]);
+  }, [
+    ms,
+    isMultiMode,
+    multiTab,
+    selectedDaeIdx,
+    daeList,
+    seStartYear,
+    seEndYear,
+    wolStartYM,
+    wolEndYM,
+    ilStartDate,
+    ilEndDate,
+    natalWithPrediction,
+    basis,
+    includeTenGod,
+    unified,
+    percent,
+    category,
+  ]);
 
   const text = isMultiMode ? multiText : normalText;
 
@@ -471,9 +638,9 @@ export default function PromptCopyCard({
       {/* 임의기간 모드 */}
       {isMultiMode && (
         <div className="space-y-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-          {/* 대운/세운/월운 탭 */}
+          {/* 대운/세운/월운/일운 탭 */}
           <div className="flex gap-1.5 border-b pb-2">
-            {(["대운", "세운", "월운"] as const).map((tab) => (
+            {(["대운", "세운", "월운", "일운"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setMultiTab(tab)}
@@ -499,8 +666,8 @@ export default function PromptCopyCard({
                   <button
                     key={idx}
                     onClick={() => {
-                      setSelectedDaeIdx(prev =>
-                        prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
+                      setSelectedDaeIdx((prev) =>
+                        prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx],
                       );
                     }}
                     className={`px-2 py-1.5 text-xs rounded border cursor-pointer text-left ${
@@ -573,11 +740,51 @@ export default function PromptCopyCard({
               </div>
               <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
                 선택 범위: {(() => {
-                  const [startY, startM] = wolStartYM.split('-').map(Number);
-                  const [endY, endM] = wolEndYM.split('-').map(Number);
+                  const [startY, startM] = wolStartYM.split("-").map(Number);
+                  const [endY, endM] = wolEndYM.split("-").map(Number);
                   const months = (endY - startY) * 12 + (endM - startM) + 1;
                   return months;
-                })()}개월
+                })()}
+                개월
+              </div>
+            </div>
+          )}
+
+          {/* 일운 범위 */}
+          {multiTab === "일운" && (
+            <div>
+              <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
+                일운 범위 (최대 7일)
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  value={ilStartDate}
+                  onChange={(e) => handleIlStartChange(e.target.value)}
+                  className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
+                />
+                <span className="text-xs">~</span>
+                <input
+                  type="date"
+                  value={ilEndDate}
+                  onChange={(e) => handleIlEndChange(e.target.value)}
+                  className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
+                />
+              </div>
+              <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
+                선택 범위: {(() => {
+                  const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+                  const [eY, eM, eD] = ilEndDate.split("-").map(Number);
+
+                  const start = new Date(sY, sM - 1, sD);
+                  const end = new Date(eY, eM - 1, eD);
+
+                  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
+
+                  const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
+                  return diffDays;
+                })()}
+                일
               </div>
             </div>
           )}
