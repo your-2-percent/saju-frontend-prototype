@@ -54,7 +54,7 @@ const BRANCH_H2K: Record<string, string> = {
   亥: "해",
 };
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+//const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function normalizeGZLocal(raw: string): string {
   if (!raw) return "";
@@ -172,118 +172,125 @@ export default function PromptCopyCard({
     setSeStartYear(s);
   };
 
-  // 월운 범위 제약 (최대 12개월)
-  const handleWolStartChange = (ym: string) => {
-    setWolStartYM(ym);
+  const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-    const [sY, sM] = ym.split("-").map(Number);
+  function diffMonths(a: Date, b: Date) {
+    return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
+  }
+
+  function formatYM(date: Date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function formatYMD(date: Date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  const handleWolStartChange = (ym: string) => {
+    setWolStartYM(ym); // raw 변경
+  };
+
+  const handleWolStartBlur = () => {
+    const [sY, sM] = wolStartYM.split("-").map(Number);
     const [eY, eM] = wolEndYM.split("-").map(Number);
 
     const start = new Date(sY, sM - 1);
     const end = new Date(eY, eM - 1);
 
-    // 1) 종료 < 시작 → 종료를 시작으로 맞춤
+    // 종료 < 시작 → 종료를 시작으로 강제 설정
     if (end < start) {
-      setWolEndYM(ym);
+      setWolEndYM(formatYM(start));
       return;
     }
 
-    // 2) 최대 12개월 초과일 때만 종료 조정
-    const diff =
-      (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-
+    // 12개월 초과 → 종료를 12개월 최대치로 보정
+    const diff = diffMonths(start, end);
     if (diff > 11) {
       const newEnd = new Date(start);
       newEnd.setMonth(start.getMonth() + 11);
-
-      setWolEndYM(
-        `${newEnd.getFullYear()}-${String(newEnd.getMonth() + 1).padStart(2, "0")}`,
-      );
+      setWolEndYM(formatYM(newEnd));
     }
   };
 
   const handleWolEndChange = (ym: string) => {
-    setWolEndYM(ym);
+    setWolEndYM(ym); // raw 변경
+  };
 
+  const handleWolEndBlur = () => {
     const [sY, sM] = wolStartYM.split("-").map(Number);
-    const [eY, eM] = ym.split("-").map(Number);
+    const [eY, eM] = wolEndYM.split("-").map(Number);
 
     const start = new Date(sY, sM - 1);
     const end = new Date(eY, eM - 1);
 
-    // 종료 < 시작이어도 건드리지 않음
-    // 단, 12개월 초과일 때만 시작 보정
-    const diff =
-      (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth());
-
-    if (diff > 11) {
-      const newStart = new Date(end);
-      newStart.setMonth(end.getMonth() - 11);
-
-      setWolStartYM(
-        `${newStart.getFullYear()}-${String(newStart.getMonth() + 1).padStart(2, "0")}`,
-      );
-    }
-  };
-
-  // 일운 범위 제약 (최대 31일)
-  const handleIlStartChange = (dateStr: string) => {
-    setIlStartDate(dateStr);
-
-    if (!ilEndDate) return;
-
-    const [sY, sM, sD] = dateStr.split("-").map(Number);
-    const [eY, eM, eD] = ilEndDate.split("-").map(Number);
-
-    const start = new Date(sY, sM - 1, sD+1);
-    const end = new Date(eY, eM - 1, eD+1);
-
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-
-    // 종료 < 시작 → 종료를 시작으로 맞춤
+    // 종료 < 시작 → 시작을 종료로 강제 조정
     if (end < start) {
-      setIlEndDate(dateStr);
+      setWolStartYM(formatYM(end));
       return;
     }
 
+    // 12개월 초과 → 시작을 12개월 전으로 보정
+    const diff = diffMonths(start, end);
+    if (diff > 11) {
+      const newStart = new Date(end);
+      newStart.setMonth(end.getMonth() - 11);
+      setWolStartYM(formatYM(newStart));
+    }
+  };
+
+  const handleIlStartChange = (dateStr: string) => {
+    setIlStartDate(dateStr); // raw 변경
+  };
+
+  const handleIlStartBlur = () => {
+    if (!ilStartDate || !ilEndDate) return;
+
+    const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+    const [eY, eM, eD] = ilEndDate.split("-").map(Number);
+
+    const start = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
+
+    // 종료 < 시작 → 종료를 start로 강제
+    if (end < start) {
+      setIlEndDate(formatYMD(start));
+      return;
+    }
+
+    // 7일 초과 → 종료를 start+7일로 강제
     const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
     if (diffDays > 7) {
       const newEnd = new Date(start);
-      newEnd.setDate(start.getDate() + 7);
-      const yyyy = newEnd.getFullYear();
-      const mm = String(newEnd.getMonth() + 1).padStart(2, "0");
-      const dd = String(newEnd.getDate()).padStart(2, "0");
-      setIlEndDate(`${yyyy}-${mm}-${dd}`);
+      newEnd.setDate(start.getDate() + 6);
+      setIlEndDate(formatYMD(newEnd));
     }
   };
 
   const handleIlEndChange = (dateStr: string) => {
-    setIlEndDate(dateStr);
+    setIlEndDate(dateStr); // raw 변경
+  };
 
-    if (!ilStartDate) return;
+  const handleIlEndBlur = () => {
+    if (!ilStartDate || !ilEndDate) return;
 
     const [sY, sM, sD] = ilStartDate.split("-").map(Number);
-    const [eY, eM, eD] = dateStr.split("-").map(Number);
+    const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-    const start = new Date(sY, sM - 1, sD+1);
-    const end = new Date(eY, eM - 1, eD+1);
+    const start = new Date(sY, sM - 1, sD);
+    const end = new Date(eY, eM - 1, eD);
 
-    if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
-
-    // 시작 > 종료 → 시작을 종료로 맞춤
+    // 시작 > 종료 → 시작을 끝으로 강제
     if (start > end) {
-      setIlStartDate(dateStr);
+      setIlStartDate(formatYMD(end));
       return;
     }
 
+    // 7일 초과 → 시작을 end-7일로 조정
     const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
     if (diffDays > 7) {
       const newStart = new Date(end);
-      newStart.setDate(end.getDate() - 7);
-      const yyyy = newStart.getFullYear();
-      const mm = String(newStart.getMonth() + 1).padStart(2, "0");
-      const dd = String(newStart.getDate()).padStart(2, "0");
-      setIlStartDate(`${yyyy}-${mm}-${dd}`);
+      newStart.setDate(end.getDate() - 6);
+      setIlStartDate(formatYMD(newStart));
     }
   };
 
@@ -728,6 +735,7 @@ export default function PromptCopyCard({
                   type="month"
                   value={wolStartYM}
                   onChange={(e) => handleWolStartChange(e.target.value)}
+                  onBlur={handleWolStartBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
                 <span className="text-xs">~</span>
@@ -735,6 +743,7 @@ export default function PromptCopyCard({
                   type="month"
                   value={wolEndYM}
                   onChange={(e) => handleWolEndChange(e.target.value)}
+                  onBlur={handleWolEndBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
               </div>
@@ -761,6 +770,7 @@ export default function PromptCopyCard({
                   type="date"
                   value={ilStartDate}
                   onChange={(e) => handleIlStartChange(e.target.value)}
+                  onBlur={handleIlStartBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
                 <span className="text-xs">~</span>
@@ -768,6 +778,7 @@ export default function PromptCopyCard({
                   type="date"
                   value={ilEndDate}
                   onChange={(e) => handleIlEndChange(e.target.value)}
+                  onBlur={handleIlEndBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
               </div>
