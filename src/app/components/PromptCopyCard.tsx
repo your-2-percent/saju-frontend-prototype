@@ -223,7 +223,7 @@ export default function PromptCopyCard({
     const m = Number(ms.birthDay?.slice(4, 6));
     const d = Number(ms.birthDay?.slice(6, 8));
     if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
-    const base = new Date(y, m - 1, d, 12, 0, 0, 0);
+    const base = new Date(y, m - 1, d, 12, 4, 0, 0);
     const yn = normalizeGZLocal(getYearGanZhi(base) || "");
     const wl = normalizeGZLocal(getMonthGanZhi(base) || "");
     const il = normalizeGZLocal(getDayGanZhi(base, rule) || "");
