@@ -1740,14 +1740,245 @@ export function buildMultiLuckPrompt(params: {
 
   // === 일운별 섹션 ===
   if (ilDays.length > 0) {
+    // 공통 일경계 규칙
+    const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
+
+    // ---------------------------------------------------
+    // 0) 대표 기준일(첫날)에서 대운 · 세운 · 월운 1회만 계산
+    // ---------------------------------------------------
+    const [y0, m0, d0] = ilDays[0].split("-").map(Number);
+    const baseDate0 = new Date(y0, m0 - 1, d0, 4, 0); // 새벽 4시 anchor (전날로 안밀리게)
+
+    if (!isNaN(baseDate0.getTime())) {
+      const daes0 = findDaeForMonthMulti(daeList, y0, m0);
+      const mainDae0 = daes0.length > 0 ? daes0[0] : null;
+
+      const ses0 = findSeForMonthMulti(y0, m0);
+      const mainSe0 = ses0.length > 0 ? ses0[ses0.length - 1] : "";
+
+      const wolGZ0 = getMonthGanZhi(new Date(y0, m0 - 1, 15));
+      const ilGZ0 = getDayGanZhi(baseDate0, rule);
+
+      const normWol0 = normalizeGZ(wolGZ0 || "");
+      const normSe0 = normalizeGZ(mainSe0 || "");
+      const normIl0 = normalizeGZ(ilGZ0 || "");
+
+      // ---------------------------------------------------
+      // 1) 상단 대운 섹션 (딱 1번)
+      // ---------------------------------------------------
+      if (mainDae0) {
+        const daeChain0: LuckChain = {
+          dae: mainDae0.gz,
+          se: normSe0,
+          wol: normWol0,
+          il: normIl0,
+        };
+        const daeOverlay0 = makeOverlayByLuck(unified, "대운", daeChain0);
+        const relWithDae0 = buildAllRelationTags({
+          natal,
+          daewoon: mainDae0.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+        });
+        const shinsalWithDae0 = buildShinsalTags({
+          natal,
+          daewoon: mainDae0.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+          basis,
+        });
+
+        const daeNabeum0 = getNabeum(mainDae0.gz);
+        const daeUnseong0 = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          mainDae0.gz.charAt(1),
+        );
+        const daeShinsal12_0 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: mainDae0.gz.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        sections.push(
+          section("대운", {
+            기본정보: `${mainDae0.age}대운 ${mainDae0.gz} (${mainDae0.startYear}~${mainDae0.endYear})`,
+            간지: mainDae0.gz,
+            오행강약: Object.fromEntries(
+              Object.entries(daeOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
+            ),
+            십신강약: daeOverlay0.totalsSub,
+            형충회합: relWithDae0,
+            신살: {
+              good: shinsalWithDae0.good,
+              bad: shinsalWithDae0.bad,
+            },
+            납음오행: daeNabeum0
+              ? {
+                  gz: mainDae0.gz,
+                  nabeum: daeNabeum0.name,
+                  element: daeNabeum0.element,
+                  code: daeNabeum0.code,
+                }
+              : null,
+            십이운성: { pos: "대운", gz: mainDae0.gz, unseong: daeUnseong0 },
+            십이신살: { pos: "대운", gz: mainDae0.gz, shinsal: daeShinsal12_0 },
+          }),
+        );
+      }
+
+      // ---------------------------------------------------
+      // 2) 상단 세운 섹션 (딱 1번)
+      // ---------------------------------------------------
+      if (normSe0) {
+        const seChain0: LuckChain = {
+          dae: mainDae0 ? mainDae0.gz : null,
+          se: normSe0,
+          wol: normWol0,
+          il: normIl0,
+        };
+        const seOverlay0 = makeOverlayByLuck(unified, "세운", seChain0);
+        const relWithSe0 = buildAllRelationTags({
+          natal,
+          daewoon: mainDae0?.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+        });
+        const shinsalWithSe0 = buildShinsalTags({
+          natal,
+          daewoon: mainDae0?.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+          basis,
+        });
+
+        const seNabeum0 = getNabeum(normSe0);
+        const seUnseong0 = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          normSe0.charAt(1),
+        );
+        const seShinsal12_0 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: normSe0.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        sections.push(
+          section("세운", {
+            기본정보: `${y0}년 ${normSe0}`,
+            간지: normSe0,
+            오행강약: Object.fromEntries(
+              Object.entries(seOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
+            ),
+            십신강약: seOverlay0.totalsSub,
+            형충회합: relWithSe0,
+            신살: {
+              good: shinsalWithSe0.good,
+              bad: shinsalWithSe0.bad,
+            },
+            납음오행: seNabeum0
+              ? {
+                  gz: normSe0,
+                  nabeum: seNabeum0.name,
+                  element: seNabeum0.element,
+                  code: seNabeum0.code,
+                }
+              : null,
+            십이운성: { pos: "세운", gz: normSe0, unseong: seUnseong0 },
+            십이신살: { pos: "세운", gz: normSe0, shinsal: seShinsal12_0 },
+          }),
+        );
+      }
+
+      // ---------------------------------------------------
+      // 3) 상단 월운 섹션 (딱 1번)
+      // ---------------------------------------------------
+      if (normWol0) {
+        const wolChain0: LuckChain = {
+          dae: mainDae0 ? mainDae0.gz : null,
+          se: normSe0,
+          wol: normWol0,
+          il: normIl0,
+        };
+        const wolOverlay0 = makeOverlayByLuck(unified, "월운", wolChain0);
+        const relWithWol0 = buildAllRelationTags({
+          natal,
+          daewoon: mainDae0?.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+        });
+        const shinsalWithWol0 = buildShinsalTags({
+          natal,
+          daewoon: mainDae0?.gz,
+          sewoon: normSe0,
+          wolwoon: normWol0,
+          ilwoon: normIl0,
+          basis,
+        });
+
+        const wolNabeum0 = getNabeum(normWol0);
+        const wolUnseong0 = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          normWol0.charAt(1),
+        );
+        const wolShinsal12_0 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: normWol0.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        sections.push(
+          section("월운", {
+            기본정보: `${y0}-${String(m0).padStart(2, "0")} ${normWol0}`,
+            간지: normWol0,
+            오행강약: Object.fromEntries(
+              Object.entries(wolOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
+            ),
+            십신강약: wolOverlay0.totalsSub,
+            형충회합: relWithWol0,
+            신살: {
+              good: shinsalWithWol0.good,
+              bad: shinsalWithWol0.bad,
+            },
+            납음오행: wolNabeum0
+              ? {
+                  gz: normWol0,
+                  nabeum: wolNabeum0.name,
+                  element: wolNabeum0.element,
+                  code: wolNabeum0.code,
+                }
+              : null,
+            십이운성: { pos: "월운", gz: normWol0, unseong: wolUnseong0 },
+            십이신살: { pos: "월운", gz: normWol0, shinsal: wolShinsal12_0 },
+          }),
+        );
+      }
+    }
+
+    // ---------------------------------------------------
+    // 4) 날짜별 일운 상세 섹션 (여러 개)
+    // ---------------------------------------------------
     for (const dateStr of ilDays) {
       const [y, m, d] = dateStr.split("-").map(Number);
-      const baseDate = new Date(y, m - 1, d, 4, 0);
+      const baseDate = new Date(y, m - 1, d, 4, 0); // 동일 anchor
       if (isNaN(baseDate.getTime())) continue;
 
-      // -----------------------------------------
-      // 해당 일자에 걸리는 대운 / 세운 / 월운
-      // -----------------------------------------
       const daes = findDaeForMonthMulti(daeList, y, m);
       const mainDae = daes.length > 0 ? daes[0] : null;
 
@@ -1755,217 +1986,12 @@ export function buildMultiLuckPrompt(params: {
       const mainSe = ses.length > 0 ? ses[ses.length - 1] : "";
 
       const wolGZ = getMonthGanZhi(new Date(y, m - 1, 15));
-      const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
       const ilGZ = getDayGanZhi(baseDate, rule);
 
       const normWol = normalizeGZ(wolGZ || "");
       const normSe = normalizeGZ(mainSe || "");
       const normIl = normalizeGZ(ilGZ || "");
 
-      // -----------------------------------------
-      // 👉 1) 일운 상단 요약용 대운 섹션
-      // -----------------------------------------
-      if (mainDae) {
-        const daeChain: LuckChain = {
-          dae: mainDae.gz,
-          se: normSe,
-          wol: normWol,
-          il: normIl,
-        };
-        const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
-        const relWithDae = buildAllRelationTags({
-          natal,
-          daewoon: mainDae.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-        });
-        const shinsalWithDae = buildShinsalTags({
-          natal,
-          daewoon: mainDae.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-          basis,
-        });
-
-        const daeNabeum = getNabeum(mainDae.gz);
-        const daeUnseong = getTwelveUnseong(natal[2]?.charAt(0) ?? "", mainDae.gz.charAt(1));
-        const daeShinsal12 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: mainDae.gz.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("대운", {
-            기본정보: `${mainDae.age}대운 ${mainDae.gz} (${mainDae.startYear}~${mainDae.endYear})`,
-            간지: mainDae.gz,
-            오행강약: Object.fromEntries(
-              Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: daeOverlay.totalsSub,
-            형충회합: relWithDae,
-            신살: {
-              good: shinsalWithDae.good,
-              bad: shinsalWithDae.bad,
-            },
-            납음오행: daeNabeum
-              ? {
-                  gz: mainDae.gz,
-                  nabeum: daeNabeum.name,
-                  element: daeNabeum.element,
-                  code: daeNabeum.code,
-                }
-              : null,
-            십이운성: { pos: "대운", gz: mainDae.gz, unseong: daeUnseong },
-            십이신살: { pos: "대운", gz: mainDae.gz, shinsal: daeShinsal12 },
-          }),
-        );
-      }
-
-      // -----------------------------------------
-      // 👉 2) 일운 상단 요약용 세운 섹션
-      // -----------------------------------------
-      if (mainSe) {
-        const seChain: LuckChain = {
-          dae: mainDae ? mainDae.gz : null,
-          se: normSe,
-          wol: normWol,
-          il: normIl,
-        };
-        const seOverlay = makeOverlayByLuck(unified, "세운", seChain);
-        const relWithSe = buildAllRelationTags({
-          natal,
-          daewoon: mainDae?.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-        });
-        const shinsalWithSe = buildShinsalTags({
-          natal,
-          daewoon: mainDae?.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-          basis,
-        });
-
-        const seNabeum = getNabeum(normSe);
-        const seUnseong = getTwelveUnseong(natal[2]?.charAt(0) ?? "", normSe.charAt(1));
-        const seShinsal12 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normSe.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("세운", {
-            기본정보: `${y}년 ${normSe}`,
-            간지: normSe,
-            오행강약: Object.fromEntries(
-              Object.entries(seOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: seOverlay.totalsSub,
-            형충회합: relWithSe,
-            신살: {
-              good: shinsalWithSe.good,
-              bad: shinsalWithSe.bad,
-            },
-            납음오행: seNabeum
-              ? {
-                  gz: normSe,
-                  nabeum: seNabeum.name,
-                  element: seNabeum.element,
-                  code: seNabeum.code,
-                }
-              : null,
-            십이운성: { pos: "세운", gz: normSe, unseong: seUnseong },
-            십이신살: { pos: "세운", gz: normSe, shinsal: seShinsal12 },
-          }),
-        );
-      }
-
-      // -----------------------------------------
-      // 👉 3) 일운 상단 요약용 월운 섹션
-      // -----------------------------------------
-      if (wolGZ) {
-        const wolChain: LuckChain = {
-          dae: mainDae ? mainDae.gz : null,
-          se: normSe,
-          wol: normWol,
-          il: normIl,
-        };
-        const wolOverlay = makeOverlayByLuck(unified, "월운", wolChain);
-        const relWithWol = buildAllRelationTags({
-          natal,
-          daewoon: mainDae?.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-        });
-        const shinsalWithWol = buildShinsalTags({
-          natal,
-          daewoon: mainDae?.gz,
-          sewoon: normSe,
-          wolwoon: normWol,
-          ilwoon: normIl,
-          basis,
-        });
-
-        const wolNabeum = getNabeum(normWol);
-        const wolUnseong = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          normWol.charAt(1),
-        );
-        const wolShinsal12 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normWol.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("월운", {
-            기본정보: `${y}-${String(m).padStart(2, "0")} ${normWol}`,
-            간지: normWol,
-            오행강약: Object.fromEntries(
-              Object.entries(wolOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: wolOverlay.totalsSub,
-            형충회합: relWithWol,
-            신살: {
-              good: shinsalWithWol.good,
-              bad: shinsalWithWol.bad,
-            },
-            납음오행: wolNabeum
-              ? {
-                  gz: normWol,
-                  nabeum: wolNabeum.name,
-                  element: wolNabeum.element,
-                  code: wolNabeum.code,
-                }
-              : null,
-            십이운성: { pos: "월운", gz: normWol, unseong: wolUnseong },
-            십이신살: { pos: "월운", gz: normWol, shinsal: wolShinsal12 },
-          }),
-        );
-      }
-
-      // -----------------------------------------
-      // 👉 4) 기존 일운 상세 섹션 (그대로 유지)
-      // -----------------------------------------
       const chain: LuckChain = {
         dae: mainDae ? mainDae.gz : null,
         se: normSe || null,
@@ -1995,11 +2021,11 @@ export function buildMultiLuckPrompt(params: {
       const ilNabeum = getNabeum(normIl);
       const ilUnseong = getTwelveUnseong(
         natal[2]?.charAt(0) ?? "",
-        (ilGZ || "").charAt(1),
+        normIl.charAt(1),
       );
       const ilShinsal12 = getTwelveShinsalBySettings({
         baseBranch,
-        targetBranch: (ilGZ || "").charAt(1),
+        targetBranch: normIl.charAt(1),
         era: shinsalEra,
         gaehwa: shinsalGaehwa,
       });
@@ -2044,7 +2070,6 @@ export function buildMultiLuckPrompt(params: {
       sections.push(section(`일운 ${dateStr}`, sectionData));
     }
   }
-
 
   const body = sections.join("\n\n");
 
