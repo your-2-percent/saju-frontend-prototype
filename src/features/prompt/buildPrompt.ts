@@ -1742,7 +1742,7 @@ export function buildMultiLuckPrompt(params: {
   if (ilDays.length > 0) {
     for (const dateStr of ilDays) {
       const [y, m, d] = dateStr.split("-").map(Number);
-      const baseDate = new Date(y, m - 1, d);
+      const baseDate = new Date(y, m - 1, d, 4, 0);
       if (isNaN(baseDate.getTime())) continue;
 
       // -----------------------------------------
