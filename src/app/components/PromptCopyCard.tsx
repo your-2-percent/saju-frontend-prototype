@@ -248,8 +248,8 @@ export default function PromptCopyCard({
     const [sY, sM, sD] = ilStartDate.split("-").map(Number);
     const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-    const start = new Date(sY, sM - 1, sD);
-    const end = new Date(eY, eM - 1, eD);
+    const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+    const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
     // 종료 < 시작 → 종료를 start로 강제
     if (end < start) {
@@ -276,8 +276,8 @@ export default function PromptCopyCard({
     const [sY, sM, sD] = ilStartDate.split("-").map(Number);
     const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-    const start = new Date(sY, sM - 1, sD);
-    const end = new Date(eY, eM - 1, eD);
+    const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+    const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
     // 시작 > 종료 → 시작을 끝으로 강제
     if (start > end) {
@@ -497,8 +497,8 @@ export default function PromptCopyCard({
             const [sY, sM, sD] = ilStartDate.split("-").map(Number);
             const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-            const start = new Date(sY, sM - 1, sD+1);
-            const end = new Date(eY, eM - 1, eD+1);
+            const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+            const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
             if (isNaN(start.getTime()) || isNaN(end.getTime())) return days;
 
@@ -787,8 +787,8 @@ export default function PromptCopyCard({
                   const [sY, sM, sD] = ilStartDate.split("-").map(Number);
                   const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-                  const start = new Date(sY, sM - 1, sD+1);
-                  const end = new Date(eY, eM - 1, eD+1);
+                  const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+                  const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
                   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
 
