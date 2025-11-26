@@ -235,8 +235,8 @@ export default function PromptCopyCard({
     const [sY, sM, sD] = dateStr.split("-").map(Number);
     const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-    const start = new Date(sY, sM - 1, sD);
-    const end = new Date(eY, eM - 1, eD);
+    const start = new Date(sY, sM - 1, sD+1);
+    const end = new Date(eY, eM - 1, eD+1);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
@@ -265,8 +265,8 @@ export default function PromptCopyCard({
     const [sY, sM, sD] = ilStartDate.split("-").map(Number);
     const [eY, eM, eD] = dateStr.split("-").map(Number);
 
-    const start = new Date(sY, sM - 1, sD);
-    const end = new Date(eY, eM - 1, eD);
+    const start = new Date(sY, sM - 1, sD+1);
+    const end = new Date(eY, eM - 1, eD+1);
 
     if (isNaN(start.getTime()) || isNaN(end.getTime())) return;
 
@@ -490,8 +490,8 @@ export default function PromptCopyCard({
             const [sY, sM, sD] = ilStartDate.split("-").map(Number);
             const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-            const start = new Date(sY, sM - 1, sD);
-            const end = new Date(eY, eM - 1, eD);
+            const start = new Date(sY, sM - 1, sD+1);
+            const end = new Date(eY, eM - 1, eD+1);
 
             if (isNaN(start.getTime()) || isNaN(end.getTime())) return days;
 
@@ -776,8 +776,8 @@ export default function PromptCopyCard({
                   const [sY, sM, sD] = ilStartDate.split("-").map(Number);
                   const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-                  const start = new Date(sY, sM - 1, sD);
-                  const end = new Date(eY, eM - 1, eD);
+                  const start = new Date(sY, sM - 1, sD+1);
+                  const end = new Date(eY, eM - 1, eD+1);
 
                   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
 
