@@ -72,27 +72,6 @@ const KE:         Record<Element, Element> = { 목:"토", 화:"금", 토:"수", 
 const KE_REV:     Record<Element, Element> = { 토:"목", 금:"화", 수:"토", 목:"금", 화:"수" };
 const SHENG_PREV: Record<Element, Element> = { 화:"목", 토:"화", 금:"토", 수:"금", 목:"수" };
 
-/* ===== 유틸 ===== */
-function cleanObject<T extends Record<string, unknown>>(obj: T): Partial<T> {
-  const out: Partial<T> = {};
-  for (const [k, v] of Object.entries(obj)) {
-    if (Array.isArray(v)) { if (v.length > 0) out[k as keyof T] = v as T[keyof T]; }
-    else if (typeof v === "object" && v !== null) {
-      const cleaned = cleanObject(v as Record<string, unknown>);
-      if (Object.keys(cleaned).length > 0) out[k as keyof T] = cleaned as T[keyof T];
-    } else if (v !== null && v !== undefined && v !== "") { out[k as keyof T] = v as T[keyof T]; }
-  }
-  return out;
-}
-function prettyJson(data: unknown): string {
-  return JSON.stringify(data, null, 2)!.replace(/\[\s+/g, "[").replace(/\s+\]/g, "]").replace(/\s*,\s*/g, ",");
-}
-function section(title: string, data: unknown): string {
-  if (data === null || data === undefined || data === "") return "";
-  const content = typeof data === "object" ? prettyJson(cleanObject(data as Record<string, unknown>)) : String(data);
-  return `## ${title}\n${content}`;
-}
-
 function normalizeStemLike(token: string): string | null {
   if (!token) return null;
   const s = token.trim();
@@ -666,80 +645,225 @@ export function buildChatPrompt(params: {
   const dayStem = unified.dayStem;  // ex) "정"
   const dayEl = STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT];
 
-  const header = [
-    `📌 명식: ${ms.name ?? "이름없음"} (${formatBirth(ms)}) 성별: ${ms.gender}`,
-    `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` +
-      (natal[3] ? ` ${natal[3]}시${!ms.birthTime || ms.birthTime === "모름" ? "(시주예측)" : ""}` : ""),
-    `운: ${formatLuckChain(tab, chain)}`,
-  ].join("\n");
+  // ===========================
+// 공통 헬퍼
+// ===========================
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
 
-  const body = [
-    section("대운 리스트 (10개)", daeList),
-    section("신강도", shinLine),
-    // 🚩 펜타곤과 완전 동기화된 수치
-    
-    section(
-      "오행강약(퍼센트·원국 기준 고정)",
-      Object.fromEntries(
-        Object.entries(unified.natalFixed.elementPercent100).map(([el, val]) => [
+const pruneEmpty = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    const arr = value
+      .map(pruneEmpty)
+      .filter((v) => {
+        if (v === undefined || v === null) return false;
+        if (Array.isArray(v) && v.length === 0) return false;
+        if (isPlainObject(v) && Object.keys(v).length === 0) return false;
+        return true;
+      });
+
+    return arr.length > 0 ? arr : undefined;
+  }
+
+  if (isPlainObject(value)) {
+    const obj: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value)) {
+      const pruned = pruneEmpty(v);
+      if (pruned === undefined) continue;
+      if (Array.isArray(pruned) && pruned.length === 0) continue;
+      if (isPlainObject(pruned) && Object.keys(pruned).length === 0) continue;
+      obj[k] = pruned;
+    }
+    return Object.keys(obj).length > 0 ? obj : undefined;
+  }
+
+  if (value === undefined || value === null) return undefined;
+  return value;
+};
+
+const formatJsonForPrompt = (raw: unknown): string => {
+  const cleaned = pruneEmpty(raw);
+  if (cleaned === undefined) return "";
+
+  if (
+    typeof cleaned === "string" ||
+    typeof cleaned === "number" ||
+    typeof cleaned === "boolean"
+  ) {
+    return String(cleaned);
+  }
+
+  return ["```json", JSON.stringify(cleaned, null, 2), "```"].join("\n");
+};
+
+const section = (title: string, raw: unknown): string => {
+  const formatted = formatJsonForPrompt(raw);
+  if (!formatted) return "";
+  return `## ${title}\n${formatted}`;
+};
+
+// ===========================
+// 프롬프트 본문 (1번 버전)
+// ===========================
+const header = [
+  `📌 명식: ${ms.name ?? "이름없음"} (${formatBirth(ms)}) 성별: ${ms.gender}`,
+  `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` +
+    (natal[3]
+      ? ` ${natal[3]}시${
+          !ms.birthTime || ms.birthTime === "모름" ? "(시주예측)" : ""
+        }`
+      : ""),
+  `운: ${formatLuckChain(tab, chain)}`,
+].join("\n");
+
+const bodyParts: string[] = [];
+
+// 대운 리스트
+bodyParts.push(section("대운 리스트 (10개)", daeList));
+
+// 신강도
+bodyParts.push(section("신강도", shinLine));
+
+// 오행강약(원국 고정)
+bodyParts.push(
+  section(
+    "오행강약(퍼센트·원국 기준 고정)",
+    Object.fromEntries(
+      Object.entries(unified.natalFixed.elementPercent100).map(
+        ([el, val]) => [
           `${el}(${elementToTenGod(dayEl, el as Element)})`,
           val,
-        ])
-      )
-    ), 
-    tab === "원국" ? "오행강약(퍼센트 운 없음)" :
+        ],
+      ),
+    ),
+  ),
+);
+
+// 오행강약(현재 탭 기준) — 원국 탭이 아니면만 출력
+if (tab !== "원국") {
+  bodyParts.push(
     section(
       `오행강약(퍼센트·탭=${tab})`,
       Object.fromEntries(
         Object.entries(elemPercentObj).map(([el, val]) => [
           `${el}(${elementToTenGod(dayEl, el as Element)})`,
           val,
-        ])
-      )
+        ]),
+      ),
     ),
-    section(`십신 강약(소분류 10개·탭=원국·합계 100)`, unified.natalFixed.totalsSub),
-    tab === "원국" ? "십신 강약(소분류 10개 운 없음)" :
-    section(`십신 강약(소분류 10개·탭=${tab}·합계 100)`, totalsSub),
+  );
+}
 
-    // 🚩 십이운성(원국+운 반영)
-    section("십이운성(원국+운 반영)",
-      tab === "원국"
-        ? natal.map((gz, i) => {
+// 십신 강약(원국 고정)
+bodyParts.push(
+  section(
+    "십신 강약(소분류 10개·원국·합계 100)",
+    unified.natalFixed.totalsSub,
+  ),
+);
+
+// 십신 강약(현재 탭 기준) — 원국 탭이 아니면만 출력
+if (tab !== "원국") {
+  bodyParts.push(
+    section(
+      `십신 강약(소분류 10개·탭=${tab}·합계 100)`,
+      totalsSub,
+    ),
+  );
+}
+
+// 🚩 십이운성(원국+운 반영)
+bodyParts.push(
+  section(
+    "십이운성(원국+운 반영)",
+    tab === "원국"
+      ? natal
+          .map((gz, i) => {
             if (!gz || i >= posLabels.length) return null;
             return {
               pos: posLabels[i],
               gz,
-              unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
+              unseong: getTwelveUnseong(
+                natal[2]?.charAt(0) ?? "",
+                gz.charAt(1),
+              ),
             };
-          }).filter(Boolean) : 
-          [...natal.map((gz, i) => {
-            if (!gz || i >= posLabels.length) return null;
-            return {
-              pos: posLabels[i],
-              gz,
-              unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
-            };
-          }).filter(Boolean),
-      
-        ...(chain?.dae
-          ? [{ pos: "대운", gz: chain.dae, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.dae.charAt(1)) }]
-          : []),
-        ...((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se
-          ? [{ pos: "세운", gz: chain.se, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.se.charAt(1)) }]
-          : []),
-        ...((tab === "월운" || tab === "일운") && chain?.wol
-          ? [{ pos: "월운", gz: chain.wol, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.wol.charAt(1)) }]
-          : []),
-        ...(tab === "일운" && chain?.il
-          ? [{ pos: "일운", gz: chain.il, unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", chain.il.charAt(1)) }]
-          : []),
-      ].filter(Boolean)
-    ),
+          })
+          .filter(Boolean)
+      : [
+          ...natal
+            .map((gz, i) => {
+              if (!gz || i >= posLabels.length) return null;
+              return {
+                pos: posLabels[i],
+                gz,
+                unseong: getTwelveUnseong(
+                  natal[2]?.charAt(0) ?? "",
+                  gz.charAt(1),
+                ),
+              };
+            })
+            .filter(Boolean),
+          ...(chain?.dae
+            ? [
+                {
+                  pos: "대운",
+                  gz: chain.dae,
+                  unseong: getTwelveUnseong(
+                    natal[2]?.charAt(0) ?? "",
+                    chain.dae.charAt(1),
+                  ),
+                },
+              ]
+            : []),
+          ...((tab === "세운" || tab === "월운" || tab === "일운") &&
+          chain?.se
+            ? [
+                {
+                  pos: "세운",
+                  gz: chain.se,
+                  unseong: getTwelveUnseong(
+                    natal[2]?.charAt(0) ?? "",
+                    chain.se.charAt(1),
+                  ),
+                },
+              ]
+            : []),
+          ...((tab === "월운" || tab === "일운") && chain?.wol
+            ? [
+                {
+                  pos: "월운",
+                  gz: chain.wol,
+                  unseong: getTwelveUnseong(
+                    natal[2]?.charAt(0) ?? "",
+                    chain.wol.charAt(1),
+                  ),
+                },
+              ]
+            : []),
+          ...(tab === "일운" && chain?.il
+            ? [
+                {
+                  pos: "일운",
+                  gz: chain.il,
+                  unseong: getTwelveUnseong(
+                    natal[2]?.charAt(0) ?? "",
+                    chain.il.charAt(1),
+                  ),
+                },
+              ]
+            : []),
+        ].filter(Boolean),
+  ),
+);
 
-    // 🚩 십이신살(원국+운 반영·설정 적용)
-    section("십이신살(원국+운 반영·설정 적용)",
-      tab === "원국"
-        ? natal.map((gz, i) => {
+// 🚩 십이신살(원국+운 반영·설정 적용)
+bodyParts.push(
+  section(
+    "십이신살(원국+운 반영·설정 적용)",
+    tab === "원국"
+      ? natal
+          .map((gz, i) => {
             if (!gz || i >= posLabels.length) return null;
             return {
               pos: posLabels[i],
@@ -751,213 +875,240 @@ export function buildChatPrompt(params: {
                 gaehwa: shinsalGaehwa,
               }),
             };
-          }).filter(Boolean) : 
-          [natal.map((gz, i) => {
-            if (!gz || i >= posLabels.length) return null;
-            return {
-              pos: posLabels[i],
-              gz,
-              shinsal: getTwelveShinsalBySettings({
-                baseBranch,
-                targetBranch: gz.charAt(1),
-                era: shinsalEra,
-                gaehwa: shinsalGaehwa,
-              }),
-            };
-          }).filter(Boolean),
-        ...(chain?.dae
-          ? [{ pos: "대운", gz: chain.dae, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.dae.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
-          : []),
-        ...((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se
-          ? [{ pos: "세운", gz: chain.se, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.se.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
-          : []),
-        ...((tab === "월운" || tab === "일운") && chain?.wol
-          ? [{ pos: "월운", gz: chain.wol, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.wol.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
-          : []),
-        ...(tab === "일운" && chain?.il
-          ? [{ pos: "일운", gz: chain.il, shinsal: getTwelveShinsalBySettings({ baseBranch, targetBranch: chain.il.charAt(1), era: shinsalEra, gaehwa: shinsalGaehwa }) }]
-          : []),
-      ].filter(Boolean)
-    ),
+          })
+          .filter(Boolean)
+      : [
+          ...natal
+            .map((gz, i) => {
+              if (!gz || i >= posLabels.length) return null;
+              return {
+                pos: posLabels[i],
+                gz,
+                shinsal: getTwelveShinsalBySettings({
+                  baseBranch,
+                  targetBranch: gz.charAt(1),
+                  era: shinsalEra,
+                  gaehwa: shinsalGaehwa,
+                }),
+              };
+            })
+            .filter(Boolean),
+          ...(chain?.dae
+            ? [
+                {
+                  pos: "대운",
+                  gz: chain.dae,
+                  shinsal: getTwelveShinsalBySettings({
+                    baseBranch,
+                    targetBranch: chain.dae.charAt(1),
+                    era: shinsalEra,
+                    gaehwa: shinsalGaehwa,
+                  }),
+                },
+              ]
+            : []),
+          ...((tab === "세운" || tab === "월운" || tab === "일운") &&
+          chain?.se
+            ? [
+                {
+                  pos: "세운",
+                  gz: chain.se,
+                  shinsal: getTwelveShinsalBySettings({
+                    baseBranch,
+                    targetBranch: chain.se.charAt(1),
+                    era: shinsalEra,
+                    gaehwa: shinsalGaehwa,
+                  }),
+                },
+              ]
+            : []),
+          ...((tab === "월운" || tab === "일운") && chain?.wol
+            ? [
+                {
+                  pos: "월운",
+                  gz: chain.wol,
+                  shinsal: getTwelveShinsalBySettings({
+                    baseBranch,
+                    targetBranch: chain.wol.charAt(1),
+                    era: shinsalEra,
+                    gaehwa: shinsalGaehwa,
+                  }),
+                },
+              ]
+            : []),
+          ...(tab === "일운" && chain?.il
+            ? [
+                {
+                  pos: "일운",
+                  gz: chain.il,
+                  shinsal: getTwelveShinsalBySettings({
+                    baseBranch,
+                    targetBranch: chain.il.charAt(1),
+                    era: shinsalEra,
+                    gaehwa: shinsalGaehwa,
+                  }),
+                },
+              ]
+            : []),
+        ].filter(Boolean),
+  ),
+);
 
-    // 🚩 납음오행(원국+운 반영)
-    section("납음오행(원국+운 반영)",
-      tab === "원국"
-        ? natal.map((gz, i) => {
+// 🚩 납음오행(원국+운 반영)
+bodyParts.push(
+  section(
+    "납음오행(원국+운 반영)",
+    tab === "원국"
+      ? natal
+          .map((gz, i) => {
             if (!gz || i >= posLabels.length) return null;
             const info = getNabeum(gz);
-            return info ? { pos: posLabels[i], gz, nabeum: info.name, element: info.element, code: info.code } : { pos: posLabels[i], gz, nabeum: null };
-          }).filter(Boolean)
-        : [
-            ...natal.map((gz, i) => {
+            return info
+              ? {
+                  pos: posLabels[i],
+                  gz,
+                  nabeum: info.name,
+                  element: info.element,
+                  code: info.code,
+                }
+              : { pos: posLabels[i], gz, nabeum: null };
+          })
+          .filter(Boolean)
+      : [
+          ...natal
+            .map((gz, i) => {
               if (!gz || i >= posLabels.length) return null;
               const info = getNabeum(gz);
-              return info ? { pos: posLabels[i], gz, nabeum: info.name, element: info.element, code: info.code } : { pos: posLabels[i], gz, nabeum: null };
-            }).filter(Boolean),
-            ...(chain?.dae ? (() => {
-              const info = getNabeum(chain.dae);
-              return info ? [{ pos: "대운", gz: chain.dae, nabeum: info.name, element: info.element, code: info.code }] : [];
-            })() : []),
-            ...(((tab === "세운" || tab === "월운" || tab === "일운") && chain?.se) ? (() => {
-              const info = getNabeum(chain.se!);
-              return info ? [{ pos: "세운", gz: chain.se!, nabeum: info.name, element: info.element, code: info.code }] : [];
-            })() : []),
-            ...(((tab === "월운" || tab === "일운") && chain?.wol) ? (() => {
-              const info = getNabeum(chain.wol!);
-              return info ? [{ pos: "월운", gz: chain.wol!, nabeum: info.name, element: info.element, code: info.code }] : [];
-            })() : []),
-            ...((tab === "일운" && chain?.il) ? (() => {
-              const info = getNabeum(chain.il!);
-              return info ? [{ pos: "일운", gz: chain.il!, nabeum: info.name, element: info.element, code: info.code }] : [];
-            })() : []),
-          ].filter(Boolean)
-    ),
+              return info
+                ? {
+                    pos: posLabels[i],
+                    gz,
+                    nabeum: info.name,
+                    element: info.element,
+                    code: info.code,
+                  }
+                : { pos: posLabels[i], gz, nabeum: null };
+            })
+            .filter(Boolean),
+          ...(chain?.dae
+            ? (() => {
+                const info = getNabeum(chain.dae);
+                return info
+                  ? [
+                      {
+                        pos: "대운",
+                        gz: chain.dae,
+                        nabeum: info.name,
+                        element: info.element,
+                        code: info.code,
+                      },
+                    ]
+                  : [];
+              })()
+            : []),
+          ...(((tab === "세운" || tab === "월운" || tab === "일운") &&
+          chain?.se)
+            ? (() => {
+                const info = getNabeum(chain.se!);
+                return info
+                  ? [
+                      {
+                        pos: "세운",
+                        gz: chain.se!,
+                        nabeum: info.name,
+                        element: info.element,
+                        code: info.code,
+                      },
+                    ]
+                  : [];
+              })()
+            : []),
+          ...(((tab === "월운" || tab === "일운") && chain?.wol)
+            ? (() => {
+                const info = getNabeum(chain.wol!);
+                return info
+                  ? [
+                      {
+                        pos: "월운",
+                        gz: chain.wol!,
+                        nabeum: info.name,
+                        element: info.element,
+                        code: info.code,
+                      },
+                    ]
+                  : [];
+              })()
+            : []),
+          ...((tab === "일운" && chain?.il)
+            ? (() => {
+                const info = getNabeum(chain.il!);
+                return info
+                  ? [
+                      {
+                        pos: "일운",
+                        gz: chain.il!,
+                        nabeum: info.name,
+                        element: info.element,
+                        code: info.code,
+                      },
+                    ]
+                  : [];
+              })()
+            : []),
+        ].filter(Boolean),
+  ),
+);
 
-    // 형충회합(원국)
-    section("형충회합(원국)",
-      buildHarmonyTags(
-        natal.filter((_, i) => i < posLabels.length) as Pillars4
-      )
+// 형충회합(원국)
+bodyParts.push(
+  section(
+    "형충회합(원국)",
+    buildHarmonyTags(
+      natal.filter((_, i) => i < posLabels.length) as Pillars4,
     ),
-    section("형충회합(운 포함: 탭 연동)", relWithLuck),
-    tab === "원국" ?
+  ),
+);
+
+// 형충회합(운 포함: 탭 연동)
+bodyParts.push(section("형충회합(운 포함: 탭 연동)", relWithLuck));
+
+// 신살(원국 / 운 포함)
+if (tab === "원국") {
+  const baseShinsal = buildShinsalTags({
+    natal,
+    daewoon: null,
+    sewoon: null,
+    wolwoon: null,
+    ilwoon: null,
+    basis,
+  });
+
+  bodyParts.push(
     section("신살(원국 전용)", {
-      good: buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).good,
-      bad:  buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).bad,
-      meta: buildShinsalTags({ natal, daewoon:null, sewoon:null, wolwoon:null, ilwoon:null, basis }).meta,
-    }) : section(`신살(운 포함·탭=${tab})`, sinsalWithLuck),
-  ].join("\n\n");
+      good: baseShinsal.good,
+      bad: baseShinsal.bad,
+      meta: baseShinsal.meta,
+    }),
+  );
+} else {
+  bodyParts.push(section(`신살(운 포함·탭=${tab})`, sinsalWithLuck));
+}
 
-  
-  const guide = [
-    tab === "원국" ?
-    `너는 명리학 전문 해석가다.  
-모든 출력은 한국어로 작성한다.  
-AI 특유의 친절함, 긍정적인면은 리셋시킨다.
-말투는 따뜻하게 하지만, 냉철한 분석가 모드로 얘기하라.
-문체는 ‘전문적이지만 이해하기 쉬운 분석체’로, 감정적인 미화나 추상적 표현은 절대 사용하지 않는다.  
-“당신은 빛나는 존재입니다” “운명이 이끄는 대로” 같은 감성 문장, 불필요한 위로나 칭찬은 금지한다.  
-그 대신 현실적인 비유와 일상적 예시를 사용한다. (예: “체력은 부족한데 해야 할 일은 많은 사람처럼…” “주변 사람 문제까지 자주 대신 떠안는 구조예요.”)  
-모든 문장은 '~예요, ~해요' 체로 끝낸다.  
-분석은 **논리적 근거(오행 비율, 신강도, 형충회합, 신살)**를 중심으로 한다.  
-비유는 반드시 설명을 명확하게 돕는 경우에만 쓴다.  
-각 문단은 ‘관찰 → 구체적 예시 → 결론 요약’의 구조를 따른다.  
-마크다운, 리스트, 제목 표시는 사용하지 않는다.  
-전체 분량은 최소 4000~5000자 이상으로, 충분히 깊고 구체적으로 서술한다.  
+// 빈 섹션 제거 후 조인
+const body = bodyParts
+  .filter((s) => s && s.trim().length > 0)
+  .join("\n\n");
 
-출력은 반드시 다음 6단계 순서로 구성한다.
+// 해석 가이드 (간단 버전이면 비워두거나 나중에 채워도 됨)
+const guide = [
+  "-----",
+  "🧭 해석 가이드",
+  "",
+  "1. 위 데이터는 사주 원국과 현재 선택된 탭(원국/대운/세운/월운/일운)의 수치·태그 정보다.",
+  "2. 해석 시, 원국 → 선택 탭 순서로 변화 포인트를 요약한다.",
+].join("\n");
 
-1단계: 전체적인 큰 흐름  
-- 첫 문장은 “그러면, ~님의 사주를 차근히 분석해볼게요.”로 시작한다.  
-- 사주의 가장 눈에 띄는 특징 1~2가지를 제시하고, 그것이 실제 성향이나 행동으로 어떻게 드러나는지 현실적인 예시로 설명한다.  
-- 감정 표현 없이 객관적이고 논리적인 서술로 성격과 기본 경향을 묘사한다.  
-
-2단계: 오행 강약과 각 요소의 역할  
-- 오행 비율과 신강도를 명시하고, 각 기운이 성격·사고·생활 패턴에 미치는 영향을 구체적으로 설명한다.  
-- 과잉/부족으로 생길 수 있는 실제 문제를 현실적으로 제시한다.  
-- 예: “수 기운이 많으면 생각이 많아지고, 실행이 느려집니다.”  
-
-3단계: 형충회합  
-- 충, 합, 형, 해 등을 심리적·행동적 작용 중심으로 해석한다.  
-- 예: “충이 있으면 감정 기복이 크고, 관계에서 쉽게 오해가 생깁니다.”  
-- ‘운명적 대립’ 같은 표현은 금지하고, 현실적인 관계나 상황으로 풀어낸다.  
-
-4단계: 십이운성과 십이신살  
-- 십이운성은 에너지의 ‘활성/쇠퇴’ 단계로 설명한다.  
-- 예: “사 단계면 이미 기운이 빠져 실제로 무기력하거나 피로를 잘 느낍니다.”  
-- 십이신살은 행동패턴과 연결해 현실적으로 해석한다.  
-- 예: “장성살이 많으면 책임감이 강하지만 부담을 크게 느낍니다.”  
-
-5단계: 주요 신살 해석  
-- 의미 있는 신살 3~5개를 선정해 각각 장단점을 함께 설명한다.  
-- 예: “귀문살은 감정선이 예민하지만 통찰력이 높습니다.”  
-- 실제 생활 패턴과 연결해서 해석한다.  
-
-6단계: 종합 운세  
-- 현재 대운·세운이 실제로 어떤 영향을 주는지 설명한다.  
-- 추상적 ‘좋다/나쁘다’ 대신 구체적인 상황과 태도로 조언한다.  
-- 예: “표현력이 늘지만 체력이 약하면 금세 지칠 수 있으니, 페이스 조절이 필요합니다.” 
-
-7단계: 납음오행  
-- 각 기둥의 납음오행을 기반으로 기운의 ‘상징적 물상’을 해석한다.  
-- 단순히 오행의 일치나 상극이 아니라, 납음이 가진 ‘형태적 이미지’를 통해 성격과 인생 패턴을 설명한다.  
-- 예: “해중금이면 겉으로 드러나지 않은 내면의 강철 같은 성향이에요.”  
-- 납음이 같은 오행끼리 반복되면 특정 에너지가 집중된 것으로 해석하고, 서로 다른 납음이 섞이면 다양한 역할이나 관심사로 분산된다고 본다.  
-- 납음의 ‘환경’(물·불·나무·흙·쇠)이 일상에서 어떤 상황으로 드러나는지 현실적인 예시로 설명한다.  
-- 예: “대해수는 큰 바다의 물이라 감정이 넓고 변화가 잦아요. 안정보단 경험을 추구하는 편이에요.”  
-- 해석은 반드시 오행강약과 신강도, 형충회합 맥락과 함께 통합적으로 설명한다.  
-
-마지막 단계: 전체적인 종합 정리  
-- 앞서 다룬 모든 요소를 통합해 전체적인 성격과 인생 경향을 요약한다.  
-- 구체적인 현실 예시와 함께, 실제 생활에서 어떻게 나타나는지 설명한다.  
-- 예: “이런 성향 때문에 직장에서는 ~한 패턴이 반복될 수 있어요.” 
-- 또한 조언이나 필요없는 말들은 배제하고, 객관적이고 논리적인 분석에 집중한다. 
-
-출력은 사람의 자연스러운 설명체로 쓰되, 항상 전문적 근거를 유지한다.  
-불필요한 감탄사, 주관적 감정어, 추상적 운명론은 절대 포함하지 않는다.
-
-문장은 지나치게 학술적으로 쓰지 말고, 실제 사람의 말투처럼 자연스럽게 이어지게 하라.
-  ` :
-  `
-너는 명리학을 기반으로 ‘현실에서 실제로 발생할 수 있는 사건’을 예측하는 분석가다.
-심리·조언·감정 서술은 절대 하지 않고,
-오직 삶의 구조에 영향을 주는 큰 사건만 설명한다.
-
-해석을 시작하기 전에 반드시 사용자에게 묻는다.
-“어떤 영역의 운을 알고 싶은가요?
-(직장·이직·승진·연애·결혼·금전·사고·건강·이사·법적/행정 등)”
-사용자가 선택한 영역에 대해서만 분석한다.
-사용자가 이미 영역을 선택해서 물어본 경우에는 제외하고, 바로 해석을 시작한다.
-
-분석 대상: (명식 데이터 입력)
-
-출력 방식은 다음을 따른다.
-
-사소한 일상적 에피소드(기계 오류, 자잘한 인간관계, 작은 지출 등)는 절대 포함하지 않는다.
-직장·승진·이직·연애·금전·사고·이사처럼
-삶의 변화를 일으키는 큰 사건만 다룬다.
-
-“이번 달에는 ○○한 일이 생길 수 있어요.”
-각 이슈의 첫 문장을 이렇게 시작한다.
-카테고리를 나누지 않고 현실적 장면이 바로 떠오르게 서술한다.
-
-각 이슈는 4단계를 반드시 따르며, 순서를 바꾸지 않는다.
-① 명리적 원인
-② 현실에서 어떻게 나타나는지
-③ 지속 기간
-④ 좋은 면 / 나쁜 면(평가가 아닌 구조적 설명)
-
-표현은 일상 언어이며, 학술적·추상적·문학적 표현 금지.
-비유 금지.
-대신 실제 생활 예시로 설명한다.
-예: “인사 발표가 갑자기 잡힐 수 있어요.”
-“갑자기 연락이 끊겼던 사람이 다시 나타날 수 있어요.”
-
-감정 유도 문장 금지.
-“조심하세요, 불안할 수 있어요, 기회입니다” 같은 문장은 쓰지 않는다.
-사고 가능성은 실제 사건 형태로만 말한다.
-예: “이번 달에는 하체 부딪힘·낙상처럼 실제 충격 사건이 발생할 수 있어요.”
-
-분석에는
-‘사건 발생력’이 강한 요소만 사용한다.
-(충·형·파·해, 합, 관성/재성/식상 변화, 원진·귀문·망신·역마 등)
-단순 성향 변화나 작고 흐릿한 요소는 제외한다.
-
-종합 정리는
-“이번 달을 한 줄로 요약하면 ○○이에요.”
-“좋게 보면 ○○ / 나쁘게 보면 △△”
-이 구조로 끝낸다.
-
-문체는 전체적으로 하나의 긴 문장형(여러개의 문단), 마크다운 사용금지, 구어체로,
-쓸데 없는 말 길게 쓰지 말고, 영양가 있는 말만 딱 써줘라. 한국 사람들 성격 급하다.
-위에서 원국에서 4000-5000자 쓰라는 프롬포트 있었어도 무시하고, 요점만 딱 써라.
-너무 친절하지도, 너무 딱딱하지도 않게,
-차분히 사건을 설명하는 톤으로 작성한다.
-  `
-  ].join("\n");
-  
-
-  return [header, body, guide].join("\n\n");
+return [header, body, guide].join("\n\n");
 }
 
 export function buildMultiLuckPrompt(params: {
@@ -1046,376 +1197,715 @@ export function buildMultiLuckPrompt(params: {
     return `${year}년 ${month}월 ${day}일 보정시 ${correctedTime}`;
   }
 
-  const header = [
-    `📌 명식: ${ms.name ?? "이름없음"} (${formatBirth(ms)}) 성별: ${
-      ms.gender
-    }`,
-    `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` +
-      (natal[3]
-        ? ` ${natal[3]}시${
-            !ms.birthTime || ms.birthTime === "모름" ? "(시주예측)" : ""
-          }`
-        : ""),
-  ].join("\n");
+// =========================
+// 🔹 공통 헬퍼
+// =========================
 
-  const sections: string[] = [];
+type ShinsalResult = ReturnType<typeof buildShinsalTags>;
+type ShinsalScope = "대운" | "세운" | "월운" | "일운";
 
-  // === 원국 고정 섹션 ===
-  sections.push(section("신강도", shinLine));
+type ShinsalGoodBad = {
+  good?: ShinsalResult["good"];
+  bad?: ShinsalResult["bad"];
+};
 
-  sections.push(
-    section(
-      "오행강약(원국)",
-      Object.fromEntries(
-        Object.entries(unified.natalFixed.elementPercent100).map(
-          ([el, val]) => [
-            `${el}(${elementToTenGod(dayEl, el as Element)})`,
-            val,
-          ],
-        ),
-      ),
-    ),
-  );
+const filterShinsalByScope = (
+  raw: ShinsalResult | null | undefined,
+  scope: ShinsalScope,
+): ShinsalGoodBad => {
+  if (!raw) return {};
 
-  sections.push(
-    section(
-      "십신 강약(소분류 10개·원국·합계 100)",
-      unified.natalFixed.totalsSub,
-    ),
-  );
+  const targetWord = scope; // "대운" / "세운" / "월운" / "일운"
 
-  // 원국 형충회합
-  sections.push(
-    section(
-      "형충회합(원국)",
-      buildHarmonyTags(
-        natal.filter((_, i) => i < posLabels.length) as Pillars4,
-      ),
-    ),
-  );
+  const filterGroup = (
+    group: ShinsalResult["good"] | undefined,
+  ): ShinsalResult["good"] | undefined => {
+    if (!group) return undefined;
 
-  // 원국 신살
-  sections.push(
-    section("신살(원국)", {
-      good: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).good,
-      bad: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).bad,
-      meta: buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      }).meta,
-    }),
-  );
+    // 부분 객체로 만들고, 마지막에 캐스팅
+    const filtered: Partial<ShinsalResult["good"]> = {};
 
-  // 원국 납음오행
-  sections.push(
-    section(
-      "납음오행(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          const info = getNabeum(gz);
-          return info
-            ? {
-                pos: posLabels[i],
-                gz,
-                nabeum: info.name,
-                element: info.element,
-                code: info.code,
-              }
-            : { pos: posLabels[i], gz, nabeum: null };
-        })
-        .filter(Boolean),
-    ),
-  );
+    for (const [key, arr] of Object.entries(group) as [
+      keyof ShinsalResult["good"],
+      string[],
+    ][]) {
+      if (!Array.isArray(arr)) continue;
 
-  // 원국 십이운성
-  sections.push(
-    section(
-      "십이운성(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          return {
-            pos: posLabels[i],
-            gz,
-            unseong: getTwelveUnseong(
-              natal[2]?.charAt(0) ?? "",
-              gz.charAt(1),
-            ),
-          };
-        })
-        .filter(Boolean),
-    ),
-  );
-
-  // 원국 십이신살
-  sections.push(
-    section(
-      "십이신살(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          return {
-            pos: posLabels[i],
-            gz,
-            shinsal: getTwelveShinsalBySettings({
-              baseBranch,
-              targetBranch: gz.charAt(1),
-              era: shinsalEra,
-              gaehwa: shinsalGaehwa,
-            }),
-          };
-        })
-        .filter(Boolean),
-    ),
-  );
-
-  // === 대운별 섹션 ===
-  if (daeList.length > 0) {
-    for (const dae of selectedDaeList) {
-      const chain: LuckChain = { dae: dae.gz, se: null, wol: null, il: null };
-      const overlay = makeOverlayByLuck(unified, "대운", chain);
-
-      // 형충회합
-      const relWithDae = buildAllRelationTags({
-        natal,
-        daewoon: dae.gz,
-        sewoon: undefined,
-        wolwoon: undefined,
-        ilwoon: undefined,
-      });
-
-      // 신살
-      const shinsalWithDae = buildShinsalTags({
-        natal,
-        daewoon: dae.gz,
-        sewoon: undefined,
-        wolwoon: undefined,
-        ilwoon: undefined,
-        basis,
-      });
-
-      // 납음오행
-      const daeNabeum = getNabeum(dae.gz);
-
-      // 십이운성
-      const daeUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        dae.gz.charAt(1),
+      const next = arr.filter(
+        (tag) => typeof tag === "string" && tag.includes(targetWord),
       );
 
-      // 십이신살
-      const daeShinsal = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: dae.gz.charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+      if (next.length > 0) {
+        filtered[key] = next;
+      }
+    }
 
-      sections.push(
-        section(`${dae.age}대운 ${dae.gz} (${dae.startYear}~${dae.endYear})`, {
+    // 한 개도 안 남으면 undefined
+    if (Object.keys(filtered).length === 0) return undefined;
+
+    // as any 말고, 정확한 타입으로 캐스팅
+    return filtered as ShinsalResult["good"];
+  };
+
+  const good = filterGroup(raw.good);
+  const bad = filterGroup(raw.bad);
+
+  const result: ShinsalGoodBad = {};
+  if (good) result.good = good;
+  if (bad) result.bad = bad;
+
+  return result;
+};
+
+const isPlainObject = (val: unknown): val is Record<string, unknown> => {
+  if (val === null || typeof val !== "object") return false;
+  const proto = Object.getPrototypeOf(val);
+  return proto === Object.prototype || proto === null;
+};
+
+function pruneEmpty<T>(value: T): T | undefined {
+  if (value === null || value === undefined) return undefined;
+
+  if (Array.isArray(value)) {
+    const next = value
+      .map((v) => pruneEmpty(v))
+      .filter((v) => v !== undefined) as unknown[];
+
+    return (next.length > 0 ? (next as T) : undefined) as T | undefined;
+  }
+
+  if (isPlainObject(value)) {
+    const next: Record<string, unknown> = {};
+
+    for (const [k, v] of Object.entries(value)) {
+      const cleaned = pruneEmpty(v);
+      if (cleaned !== undefined) {
+        next[k] = cleaned;
+      }
+    }
+
+    return (Object.keys(next).length > 0 ? (next as T) : undefined) as
+      | T
+      | undefined;
+  }
+
+  return value;
+}
+
+const formatJsonForPrompt = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+};
+
+const section = (title: string, raw: unknown): string => {
+  const cleaned = pruneEmpty(raw);
+  if (cleaned === undefined) return "";
+
+  const body = formatJsonForPrompt(cleaned);
+  if (!body.trim()) return "";
+
+  return `## ${title}\n${body}`;
+};
+
+// =========================
+// 🔹 형충회합 필터 (레벨별)
+//   - "대운" 섹션 → "대운" 들어간 태그만
+//   - "세운" 섹션 → "세운" 들어간 태그만
+//   - "월운" 섹션 → "월운" 들어간 태그만
+//   - "일운" 섹션 → "일운" 들어간 태그만
+//   - 원국 전용 섹션은 그대로 buildHarmonyTags 사용
+// =========================
+
+const filterHarmonyTagsByScope = (
+  rel: unknown,
+  scope: "대운" | "세운" | "월운" | "일운",
+) => {
+  const result: Record<string, string[]> = {};
+
+  if (!rel || typeof rel !== "object") return result;
+
+  for (const [key, value] of Object.entries(rel)) {
+    if (!Array.isArray(value)) continue;
+
+    const filtered = Array.from(
+      new Set(
+        value.filter(
+          (tag) => typeof tag === "string" && tag.includes(scope),
+        ),
+      ),
+    );
+
+    if (filtered.length > 0) {
+      result[key] = filtered;
+    }
+  }
+
+  return result;
+};
+
+// =========================
+// 🔹 프롬프트 본문 (2번 버전)
+// =========================
+
+const header = [
+  `📌 명식: ${ms.name ?? "이름없음"} (${formatBirth(ms)}) 성별: ${ms.gender}`,
+  `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` +
+    (natal[3]
+      ? ` ${natal[3]}시${
+          !ms.birthTime || ms.birthTime === "모름" ? "(시주예측)" : ""
+        }`
+      : ""),
+].join("\n");
+
+const sections: string[] = [];
+
+// ============================
+// 1) 원국 고정 섹션
+// ============================
+
+// 신강도
+sections.push(section("신강도", shinLine));
+
+// 오행강약(원국·퍼센트)
+sections.push(
+  section(
+    "오행강약(원국)",
+    Object.fromEntries(
+      Object.entries(unified.natalFixed.elementPercent100).map(
+        ([el, val]) => [
+          `${el}(${elementToTenGod(dayEl, el as Element)})`,
+          val,
+        ],
+      ),
+    ),
+  ),
+);
+
+// 십신 강약(원국)
+sections.push(
+  section(
+    "십신 강약(소분류 10개·원국·합계 100)",
+    unified.natalFixed.totalsSub,
+  ),
+);
+
+// 형충회합(원국 전용)
+sections.push(
+  section(
+    "형충회합(원국)",
+    buildHarmonyTags(
+      natal.filter((_, i) => i < posLabels.length) as Pillars4,
+    ),
+  ),
+);
+
+// 신살(원국 전용)
+const shinsalNatal = buildShinsalTags({
+  natal,
+  daewoon: null,
+  sewoon: null,
+  wolwoon: null,
+  ilwoon: null,
+  basis,
+});
+
+sections.push(
+  section("신살(원국)", {
+    good: shinsalNatal.good,
+    bad: shinsalNatal.bad,
+    meta: shinsalNatal.meta,
+  }),
+);
+
+// 납음오행(원국)
+sections.push(
+  section(
+    "납음오행(원국)",
+    natal
+      .map((gz, i) => {
+        if (!gz || i >= posLabels.length) return null;
+        const info = getNabeum(gz);
+        return info
+          ? {
+              pos: posLabels[i],
+              gz,
+              nabeum: info.name,
+              element: info.element,
+              code: info.code,
+            }
+          : { pos: posLabels[i], gz, nabeum: null };
+      })
+      .filter(Boolean),
+  ),
+);
+
+// 십이운성(원국)
+sections.push(
+  section(
+    "십이운성(원국)",
+    natal
+      .map((gz, i) => {
+        if (!gz || i >= posLabels.length) return null;
+        return {
+          pos: posLabels[i],
+          gz,
+          unseong: getTwelveUnseong(
+            natal[2]?.charAt(0) ?? "",
+            gz.charAt(1),
+          ),
+        };
+      })
+      .filter(Boolean),
+  ),
+);
+
+// 십이신살(원국)
+sections.push(
+  section(
+    "십이신살(원국)",
+    natal
+      .map((gz, i) => {
+        if (!gz || i >= posLabels.length) return null;
+        return {
+          pos: posLabels[i],
+          gz,
+          shinsal: getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: gz.charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          }),
+        };
+      })
+      .filter(Boolean),
+  ),
+);
+
+// ============================
+// 2) 대운 개별 섹션 (선택된 리스트)
+// ============================
+
+if (daeList.length > 0) {
+  for (const dae of selectedDaeList) {
+    const chain: LuckChain = { dae: dae.gz, se: null, wol: null, il: null };
+    const overlay = makeOverlayByLuck(unified, "대운", chain);
+
+    const relWithDae = buildAllRelationTags({
+      natal,
+      daewoon: dae.gz,
+      sewoon: undefined,
+      wolwoon: undefined,
+      ilwoon: undefined,
+    });
+
+    const shinsalWithDae = buildShinsalTags({
+      natal,
+      daewoon: dae.gz,
+      sewoon: undefined,
+      wolwoon: undefined,
+      ilwoon: undefined,
+      basis,
+    });
+
+    const daeNabeum = getNabeum(dae.gz);
+    const daeUnseong = getTwelveUnseong(
+      natal[2]?.charAt(0) ?? "",
+      dae.gz.charAt(1),
+    );
+    const daeShinsal = getTwelveShinsalBySettings({
+      baseBranch,
+      targetBranch: dae.gz.charAt(1),
+      era: shinsalEra,
+      gaehwa: shinsalGaehwa,
+    });
+
+    sections.push(
+      section(`${dae.age}대운 ${dae.gz} (${dae.startYear}~${dae.endYear})`, {
+        오행강약: Object.fromEntries(
+          Object.entries(overlay.elementPercent).map(([el, val]) => [
+            `${el}(${elementToTenGod(dayEl, el as Element)})`,
+            val,
+          ]),
+        ),
+        십신강약: overlay.totalsSub,
+        형충회합: relWithDae, // 여기엔 대운만 들어가 있으므로 별도 필터 불필요
+        신살: {
+          good: shinsalWithDae.good,
+          bad: shinsalWithDae.bad,
+        },
+        납음오행: daeNabeum
+          ? {
+              gz: dae.gz,
+              nabeum: daeNabeum.name,
+              element: daeNabeum.element,
+              code: daeNabeum.code,
+            }
+          : null,
+        십이운성: { pos: "대운", gz: dae.gz, unseong: daeUnseong },
+        십이신살: { pos: "대운", gz: dae.gz, shinsal: daeShinsal },
+      }),
+    );
+  }
+}
+
+// ============================
+// 3) 세운 탭 섹션
+// ============================
+
+if (seYears.length > 0) {
+  const rangeStartYear = seYears[0];
+  const rangeEndYear = seYears[seYears.length - 1];
+
+  // 세운 범위 전체에 걸쳐 있는 대운들
+  const daesForRange = findDaeForYearRangeMulti(
+    daeList,
+    rangeStartYear,
+    rangeEndYear,
+  );
+
+  // ---- (3-1) 세운 탭 상단: 대운 요약 ----
+  if (daesForRange.length > 0) {
+    const refYear = rangeStartYear;
+    const seGZRef = getYearGanZhi(new Date(refYear, 5, 15));
+    const seNormRef = normalizeGZ(seGZRef || "");
+
+    const daeSectionData = {
+      대운: daesForRange.map((daa) => {
+        const daeChain: LuckChain = {
+          dae: daa.gz,
+          se: seNormRef || null,
+          wol: null,
+          il: null,
+        };
+
+        const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
+        const relWithDae = buildAllRelationTags({
+          natal,
+          daewoon: daa.gz,
+          sewoon: seNormRef || undefined,
+          wolwoon: undefined,
+          ilwoon: undefined,
+        });
+        const shinsalWithDae = buildShinsalTags({
+          natal,
+          daewoon: daa.gz,
+          sewoon: seNormRef || undefined,
+          wolwoon: undefined,
+          ilwoon: undefined,
+          basis,
+        });
+
+        const daeNabeum = getNabeum(daa.gz);
+        const daeUnseong = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          daa.gz.charAt(1),
+        );
+        const daeShinsal12 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: daa.gz.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        return {
+          기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
+          간지: daa.gz,
           오행강약: Object.fromEntries(
-            Object.entries(overlay.elementPercent).map(([el, val]) => [
+            Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
-          형충회합: relWithDae,
+          십신강약: daeOverlay.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
           신살: {
             good: shinsalWithDae.good,
             bad: shinsalWithDae.bad,
           },
           납음오행: daeNabeum
             ? {
-                gz: dae.gz,
+                gz: daa.gz,
                 nabeum: daeNabeum.name,
                 element: daeNabeum.element,
                 code: daeNabeum.code,
               }
             : null,
-          십이운성: { pos: "대운", gz: dae.gz, unseong: daeUnseong },
-          십이신살: { pos: "대운", gz: dae.gz, shinsal: daeShinsal },
-        }),
-      );
-    }
+          십이운성: { pos: "대운", gz: daa.gz, unseong: daeUnseong },
+          십이신살: {
+            pos: "대운",
+            gz: daa.gz,
+            shinsal: daeShinsal12,
+          },
+        };
+      }),
+    };
+
+    sections.push(section("대운", daeSectionData));
   }
 
-  // === 세운별 섹션 ===
-  if (seYears.length > 0) {
-    const rangeStartYear = seYears[0];
-    const rangeEndYear = seYears[seYears.length - 1];
+  // ---- (3-2) 세운 연도별 리스트 ----
+  for (const year of seYears) {
+    const seGZ = getYearGanZhi(new Date(year, 5, 15));
+    const daesAtYear = findDaeForYearMulti(daeList, year);
+    const mainDaeForYear = daesAtYear.length > 0 ? daesAtYear[0] : null;
 
-    // 🔹 세운 범위 전체에 걸쳐 있는 대운들
-    const daesForRange = findDaeForYearRangeMulti(
-      daeList,
-      rangeStartYear,
-      rangeEndYear,
+    const chain: LuckChain = {
+      dae: mainDaeForYear ? mainDaeForYear.gz : null,
+      se: normalizeGZ(seGZ || ""),
+      wol: null,
+      il: null,
+    };
+
+    const overlay = makeOverlayByLuck(unified, "세운", chain);
+    const relWithSe = buildAllRelationTags({
+      natal,
+      daewoon: mainDaeForYear?.gz,
+      sewoon: normalizeGZ(seGZ || ""),
+      wolwoon: undefined,
+      ilwoon: undefined,
+    });
+    const shinsalWithSe = buildShinsalTags({
+      natal,
+      daewoon: mainDaeForYear?.gz,
+      sewoon: normalizeGZ(seGZ || ""),
+      wolwoon: undefined,
+      ilwoon: undefined,
+      basis,
+    });
+
+    const seNabeum = getNabeum(normalizeGZ(seGZ || ""));
+    const seUnseong = getTwelveUnseong(
+      natal[2]?.charAt(0) ?? "",
+      (seGZ || "").charAt(1),
     );
+    const seShinsal = getTwelveShinsalBySettings({
+      baseBranch,
+      targetBranch: (seGZ || "").charAt(1),
+      era: shinsalEra,
+      gaehwa: shinsalGaehwa,
+    });
 
-    // ============================
-    // 🔹 대운 섹션 (세운 탭 상단)
-    // ============================
-    if (daesForRange.length > 0) {
-      const refYear = rangeStartYear;
-      const seGZRef = getYearGanZhi(new Date(refYear, 5, 15));
-      const seNormRef = normalizeGZ(seGZRef || "");
+    const sectionData: Record<string, unknown> = {
+      세운: {
+        기본정보: `${year}년 ${normalizeGZ(seGZ || "")}`,
+        간지: normalizeGZ(seGZ || ""),
+        오행강약: Object.fromEntries(
+          Object.entries(overlay.elementPercent).map(([el, val]) => [
+            `${el}(${elementToTenGod(dayEl, el as Element)})`,
+            val,
+          ]),
+        ),
+        십신강약: overlay.totalsSub,
+        형충회합: filterHarmonyTagsByScope(relWithSe, "세운"),
+        신살: {
+          good: shinsalWithSe.good,
+          bad: shinsalWithSe.bad,
+        },
+        납음오행: seNabeum
+          ? {
+              gz: normalizeGZ(seGZ || ""),
+              nabeum: seNabeum.name,
+              element: seNabeum.element,
+              code: seNabeum.code,
+            }
+          : null,
+        십이운성: {
+          pos: "세운",
+          gz: normalizeGZ(seGZ || ""),
+          unseong: seUnseong,
+        },
+        십이신살: {
+          pos: "세운",
+          gz: normalizeGZ(seGZ || ""),
+          shinsal: seShinsal,
+        },
+      },
+    };
 
-      const daeSectionData = {
-        대운: daesForRange.map((daa) => {
-          const daeChain: LuckChain = {
-            dae: daa.gz,
-            se: seNormRef || null,
-            wol: null,
-            il: null,
-          };
+    sections.push(section(`세운 ${year}`, sectionData));
+  }
+}
 
-          const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
-          const relWithDae = buildAllRelationTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-          });
-          const shinsalWithDae = buildShinsalTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
+// ============================
+// 4) 월운 탭 섹션
+// ============================
 
-          const daeNabeum = getNabeum(daa.gz);
-          const daeUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            daa.gz.charAt(1),
-          );
-          const daeShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: daa.gz.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
+if (wolMonths.length > 0) {
+  const daeUnion: DaewoonInfo[] = [];
+  const seRepMap = new Map<string, { year: number; month: number }>();
 
-          return {
-            기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
-            간지: daa.gz,
-            오행강약: Object.fromEntries(
-              Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: daeOverlay.totalsSub,
-            형충회합: relWithDae,
-            신살: {
-              good: shinsalWithDae.good,
-              bad: shinsalWithDae.bad,
-            },
-            납음오행: daeNabeum
-              ? {
-                  gz: daa.gz,
-                  nabeum: daeNabeum.name,
-                  element: daeNabeum.element,
-                  code: daeNabeum.code,
-                }
-              : null,
-            십이운성: { pos: "대운", gz: daa.gz, unseong: daeUnseong },
-            십이신살: {
-              pos: "대운",
-              gz: daa.gz,
-              shinsal: daeShinsal12,
-            },
-          };
-        }),
-      };
+  for (const ym of wolMonths) {
+    const [y, m] = ym.split("-").map(Number);
 
-      sections.push(section("대운", daeSectionData));
-    }
+    const daes = findDaeForMonthMulti(daeList, y, m);
+    daes.forEach((d) => {
+      if (!daeUnion.some((x) => x.gz === d.gz && x.startYear === d.startYear)) {
+        daeUnion.push(d);
+      }
+    });
 
-    // ============================
-    // 🔹 세운 리스트 (연도별)
-    // ============================
-    for (const year of seYears) {
-      const seGZ = getYearGanZhi(new Date(year, 5, 15));
-      const daesAtYear = findDaeForYearMulti(daeList, year);
-      const mainDaeForYear = daesAtYear.length > 0 ? daesAtYear[0] : null;
+    const seYearsArr = resolveSeYear(y, m);
+    const ses = findSeForMonthMulti(y, m);
 
-      const chain: LuckChain = {
-        dae: mainDaeForYear ? mainDaeForYear.gz : null,
-        se: normalizeGZ(seGZ || ""),
-        wol: null,
-        il: null,
-      };
+    ses.forEach((se, idx) => {
+      const seYear = seYearsArr[idx] ?? seYearsArr[seYearsArr.length - 1];
+      if (!seRepMap.has(se)) {
+        seRepMap.set(se, { year: seYear, month: m });
+      }
+    });
+  }
 
-      const overlay = makeOverlayByLuck(unified, "세운", chain);
-      const relWithSe = buildAllRelationTags({
-        natal,
-        daewoon: mainDaeForYear?.gz,
-        sewoon: normalizeGZ(seGZ || ""),
-        wolwoon: undefined,
-        ilwoon: undefined,
-      });
-      const shinsalWithSe = buildShinsalTags({
-        natal,
-        daewoon: mainDaeForYear?.gz,
-        sewoon: normalizeGZ(seGZ || ""),
-        wolwoon: undefined,
-        ilwoon: undefined,
-        basis,
-      });
+  const [refYear] = wolMonths[0].split("-").map(Number);
+  const seGZRef = getYearGanZhi(new Date(refYear, 5, 15));
+  const seNormRef = normalizeGZ(seGZRef || "");
 
-      const seNabeum = getNabeum(normalizeGZ(seGZ || ""));
-      const seUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        (seGZ || "").charAt(1),
-      );
-      const seShinsal = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: (seGZ || "").charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+  // ---- (4-1) 월운 탭 상단: 대운 요약 ----
+  if (daeUnion.length > 0) {
+    const daeSectionData = {
+      대운: daeUnion.map((daa) => {
+        const daeChain: LuckChain = {
+          dae: daa.gz,
+          se: seNormRef || null,
+          wol: null,
+          il: null,
+        };
 
-      const sectionData: Record<string, unknown> = {
-        세운: {
-          기본정보: `${year}년 ${normalizeGZ(seGZ || "")}`,
-          간지: normalizeGZ(seGZ || ""),
+        const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
+        const relWithDae = buildAllRelationTags({
+          natal,
+          daewoon: daa.gz,
+          sewoon: seNormRef || undefined,
+          wolwoon: undefined,
+          ilwoon: undefined,
+        });
+        const shinsalWithDae = buildShinsalTags({
+          natal,
+          daewoon: daa.gz,
+          sewoon: seNormRef || undefined,
+          wolwoon: undefined,
+          ilwoon: undefined,
+          basis,
+        });
+
+        const daeNabeum = getNabeum(daa.gz);
+        const daeUnseong = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          daa.gz.charAt(1),
+        );
+        const daeShinsal12 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: daa.gz.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        return {
+          기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
+          간지: daa.gz,
           오행강약: Object.fromEntries(
-            Object.entries(overlay.elementPercent).map(([el, val]) => [
+            Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
-          형충회합: relWithSe,
+          십신강약: daeOverlay.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
           신살: {
-            good: shinsalWithSe.good,
-            bad: shinsalWithSe.bad,
+            good: shinsalWithDae.good,
+            bad: shinsalWithDae.bad,
+          },
+          납음오행: daeNabeum
+            ? {
+                gz: daa.gz,
+                nabeum: daeNabeum.name,
+                element: daeNabeum.element,
+                code: daeNabeum.code,
+              }
+            : null,
+          십이운성: {
+            pos: "대운",
+            gz: daa.gz,
+            unseong: daeUnseong,
+          },
+          십이신살: {
+            pos: "대운",
+            gz: daa.gz,
+            shinsal: daeShinsal12,
+          },
+        };
+      }),
+    };
+
+    sections.push(section("대운", daeSectionData));
+  }
+
+  // ---- (4-2) 월운 탭 상단: 세운 요약 ----
+  const seKeys = Array.from(seRepMap.keys());
+
+  if (seKeys.length > 0) {
+    const seSectionData = {
+      세운: seKeys.map((se) => {
+        const rep = seRepMap.get(se)!;
+        const y = rep.year;
+
+        const daesForSeYear = findDaeForYearMulti(daeList, y);
+        const mainDaeForSe = daesForSeYear[0] ?? daeUnion[0] ?? null;
+
+        const seChain: LuckChain = {
+          dae: mainDaeForSe ? mainDaeForSe.gz : null,
+          se,
+          wol: null,
+          il: null,
+        };
+
+        const seOverlay = makeOverlayByLuck(unified, "세운", seChain);
+        const relWithSeTop = buildAllRelationTags({
+          natal,
+          daewoon: mainDaeForSe?.gz,
+          sewoon: se,
+          wolwoon: undefined,
+          ilwoon: undefined,
+        });
+        const shinsalWithSeTop = buildShinsalTags({
+          natal,
+          daewoon: mainDaeForSe?.gz,
+          sewoon: se,
+          wolwoon: undefined,
+          ilwoon: undefined,
+          basis,
+        });
+
+        const seNabeum = getNabeum(se);
+        const seUnseong = getTwelveUnseong(
+          natal[2]?.charAt(0) ?? "",
+          se.charAt(1),
+        );
+        const seShinsal12 = getTwelveShinsalBySettings({
+          baseBranch,
+          targetBranch: se.charAt(1),
+          era: shinsalEra,
+          gaehwa: shinsalGaehwa,
+        });
+
+        return {
+          기본정보: `${y}년 ${se}`,
+          간지: se,
+          오행강약: Object.fromEntries(
+            Object.entries(seOverlay.elementPercent).map(([el, val]) => [
+              `${el}(${elementToTenGod(dayEl, el as Element)})`,
+              val,
+            ]),
+          ),
+          십신강약: seOverlay.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithSeTop, "세운"),
+          신살: {
+            good: shinsalWithSeTop.good,
+            bad: shinsalWithSeTop.bad,
           },
           납음오행: seNabeum
             ? {
-                gz: normalizeGZ(seGZ || ""),
+                gz: se,
                 nabeum: seNabeum.name,
                 element: seNabeum.element,
                 code: seNabeum.code,
@@ -1423,712 +1913,433 @@ export function buildMultiLuckPrompt(params: {
             : null,
           십이운성: {
             pos: "세운",
-            gz: normalizeGZ(seGZ || ""),
+            gz: se,
             unseong: seUnseong,
           },
           십이신살: {
             pos: "세운",
-            gz: normalizeGZ(seGZ || ""),
-            shinsal: seShinsal,
+            gz: se,
+            shinsal: seShinsal12,
           },
-        },
-      };
+        };
+      }),
+    };
 
-      sections.push(section(`세운 ${year}`, sectionData));
-    }
+    sections.push(section("세운", seSectionData));
   }
 
-  // === 월운별 섹션 ===
-  if (wolMonths.length > 0) {
-    // 1) 월운 전체 범위에서 대운·세운 union 수집
-    const daeUnion: DaewoonInfo[] = [];
-    const seRepMap = new Map<string, { year: number; month: number }>(); // 세운별 대표 년월 저장
+  // ---- (4-3) 월운 리스트 (각 월별) ----
+  for (const ym of wolMonths) {
+    const [y, m] = ym.split("-").map(Number);
+    const date = new Date(y, m - 1, 15);
+    const wolGZ = getMonthGanZhi(date);
 
-    for (const ym of wolMonths) {
-      const [y, m] = ym.split("-").map(Number);
+    const daes = findDaeForMonthMulti(daeList, y, m);
+    const mainDae = daes.length > 0 ? daes[0] : null;
 
-      // ▸ 이 월에 걸리는 대운들 (교운기면 여러 개)
-      const daes = findDaeForMonthMulti(daeList, y, m);
-      daes.forEach((d) => {
-        if (!daeUnion.some((x) => x.gz === d.gz && x.startYear === d.startYear)) {
-          daeUnion.push(d);
-        }
-      });
+    const ses = findSeForMonthMulti(y, m);
+    const mainSe = ses.length > 0 ? ses[ses.length - 1] : "";
 
-      const seYearsArr = resolveSeYear(y, m);
+    const chain: LuckChain = {
+      dae: mainDae ? mainDae.gz : null,
+      se: mainSe || null,
+      wol: normalizeGZ(wolGZ || ""),
+      il: null,
+    };
 
-      // ▸ 이 월에 적용되는 세운들 (교운기면 여러 개)
-      const ses = findSeForMonthMulti(y, m);
-      ses.forEach((se, idx) => {
-        // 세운이 2개일 때는 2033/2034가 정확히 매칭됨
-        const seYear = seYearsArr[idx] ?? seYearsArr[seYearsArr.length - 1];
+    const overlay = makeOverlayByLuck(unified, "월운", chain);
+    const relWithWol = buildAllRelationTags({
+      natal,
+      daewoon: mainDae?.gz,
+      sewoon: mainSe || undefined,
+      wolwoon: normalizeGZ(wolGZ || ""),
+      ilwoon: undefined,
+    });
+    const shinsalWithWol = buildShinsalTags({
+      natal,
+      daewoon: mainDae?.gz,
+      sewoon: mainSe || undefined,
+      wolwoon: normalizeGZ(wolGZ || ""),
+      ilwoon: undefined,
+      basis,
+    });
 
-        if (!seRepMap.has(se)) {
-          seRepMap.set(se, { year: seYear, month: m });
-        }
-      });
-    }
+    const wolNabeum = getNabeum(normalizeGZ(wolGZ || ""));
+    const wolUnseong = getTwelveUnseong(
+      natal[2]?.charAt(0) ?? "",
+      (wolGZ || "").charAt(1),
+    );
+    const wolShinsal = getTwelveShinsalBySettings({
+      baseBranch,
+      targetBranch: (wolGZ || "").charAt(1),
+      era: shinsalEra,
+      gaehwa: shinsalGaehwa,
+    });
 
-    // 기준 연도 (세운 계산용)
-    const [refYear] = wolMonths[0].split("-").map(Number);
-    const seGZRef = getYearGanZhi(new Date(refYear, 5, 15));
-    const seNormRef = normalizeGZ(seGZRef || "");
+    const sectionData: Record<string, unknown> = {
+      월운: {
+        기본정보: `${ym} ${normalizeGZ(wolGZ || "")}`,
+        간지: normalizeGZ(wolGZ || ""),
+        오행강약: Object.fromEntries(
+          Object.entries(overlay.elementPercent).map(([el, val]) => [
+            `${el}(${elementToTenGod(dayEl, el as Element)})`,
+            val,
+          ]),
+        ),
+        십신강약: overlay.totalsSub,
+        형충회합: filterHarmonyTagsByScope(relWithWol, "월운"),
+        신살: {
+          good: shinsalWithWol.good,
+          bad: shinsalWithWol.bad,
+        },
+        납음오행: wolNabeum
+          ? {
+              gz: normalizeGZ(wolGZ || ""),
+              nabeum: wolNabeum.name,
+              element: wolNabeum.element,
+              code: wolNabeum.code,
+            }
+          : null,
+        십이운성: {
+          pos: "월운",
+          gz: normalizeGZ(wolGZ || ""),
+          unseong: wolUnseong,
+        },
+        십이신살: {
+          pos: "월운",
+          gz: normalizeGZ(wolGZ || ""),
+          shinsal: wolShinsal,
+        },
+      },
+    };
 
-    // ============================
-    // 🔹 1) 대운 섹션 (월운 탭 상단)
-    // ============================
-    if (daeUnion.length > 0) {
-      const daeSectionData = {
-        대운: daeUnion.map((daa) => {
-          const daeChain: LuckChain = {
-            dae: daa.gz,
-            se: seNormRef || null,
-            wol: null,
-            il: null,
-          };
+    sections.push(section(`월운 ${ym}`, sectionData));
+  }
+}
 
-          const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
-          const relWithDae = buildAllRelationTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-          });
-          const shinsalWithDae = buildShinsalTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
+// ============================
+// 5) 일운 탭 섹션
+// ============================
 
-          const daeNabeum = getNabeum(daa.gz);
-          const daeUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            daa.gz.charAt(1),
-          );
-          const daeShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: daa.gz.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
+if (ilDays.length > 0) {
+  const rule: DayBoundaryRule =
+    (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
-          return {
-            기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
-            간지: daa.gz,
-            오행강약: Object.fromEntries(
-              Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: daeOverlay.totalsSub,
-            형충회합: relWithDae,
-            신살: {
-              good: shinsalWithDae.good,
-              bad: shinsalWithDae.bad,
-            },
-            납음오행: daeNabeum
-              ? {
-                  gz: daa.gz,
-                  nabeum: daeNabeum.name,
-                  element: daeNabeum.element,
-                  code: daeNabeum.code,
-                }
-              : null,
-            십이운성: {
-              pos: "대운",
-              gz: daa.gz,
-              unseong: daeUnseong,
-            },
-            십이신살: {
-              pos: "대운",
-              gz: daa.gz,
-              shinsal: daeShinsal12,
-            },
-          };
-        }),
+  // ---- (5-1) 기준일(첫날)에서 상단 대운/세운/월운 요약 ----
+  const [y0, m0, d0] = ilDays[0].split("-").map(Number);
+  const baseDate0 = new Date(y0, m0 - 1, d0, 4, 0);
+
+  if (!isNaN(baseDate0.getTime())) {
+    const daes0 = findDaeForMonthMulti(daeList, y0, m0);
+    const mainDae0 = daes0.length > 0 ? daes0[0] : null;
+
+    const ses0 = findSeForMonthMulti(y0, m0);
+    const mainSe0 = ses0.length > 0 ? ses0[ses0.length - 1] : "";
+
+    const wolGZ0 = getMonthGanZhi(new Date(y0, m0 - 1, 15));
+    const ilGZ0 = getDayGanZhi(baseDate0, rule);
+
+    const normWol0 = normalizeGZ(wolGZ0 || "");
+    const normSe0 = normalizeGZ(mainSe0 || "");
+    const normIl0 = normalizeGZ(ilGZ0 || "");
+
+    // (5-1-a) 상단 대운
+    if (mainDae0) {
+      const daeChain0: LuckChain = {
+        dae: mainDae0.gz,
+        se: normSe0,
+        wol: normWol0,
+        il: normIl0,
       };
-
-      sections.push(section("대운", daeSectionData));
-    }
-
-    // ============================
-    // 🔹 2) 세운 섹션 (월운 탭 상단 / 교운기면 여러 줄)
-    // ============================
-    const seKeys = Array.from(seRepMap.keys()); // ["을사", "병오"] 이런 식
-
-    if (seKeys.length > 0) {
-      const seSectionData = {
-        세운: seKeys.map((se) => {
-          const rep = seRepMap.get(se)!; // 이 세운이 실제로 적용된 대표 년월
-          const y = rep.year;
-
-          // 이 세운이 걸려 있는 해에 해당하는 대운 (없으면 상단 대운 중 첫번째)
-          const daesForSeYear = findDaeForYearMulti(daeList, y);
-          const mainDaeForSe = daesForSeYear[0] ?? daeUnion[0] ?? null;
-
-          const seChain: LuckChain = {
-            dae: mainDaeForSe ? mainDaeForSe.gz : null,
-            se,
-            wol: null,
-            il: null,
-          };
-
-          const seOverlay = makeOverlayByLuck(unified, "세운", seChain);
-          const relWithSeTop = buildAllRelationTags({
-            natal,
-            daewoon: mainDaeForSe?.gz,
-            sewoon: se,
-            wolwoon: undefined,
-            ilwoon: undefined,
-          });
-          const shinsalWithSeTop = buildShinsalTags({
-            natal,
-            daewoon: mainDaeForSe?.gz,
-            sewoon: se,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
-
-          const seNabeum = getNabeum(se);
-          const seUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            se.charAt(1),
-          );
-          const seShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: se.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
-
-          return {
-            기본정보: `${y}년 ${se}`,
-            간지: se,
-            오행강약: Object.fromEntries(
-              Object.entries(seOverlay.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: seOverlay.totalsSub,
-            형충회합: relWithSeTop,
-            신살: {
-              good: shinsalWithSeTop.good,
-              bad: shinsalWithSeTop.bad,
-            },
-            납음오행: seNabeum
-              ? {
-                  gz: se,
-                  nabeum: seNabeum.name,
-                  element: seNabeum.element,
-                  code: seNabeum.code,
-                }
-              : null,
-            십이운성: {
-              pos: "세운",
-              gz: se,
-              unseong: seUnseong,
-            },
-            십이신살: {
-              pos: "세운",
-              gz: se,
-              shinsal: seShinsal12,
-            },
-          };
-        }),
-      };
-
-      sections.push(section("세운", seSectionData));
-    }
-
-    // ============================
-    // 🔹 3) 월운 리스트 섹션 (각 월별)
-    // ============================
-    for (const ym of wolMonths) {
-      const [y, m] = ym.split("-").map(Number);
-      const date = new Date(y, m - 1, 15);
-      const wolGZ = getMonthGanZhi(date);
-
-      const daes = findDaeForMonthMulti(daeList, y, m);
-      const mainDae = daes.length > 0 ? daes[0] : null;
-
-      const ses = findSeForMonthMulti(y, m);
-      const mainSe = ses.length > 0 ? ses[ses.length - 1] : "";
-
-      const chain: LuckChain = {
-        dae: mainDae ? mainDae.gz : null,
-        se: mainSe || null,
-        wol: normalizeGZ(wolGZ || ""),
-        il: null,
-      };
-
-      const overlay = makeOverlayByLuck(unified, "월운", chain);
-      const relWithWol = buildAllRelationTags({
+      const daeOverlay0 = makeOverlayByLuck(unified, "대운", daeChain0);
+      const relWithDae0 = buildAllRelationTags({
         natal,
-        daewoon: mainDae?.gz,
-        sewoon: mainSe || undefined,
-        wolwoon: normalizeGZ(wolGZ || ""),
-        ilwoon: undefined,
+        daewoon: mainDae0.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
       });
-      const shinsalWithWol = buildShinsalTags({
+      const shinsalWithDae0 = buildShinsalTags({
         natal,
-        daewoon: mainDae?.gz,
-        sewoon: mainSe || undefined,
-        wolwoon: normalizeGZ(wolGZ || ""),
-        ilwoon: undefined,
+        daewoon: mainDae0.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
         basis,
       });
 
-      const wolNabeum = getNabeum(normalizeGZ(wolGZ || ""));
-      const wolUnseong = getTwelveUnseong(
+      const daeNabeum0 = getNabeum(mainDae0.gz);
+      const daeUnseong0 = getTwelveUnseong(
         natal[2]?.charAt(0) ?? "",
-        (wolGZ || "").charAt(1),
+        mainDae0.gz.charAt(1),
       );
-      const wolShinsal = getTwelveShinsalBySettings({
+      const daeShinsal12_0 = getTwelveShinsalBySettings({
         baseBranch,
-        targetBranch: (wolGZ || "").charAt(1),
+        targetBranch: mainDae0.gz.charAt(1),
         era: shinsalEra,
         gaehwa: shinsalGaehwa,
       });
 
-      const sectionData: Record<string, unknown> = {
-        월운: {
-          기본정보: `${ym}월 ${normalizeGZ(wolGZ || "")}`,
-          간지: normalizeGZ(wolGZ || ""),
+      sections.push(
+        section("대운", {
+          기본정보: `${mainDae0.age}대운 ${mainDae0.gz} (${mainDae0.startYear}~${mainDae0.endYear})`,
+          간지: mainDae0.gz,
           오행강약: Object.fromEntries(
-            Object.entries(overlay.elementPercent).map(([el, val]) => [
+            Object.entries(daeOverlay0.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
-          형충회합: relWithWol,
-          신살: {
-            good: shinsalWithWol.good,
-            bad: shinsalWithWol.bad,
-          },
-          납음오행: wolNabeum
+          십신강약: daeOverlay0.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithDae0, "대운"),
+          신살: filterShinsalByScope(shinsalWithDae0, "대운"),
+          납음오행: daeNabeum0
             ? {
-                gz: normalizeGZ(wolGZ || ""),
-                nabeum: wolNabeum.name,
-                element: wolNabeum.element,
-                code: wolNabeum.code,
+                gz: mainDae0.gz,
+                nabeum: daeNabeum0.name,
+                element: daeNabeum0.element,
+                code: daeNabeum0.code,
               }
             : null,
-          십이운성: {
-            pos: "월운",
-            gz: normalizeGZ(wolGZ || ""),
-            unseong: wolUnseong,
-          },
+          십이운성: { pos: "대운", gz: mainDae0.gz, unseong: daeUnseong0 },
           십이신살: {
-            pos: "월운",
-            gz: normalizeGZ(wolGZ || ""),
-            shinsal: wolShinsal,
+            pos: "대운",
+            gz: mainDae0.gz,
+            shinsal: daeShinsal12_0,
           },
-        },
-      };
-
-      sections.push(section(`월운 ${ym}`, sectionData));
-    }
-  }
-
-  // === 일운별 섹션 ===
-  if (ilDays.length > 0) {
-    // 공통 일경계 규칙
-    const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
-
-    // ---------------------------------------------------
-    // 0) 대표 기준일(첫날)에서 대운 · 세운 · 월운 1회만 계산
-    // ---------------------------------------------------
-    const [y0, m0, d0] = ilDays[0].split("-").map(Number);
-    const baseDate0 = new Date(y0, m0 - 1, d0, 4, 0); // 새벽 4시 anchor (전날로 안밀리게)
-
-    if (!isNaN(baseDate0.getTime())) {
-      const daes0 = findDaeForMonthMulti(daeList, y0, m0);
-      const mainDae0 = daes0.length > 0 ? daes0[0] : null;
-
-      const ses0 = findSeForMonthMulti(y0, m0);
-      const mainSe0 = ses0.length > 0 ? ses0[ses0.length - 1] : "";
-
-      const wolGZ0 = getMonthGanZhi(new Date(y0, m0 - 1, 15));
-      const ilGZ0 = getDayGanZhi(baseDate0, rule);
-
-      const normWol0 = normalizeGZ(wolGZ0 || "");
-      const normSe0 = normalizeGZ(mainSe0 || "");
-      const normIl0 = normalizeGZ(ilGZ0 || "");
-
-      // ---------------------------------------------------
-      // 1) 상단 대운 섹션 (딱 1번)
-      // ---------------------------------------------------
-      if (mainDae0) {
-        const daeChain0: LuckChain = {
-          dae: mainDae0.gz,
-          se: normSe0,
-          wol: normWol0,
-          il: normIl0,
-        };
-        const daeOverlay0 = makeOverlayByLuck(unified, "대운", daeChain0);
-        const relWithDae0 = buildAllRelationTags({
-          natal,
-          daewoon: mainDae0.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-        });
-        const shinsalWithDae0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
-
-        const daeNabeum0 = getNabeum(mainDae0.gz);
-        const daeUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          mainDae0.gz.charAt(1),
-        );
-        const daeShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: mainDae0.gz.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("대운", {
-            기본정보: `${mainDae0.age}대운 ${mainDae0.gz} (${mainDae0.startYear}~${mainDae0.endYear})`,
-            간지: mainDae0.gz,
-            오행강약: Object.fromEntries(
-              Object.entries(daeOverlay0.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: daeOverlay0.totalsSub,
-            형충회합: relWithDae0,
-            신살: {
-              good: shinsalWithDae0.good,
-              bad: shinsalWithDae0.bad,
-            },
-            납음오행: daeNabeum0
-              ? {
-                  gz: mainDae0.gz,
-                  nabeum: daeNabeum0.name,
-                  element: daeNabeum0.element,
-                  code: daeNabeum0.code,
-                }
-              : null,
-            십이운성: { pos: "대운", gz: mainDae0.gz, unseong: daeUnseong0 },
-            십이신살: { pos: "대운", gz: mainDae0.gz, shinsal: daeShinsal12_0 },
-          }),
-        );
-      }
-
-      // ---------------------------------------------------
-      // 2) 상단 세운 섹션 (딱 1번)
-      // ---------------------------------------------------
-      if (normSe0) {
-        const seChain0: LuckChain = {
-          dae: mainDae0 ? mainDae0.gz : null,
-          se: normSe0,
-          wol: normWol0,
-          il: normIl0,
-        };
-        const seOverlay0 = makeOverlayByLuck(unified, "세운", seChain0);
-        const relWithSe0 = buildAllRelationTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-        });
-        const shinsalWithSe0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
-
-        const seNabeum0 = getNabeum(normSe0);
-        const seUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          normSe0.charAt(1),
-        );
-        const seShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normSe0.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("세운", {
-            기본정보: `${y0}년 ${normSe0}`,
-            간지: normSe0,
-            오행강약: Object.fromEntries(
-              Object.entries(seOverlay0.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: seOverlay0.totalsSub,
-            형충회합: relWithSe0,
-            신살: {
-              good: shinsalWithSe0.good,
-              bad: shinsalWithSe0.bad,
-            },
-            납음오행: seNabeum0
-              ? {
-                  gz: normSe0,
-                  nabeum: seNabeum0.name,
-                  element: seNabeum0.element,
-                  code: seNabeum0.code,
-                }
-              : null,
-            십이운성: { pos: "세운", gz: normSe0, unseong: seUnseong0 },
-            십이신살: { pos: "세운", gz: normSe0, shinsal: seShinsal12_0 },
-          }),
-        );
-      }
-
-      // ---------------------------------------------------
-      // 3) 상단 월운 섹션 (딱 1번)
-      // ---------------------------------------------------
-      if (normWol0) {
-        const wolChain0: LuckChain = {
-          dae: mainDae0 ? mainDae0.gz : null,
-          se: normSe0,
-          wol: normWol0,
-          il: normIl0,
-        };
-        const wolOverlay0 = makeOverlayByLuck(unified, "월운", wolChain0);
-        const relWithWol0 = buildAllRelationTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-        });
-        const shinsalWithWol0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
-
-        const wolNabeum0 = getNabeum(normWol0);
-        const wolUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          normWol0.charAt(1),
-        );
-        const wolShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normWol0.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
-
-        sections.push(
-          section("월운", {
-            기본정보: `${y0}-${String(m0).padStart(2, "0")} ${normWol0}`,
-            간지: normWol0,
-            오행강약: Object.fromEntries(
-              Object.entries(wolOverlay0.elementPercent).map(([el, val]) => [
-                `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                val,
-              ]),
-            ),
-            십신강약: wolOverlay0.totalsSub,
-            형충회합: relWithWol0,
-            신살: {
-              good: shinsalWithWol0.good,
-              bad: shinsalWithWol0.bad,
-            },
-            납음오행: wolNabeum0
-              ? {
-                  gz: normWol0,
-                  nabeum: wolNabeum0.name,
-                  element: wolNabeum0.element,
-                  code: wolNabeum0.code,
-                }
-              : null,
-            십이운성: { pos: "월운", gz: normWol0, unseong: wolUnseong0 },
-            십이신살: { pos: "월운", gz: normWol0, shinsal: wolShinsal12_0 },
-          }),
-        );
-      }
+        }),
+      );
     }
 
-    // ---------------------------------------------------
-    // 4) 날짜별 일운 상세 섹션 (여러 개)
-    // ---------------------------------------------------
-    for (const dateStr of ilDays) {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      const baseDate = new Date(y, m - 1, d, 4, 0); // 동일 anchor
-      if (isNaN(baseDate.getTime())) continue;
-
-      const daes = findDaeForMonthMulti(daeList, y, m);
-      const mainDae = daes.length > 0 ? daes[0] : null;
-
-      const ses = findSeForMonthMulti(y, m);
-      const mainSe = ses.length > 0 ? ses[ses.length - 1] : "";
-
-      const wolGZ = getMonthGanZhi(new Date(y, m - 1, 15));
-      const ilGZ = getDayGanZhi(baseDate, rule);
-
-      const normWol = normalizeGZ(wolGZ || "");
-      const normSe = normalizeGZ(mainSe || "");
-      const normIl = normalizeGZ(ilGZ || "");
-
-      const chain: LuckChain = {
-        dae: mainDae ? mainDae.gz : null,
-        se: normSe || null,
-        wol: normWol,
-        il: normIl,
+    // (5-1-b) 상단 세운
+    if (normSe0) {
+      const seChain0: LuckChain = {
+        dae: mainDae0 ? mainDae0.gz : null,
+        se: normSe0,
+        wol: normWol0,
+        il: normIl0,
       };
-
-      const overlay = makeOverlayByLuck(unified, "일운", chain);
-
-      const relWithIl = buildAllRelationTags({
+      const seOverlay0 = makeOverlayByLuck(unified, "세운", seChain0);
+      const relWithSe0 = buildAllRelationTags({
         natal,
-        daewoon: mainDae?.gz,
-        sewoon: normSe || undefined,
-        wolwoon: normWol || undefined,
-        ilwoon: normIl || undefined,
+        daewoon: mainDae0?.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
       });
-
-      const shinsalWithIl = buildShinsalTags({
+      const shinsalWithSe0 = buildShinsalTags({
         natal,
-        daewoon: mainDae?.gz,
-        sewoon: normSe || undefined,
-        wolwoon: normWol || undefined,
-        ilwoon: normIl || undefined,
+        daewoon: mainDae0?.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
         basis,
       });
 
-      const ilNabeum = getNabeum(normIl);
-      const ilUnseong = getTwelveUnseong(
+      const seNabeum0 = getNabeum(normSe0);
+      const seUnseong0 = getTwelveUnseong(
         natal[2]?.charAt(0) ?? "",
-        normIl.charAt(1),
+        normSe0.charAt(1),
       );
-      const ilShinsal12 = getTwelveShinsalBySettings({
+      const seShinsal12_0 = getTwelveShinsalBySettings({
         baseBranch,
-        targetBranch: normIl.charAt(1),
+        targetBranch: normSe0.charAt(1),
         era: shinsalEra,
         gaehwa: shinsalGaehwa,
       });
 
-      const sectionData: Record<string, unknown> = {
-        일운: {
-          기본정보: `${dateStr} ${normIl}`,
-          간지: normIl,
+      sections.push(
+        section("세운", {
+          기본정보: `${y0}년 ${normSe0}`,
+          간지: normSe0,
           오행강약: Object.fromEntries(
-            Object.entries(overlay.elementPercent).map(([el, val]) => [
+            Object.entries(seOverlay0.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
-          형충회합: relWithIl,
-          신살: {
-            good: shinsalWithIl.good,
-            bad: shinsalWithIl.bad,
-          },
-          납음오행: ilNabeum
+          십신강약: seOverlay0.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithSe0, "세운"),
+          신살: filterShinsalByScope(shinsalWithSe0, "세운"),
+          납음오행: seNabeum0
             ? {
-                gz: normIl,
-                nabeum: ilNabeum.name,
-                element: ilNabeum.element,
-                code: ilNabeum.code,
+                gz: normSe0,
+                nabeum: seNabeum0.name,
+                element: seNabeum0.element,
+                code: seNabeum0.code,
               }
             : null,
-          십이운성: {
-            pos: "일운",
-            gz: normIl,
-            unseong: ilUnseong,
-          },
-          십이신살: {
-            pos: "일운",
-            gz: normIl,
-            shinsal: ilShinsal12,
-          },
-        },
-      };
+          십이운성: { pos: "세운", gz: normSe0, unseong: seUnseong0 },
+          십이신살: { pos: "세운", gz: normSe0, shinsal: seShinsal12_0 },
+        }),
+      );
+    }
 
-      sections.push(section(`일운 ${dateStr}`, sectionData));
+    // (5-1-c) 상단 월운
+    if (normWol0) {
+      const wolChain0: LuckChain = {
+        dae: mainDae0 ? mainDae0.gz : null,
+        se: normSe0,
+        wol: normWol0,
+        il: normIl0,
+      };
+      const wolOverlay0 = makeOverlayByLuck(unified, "월운", wolChain0);
+      const relWithWol0 = buildAllRelationTags({
+        natal,
+        daewoon: mainDae0?.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
+      });
+      const shinsalWithWol0 = buildShinsalTags({
+        natal,
+        daewoon: mainDae0?.gz,
+        sewoon: normSe0,
+        wolwoon: normWol0,
+        ilwoon: normIl0,
+        basis,
+      });
+
+      const wolNabeum0 = getNabeum(normWol0);
+      const wolUnseong0 = getTwelveUnseong(
+        natal[2]?.charAt(0) ?? "",
+        normWol0.charAt(1),
+      );
+      const wolShinsal12_0 = getTwelveShinsalBySettings({
+        baseBranch,
+        targetBranch: normWol0.charAt(1),
+        era: shinsalEra,
+        gaehwa: shinsalGaehwa,
+      });
+
+      sections.push(
+        section("월운", {
+          기본정보: `${y0}-${String(m0).padStart(2, "0")} ${normWol0}`,
+          간지: normWol0,
+          오행강약: Object.fromEntries(
+            Object.entries(wolOverlay0.elementPercent).map(([el, val]) => [
+              `${el}(${elementToTenGod(dayEl, el as Element)})`,
+              val,
+            ]),
+          ),
+          십신강약: wolOverlay0.totalsSub,
+          형충회합: filterHarmonyTagsByScope(relWithWol0, "월운"),
+          신살: filterShinsalByScope(shinsalWithWol0, "월운"),
+          납음오행: wolNabeum0
+            ? {
+                gz: normWol0,
+                nabeum: wolNabeum0.name,
+                element: wolNabeum0.element,
+                code: wolNabeum0.code,
+              }
+            : null,
+          십이운성: { pos: "월운", gz: normWol0, unseong: wolUnseong0 },
+          십이신살: { pos: "월운", gz: normWol0, shinsal: wolShinsal12_0 },
+        }),
+      );
     }
   }
 
-  const body = sections.join("\n\n");
+  // ---- (5-2) 날짜별 일운 상세섹션 ----
+  for (const dateStr of ilDays) {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const baseDate = new Date(y, m - 1, d, 4, 0);
+    if (isNaN(baseDate.getTime())) continue;
 
-  const guide = `
-너는 명리학을 기반으로 ‘현실에서 실제로 발생할 수 있는 사건’을 예측하는 분석가다.
-심리·조언·감정 서술은 절대 하지 않고,
-오직 삶의 구조에 영향을 주는 큰 사건만 설명한다.
+    const daes = findDaeForMonthMulti(daeList, y, m);
+    const mainDae = daes.length > 0 ? daes[0] : null;
 
-해석을 시작하기 전에 반드시 사용자에게 묻는다.
-“어떤 영역의 운을 알고 싶은가요?
-(직장·이직·승진·연애·결혼·금전·사고·건강·이사·법적/행정 등)”
-사용자가 선택한 영역에 대해서만 분석한다.
-사용자가 이미 영역을 선택해서 물어본 경우에는 제외하고, 바로 해석을 시작한다.
+    const ses = findSeForMonthMulti(y, m);
+    const mainSe = ses.length > 0 ? ses[ses.length - 1] : "";
 
-분석 대상: (명식 데이터 입력)
+    const wolGZ = getMonthGanZhi(new Date(y, m - 1, 15));
+    const ilGZ = getDayGanZhi(baseDate, rule);
 
-출력 방식은 다음을 따른다.
+    const normWol = normalizeGZ(wolGZ || "");
+    const normSe = normalizeGZ(mainSe || "");
+    const normIl = normalizeGZ(ilGZ || "");
 
-사소한 일상적 에피소드(기계 오류, 자잘한 인간관계, 작은 지출 등)는 절대 포함하지 않는다.
-직장·승진·이직·연애·금전·사고·이사처럼
-삶의 변화를 일으키는 큰 사건만 다룬다.
+    const chain: LuckChain = {
+      dae: mainDae ? mainDae.gz : null,
+      se: normSe || null,
+      wol: normWol,
+      il: normIl,
+    };
 
-“이번 달에는 ○○한 일이 생길 수 있어요.”
-각 이슈의 첫 문장을 이렇게 시작한다.
-카테고리를 나누지 않고 현실적 장면이 바로 떠오르게 서술한다.
+    const overlay = makeOverlayByLuck(unified, "일운", chain);
+    const relWithIl = buildAllRelationTags({
+      natal,
+      daewoon: mainDae?.gz,
+      sewoon: normSe || undefined,
+      wolwoon: normWol || undefined,
+      ilwoon: normIl || undefined,
+    });
+    const shinsalWithIl = buildShinsalTags({
+      natal,
+      daewoon: mainDae?.gz,
+      sewoon: normSe || undefined,
+      wolwoon: normWol || undefined,
+      ilwoon: normIl || undefined,
+      basis,
+    });
 
-각 이슈는 4단계를 반드시 따르며, 순서를 바꾸지 않는다.
-① 명리적 원인
-② 현실에서 어떻게 나타나는지
-③ 지속 기간
-④ 좋은 면 / 나쁜 면(평가가 아닌 구조적 설명)
+    const ilNabeum = getNabeum(normIl);
+    const ilUnseong = getTwelveUnseong(
+      natal[2]?.charAt(0) ?? "",
+      normIl.charAt(1),
+    );
+    const ilShinsal12 = getTwelveShinsalBySettings({
+      baseBranch,
+      targetBranch: normIl.charAt(1),
+      era: shinsalEra,
+      gaehwa: shinsalGaehwa,
+    });
 
-표현은 일상 언어이며, 학술적·추상적·문학적 표현 금지.
-비유 금지.
-대신 실제 생활 예시로 설명한다.
-예: “인사 발표가 갑자기 잡힐 수 있어요.”
-“갑자기 연락이 끊겼던 사람이 다시 나타날 수 있어요.”
+    const sectionData: Record<string, unknown> = {
+      일운: {
+        기본정보: `${dateStr} ${normIl}`,
+        간지: normIl,
+        오행강약: Object.fromEntries(
+          Object.entries(overlay.elementPercent).map(([el, val]) => [
+            `${el}(${elementToTenGod(dayEl, el as Element)})`,
+            val,
+          ]),
+        ),
+        십신강약: overlay.totalsSub,
+        형충회합: filterHarmonyTagsByScope(relWithIl, "일운"),
+        신살: filterShinsalByScope(shinsalWithIl, "일운"),
+        납음오행: ilNabeum
+          ? {
+              gz: normIl,
+              nabeum: ilNabeum.name,
+              element: ilNabeum.element,
+              code: ilNabeum.code,
+            }
+          : null,
+        십이운성: {
+          pos: "일운",
+          gz: normIl,
+          unseong: ilUnseong,
+        },
+        십이신살: {
+          pos: "일운",
+          gz: normIl,
+          shinsal: ilShinsal12,
+        },
+      },
+    };
 
-감정 유도 문장 금지.
-“조심하세요, 불안할 수 있어요, 기회입니다” 같은 문장은 쓰지 않는다.
-사고 가능성은 실제 사건 형태로만 말한다.
-예: “이번 달에는 하체 부딪힘·낙상처럼 실제 충격 사건이 발생할 수 있어요.”
+    sections.push(section(`일운 ${dateStr}`, sectionData));
+  }
+}
 
-분석에는
-‘사건 발생력’이 강한 요소만 사용한다.
-(충·형·파·해, 합, 관성/재성/식상 변화, 원진·귀문·망신·역마 등)
-단순 성향 변화나 작고 흐릿한 요소는 제외한다.
+// ============================
+// 최종 프롬프트
+// ============================
 
-종합 정리는
-“이번 달을 한 줄로 요약하면 ○○이에요.”
-“좋게 보면 ○○ / 나쁘게 보면 △△”
-이 구조로 끝낸다.
+const body = sections.filter((s) => s.trim().length > 0).join("\n\n");
+const guide = ``;
 
-문체는 전체적으로 하나의 긴 문장형(여러개의 문단), 마크다운 사용금지, 구어체로,
-쓸데 없는 말 길게 쓰지 말고, 영양가 있는 말만 딱 써줘라. 한국 사람들 성격 급하다.
-위에서 원국에서 4000-5000자 쓰라는 프롬포트 있었어도 무시하고, 요점만 딱 써라.
-너무 친절하지도, 너무 딱딱하지도 않게,
-차분히 사건을 설명하는 톤으로 작성한다.
-`;
+return [header, body, guide].join("\n\n");
 
-  return [header, body, guide].join("\n\n");
 }
