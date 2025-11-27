@@ -1530,10 +1530,7 @@ if (daeList.length > 0) {
         ),
         십신강약: overlay.totalsSub,
         형충회합: relWithDae, // 여기엔 대운만 들어가 있으므로 별도 필터 불필요
-        신살: {
-          good: shinsalWithDae.good,
-          bad: shinsalWithDae.bad,
-        },
+        신살: filterShinsalByScope(shinsalWithDae, "대운"),
         납음오행: daeNabeum
           ? {
               gz: dae.gz,
@@ -1619,10 +1616,7 @@ if (seYears.length > 0) {
           ),
           십신강약: daeOverlay.totalsSub,
           형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
-          신살: {
-            good: shinsalWithDae.good,
-            bad: shinsalWithDae.bad,
-          },
+          신살: filterShinsalByScope(shinsalWithDae, "대운"),
           납음오행: daeNabeum
             ? {
                 gz: daa.gz,
@@ -1698,10 +1692,7 @@ if (seYears.length > 0) {
         ),
         십신강약: overlay.totalsSub,
         형충회합: filterHarmonyTagsByScope(relWithSe, "세운"),
-        신살: {
-          good: shinsalWithSe.good,
-          bad: shinsalWithSe.bad,
-        },
+        신살: filterShinsalByScope(shinsalWithSe, "세운"),
         납음오행: seNabeum
           ? {
               gz: normalizeGZ(seGZ || ""),
@@ -1811,10 +1802,7 @@ if (wolMonths.length > 0) {
           ),
           십신강약: daeOverlay.totalsSub,
           형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
-          신살: {
-            good: shinsalWithDae.good,
-            bad: shinsalWithDae.bad,
-          },
+          신살: filterShinsalByScope(shinsalWithDae, "대운"),
           납음오행: daeNabeum
             ? {
                 gz: daa.gz,
@@ -1899,10 +1887,7 @@ if (wolMonths.length > 0) {
           ),
           십신강약: seOverlay.totalsSub,
           형충회합: filterHarmonyTagsByScope(relWithSeTop, "세운"),
-          신살: {
-            good: shinsalWithSeTop.good,
-            bad: shinsalWithSeTop.bad,
-          },
+          신살: filterShinsalByScope(shinsalWithSeTop, "세운"),
           납음오행: seNabeum
             ? {
                 gz: se,
@@ -1988,10 +1973,7 @@ if (wolMonths.length > 0) {
         ),
         십신강약: overlay.totalsSub,
         형충회합: filterHarmonyTagsByScope(relWithWol, "월운"),
-        신살: {
-          good: shinsalWithWol.good,
-          bad: shinsalWithWol.bad,
-        },
+        신살: filterShinsalByScope(shinsalWithWol, "월운"),
         납음오행: wolNabeum
           ? {
               gz: normalizeGZ(wolGZ || ""),
