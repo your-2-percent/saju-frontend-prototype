@@ -241,7 +241,7 @@ export default function DaewoonList({
                 {age}
               </div>
 
-              <div className="p-2 flex flex-col items-center gap-1">
+              <div className="p-2 flex flex-col items-center gap-0.5">
                 {/* 십신(천간) */}
                 {showSipSin && (
                   <div className="text-[10px] text-neutral-500 dark:text-neutral-400 text-nowrap">
@@ -284,7 +284,7 @@ export default function DaewoonList({
 
                 {/* 운성/신살 */}
                 {(showSibiUnseong || showSibiSinsal) && (
-                  <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1 text-center space-y-0.5 text-nowrap">
+                  <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1 text-center space-y-0.5 text-nowrap">
                     {showSibiUnseong && <div>{unseong}</div>}
                     {showSibiSinsal && <div>{shinsal}</div>}
                   </div>
