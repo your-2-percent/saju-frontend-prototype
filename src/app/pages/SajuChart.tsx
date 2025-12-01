@@ -185,23 +185,46 @@ export default function SajuChart({ data, hourTable }: Props) {
   function makeParsed(d: MyeongSik, useDSTFlag: boolean): Parsed {
     const unknown = !d.birthTime || d.birthTime === "모름";
 
+    // 1) 양력으로 통일
     let y = Number(d.birthDay!.slice(0, 4));
     let mo = Number(d.birthDay!.slice(4, 6));
     let da = Number(d.birthDay!.slice(6, 8));
     if (d.calendarType === "lunar") {
       const solar = lunarToSolarStrict(y, mo, da);
-      y = solar.getFullYear(); mo = solar.getMonth() + 1; da = solar.getDate();
+      y = solar.getFullYear();
+      mo = solar.getMonth() + 1;
+      da = solar.getDate();
     }
 
+    // 2) 기본 출생 시각 (모름이면 04:30 기준)
     const hh = unknown ? 4 : Number(d.birthTime!.slice(0, 2));
     const mi = unknown ? 30 : Number(d.birthTime!.slice(2, 4));
     const rawBirth = new Date(y, mo - 1, da, hh, mi, 0, 0);
 
-    const lonVal = !d.birthPlace || d.birthPlace.lon === 0 ? 127.5 : d.birthPlace.lon;
-    const corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
-    const corrected = useDSTFlag ? new Date(corrected0.getTime() - 60 * 60 * 1000) : corrected0;
+    // 3) 출생지 판단
+    const isUnknownPlace =
+      !d.birthPlace || d.birthPlace.name === "모름" || !d.birthPlace.lon;
 
-    const hourRule: DayBoundaryRule = (d.mingSikType ?? "조자시/야자시") as DayBoundaryRule;
+    const lonVal = isUnknownPlace ? 127.5 : d.birthPlace!.lon!;
+
+    // 🔥 4) 보정 로직
+    //    - 출생지 "모름"이면: rawBirth 기준에서 정확히 -30분만 깎기
+    //    - 출생지 있는 경우: 기존 getCorrectedDate 사용
+    let corrected0: Date;
+    if (isUnknownPlace) {
+      corrected0 = new Date(rawBirth.getTime() - 30 * 60 * 1000); // ← 여기서 -30분 고정
+    } else {
+      corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
+    }
+
+    // 5) 썸머타임 토글(필요할 때만 -1시간 추가로 깎기)
+    const corrected = useDSTFlag
+      ? new Date(corrected0.getTime() - 60 * 60 * 1000)
+      : corrected0;
+
+    // 6) 간지 계산
+    const hourRule: DayBoundaryRule =
+      (d.mingSikType ?? "조자시/야자시") as DayBoundaryRule;
 
     const yGZ = getYearGanZhi(corrected, lonVal);
     const mGZ = getMonthGanZhi(corrected, lonVal);
