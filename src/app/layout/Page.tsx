@@ -222,13 +222,6 @@ export default function Page() {
         </>
       )}
 
-      {/* 빈 상태 안내 */}
-      {!hasCurrent && (
-        <div className="flex items-center justify-center py-24 text-neutral-500">
-          등록된 명식이 없습니다. 상단의 “+” 버튼으로 새 명식을 추가하세요.
-        </div>
-      )}
-
       {/* 궁합 뷰어 */}
       {showCouple && (
         <div className="pt-18 pb-4">
