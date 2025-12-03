@@ -153,7 +153,7 @@ export default function BirthPlacePickerBridge({
       const items = getItems(s);
       if (items.length === 0) return;
       e.preventDefault();
-      focusItem(s, 0);
+      //focusItem(s, 0);
     };
     searchBox?.addEventListener("keydown", searchBoxKeydown);
 
@@ -231,7 +231,7 @@ export default function BirthPlacePickerBridge({
         if (!s) return;
         const items = getItems(s);
         if (items.length === 0) return;
-        focusItem(s, 0);
+        //focusItem(s, 0);
       });
       mo.observe(suggestions, { childList: true, subtree: false });
     }

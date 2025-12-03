@@ -171,10 +171,10 @@ export default function Page() {
         <>
           <div
             id="wizard-dim"
-            className="bg-black opacity-80 absolute inset-0 w-full h-full z-50"
+            className="bg-black opacity-80 fixed inset-0 w-full min-h-full z-99"
           />
-          <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-50">
-            <div className="py-6">
+          <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-100">
+            <div className="py-6 pb-16 overflow-y-auto min-h-[100dvh]">
               <InputWizard
                 onSave={(m) => {
                   setCurrentId(m.id);
