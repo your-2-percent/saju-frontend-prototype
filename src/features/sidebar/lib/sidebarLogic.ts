@@ -1,304 +1,241 @@
 // features/sidebar/lib/sidebarLogic.ts
-import { useEffect, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useRef,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import type { DropResult } from "@hello-pangea/dnd";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { confirmToast } from "@/shared/ui/feedback/ConfirmToast";
-import { type DropResult } from "@hello-pangea/dnd";
 import {
   UNASSIGNED_LABEL,
-  FOLDER_PRESETS,
-  LS_FOLDERS,
-  LS_FOLDER_ORDER,
   LS_FOLDER_FAVS,
-  LS_DISABLED_PRESETS,
-  displayFolderLabel,
+  getEffectiveFolders,
+  loadFolderOrder,
+  saveFolderOrder,
+  reconcileFolderOrder,
+  FOLDER_EVENT,
+  addCustomFolder,
+  removeCustomFolder,
+  disablePresetFolder,
+  FOLDER_PRESETS,
 } from "@/features/sidebar/model/folderModel";
-import { useLocalStorageState } from "@/shared/lib/hooks/useLocalStorageState";
 
-function arrayMove<T>(arr: T[], from: number, to: number) {
-  const a = arr.slice();
-  const [m] = a.splice(from, 1);
-  a.splice(to, 0, m);
-  return a;
-}
+type BoolMap = Record<string, boolean>;
+type FolderFavMap = Record<string, boolean>;
 
-const LIST_PREFIX = "list:";
-const DROPPABLE_UNASSIGNED = "list:__unassigned__";
-// 아이템 순서 전용 키
-const LS_ORDERMAP = "sidebar.orderMap.v1";
+type UseSidebarLogicResult = {
+  folderFavMap: FolderFavMap;
+  setFolderFavMap: Dispatch<SetStateAction<FolderFavMap>>;
+  folderOpenMap: BoolMap;
+  setFolderOpenMap: Dispatch<SetStateAction<BoolMap>>;
+  memoOpenMap: BoolMap;
+  setMemoOpenMap: Dispatch<SetStateAction<BoolMap>>;
+  newFolderName: string;
+  setNewFolderName: Dispatch<SetStateAction<string>>;
+  orderedFolders: string[];
+  grouped: Record<string, MyeongSik[]>;
+  unassignedItems: MyeongSik[];
+  handleDragEnd: (r: DropResult) => void; // 🔹 FOLDER DnD 전용
+  createFolder: (name: string) => void;
+  deleteFolder: (name: string) => void;
+  UNASSIGNED_LABEL: string;
+};
 
-type OrderMap = Record<string, string[]>;
-
-function toListId(folder?: string): string {
-  return folder ? `${LIST_PREFIX}${folder}` : DROPPABLE_UNASSIGNED;
-}
-
+/**
+ * ⚠️ 여기서는 "폴더 메타"만 관리한다.
+ *  - 폴더 순서, 즐겨찾기, 열린 상태, 새 폴더 생성/삭제
+ *
+ * ❌ 아이템 순서는 따로 안 들고, 항상 useMyeongSikStore.list 순서를 그대로 쓴다.
+ *    (폴더 이동은 Sidebar.tsx 에서 update(id, { folder })로만 처리)
+ */
 export function useSidebarLogic(
   list: MyeongSik[],
   update: (id: string, patch: Partial<MyeongSik>) => void
-) {
-  // ===== 로컬스토리지 상태들 (폴더 관련)
-  const [customFolders, setCustomFolders] =
-    useLocalStorageState<string[]>(LS_FOLDERS, []);
-  const [folderFavMap, setFolderFavMap] =
-    useLocalStorageState<Record<string, boolean>>(LS_FOLDER_FAVS, {});
-  const [folderOrder, setFolderOrder] =
-    useLocalStorageState<string[]>(LS_FOLDER_ORDER, []);
-  const [disabledPresets, setDisabledPresets] =
-    useLocalStorageState<string[]>(LS_DISABLED_PRESETS, []);
+): UseSidebarLogicResult {
+  /* ---------- 즐겨찾기 ---------- */
+  const [folderFavMap, setFolderFavMap] = useState<FolderFavMap>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(LS_FOLDER_FAVS);
+      return raw ? (JSON.parse(raw) as FolderFavMap) : {};
+    } catch {
+      return {};
+    }
+  });
 
-  // 임시 UI 상태
-  const [folderOpenMap, setFolderOpenMap] =
-    useLocalStorageState<Record<string, boolean>>("ms_folder_open", {});
-  const [memoOpenMap, setMemoOpenMap] =
-    useLocalStorageState<Record<string, boolean>>("ms_memo_open", {});
-  const [newFolderName, setNewFolderName] =
-    useLocalStorageState<string>("ms_new_folder_tmp", "");
-
-  // Confirm 쓰로틀
-  const lastConfirmAtRef = useRef(0);
-  function confirmThrottled(
-    message: string,
-    onOk: () => void,
-    onCancel?: () => void
-  ) {
-    const now = Date.now();
-    if (now - lastConfirmAtRef.current < 450) return;
-    lastConfirmAtRef.current = now;
-    confirmToast(message, {
-      onConfirm: onOk,
-      onCancel,
-      duration: Number.POSITIVE_INFINITY,
-    });
-  }
-
-  // ===== 폴더 레지스트리(등록된 폴더만): 숨김 제외
-  const presetsEffective = useMemo(
-    () => FOLDER_PRESETS.filter((f) => !disabledPresets.includes(f)),
-    [disabledPresets]
-  );
-
-  // 폴더 목록(UNASSIGNED 제외)
-  const allFoldersBase = useMemo(
-    () => [...presetsEffective, ...customFolders],
-    [presetsEffective, customFolders]
-  );
-
-  // ===== 폴더 순서 정합성 유지
   useEffect(() => {
-    setFolderOrder((prev) => {
-      let changed = false;
-      let next = [...prev];
+    if (typeof window === "undefined") return;
+    try {
+      localStorage.setItem(LS_FOLDER_FAVS, JSON.stringify(folderFavMap));
+    } catch {
+      // ignore
+    }
+  }, [folderFavMap]);
 
-      // 1) 기존 폴더 중 유효하지 않은 것 제거
-      const filtered = next.filter((f) => allFoldersBase.includes(f));
-      if (filtered.length !== next.length) {
-        next = filtered;
-        changed = true;
+  /* ---------- 폴더 열림/닫힘, 메모 열림/닫힘 ---------- */
+  const [folderOpenMap, setFolderOpenMap] = useState<BoolMap>({});
+  const [memoOpenMap, setMemoOpenMap] = useState<BoolMap>({});
+
+  /* ---------- 새 폴더 이름 인풋 ---------- */
+  const [newFolderName, setNewFolderName] = useState<string>("");
+
+  /* ---------- 실제 표시 폴더 목록 (FolderField와 동일 소스 사용) ---------- */
+  const [orderedFolders, setOrderedFolders] = useState<string[]>(() => {
+    const effective = getEffectiveFolders();      // 프리셋 숨김 + 커스텀 모두 반영된 목록
+    const saved = loadFolderOrder();              // 저장된 순서
+    return saved.length ? reconcileFolderOrder(effective, saved) : effective;
+  });
+
+  const selfOrderingRef = useRef(false);
+
+  // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
+    // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handler = () => {
+      // ⬇ 우리가 방금 DnD로 saveFolderOrder를 호출해서 생긴 이벤트면 무시
+      if (selfOrderingRef.current) {
+        selfOrderingRef.current = false;
+        return;
       }
 
-      // 2) 새 폴더가 등장하면 "뒤에만" 추가 (순서 보존)
-      for (const f of allFoldersBase) {
-        if (!next.includes(f)) {
-          next.push(f);
-          changed = true;
-        }
-      }
+      const effective = getEffectiveFolders();
+      const saved = loadFolderOrder();
+      const next = saved.length
+        ? reconcileFolderOrder(effective, saved)
+        : effective;
 
-      // 순서 자체는 유지
-      return changed ? next : prev;
-    });
-  }, [allFoldersBase, setFolderOrder]);
+      setOrderedFolders(next);
+    };
 
-  // 즐겨/비즐겨
-  const orderedFolders = useMemo(() => {
-    const base = folderOrder.slice();
-    const favs = base.filter((f) => !!folderFavMap[f]);
-    const nonFavs = base.filter((f) => !folderFavMap[f]);
-    return [...favs, ...nonFavs];
-  }, [folderOrder, folderFavMap]);
+    window.addEventListener(FOLDER_EVENT, handler);
+    return () => window.removeEventListener(FOLDER_EVENT, handler);
+  }, []);
 
-  // 기본 열림
+
+  /* ---------- 기본 열림 설정 ---------- */
   useEffect(() => {
     setFolderOpenMap((prev) => {
-      const next = { ...prev };
+      const next: BoolMap = { ...prev };
       for (const f of orderedFolders) {
         if (next[f] === undefined) next[f] = true;
       }
       return next;
     });
-  }, [orderedFolders, setFolderOpenMap]);
+  }, [orderedFolders]);
 
-  // ===== 레거시 폴더 정리 (★ 유령 폴더는 건드리지 않음!)
-  useEffect(() => {
-    // 옛날 값 "미분류"만 undefined로 정리
-    const legacy = list.filter((m) => m.folder === "미분류");
-    if (!legacy.length) return;
-
-    legacy.forEach((m) => {
-      update(m.id, { folder: undefined });
-    });
-  }, [list, update]);
-
-  // ===== orderMap (아이템 순서) - 로컬스토리지 스냅샷
-  const orderMapRaw =
-    typeof window === "undefined" ? "" : localStorage.getItem(LS_ORDERMAP) ?? "";
-
-  const orderMap: OrderMap = useMemo(() => {
-    try {
-      return orderMapRaw ? (JSON.parse(orderMapRaw) as OrderMap) : {};
-    } catch {
-      console.log("[Sidebar] Failed to parse orderMap from localStorage.");
-      return {};
-    }
-  }, [orderMapRaw]);
-
-  // ===== 그룹/바깥 리스트 (orderMap + 즐겨찾기 반영)
+  /* ---------- 그룹핑: ★ 아이템 순서는 list 순서를 그대로 사용 ★ ---------- */
   const { grouped, unassignedItems } = useMemo(() => {
-    // 원본 분류
     const g: Record<string, MyeongSik[]> = {};
-    for (const f of orderedFolders) g[f] = [];
-    const outside: MyeongSik[] = [];
+    orderedFolders.forEach((f) => {
+      g[f] = [];
+    });
 
-    for (const it of list) {
-      const f = it.folder;
-      if (!f) {
-        outside.push(it);
-      } else if (g[f]) {
-        g[f].push(it);
+    const unassigned: MyeongSik[] = [];
+    const assignedIds = new Set<string>(); // 🔹 같은 id 두 번 안 들어가게 방지
+
+    for (const m of list) {
+      if (!m.id || assignedIds.has(m.id)) continue; // 이미 들어간 id면 스킵
+
+      const f = m.folder;
+      if (f && orderedFolders.includes(f)) {
+        g[f].push(m); // list 순서대로
       } else {
-        // 등록되지 않은 폴더는 일단 바깥으로 보이게만 처리
-        outside.push(it);
-      }
-    }
-
-    // 지역 함수: orderMap 순서 → 즐겨찾기 우선
-    const applyOrder = (arr: MyeongSik[], listId: string): MyeongSik[] => {
-      const ord = orderMap[listId] ?? [];
-      const byId = new Map(arr.map((it) => [it.id, it]));
-      const seq: MyeongSik[] = [];
-
-      // 1) orderMap 순서대로
-      for (const id of ord) {
-        const it = byId.get(id);
-        if (it) {
-          seq.push(it);
-          byId.delete(id);
-        }
-      }
-      // 2) orderMap에 없던 새 항목은 뒤에
-      for (const it of byId.values()) seq.push(it);
-
-      // 3) 즐겨찾기 우선(상대 순서 보존)
-      const favs = seq.filter((x) => !!x.favorite);
-      const rest = seq.filter((x) => !x.favorite);
-      return [...favs, ...rest];
-    };
-
-    const outsideOrdered = applyOrder(outside, DROPPABLE_UNASSIGNED);
-    const outGrouped: Record<string, MyeongSik[]> = {};
-    for (const f of orderedFolders) {
-      outGrouped[f] = applyOrder(g[f], toListId(f));
-    }
-
-    return { grouped: outGrouped, unassignedItems: outsideOrdered };
-  }, [list, orderedFolders, orderMap]);
-
-  // ===== 드래그 (여기서는 폴더만 처리; ITEM은 Sidebar에서 처리)
-  function handleDragEnd(result: DropResult) {
-    const { destination, draggableId, type, source } = result;
-    if (!destination) return;
-
-    if (type === "FOLDER") {
-      const name = draggableId.replace(/^folder-/, "");
-      if (source.index === destination.index) return;
-
-      const favs = folderOrder.filter((f) => !!folderFavMap[f]);
-      const nonFavs = folderOrder.filter((f) => !folderFavMap[f]);
-      const isFav = !!folderFavMap[name];
-
-      if (isFav) {
-        const from = favs.indexOf(name);
-        if (from === -1) return;
-        const to = Math.min(favs.length - 1, destination.index);
-        const nextFavs = arrayMove(favs, from, to);
-        setFolderOrder([...nextFavs, ...nonFavs]);
-      } else {
-        const from = nonFavs.indexOf(name);
-        if (from === -1) return;
-        const to = Math.min(
-          nonFavs.length - 1,
-          destination.index - favs.length
-        );
-        const nextNonFavs = arrayMove(nonFavs, from, to);
-        setFolderOrder([...favs, ...nextNonFavs]);
+        unassigned.push(m);
       }
 
-      // 폴더 순서 변경 브로드캐스트 (FolderField 동기화용)
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new Event("myeoun:folder-updated"));
+      assignedIds.add(m.id);
+    }
+
+    return { grouped: g, unassignedItems: unassigned };
+  }, [list, orderedFolders]);
+
+  /* ---------- 폴더 DnD (type === "FOLDER") ---------- */
+      /* ---------- 폴더 DnD (type === "FOLDER") ---------- */
+    const handleDragEnd = useCallback(
+    (r: DropResult) => {
+      const { source, destination, type } = r;
+      if (!destination) return;
+      if (type !== "FOLDER") return;
+
+      const srcIdx = source.index;
+      const dstIdx = destination.index;
+      if (srcIdx === dstIdx) return;
+
+      setOrderedFolders((current) => {
+        if (!current.length) return current;
+
+        const next = [...current];
+        const [moved] = next.splice(srcIdx, 1);
+        next.splice(dstIdx, 0, moved);
+
+        // ⬇ 이 변경은 우리 쪽에서 트리거했다는 표시
+        selfOrderingRef.current = true;
+        saveFolderOrder(next); // 여기서 FOLDER_EVENT 발생
+
+        return next;
+      });
+    },
+    []
+  );
+
+  /* ---------- 새 폴더 생성 ---------- */
+    const createFolder = (name: string) => {
+    const n = name.trim();
+    if (!n || n === UNASSIGNED_LABEL) return;
+
+    // 전역 커스텀 폴더 추가 (localStorage + FOLDER_EVENT)
+    addCustomFolder(n);
+
+    // 현재 순서에 새 폴더를 붙이고 순서도 저장
+    setOrderedFolders((prev) => {
+      if (prev.includes(n)) return prev;
+      const next = [...prev, n];
+      saveFolderOrder(next);
+      return next;
+    });
+  };
+
+
+  /* ---------- 폴더 삭제 (소속 항목은 폴더 미지정으로) ---------- */
+    const deleteFolder = (name: string) => {
+    // 1) 이 폴더에 속한 명식들 → 폴더 미지정으로
+    list.forEach((m) => {
+      if (m.folder === name) {
+        update(m.id, { folder: undefined });
       }
+    });
 
-      return;
-    }
+    // 2) 즐겨찾기 맵에서 제거
+    setFolderFavMap((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
 
-    // ITEM 이동은 Sidebar에서 처리
-  }
+    // 3) 폴더 순서에서 제거 + 저장
+    setOrderedFolders((prev) => {
+      const next = prev.filter((f) => f !== name);
+      saveFolderOrder(next);
+      return next;
+    });
 
-  // ===== 폴더 생성/삭제
-  function createFolder(name: string) {
-    const base = name.trim();
-    if (!base) return;
-    const exists = new Set([...allFoldersBase, ...customFolders]);
-    let unique = base;
-    let i = 2;
-    while (exists.has(unique)) unique = `${base} ${i++}`;
-
-    setCustomFolders((prev) => [...prev, unique]);
-    setFolderOpenMap((s) => ({ ...s, [unique]: true }));
-    setNewFolderName("");
-
-    // 순서 배열에도 맨 뒤에 추가
-    setFolderOrder((prev) =>
-      prev.includes(unique) ? prev : [...prev, unique]
-    );
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("myeoun:folder-updated"));
-    }
-  }
-
-  function deleteFolder(name: string) {
-    // 1) 해당 폴더의 항목들 → 바깥(=undefined)
-    const needMove = list.filter((it) => it.folder === name);
-    needMove.forEach((it) => update(it.id, { folder: undefined }));
-
-    // 2) 프리셋이면 숨김, 커스텀은 제거
+    // 4) 실제 폴더 정의에서 제거
+    //    - 프리셋이면 disablePresetFolder (숨김)
+    //    - 커스텀이면 removeCustomFolder
     if (FOLDER_PRESETS.includes(name)) {
-      setDisabledPresets((prev) => Array.from(new Set([...prev, name])));
+      disablePresetFolder(name);
     } else {
-      setCustomFolders((prev) => prev.filter((n) => n !== name));
+      removeCustomFolder(name);
     }
-
-    // 3) 상태 정리
-    setFolderOpenMap((s) => {
-      const n = { ...s };
-      delete n[name];
-      return n;
-    });
-    setFolderFavMap((s) => {
-      const n = { ...s };
-      delete n[name];
-      return n;
-    });
-    setFolderOrder((prev) => prev.filter((n) => n !== name));
-
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("myeoun:folder-updated"));
-    }
-  }
+  };
 
   return {
-    // states
     folderFavMap,
     setFolderFavMap,
     folderOpenMap,
@@ -310,16 +247,9 @@ export function useSidebarLogic(
     orderedFolders,
     grouped,
     unassignedItems,
-
-    // actions
-    confirmThrottled,
     handleDragEnd,
     createFolder,
     deleteFolder,
-
-    // helpers
-    displayFolderLabel,
     UNASSIGNED_LABEL,
-    DROPPABLE_UNASSIGNED,
   };
 }
