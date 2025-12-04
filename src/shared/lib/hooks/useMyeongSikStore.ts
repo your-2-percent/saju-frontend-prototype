@@ -51,7 +51,10 @@ export const useMyeongSikStore = create<MyeongSikStore>()(
           ),
         }),
 
-      reorder: (newList) => set({ list: newList }),
+      reorder: (newList) =>
+        set({
+          list: newList,
+        }),
     }),
     {
       name: "myeongsik-list",

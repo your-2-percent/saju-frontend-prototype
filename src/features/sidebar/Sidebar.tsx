@@ -13,7 +13,13 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { useMemo, useState, type CSSProperties } from "react";
+import {
+  useMemo,
+  useState,
+  useRef,
+  useEffect,
+  type CSSProperties,
+} from "react";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
@@ -24,7 +30,6 @@ import {
 } from "@/features/sidebar/lib/sidebarUtils";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 import { formatLocalHM } from "@/shared/utils";
-import { isDST } from "@/shared/lib/core/timeCorrection";
 import type { DayBoundaryRule } from "@/shared/type";
 
 type MemoOpenMap = Record<string, boolean>;
@@ -63,7 +68,7 @@ export default function Sidebar({
   onEdit,
   onDeleteView,
 }: SidebarProps) {
-  const { list, remove, update } = useMyeongSikStore();
+  const { list, remove, update, reorder } = useMyeongSikStore();
 
   const {
     folderFavMap,
@@ -166,15 +171,24 @@ export default function Sidebar({
     };
   }, [search, searchMode, isFiltering, unassignedItems, grouped, orderedFolders]);
 
-  /* 전역 드래그 여부(모바일 스크롤 UX 보조) */
-  const [isDraggingAny, setIsDraggingAny] = useState(false);
+  // 🔹 스크롤 컨테이너 ref + 이전 스크롤 위치 저장용 ref
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const pendingScrollTopRef = useRef<number | null>(null);
 
-  const foldersToRender = orderedFolders;
+  // list / 폴더 구조가 바뀐 다음에 스크롤 복원
+  useEffect(() => {
+    if (pendingScrollTopRef.current == null) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = pendingScrollTopRef.current;
+    pendingScrollTopRef.current = null;
+  }, [list, orderedFolders]);
 
   /* 드래그 아이템 스타일 */
-  const getDragStyle = (base: CSSProperties | undefined): CSSProperties => {
-    return base ?? {};
-  };
+  const getDragStyle = (base?: CSSProperties): CSSProperties => ({
+    ...base,
+    transition: base?.transform ? 'transform 0.15s ease' : 'none',
+  });
 
   /* 개별 카드(아이템) 렌더 — li 전체 핸들 */
   const renderCard = (m: MyeongSik, index: number) => {
@@ -186,16 +200,7 @@ export default function Sidebar({
     const genderLabel =
       m.gender === "남" ? "남자" : m.gender === "여" ? "여자" : m.gender;
 
-    let correctedDate = new Date(m.corrected);
-    if (
-      isDST(
-        correctedDate.getFullYear(),
-        correctedDate.getMonth() + 1,
-        correctedDate.getDate()
-      )
-    ) {
-      correctedDate = new Date(correctedDate.getTime() - 60 * 60 * 1000);
-    }
+    const correctedDate = new Date(m.corrected);
 
     const isUnknownTime = !m.birthTime || m.birthTime === "모름";
 
@@ -422,31 +427,72 @@ export default function Sidebar({
     );
   };
 
-  /* 🔹 드롭 처리: FOLDER / ITEM 분리 */
-  const handleDrop = (r: DropResult) => {
-    const { type, destination, source, draggableId } = r;
+  /* 🔹 드롭 처리: FOLDER / ITEM 분리 + 스크롤 위치 저장 */
+    const handleDrop = (r: DropResult) => {
+    const { type, source, destination, draggableId } = r;
     if (!destination) return;
     if (isFiltering) return;
 
-    // 1) 폴더 DnD → 훅에 위임
+    // 현재 스크롤 위치 저장 → list / 폴더 구조 갱신 후 복원
+    const container = scrollRef.current;
+    if (container) {
+      pendingScrollTopRef.current = container.scrollTop;
+    }
+
+    // 📌 폴더 이동 (폴더 DnD)
     if (type === "FOLDER") {
       handleDragEnd(r);
-      emitFolderEvent(); // 폴더 순서 변경 알림 (FolderField용)
+      // saveFolderOrder 안에서 FOLDER_EVENT를 쏘지만,
+      // 기존 emitFolderEvent 도 남겨놔도 무해함 (중복 이벤트)
+      //emitFolderEvent();
       return;
     }
 
-    // 2) ITEM DnD → 여기서 직접 folder 필드만 수정
+    // 📌 ITEM 이동
     if (type === "ITEM") {
-      const itemId = draggableId.replace(/^item:/, "");
+      const id = draggableId.replace(/^item:/, "");
+      if (!id) return;
+
       const srcFolder = decodeListIdToFolder(source.droppableId);
       const dstFolder = decodeListIdToFolder(destination.droppableId);
 
-      // 같은 폴더 안에서 위치만 바꾸는 건 지금은 별도 저장 안 함
-      if (srcFolder === dstFolder) return;
+      const srcKey = srcFolder ?? "__unassigned__";
+      const dstKey = dstFolder ?? "__unassigned__";
 
-      // 폴더 변경만 저장 (Zustand persist 타고 localStorage에도 저장)
-      update(itemId, { folder: dstFolder });
-      return;
+      // 현재 상태 기반으로 그룹 맵 구성
+      const groupMap: Record<string, MyeongSik[]> = {
+        "__unassigned__": [...unassignedItems],
+      };
+      orderedFolders.forEach((f) => {
+        groupMap[f] = [...(grouped[f] || [])];
+      });
+
+      const sourceArr = groupMap[srcKey] ?? [];
+      if (!sourceArr[source.index]) return;
+
+      // source 그룹에서 빼고
+      const [moved] = sourceArr.splice(source.index, 1);
+
+      // 폴더 값 변경
+      const updatedMoved: MyeongSik = {
+        ...moved,
+        folder: dstFolder ?? undefined,
+      };
+
+      // dest 그룹에 끼워넣기
+      const destArr = groupMap[dstKey] ?? [];
+      destArr.splice(destination.index, 0, updatedMoved);
+
+      groupMap[srcKey] = sourceArr;
+      groupMap[dstKey] = destArr;
+
+      // 전역 list 재조립: 미지정 → 폴더 순서대로
+      const nextList: MyeongSik[] = [
+        ...groupMap["__unassigned__"],
+        ...orderedFolders.flatMap((f) => groupMap[f] ?? []),
+      ];
+
+      reorder(nextList);
     }
   };
 
@@ -468,7 +514,7 @@ export default function Sidebar({
                     bg-white dark:bg-neutral-950
                     text-neutral-900 dark:text-white
                     shadow-lg z-99 transition-[left] duration-300
-                    ${isDraggingAny ? "overflow-hidden" : "overflow-auto"}
+                    overflow-hidden
                     ${open ? "left-0" : "left-[-100%]"}`}
       >
         {/* 헤더 */}
@@ -495,14 +541,9 @@ export default function Sidebar({
           </div>
         </div>
 
-        <DragDropContext
-          onDragStart={() => setIsDraggingAny(true)}
-          onDragEnd={(r) => {
-            setIsDraggingAny(false);
-            handleDrop(r);
-          }}
-        >
+        <DragDropContext onDragEnd={handleDrop}>
           <div
+            ref={scrollRef}
             className="p-4 h-[calc(100%-56px)] overflow-y-auto overscroll-contain"
             style={{ touchAction: "pan-y" }}
           >
@@ -535,7 +576,7 @@ export default function Sidebar({
                         ? "간지 검색 (예: 경자·갑신)"
                         : "생년월일 검색 (예: 19961229, 1996-12-29)"
                     }
-                    className="w_full pl-7 pr-8 py-1 h-30 rounded
+                    className="w-full pl-7 pr-8 py-1 h-30 rounded
                                bg-white dark:bg-neutral-900
                                border border-neutral-300 dark:border-neutral-700
                                text-[16px] text-neutral-900 dark:text-neutral-100
@@ -637,7 +678,7 @@ export default function Sidebar({
             >
               {(foldersProv) => (
                 <div ref={foldersProv.innerRef} {...foldersProv.droppableProps}>
-                  {foldersToRender.map((folderName, folderIndex) => {
+                  {orderedFolders.map((folderName, folderIndex) => {
                     const listId = listDroppableId(folderName);
                     const inItemsOrdered = filteredGrouped[folderName] || [];
                     const openF = !!folderOpenMap[folderName];
