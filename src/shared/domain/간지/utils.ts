@@ -39,21 +39,22 @@ export function normalizeBranch(ch: string): Branch | null {
 
 /** 오행 → Tailwind 배경색 */
 export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
+  
   if (settingsV1?.difficultyMode) {
     if (settingsV1?.theme === "light") {
-      return "bg-white border border-gray-300 text-black";
+      return "bg-white border border-gray-300 text-white";
     }
     return "bg-white text-black";
   }
 
   // ✅ 기존 로직
   switch (elem) {
-    case "목": return "bg-green-600";
-    case "화": return "bg-red-600";
-    case "토": return "bg-yellow-500";
-    case "금": return "bg-gray-400";
-    case "수": return "bg-black";
-    default:   return "bg-neutral-700";
+    case "목": return "bg-green-600 text-white";
+    case "화": return "bg-red-600 text-white";
+    case "토": return "bg-yellow-500 text-white";
+    case "금": return "bg-gray-400 text-white";
+    case "수": return "bg-black text-white";
+    default:   return "bg-neutral-700 text-white";
   }
 }
 
