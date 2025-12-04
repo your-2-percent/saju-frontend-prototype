@@ -22,7 +22,6 @@ import {
   formatPlaceDisplay,
   getGanjiString,
 } from "@/features/sidebar/lib/sidebarUtils";
-import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 import { formatLocalHM } from "@/shared/utils";
 import { isDST } from "@/shared/lib/core/timeCorrection";
@@ -31,9 +30,21 @@ import type { DayBoundaryRule } from "@/shared/type";
 type MemoOpenMap = Record<string, boolean>;
 type SearchMode = "name" | "ganji" | "birth";
 
-// ITEM 드롭 영역 ID 규칙
+// 🔹 ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const listDroppableId = (folderName: string) => `list:${folderName}`;
+const decodeListIdToFolder = (droppableId: string): string | undefined => {
+  if (!droppableId.startsWith("list:")) return undefined;
+  const key = droppableId.slice(5);
+  return key === "__unassigned__" ? undefined : key;
+};
+
+// 🔹 폴더 변경 브로드캐스트(FolderField랑 동기화용)
+const FOLDER_EVENT = "myeoun:folder-updated";
+const emitFolderEvent = () => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(FOLDER_EVENT));
+};
 
 type SidebarProps = {
   open: boolean;
@@ -66,11 +77,10 @@ export default function Sidebar({
     orderedFolders,
     grouped, // { [folderName]: MyeongSik[] }
     unassignedItems, // MyeongSik[]
-    handleDragEnd,
+    handleDragEnd, // 🔹 폴더 DnD 전용
     createFolder,
     deleteFolder,
     UNASSIGNED_LABEL,
-    displayFolderLabel,
   } = useSidebarLogic(list, update);
 
   /* --------------------------------
@@ -306,20 +316,15 @@ export default function Sidebar({
                              border border-neutral-300 dark:border-neutral-700
                              text-neutral-900 dark:text-neutral-100
                              focus:outline-none focus:ring-2 focus:ring-amber-500/40"
-                  value={displayFolderLabel(m.folder)}
+                  value={m.folder ?? UNASSIGNED_LABEL}
                   onClick={(e) => e.stopPropagation()}
                   onChange={(e) => {
                     e.stopPropagation();
                     const raw = e.target.value;
-                    const normalized = normalizeFolderValue(raw);
-                    const itemId = m.id;
+                    const normalized =
+                      raw === UNASSIGNED_LABEL ? undefined : raw;
 
-                    // 선택한 값이 아직 폴더 목록에 없으면 새 폴더로 생성
-                    if (normalized && !orderedFolders.includes(normalized)) {
-                      createFolder(normalized);
-                    }
-
-                    update(itemId, { folder: normalized });
+                    update(m.id, { folder: normalized });
                   }}
                 >
                   {[UNASSIGNED_LABEL, ...orderedFolders].map((f) => (
@@ -417,11 +422,32 @@ export default function Sidebar({
     );
   };
 
-  /* 드롭 처리: 폴더/아이템 모두 훅에 위임 */
+  /* 🔹 드롭 처리: FOLDER / ITEM 분리 */
   const handleDrop = (r: DropResult) => {
-    if (!r.destination) return;
-    if (isFiltering) return; // 필터 중에는 드래그 무시
-    handleDragEnd(r);
+    const { type, destination, source, draggableId } = r;
+    if (!destination) return;
+    if (isFiltering) return;
+
+    // 1) 폴더 DnD → 훅에 위임
+    if (type === "FOLDER") {
+      handleDragEnd(r);
+      emitFolderEvent(); // 폴더 순서 변경 알림 (FolderField용)
+      return;
+    }
+
+    // 2) ITEM DnD → 여기서 직접 folder 필드만 수정
+    if (type === "ITEM") {
+      const itemId = draggableId.replace(/^item:/, "");
+      const srcFolder = decodeListIdToFolder(source.droppableId);
+      const dstFolder = decodeListIdToFolder(destination.droppableId);
+
+      // 같은 폴더 안에서 위치만 바꾸는 건 지금은 별도 저장 안 함
+      if (srcFolder === dstFolder) return;
+
+      // 폴더 변경만 저장 (Zustand persist 타고 localStorage에도 저장)
+      update(itemId, { folder: dstFolder });
+      return;
+    }
   };
 
   return (
@@ -446,7 +472,7 @@ export default function Sidebar({
                     ${open ? "left-0" : "left-[-100%]"}`}
       >
         {/* 헤더 */}
-        <div className="flex justify-between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex justify_between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
           <h2 className="text-lg font-bold">명식 리스트</h2>
           <div className="flex items-center gap-2">
             <button
@@ -509,7 +535,7 @@ export default function Sidebar({
                         ? "간지 검색 (예: 경자·갑신)"
                         : "생년월일 검색 (예: 19961229, 1996-12-29)"
                     }
-                    className="w-full pl-7 pr-8 py-1 h-30 rounded
+                    className="w_full pl-7 pr-8 py-1 h-30 rounded
                                bg-white dark:bg-neutral-900
                                border border-neutral-300 dark:border-neutral-700
                                text-[16px] text-neutral-900 dark:text-neutral-100
@@ -562,7 +588,9 @@ export default function Sidebar({
                   e.stopPropagation();
                   const raw = newFolderName.trim();
                   if (!raw) return;
-                  createFolder(raw);
+                  createFolder(raw); // 훅에서 LS_FOLDERS/ORDER 갱신
+                  setNewFolderName("");
+                  emitFolderEvent(); // FolderField 동기화
                 }}
               >
                 생성
@@ -701,6 +729,7 @@ export default function Sidebar({
                                       )
                                     ) {
                                       deleteFolder(folderName);
+                                      emitFolderEvent();
                                     }
                                   }}
                                   className="px-2 py-1 rounded text-xs cursor-pointer

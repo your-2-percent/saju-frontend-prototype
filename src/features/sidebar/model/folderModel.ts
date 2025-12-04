@@ -26,11 +26,9 @@ export function displayFolderLabel(v: string | undefined | null) {
 }
 
 /** 저장용: "폴더 미지정"/"미분류"/빈 값 → undefined */
-export function normalizeFolderValue(
-  v: string | undefined | null
-): string | undefined {
-  if (!v || v === UNASSIGNED_LABEL || v === "미분류") return undefined;
-  return v;
+export function normalizeFolderValue(v: string | undefined | null): string | undefined {
+  if (v === UNASSIGNED_LABEL) return undefined;
+  return v || undefined;
 }
 
 function readStringArray(key: string): string[] {
