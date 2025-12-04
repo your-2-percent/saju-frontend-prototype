@@ -41,10 +41,8 @@ export function normalizeBranch(ch: string): Branch | null {
 export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
   if (settingsV1?.difficultyMode) {
     if (settingsV1?.theme === "light") {
-      // 라이트 모드 → 흰색 바탕 + 회색 테두리
-      return "bg-white border border-gray-300 text-gray-800 text-black";
+      return "bg-white border border-gray-300 text-black";
     }
-    // 다크 모드 → 올화이트
     return "bg-white text-black";
   }
 

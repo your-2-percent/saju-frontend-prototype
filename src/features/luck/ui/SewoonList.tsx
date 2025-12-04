@@ -289,11 +289,11 @@ export default function SewoonList({
                 )}
 
                 <div className={`w-8 h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border ${getElementColor(stem, "stem", settings)}`}>
-                  <span className={`text-[20px] md:text-xl text-white ${stemFont}`}>{stemDisp}</span>
+                  <span className={`text-[20px] md:text-xl ${stemFont}`}>{stemDisp}</span>
                 </div>
 
                 <div className={`w-8 h-8 md:w-10 md:h-10 rounded-sm md:rounded-lg flex items-center justify-center border ${getElementColor(branch, "branch", settings)}`}>
-                  <span className={`text-[20px] md:text-xl text-white ${branchFont}`}>{branchDisp}</span>
+                  <span className={`text-[20px] md:text-xl ${branchFont}`}>{branchDisp}</span>
                 </div>
 
                 {settings.showSipSin && (

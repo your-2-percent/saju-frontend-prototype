@@ -342,11 +342,11 @@ export default function IlwoonCalendar({
 
                 {showSipSin && <div className="text-[10px] text-neutral-500 dark:text-neutral-400">{sipSinStem}</div>}
 
-                <div className={`w-8 h-8 rounded flex items-center justify-center text-base text-white ${getElementColor(stem, "stem", settings)}`}>
+                <div className={`w-8 h-8 rounded flex items-center justify-center text-base ${getElementColor(stem, "stem", settings)}`}>
                   <span className={stemFont}>{stemDisp}</span>
                 </div>
 
-                <div className={`w-8 h-8 rounded flex items-center justify-center text-base text-white ${getElementColor(branch, "branch", settings)}`}>
+                <div className={`w-8 h-8 rounded flex items-center justify-center text-base ${getElementColor(branch, "branch", settings)}`}>
                   <span className={branchFont}>{branchDisp}</span>
                 </div>
 

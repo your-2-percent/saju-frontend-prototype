@@ -690,13 +690,18 @@ function Cell({
   const weight = thinEum && isYin ? "font-thin" : "font-bold";
 
   return (
-    <div className={`w-11 h-11 sm:w-14 sm:h-14 md:w-14 md:h-14 rounded-md ${color} flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}>
-      <span className={`text-[24px] md:text-2xl ${weight} text-white`}>
+    <div
+      className={`w-11 h-11 sm:w-14 sm:h-14 md:w-14 md:h-14 rounded-md ${color}
+                  flex items-center justify-center border border-neutral-200 dark:border-neutral-800`}
+    >
+      {/* ❌ text-white 제거 */}
+      <span className={`text-[24px] md:text-2xl ${weight}`}>
         {display}
       </span>
     </div>
   );
 }
+
 
 function formatBirthDisplay(yyyymmdd?: string, hhmm?: string) {
   if (!yyyymmdd || !/^\d{8}$/.test(yyyymmdd)) return "";

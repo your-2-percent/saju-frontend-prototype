@@ -312,7 +312,7 @@ export default function WolwoonList({
                     settings
                   )}`}
                 >
-                  <span className={`text-base md:text-xl text-white ${stemFont}`}>
+                  <span className={`text-base md:text-xl ${stemFont}`}>
                     {stemDisp}
                   </span>
                 </div>
@@ -325,7 +325,7 @@ export default function WolwoonList({
                     settings
                   )}`}
                 >
-                  <span className={`text-base md:text-xl text-white ${branchFont}`}>
+                  <span className={`text-base md:text-xl ${branchFont}`}>
                     {branchDisp}
                   </span>
                 </div>
