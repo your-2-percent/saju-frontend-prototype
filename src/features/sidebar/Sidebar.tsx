@@ -472,7 +472,7 @@ export default function Sidebar({
                     ${open ? "left-0" : "left-[-100%]"}`}
       >
         {/* 헤더 */}
-        <div className="flex justify_between items-center h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex justify-between items-center w-full h-12 desk:h-16 p-4 border-b border-neutral-200 dark:border-neutral-800">
           <h2 className="text-lg font-bold">명식 리스트</h2>
           <div className="flex items-center gap-2">
             <button
