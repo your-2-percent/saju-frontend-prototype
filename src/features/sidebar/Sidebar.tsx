@@ -1,4 +1,4 @@
-// components/Sidebar.tsx
+// features/sidebar/components/Sidebar.tsx
 import {
   X,
   Plus,
@@ -13,7 +13,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
@@ -29,23 +29,11 @@ import { isDST } from "@/shared/lib/core/timeCorrection";
 import type { DayBoundaryRule } from "@/shared/type";
 
 type MemoOpenMap = Record<string, boolean>;
-type OrderMap = Record<string, string[]>; // droppableId -> itemId[]
 type SearchMode = "name" | "ganji" | "birth";
-
-const LS_ORDER_KEY = "sidebar.orderMap.v1";
-const LS_FOLDER_ORDER_KEY = "sidebar.folderOrder.v1";
-// 마이그레이션 버전 키 (기존 리버스 흔적 제거용)
-const LS_ORDER_VERSION_KEY = "sidebar.orderMap.version";
-const ORDERMAP_VERSION = 3;
 
 // ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const listDroppableId = (folderName: string) => `list:${folderName}`;
-const decodeListIdToFolder = (droppableId: string): string | undefined => {
-  if (!droppableId.startsWith("list:")) return undefined;
-  const key = droppableId.slice(5);
-  return key === "__unassigned__" ? undefined : key;
-};
 
 type SidebarProps = {
   open: boolean;
@@ -78,7 +66,7 @@ export default function Sidebar({
     orderedFolders,
     grouped, // { [folderName]: MyeongSik[] }
     unassignedItems, // MyeongSik[]
-    handleDragEnd: handleFolderDragEnd,
+    handleDragEnd,
     createFolder,
     deleteFolder,
     UNASSIGNED_LABEL,
@@ -146,7 +134,8 @@ export default function Sidebar({
 
     const match = (m: MyeongSik) => {
       if (searchMode === "name") return norm(m.name ?? "").includes(q);
-      if (searchMode === "ganji") return norm(getGanjiString(m) ?? "").includes(q);
+      if (searchMode === "ganji")
+        return norm(getGanjiString(m) ?? "").includes(q);
       return birthText(m).includes(q);
     };
 
@@ -167,204 +156,10 @@ export default function Sidebar({
     };
   }, [search, searchMode, isFiltering, unassignedItems, grouped, orderedFolders]);
 
-  /* --------------------------------
-   * 폴더 렌더 순서 (로컬 유지)
-   * -------------------------------- */
-  const [folderOrder, setFolderOrder] = useState<string[]>([]);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_FOLDER_ORDER_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as string[];
-        if (Array.isArray(parsed)) setFolderOrder(parsed);
-      }
-    } catch {
-      console.log("[Sidebar] Failed to load folderOrder from localStorage");
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_FOLDER_ORDER_KEY, JSON.stringify(folderOrder));
-    } catch {
-      console.log("[Sidebar] Failed to save folderOrder to localStorage");
-    }
-  }, [folderOrder]);
-
-  /* --------------------------------
-   * 리스트별 아이템 렌더 순서 (DroppableId -> itemId[])
-   * -------------------------------- */
-  const [orderMap, setOrderMap] = useState<OrderMap>({});
-
-  // v1 로드
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LS_ORDER_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as OrderMap;
-        if (parsed && typeof parsed === "object") {
-          setOrderMap((prev) => ({ ...parsed, ...prev }));
-        }
-      }
-    } catch {
-      console.log("[Sidebar] Failed to load orderMap from localStorage");
-    }
-  }, []);
-
-  // v2 저장
-  useEffect(() => {
-    try {
-      localStorage.setItem(LS_ORDER_KEY, JSON.stringify(orderMap));
-    } catch {
-      console.log("[Sidebar] Failed to save orderMap to localStorage");
-    }
-  }, [orderMap]);
-
   /* 전역 드래그 여부(모바일 스크롤 UX 보조) */
   const [isDraggingAny, setIsDraggingAny] = useState(false);
 
-  /* 현재 렌더 기준 배열을 orderMap 순서로 정렬 */
-  const orderItems = (droppableId: string, arr: MyeongSik[]) => {
-    const byId = new Map(arr.map((it) => [it.id, it]));
-    const ord = orderMap[droppableId] ?? [];
-    const out: MyeongSik[] = [];
-    for (const id of ord) {
-      const it = byId.get(id);
-      if (it) {
-        out.push(it);
-        byId.delete(id);
-      }
-    }
-    // 누락 보강(새 항목은 "뒤에" 추가: 예전 정책)
-    byId.forEach((it) => out.push(it));
-    return out;
-  };
-
-  /* 원본(필터 X) 기준 현재 보이는 순서 */
-  const getRawDisplayOrder = (droppableId: string): string[] => {
-    const folder = decodeListIdToFolder(droppableId);
-    const baseArr = folder ? grouped[folder] || [] : unassignedItems;
-    return orderItems(droppableId, baseArr).map((it) => it.id);
-  };
-
-  // orderMap을 "원본 배열 순서"로 재구성
-  const rebuildOrderMapFromBase = (): OrderMap => {
-    const next: OrderMap = {};
-    next[DROPPABLE_UNASSIGNED] = unassignedItems.map((it) => it.id);
-    for (const folderName of orderedFolders) {
-      const listId = listDroppableId(folderName);
-      next[listId] = (grouped[folderName] || []).map((it) => it.id);
-    }
-    return next;
-  };
-
-  // 1) 항상 원본 배열 기준으로 누락/삭제 보강
-  useEffect(() => {
-    setOrderMap((prev) => {
-      let changed = false;
-      const next: OrderMap = { ...prev };
-
-      // 바깥(미지정)
-      {
-        const outId = DROPPABLE_UNASSIGNED;
-        const base = unassignedItems.map((it) => it.id);
-        if (!next[outId]) {
-          next[outId] = base;
-          changed = true;
-        } else {
-          const missing = base.filter((id) => !next[outId].includes(id));
-          if (missing.length) {
-            next[outId] = [...next[outId], ...missing]; // 새 항목은 뒤에
-            changed = true;
-          }
-          const gone = next[outId].filter((id) => !base.includes(id));
-          if (gone.length) {
-            next[outId] = next[outId].filter((id) => !gone.includes(id));
-            changed = true;
-          }
-        }
-      }
-
-      // 각 폴더
-      for (const folderName of orderedFolders) {
-        const listId = listDroppableId(folderName);
-        const base = (grouped[folderName] || []).map((it) => it.id);
-        if (!next[listId]) {
-          next[listId] = base;
-          changed = true;
-        } else {
-          const missing = base.filter((id) => !next[listId].includes(id));
-          if (missing.length) {
-            next[listId] = [...next[listId], ...missing]; // 새 항목은 뒤에
-            changed = true;
-          }
-          const gone = next[listId].filter((id) => !base.includes(id));
-          if (gone.length) {
-            next[listId] = next[listId].filter((id) => !gone.includes(id));
-            changed = true;
-          }
-        }
-      }
-
-      return changed ? next : prev;
-    });
-  }, [unassignedItems, grouped, orderedFolders]);
-
-  // 2) 마이그레이션: 과거 리버스 흔적이 있으면 1회 원복
-  useEffect(() => {
-    try {
-      const v = Number(localStorage.getItem(LS_ORDER_VERSION_KEY) || "0");
-      if (v >= ORDERMAP_VERSION) return;
-
-      // 간단한 휴리스틱: orderMap이 비어있지 않으면 원본과 첫/끝 비교해보고 뒤집힌 느낌이면 재구성
-      const current = orderMap;
-      const base = rebuildOrderMapFromBase();
-
-      const checkIds = (idsA: string[], idsB: string[]) =>
-        idsA.length >= 2 &&
-        idsB.length >= 2 &&
-        (idsA[0] === idsB[idsB.length - 1] &&
-          idsA[idsA.length - 1] === idsB[0]);
-
-      let needRebuild = false;
-      // 바깥
-      const a = current[DROPPABLE_UNASSIGNED] || [];
-      const b = base[DROPPABLE_UNASSIGNED] || [];
-      if (checkIds(a, b)) needRebuild = true;
-
-      // 각 폴더
-      if (!needRebuild) {
-        for (const f of orderedFolders) {
-          const id = listDroppableId(f);
-          const ca = current[id] || [];
-          const cb = base[id] || [];
-          if (checkIds(ca, cb)) {
-            needRebuild = true;
-            break;
-          }
-        }
-      }
-
-      if (needRebuild) {
-        const rebuilt = base;
-        setOrderMap(rebuilt);
-      }
-      localStorage.setItem(LS_ORDER_VERSION_KEY, String(ORDERMAP_VERSION));
-    } catch {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderMap, orderedFolders, unassignedItems, grouped]);
-
-  /* 폴더 렌더 순서: 저장된 순서 우선 + 신규 폴더 보강 */
-  const foldersToRender = useMemo(
-    () => [
-      ...folderOrder.filter((f) => orderedFolders.includes(f)),
-      ...orderedFolders.filter((f) => !folderOrder.includes(f)),
-    ],
-    [folderOrder, orderedFolders]
-  );
+  const foldersToRender = orderedFolders;
 
   /* 드래그 아이템 스타일 */
   const getDragStyle = (base: CSSProperties | undefined): CSSProperties => {
@@ -378,7 +173,6 @@ export default function Sidebar({
     const keyId = `item:${m.id}`;
     const memoOpen = !!memoOpenMap[m.id];
 
-    // 성별 라벨 변환: (남) → (남자), (여) → (여자)
     const genderLabel =
       m.gender === "남" ? "남자" : m.gender === "여" ? "여자" : m.gender;
 
@@ -396,8 +190,8 @@ export default function Sidebar({
     const isUnknownTime = !m.birthTime || m.birthTime === "모름";
 
     const rawBirth = String(m.birthDay).trim();
-
     let birthYear = NaN;
+
     if (/^\d{8}$/.test(rawBirth)) {
       const formatted = `${rawBirth.slice(0, 4)}-${rawBirth.slice(
         4,
@@ -520,37 +314,10 @@ export default function Sidebar({
                     const normalized = normalizeFolderValue(raw);
                     const itemId = m.id;
 
-                    const srcListId = m.folder
-                      ? listDroppableId(m.folder)
-                      : DROPPABLE_UNASSIGNED;
-                    const dstListId = normalized
-                      ? listDroppableId(normalized)
-                      : DROPPABLE_UNASSIGNED;
-
+                    // 선택한 값이 아직 폴더 목록에 없으면 새 폴더로 생성
                     if (normalized && !orderedFolders.includes(normalized)) {
                       createFolder(normalized);
                     }
-
-                    // 예전 정책: dst "맨뒤"로
-                    setOrderMap((prev) => {
-                      const next: OrderMap = { ...prev };
-                      const srcDisplay = getRawDisplayOrder(srcListId);
-                      const dstDisplay =
-                        srcListId === dstListId
-                          ? srcDisplay.slice()
-                          : getRawDisplayOrder(dstListId).slice();
-
-                      const si = srcDisplay.indexOf(itemId);
-                      if (si >= 0) srcDisplay.splice(si, 1);
-
-                      const di = dstDisplay.indexOf(itemId);
-                      if (di >= 0) dstDisplay.splice(di, 1);
-                      dstDisplay.push(itemId);
-
-                      next[srcListId] = srcDisplay;
-                      next[dstListId] = dstDisplay;
-                      return next;
-                    });
 
                     update(itemId, { folder: normalized });
                   }}
@@ -625,43 +392,12 @@ export default function Sidebar({
                   삭제
                 </button>
 
-                {/* 즐겨찾기: ON → 맨앞, OFF → 즐겨찾기 구역 뒤 */}
+                {/* 즐겨찾기 */}
                 <button
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     const nextFav = !m.favorite;
-
-                    const listId = m.folder
-                      ? listDroppableId(m.folder)
-                      : DROPPABLE_UNASSIGNED;
-
-                    setOrderMap((prev) => {
-                      const next = { ...prev };
-                      const display = getRawDisplayOrder(listId);
-
-                      // 제거
-                      const curIdx = display.indexOf(m.id);
-                      if (curIdx >= 0) display.splice(curIdx, 1);
-
-                      // 같은 리스트의 다른 즐겨찾기 수
-                      const itemsInList = m.folder
-                        ? grouped[m.folder] || []
-                        : unassignedItems;
-                      const favCount = itemsInList.filter(
-                        (x) => x.id !== m.id && x.favorite
-                      ).length;
-
-                      if (nextFav) {
-                        display.unshift(m.id); // 맨앞
-                      } else {
-                        display.splice(favCount, 0, m.id); // 즐겨찾기 뒤
-                      }
-
-                      next[listId] = display;
-                      return next;
-                    });
-
                     update(m.id, { favorite: nextFav });
                   }}
                   className={`ml-auto p-1 rounded cursor-pointer ${
@@ -681,62 +417,11 @@ export default function Sidebar({
     );
   };
 
-  /* 드롭 처리: 폴더/아이템 모두 처리(원본 순서 기반) */
+  /* 드롭 처리: 폴더/아이템 모두 훅에 위임 */
   const handleDrop = (r: DropResult) => {
-    const { source, destination, draggableId, type } = r;
-    if (!destination) return;
-    if (isFiltering) return; // 필터 중에는 재정렬 금지
-
-    if (type === "FOLDER") {
-      handleFolderDragEnd(r);
-      setFolderOrder((prev) => {
-        const base = prev.length ? [...prev] : [...orderedFolders];
-        const [moved] = base.splice(source.index, 1);
-        base.splice(destination.index, 0, moved);
-        return base;
-      });
-      return;
-    }
-
-    if (type === "ITEM") {
-      const itemId = draggableId.replace(/^item:/, "");
-      const srcListId = source.droppableId;
-      const dstListId = destination.droppableId;
-
-      setOrderMap((prev) => {
-        const next: OrderMap = { ...prev };
-
-        const srcDisplay = getRawDisplayOrder(srcListId);
-        const dstDisplay =
-          srcListId === dstListId
-            ? srcDisplay.slice()
-            : getRawDisplayOrder(dstListId).slice();
-
-        if (srcListId === dstListId) {
-          const [moved] = dstDisplay.splice(source.index, 1);
-          dstDisplay.splice(destination.index, 0, moved);
-          next[srcListId] = dstDisplay;
-          return next;
-        }
-
-        const si = srcDisplay.indexOf(itemId);
-        if (si >= 0) srcDisplay.splice(si, 1);
-
-        const di = dstDisplay.indexOf(itemId);
-        if (di >= 0) dstDisplay.splice(di, 1);
-        dstDisplay.splice(destination.index, 0, itemId);
-
-        next[srcListId] = srcDisplay;
-        next[dstListId] = dstDisplay;
-        return next;
-      });
-
-      const srcFolder = decodeListIdToFolder(srcListId);
-      const dstFolder = decodeListIdToFolder(dstListId);
-      if (srcFolder !== dstFolder) {
-        update(itemId, { folder: dstFolder });
-      }
-    }
+    if (!r.destination) return;
+    if (isFiltering) return; // 필터 중에는 드래그 무시
+    handleDragEnd(r);
   };
 
   return (
@@ -795,7 +480,7 @@ export default function Sidebar({
             className="p-4 h-[calc(100%-56px)] overflow-y-auto overscroll-contain"
             style={{ touchAction: "pan-y" }}
           >
-            {/* 검색 바 - 헤더처럼 고정되도록 sticky 처리 */}
+            {/* 검색 바 */}
             <div className="mb-3 sticky top-[-16px] z-10 pb-2 pt-2 bg-white dark:bg-neutral-950 z-50">
               <div className="flex items-center gap-2">
                 <select
@@ -868,13 +553,17 @@ export default function Sidebar({
               />
               <button
                 type="button"
-                onClick={() => createFolder(newFolderName)}
                 className="px-3 rounded h-30 text-sm cursor-pointer
                            bg-neutral-100 hover:bg-neutral-200
                            dark:bg-neutral-800 dark:hover:bg-neutral-700
                            text-neutral-900 dark:text-neutral-100
                            border border-neutral-200 dark:border-neutral-700"
-                onClickCapture={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const raw = newFolderName.trim();
+                  if (!raw) return;
+                  createFolder(raw);
+                }}
               >
                 생성
               </button>
@@ -894,10 +583,7 @@ export default function Sidebar({
               isDropDisabled={isFiltering}
             >
               {(prov) => {
-                const outItems = orderItems(
-                  DROPPABLE_UNASSIGNED,
-                  filteredUnassigned
-                );
+                const outItems = filteredUnassigned;
                 return (
                   <div
                     ref={prov.innerRef}
@@ -925,10 +611,7 @@ export default function Sidebar({
                 <div ref={foldersProv.innerRef} {...foldersProv.droppableProps}>
                   {foldersToRender.map((folderName, folderIndex) => {
                     const listId = listDroppableId(folderName);
-                    const inItemsOrdered = orderItems(
-                      listId,
-                      filteredGrouped[folderName] || []
-                    );
+                    const inItemsOrdered = filteredGrouped[folderName] || [];
                     const openF = !!folderOpenMap[folderName];
                     const isFavFolder = !!folderFavMap[folderName];
 
