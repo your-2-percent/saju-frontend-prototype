@@ -20,6 +20,7 @@ import {
   useEffect,
   type CSSProperties,
 } from "react";
+import { isDST } from "@/shared/lib/core/timeCorrection";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
@@ -59,6 +60,54 @@ type SidebarProps = {
   onEdit: (m: MyeongSik) => void;
   onDeleteView: () => void;
 };
+
+function getSidebarGanjiWithDST(m: MyeongSik): string {
+  // 기본값: 원래 저장돼 있던 간지 문자열
+  const fallback = getGanjiString(m);
+
+  // 생일 파싱 (YYYYMMDD 기준)
+  const raw = String(m.birthDay ?? "").trim();
+  if (!/^\d{8}$/.test(raw)) return fallback;
+
+  const y = Number(raw.slice(0, 4));
+  const mo = Number(raw.slice(4, 6));
+  const da = Number(raw.slice(6, 8));
+
+  // DST 아니면 그냥 원래 간지 사용
+  if (!isDST(y, mo, da)) return fallback;
+
+  // 출생시 모름이면 패스
+  if (!m.birthTime || m.birthTime === "모름") return fallback;
+
+  // 🔹 1시간 빼서 HHmm 만들기
+  const hh = Number(m.birthTime.slice(0, 2));
+  const mm = m.birthTime.slice(2, 4);
+  const newH = hh - 1 < 0 ? 23 : hh - 1;
+  const nextBirthTime = String(newH).padStart(2, "0") + mm;
+
+  // 🔹 보정시 기반으로도 -1h 한 번 더 만들어줌 (간지 계산 전용)
+  const baseCorrected =
+    m.corrected instanceof Date
+      ? m.corrected
+      : new Date(m.corrected as unknown as string | number | Date);
+
+  if (Number.isNaN(baseCorrected.getTime())) return fallback;
+
+  const correctedForGanji = new Date(
+    baseCorrected.getTime() - 60 * 60 * 1000
+  );
+
+  // 🔹 여기서만 쓸 “임시 명식”으로 간지 스냅샷 재계산
+  const snapshot = recalcGanjiSnapshot({
+    ...m,
+    birthTime: nextBirthTime,
+    corrected: correctedForGanji,
+  });
+
+  // 🔹 스토어에는 안 저장하고, 결합해서 문자열만 뽑기
+  return getGanjiString({ ...m, ...snapshot });
+}
+
 
 export default function Sidebar({
   open,
@@ -192,7 +241,7 @@ export default function Sidebar({
 
   /* 개별 카드(아이템) 렌더 — li 전체 핸들 */
   const renderCard = (m: MyeongSik, index: number) => {
-    const ganji = getGanjiString(m);
+    const ganji = getSidebarGanjiWithDST(m);
     const placeDisplay = formatPlaceDisplay(m.birthPlace?.name);
     const keyId = `item:${m.id}`;
     const memoOpen = !!memoOpenMap[m.id];
