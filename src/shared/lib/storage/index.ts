@@ -29,6 +29,7 @@ export type MyeongSik = {
   ganji: string;          // (호환용) 간지 전체 문자열
   calendarType: "solar" | "lunar";
   dir: "forward" | "backward";
+  dstApplied?: boolean;
 };
 
 // 폼 입력 상태용
