@@ -1,5 +1,5 @@
 // components/form/FolderField.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -11,14 +11,16 @@ import {
   getFolderOptionsForInputNow,
   normalizeFolderValue,
   addCustomFolder,
+  loadFolderOrder,
+  saveFolderOrder,
+  reconcileFolderOrder,
+  FOLDER_EVENT,
 } from "@/features/sidebar/model/folderModel";
 
 type Props = {
-  value?: string | undefined; // 저장 값 (실제 폴더명 or undefined)
+  value?: string | undefined;
   onChange: (v: string | undefined) => void;
 };
-
-const ORDER_KEY = "folder.order.v1";
 
 function uniq(arr: string[]): string[] {
   return Array.from(new Set(arr));
@@ -32,10 +34,7 @@ function splitUnassigned(options: string[]) {
 
 /** 저장된 순서와 현재 옵션을 병합 (없는 값 제거, 새 값 뒤에 추가) */
 function reconcileOrder(saved: string[], current: string[]): string[] {
-  const curSet = new Set(current);
-  const pruned = saved.filter((x) => curSet.has(x));
-  const withNew = [...pruned, ...current.filter((x) => !pruned.includes(x))];
-  return withNew;
+  return reconcileFolderOrder(current, saved);
 }
 
 export default function FolderField({ value, onChange }: Props) {
@@ -44,28 +43,43 @@ export default function FolderField({ value, onChange }: Props) {
   const [text, setText] = useState("");
   const [showModify, setShowModify] = useState(false);
 
-  // 최초 로드: 현재 폴더 목록 + 저장된 순서 병합
-  useEffect(() => {
-    const rawNow = uniq(getFolderOptionsForInputNow());
-    const now = rawNow.includes(UNASSIGNED_LABEL)
-      ? uniq(rawNow)
-      : [UNASSIGNED_LABEL, ...rawNow];
+  // 🔹 모델 + localStorage 순서를 읽어서 options 동기화
+  const syncFromModel = useCallback(() => {
+    if (typeof window === "undefined") return;
 
-    const savedRaw = localStorage.getItem(ORDER_KEY);
-    const saved: string[] = savedRaw ? (JSON.parse(savedRaw) as string[]) : [];
+    const nowRaw = uniq(getFolderOptionsForInputNow());
+    const now = nowRaw.includes(UNASSIGNED_LABEL)
+      ? nowRaw
+      : [UNASSIGNED_LABEL, ...nowRaw];
 
-    // 저장은 UNASSIGNED 제외된 순서만 보관 → 병합 시에도 동일 처리
-    const { rest } = splitUnassigned(now);
+    const { rest } = splitUnassigned(now); // 실제 폴더 이름들
+    const saved = loadFolderOrder(); // ["가족","고객",...,"본ㅁ","동료"] 같은 배열
+
     const mergedRest = reconcileOrder(saved, rest);
     const merged = [UNASSIGNED_LABEL, ...mergedRest];
 
     setOptions(merged);
 
-    // 저장본 업데이트(차이 있을 때만)
-    if (JSON.stringify(saved) !== JSON.stringify(mergedRest)) {
-      localStorage.setItem(ORDER_KEY, JSON.stringify(mergedRest));
+    const same =
+      saved.length === mergedRest.length &&
+      saved.every((v, i) => v === mergedRest[i]);
+
+    if (!same) {
+      saveFolderOrder(mergedRest);
     }
   }, []);
+
+  useEffect(() => {
+    // 최초 1회
+    syncFromModel();
+
+    // Sidebar/useSidebarLogic, addCustomFolder 등에서 FOLDER_EVENT 발생 시 다시 동기화
+    if (typeof window !== "undefined") {
+      const handler = () => syncFromModel();
+      window.addEventListener(FOLDER_EVENT, handler);
+      return () => window.removeEventListener(FOLDER_EVENT, handler);
+    }
+  }, [syncFromModel]);
 
   // 외부 value ↔ 선택 값 동기화
   const selectValue = useMemo(
@@ -76,7 +90,7 @@ export default function FolderField({ value, onChange }: Props) {
   /** 현재 options를 저장(UNASSIGNED 제외) */
   const persistOrder = (opts: string[]) => {
     const { rest } = splitUnassigned(opts);
-    localStorage.setItem(ORDER_KEY, JSON.stringify(rest));
+    saveFolderOrder(rest);
   };
 
   /** 드래그로 순서 변경 */
@@ -97,22 +111,14 @@ export default function FolderField({ value, onChange }: Props) {
 
   /** 새 폴더 추가 */
   const addFolderAndPersist = (name: string) => {
-    addCustomFolder(name); // 모델에 등록
-    // 최신 옵션 가져와 병합 + 저장 순서 보존
-    const fresh = uniq(getFolderOptionsForInputNow());
-    const base = fresh.includes(UNASSIGNED_LABEL)
-      ? fresh
-      : [UNASSIGNED_LABEL, ...fresh];
+    const normalized = normalizeFolderValue(name);
+    if (!normalized) return;
 
-    const savedRaw = localStorage.getItem(ORDER_KEY);
-    const saved: string[] = savedRaw ? (JSON.parse(savedRaw) as string[]) : [];
+    // 1) 커스텀 폴더 모델에 등록 (ms_folders 업데이트 + FOLDER_EVENT 발생)
+    addCustomFolder(normalized);
 
-    const { rest } = splitUnassigned(base);
-    const mergedRest = reconcileOrder(saved, rest);
-    const merged = [UNASSIGNED_LABEL, ...mergedRest];
-
-    setOptions(merged);
-    persistOrder(merged);
+    // 2) 즉시 재동기화 (ms_folder_order도 필요하면 갱신)
+    syncFromModel();
   };
 
   return (
@@ -160,12 +166,12 @@ export default function FolderField({ value, onChange }: Props) {
           />
           <button
             type="button"
-            className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-sm text-white"
+            className="px-3 py-2 rounded bg-neutral-800 hover:bg-neutral-700 text-sm text-white cursor-pointer"
             onClick={() => {
               const name = text.trim();
               if (!name) return;
               addFolderAndPersist(name);
-              onChange(name);
+              onChange(normalizeFolderValue(name));
               setInputMode(false);
               setText("");
             }}
@@ -187,7 +193,11 @@ export default function FolderField({ value, onChange }: Props) {
 
           {/* 나머지만 드래그 가능 */}
           <DragDropContext onDragEnd={handleDragEnd}>
-            <Droppable droppableId="folderList" direction="vertical" type="FOLDER">
+            <Droppable
+              droppableId="folderList"
+              direction="vertical"
+              type="FOLDER"
+            >
               {(dropProv) => (
                 <ul
                   ref={dropProv.innerRef}
@@ -203,7 +213,9 @@ export default function FolderField({ value, onChange }: Props) {
                           {...prov.dragHandleProps}
                           className="flex items-center justify-between bg-white dark:bg-neutral-800 p-2 rounded border text-sm"
                         >
-                          <span className="cursor-grab select-none mr-2">☰</span>
+                          <span className="cursor-grab select-none mr-2">
+                            ☰
+                          </span>
                           <span className="flex-1 pr-1">{f}</span>
                         </li>
                       )}
@@ -218,7 +230,8 @@ export default function FolderField({ value, onChange }: Props) {
       )}
 
       <p className="text-xs text-gray-500">
-        폴더를 지정하지 않으려면 "{UNASSIGNED_LABEL}"을 선택하세요. 직접입력으로 새 폴더를 만들 수 있어요.
+        폴더를 지정하지 않으려면 "{UNASSIGNED_LABEL}"을 선택하세요. 직접입력으로 새
+        폴더를 만들 수 있어요.
       </p>
     </div>
   );
