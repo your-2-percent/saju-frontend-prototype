@@ -27,7 +27,7 @@ import type {
   UnifiedPowerResult,
 } from "@/features/AnalysisReport/utils/unifiedPower";
 import type { Element } from "@/features/AnalysisReport/utils/types";
-import { buildTopicGuide, type MainCategoryKey, type SubCategoryKey, type TimeMode, type RelationMode } from "./buildPrompt";
+import { buildTopicGuide, type MainCategoryKey, type SubCategoryKey, type RelationMode } from "./buildPrompt";
 
 import {
   ensureSolarBirthDay,
@@ -47,25 +47,35 @@ function getActivePosLabels(natal: Pillars4, ms: MyeongSik): string[] {
   return ["연", "월", "일"];
 }
 
-type SinglePromptInput = {
+// 🔥 사주 해석 톤 프리셋
+type ToneKey =
+  | "analysis"
+  | "teacher"
+  | "mentor"
+  | "speed"
+  | "dryHumor"
+  | "softWarm"
+  | "pro"
+
+export type SinglePromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
-  chain?: LuckChain;
+  chain: LuckChain;
   basis?: ShinsalBasis;
-  tab: BlendTab;
   includeTenGod?: boolean;
+  tab: BlendTab;
   unified: UnifiedPowerResult;
   percent: number;
   category: ShinCategory;
+  topic: MainCategoryKey;
+  subTopic: SubCategoryKey;
+  timeMode?: "single";
+  relationMode?: RelationMode;
+  partnerMs?: MyeongSik | null;
 
-  // 이미 들어간 것들
-  topic?: MainCategoryKey;
-  subTopic?: SubCategoryKey;
-  timeMode?: TimeMode;
-
-  // 여기부터 추가 👇
-  relationMode?: RelationMode;   // "solo" | "couple"
-  partnerMs?: MyeongSik | null;  // 상대 명식 전체 (선택)
+  // 🔥 추가
+  tone?: ToneKey;     
+  friendMode?: boolean;
 };
 
 /* ===========================
@@ -142,7 +152,8 @@ export function buildChatPrompt(input: SinglePromptInput): string {
     category,
     topic,
     subTopic,
-    relationMode
+    relationMode,
+    tone
   } = input;
 
   const natal: Pillars4 = [
@@ -657,8 +668,9 @@ export function buildChatPrompt(input: SinglePromptInput): string {
     topic,
     subTopic,
     timeMode: "single",
-    tab, // activeTab 같은 거
-    relationMode
+    tab,
+    relationMode,
+    tone,          // 🔥 추가
   });
 
   const guideParts: string[] = [

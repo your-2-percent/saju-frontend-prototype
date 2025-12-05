@@ -43,51 +43,45 @@ type ToneKey =
   | "speed"
   | "dryHumor"
   | "softWarm"
-  | "pro"
 
 const TONE_META: Record<
   ToneKey,
   { label: string; desc: string }
 > = {
   analysis: {
-    label: "분석관찰형",
+    label: "분석관찰형(학습용)",
     desc: `- 감정 완전 배제하고, 사주를 데이터처럼 설명
 - "이 명식은 구조적으로 이런 패턴이 반복됨" 같은 방식
 - ST형 냉정 분석 느낌`,
   },
   teacher: {
-    label: "선생님형",
+    label: "선생님형(학습용)",
     desc: `- 원리·이유 중심의 설명
 - 사주 구조를 순차적으로 풀어줌
 - 학습용, 설명 듣고 싶은 사용자에게 적합`,
   },
   mentor: {
-    label: "조언가형",
+    label: "조언가형(초보용)",
     desc: `- 사주 구조 → 현실적 선택지 → 실행 조언
 - 과한 긍정도 X, 과한 비관도 X
 - “지금 이 흐름이면 ~~ 우선하자” 스타일`,
   },
   speed: {
-    label: "스피드컨시스",
+    label: "스피드컨시스(초보용)",
     desc: `- 핵심 요약만 짧게
 - 2~4문장으로 결론만 정리
 - 빠르게 알고 싶은 질문용`,
   },
   dryHumor: {
-    label: "냉소유머형",
+    label: "냉소유머형(초보용)",
     desc: `- 약한 비꼼 + 드라이한 유머
 - “이 조합이면 원래 순탄하긴 힘들지 ㅋㅋ 대신 재능치는 미쳤다” 같은 느낌`,
   },
   softWarm: {
-    label: "심플따뜻형",
+    label: "심플따뜻형(초보용)",
     desc: `- 불필요한 말 없이 부드럽게 핵심 전달
 - 공감형보다 담백하고 깔끔한 톤`,
-  },
-  pro: {
-    label: "직업전문가형",
-    desc: `- 직업/산업/커리어 관점 중심 설명
-- “이 명식은 ~~ 업종에 강점” 식의 전문적 분석`,
-  },
+  }
 };
 
 type Props = {
@@ -752,6 +746,7 @@ export default function PromptCopyCard({
         relationMode === "couple"
           ? partnerMs ?? null
           : null,
+      tone
     });
   }, [
     ms,
@@ -767,6 +762,7 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
+    tone
   ]);
 
   const multiText = useMemo(() => {
@@ -895,6 +891,7 @@ export default function PromptCopyCard({
         relationMode === "couple"
           ? partnerMs ?? null
           : null,
+      tone
     });
   }, [
     ms,
@@ -918,6 +915,7 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
+    tone
   ]);
 
   const partnerPromptFragment = useMemo(() => {
@@ -985,8 +983,6 @@ export default function PromptCopyCard({
         return "※ 드라이한 유머 톤으로, 가벼운 냉소 섞어서 설명한다.\n";
       case "softWarm":
         return "※ 담백하지만 따뜻한 톤으로 설명한다.\n";
-      case "pro":
-        return "※ 직업/진로 전문분석 스타일로 설명한다.\n";
       default:
         return "";
     }
@@ -1079,12 +1075,12 @@ export default function PromptCopyCard({
           </div>
 
           {/* 버튼 목록 */}
-          <div className="flex flex-wrap gap-1.5 mb-2">
+          <div className="grid grid-cols-3 gap-1.5 mb-2">
             {(Object.keys(TONE_META) as ToneKey[]).map((key) => (
               <button
                 key={key}
                 onClick={() => setTone(key)}
-                className={`flex-1 px-2 py-1 text-[11px] rounded border cursor-pointer ${
+                className={`flex-1 px-2 py-1 text-[10px] rounded border cursor-pointer ${
                   tone === key
                     ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
                     : "bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"

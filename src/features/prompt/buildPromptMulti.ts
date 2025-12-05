@@ -60,6 +60,16 @@ export type DaewoonInfo = {
   endYear: number;
 };
 
+// 🔥 사주 해석 톤 프리셋
+type ToneKey =
+  | "analysis"
+  | "teacher"
+  | "mentor"
+  | "speed"
+  | "dryHumor"
+  | "softWarm"
+  | "pro"
+
 type MultiPromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -82,6 +92,10 @@ type MultiPromptInput = {
   // 추가 👇
   relationMode?: RelationMode;
   partnerMs?: MyeongSik | null;
+
+  // 🔥 추가
+  tone?: ToneKey;
+  friendMode?: boolean;
 };
 
 function getDaeStartDate(d: DaewoonInfo): Date {
@@ -409,6 +423,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     ilDays,
     topic,
     subTopic,
+    tone
   } = input;
 
   const natal: Pillars4 = [
@@ -1455,8 +1470,8 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
   const topicGuide = buildTopicGuide({
     topic,
     subTopic,
-    timeMode: "multi",
-    // tab 안 넘김
+    timeMode: "single",
+    tone,          // 🔥 추가
   });
 
   const guideParts: string[] = [
