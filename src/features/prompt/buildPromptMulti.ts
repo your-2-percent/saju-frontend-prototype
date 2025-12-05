@@ -60,16 +60,6 @@ export type DaewoonInfo = {
   endYear: number;
 };
 
-// 🔥 사주 해석 톤 프리셋
-type ToneKey =
-  | "analysis"
-  | "teacher"
-  | "mentor"
-  | "speed"
-  | "dryHumor"
-  | "softWarm"
-  | "pro"
-
 type MultiPromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -94,7 +84,7 @@ type MultiPromptInput = {
   partnerMs?: MyeongSik | null;
 
   // 🔥 추가
-  tone?: ToneKey;
+  teacherMode?: boolean;
   friendMode?: boolean;
 };
 
@@ -423,7 +413,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     ilDays,
     topic,
     subTopic,
-    tone
+    teacherMode
   } = input;
 
   const natal: Pillars4 = [
@@ -1471,7 +1461,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     topic,
     subTopic,
     timeMode: "single",
-    tone,          // 🔥 추가
+    teacherMode,          // 🔥 추가
   });
 
   const guideParts: string[] = [

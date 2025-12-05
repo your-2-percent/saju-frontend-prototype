@@ -129,18 +129,8 @@ export type TopicContext = {
     relationMode?: RelationMode;
 }
 
-// 🔥 사주 해석 톤 프리셋
-type ToneKey =
-  | "analysis"
-  | "teacher"
-  | "mentor"
-  | "speed"
-  | "dryHumor"
-  | "softWarm"
-  | "pro"
-
-export function buildTopicGuide(ctx: TopicContext & { tone?: ToneKey }) {
-  const { topic, subTopic, timeMode = "single", tab, relationMode, tone } = ctx;
+export function buildTopicGuide(ctx: TopicContext & { teacherMode?: boolean; }) {
+  const { topic, subTopic, timeMode = "single", tab, relationMode, teacherMode } = ctx;
 
   // 카테고리 없으면 아무 것도 안 붙임
   if (!topic) return "";
@@ -151,7 +141,7 @@ export function buildTopicGuide(ctx: TopicContext & { tone?: ToneKey }) {
 
   // 사주 공부형(전문가용)인지 체크
   const isStudyTone =
-    tone === "analysis" || tone === "teacher" || tone === "pro";
+    teacherMode === true;
 
   if (!isStudyTone) {
     // 🔹 초보자용 톤 → 기존 가이드 그대로

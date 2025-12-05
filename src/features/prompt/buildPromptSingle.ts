@@ -47,16 +47,6 @@ function getActivePosLabels(natal: Pillars4, ms: MyeongSik): string[] {
   return ["연", "월", "일"];
 }
 
-// 🔥 사주 해석 톤 프리셋
-type ToneKey =
-  | "analysis"
-  | "teacher"
-  | "mentor"
-  | "speed"
-  | "dryHumor"
-  | "softWarm"
-  | "pro"
-
 export type SinglePromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -74,7 +64,7 @@ export type SinglePromptInput = {
   partnerMs?: MyeongSik | null;
 
   // 🔥 추가
-  tone?: ToneKey;     
+  teacherMode?: boolean;     
   friendMode?: boolean;
 };
 
@@ -153,7 +143,7 @@ export function buildChatPrompt(input: SinglePromptInput): string {
     topic,
     subTopic,
     relationMode,
-    tone
+    teacherMode
   } = input;
 
   const natal: Pillars4 = [
@@ -670,7 +660,7 @@ export function buildChatPrompt(input: SinglePromptInput): string {
     timeMode: "single",
     tab,
     relationMode,
-    tone,          // 🔥 추가
+    teacherMode,          // 🔥 추가
   });
 
   const guideParts: string[] = [

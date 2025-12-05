@@ -43,44 +43,49 @@ type ToneKey =
   | "speed"
   | "dryHumor"
   | "softWarm"
+  | "ect"
 
 const TONE_META: Record<
   ToneKey,
   { label: string; desc: string }
 > = {
   analysis: {
-    label: "분석관찰형(학습용)",
+    label: "분석관찰형",
     desc: `- 감정 완전 배제하고, 사주를 데이터처럼 설명
 - "이 명식은 구조적으로 이런 패턴이 반복됨" 같은 방식
 - ST형 냉정 분석 느낌`,
   },
   teacher: {
-    label: "선생님형(학습용)",
+    label: "선생님형",
     desc: `- 원리·이유 중심의 설명
 - 사주 구조를 순차적으로 풀어줌
 - 학습용, 설명 듣고 싶은 사용자에게 적합`,
   },
   mentor: {
-    label: "조언가형(초보용)",
+    label: "조언가형",
     desc: `- 사주 구조 → 현실적 선택지 → 실행 조언
 - 과한 긍정도 X, 과한 비관도 X
 - “지금 이 흐름이면 ~~ 우선하자” 스타일`,
   },
   speed: {
-    label: "스피드컨시스(초보용)",
+    label: "스피드컨시스",
     desc: `- 핵심 요약만 짧게
 - 2~4문장으로 결론만 정리
 - 빠르게 알고 싶은 질문용`,
   },
   dryHumor: {
-    label: "냉소유머형(초보용)",
+    label: "냉소유머형",
     desc: `- 약한 비꼼 + 드라이한 유머
 - “이 조합이면 원래 순탄하긴 힘들지 ㅋㅋ 대신 재능치는 미쳤다” 같은 느낌`,
   },
   softWarm: {
-    label: "심플따뜻형(초보용)",
+    label: "심플따뜻형",
     desc: `- 불필요한 말 없이 부드럽게 핵심 전달
 - 공감형보다 담백하고 깔끔한 톤`,
+  },
+  ect: {
+    label: "기타",
+    desc: `- 톤 지정 따로 없음`,
   }
 };
 
@@ -309,6 +314,7 @@ export default function PromptCopyCard({
 }: Props) {
   const [tone, setTone] = useState<ToneKey>("analysis");
   const [friendMode, setFriendMode] = useState(false);
+  const [teacherMode, setTeacherMode] = useState(false);
 
   const [date, setDate] = useState<Date>(() => new Date());
 
@@ -746,7 +752,7 @@ export default function PromptCopyCard({
         relationMode === "couple"
           ? partnerMs ?? null
           : null,
-      tone
+      teacherMode
     });
   }, [
     ms,
@@ -762,7 +768,7 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
-    tone
+    teacherMode
   ]);
 
   const multiText = useMemo(() => {
@@ -891,7 +897,7 @@ export default function PromptCopyCard({
         relationMode === "couple"
           ? partnerMs ?? null
           : null,
-      tone
+      teacherMode
     });
   }, [
     ms,
@@ -915,7 +921,7 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
-    tone
+    teacherMode
   ]);
 
   const partnerPromptFragment = useMemo(() => {
@@ -989,7 +995,7 @@ export default function PromptCopyCard({
   }, [tone]);
 
   const friendInstruction = friendMode
-    ? "※ 모든 해석은 반말로, 친구처럼 편하게 말해한다.\n"
+    ? "※ 모든 해석은 반말로, 친구처럼 편하게 말한다.\n"
     : "";
 
   const basePrompt = useMemo(
@@ -1075,7 +1081,7 @@ export default function PromptCopyCard({
           </div>
 
           {/* 버튼 목록 */}
-          <div className="grid grid-cols-3 gap-1.5 mb-2">
+          <div className="flex gap-1.5 mb-2">
             {(Object.keys(TONE_META) as ToneKey[]).map((key) => (
               <button
                 key={key}
@@ -1098,20 +1104,38 @@ export default function PromptCopyCard({
 
           {/* 🔥 친구(반말) 옵션 */}
           <div className="mt-2 flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="friendMode"
-              checked={friendMode}
-              onChange={(e) => setFriendMode(e.target.checked)}
-              className="w-3 h-3"
-            />
-            <label
-              htmlFor="friendMode"
-              className="text-[11px] text-neutral-700 dark:text-neutral-200 cursor-pointer"
-            >
-              친구처럼 반말로 이야기해줘
-            </label>
+            <div className="mr-1 flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="friendMode"
+                checked={friendMode}
+                onChange={(e) => setFriendMode(e.target.checked)}
+                className="w-3 h-3"
+              />
+              <label
+                htmlFor="friendMode"
+                className="text-[11px] text-neutral-700 dark:text-neutral-200 cursor-pointer"
+              >
+                반말모드
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="teacherMode"
+                checked={teacherMode}
+                onChange={(e) => setTeacherMode(e.target.checked)}
+                className="w-3 h-3"
+              />
+              <label
+                htmlFor="teacherMode"
+                className="text-[11px] text-neutral-700 dark:text-neutral-200 cursor-pointer"
+              >
+                선생님모드(공부/학습용)
+              </label>
+            </div>
           </div>
+          
         </div>
 
         
