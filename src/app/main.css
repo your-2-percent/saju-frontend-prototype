@@ -41,6 +41,10 @@ li {
   display: block !important;
 }
 
+li.flex {
+  display: flex !important;
+}
+
 .btn_style {
   height: 40px;
   padding: 0 24px;
