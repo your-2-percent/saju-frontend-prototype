@@ -18,7 +18,7 @@ const DEFAULT_SECTION_KEYS = [
   "theme",            // ✅ 테마 토글
   "hiddenStem",       // 지장간 표시 타입
   "hiddenStemMode",   // 지장간 유형
-  "ilunRule",         // 일운 달력 시간타입
+  //"ilunRule",         // 일운 달력 시간타입
   "sinsalMode",       // 십이신살타입
   "sinsalBase",       // 십이신살기준
   "sinsalBloom",      // 개화론 적용여부
@@ -57,7 +57,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
+  //const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
   // 테마 클래스 적용(실시간 미리보기)
   useApplyTheme(localSettings.theme ?? "dark");
@@ -136,20 +136,20 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           </Section>
         );
 
-      case "ilunRule":
-        return (
-          <Section title="일운 달력 시간타입">
-            <SegmentedControl
-              value={ilunRuleValue}
-              onChange={(v) => update("ilunRule", v)}
-              options={[
-                { label: "자시", value: "자시" },
-                { label: "조자시/야자시", value: "조자시/야자시" },
-                { label: "인시", value: "인시" },
-              ]}
-            />
-          </Section>
-        );
+      // case "ilunRule":
+      //   return (
+      //     <Section title="일운 달력 시간타입">
+      //       <SegmentedControl
+      //         value={ilunRuleValue}
+      //         onChange={(v) => update("ilunRule", v)}
+      //         options={[
+      //           { label: "자시", value: "자시" },
+      //           { label: "조자시/야자시", value: "조자시/야자시" },
+      //           { label: "인시", value: "인시" },
+      //         ]}
+      //       />
+      //     </Section>
+      //   );
 
       case "sinsalMode":
         return (

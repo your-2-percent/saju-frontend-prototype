@@ -169,6 +169,25 @@ export function getEffectiveDayOffset(dateObj: Date, rule: DayBoundaryRule): num
   return totalMinutes < 0 ? 0 : 0; // 사실상 항상 0
 }
 
+export function getDayOffsetForCalendar(dateObj: Date, rule: DayBoundaryRule): number {
+  const h = dateObj.getHours();
+  const totalMinutes = h * 60 + dateObj.getMinutes();
+
+  if (rule === "자시") {
+    // 23:00 이후면 다음날로 계산
+    return totalMinutes >= 23 * 60 ? 1 : 0;
+  }
+
+  if (rule === "인시") {
+    console.log('들어오잖아');
+    // 03:00 이전은 전날로 계산
+    return totalMinutes < 3 * 60 ? -1 : 0;
+  }
+
+  // 조자시/야자시 → 00:00 기준
+  return 0;
+}
+
 export const ANCHOR = {
   JDN: 2445731, // 1984-02-02 00:00의 JDN (floor(JD+0.5))
   idx: 0        // 갑자
@@ -192,6 +211,30 @@ export function getDayGanZhi(dateObj: Date, rule: DayBoundaryRule): string {
   if (!gz) {
     throw new Error(`getDayGanZhi: idx=${idx} out of range (jdn=${jdn}, jd=${jd})`);
   }
+  return gz;
+}
+
+export function getDayGanZhiilun(date: Date, rule: DayBoundaryRule) {
+  const d = new Date(date);
+  const offset = getDayOffsetForCalendar(d, rule);
+
+  // offset은 날짜 단위로 먼저 적용
+  const dt = new Date(date.getTime());
+  dt.setDate(dt.getDate() + offset);
+
+  const jd  = calendarGregorianToJD(
+    dt.getFullYear(), dt.getMonth() + 1, dt.getDate(),
+    dt.getHours(), dt.getMinutes()
+  );
+  const jdn = Math.floor(jd + 0.5);        // ✅ 자정 앵커 JDN
+  const idx = posMod(jdn - ANCHOR.JDN + ANCHOR.idx, 60); // ✅ 항상 0..59
+
+  const gz = 육십갑자_자시[idx]; // 너희 프로젝트에서 쓰는 60갑자 배열명 유지
+  if (!gz) {
+    throw new Error(`getDayGanZhi: idx=${idx} out of range (jdn=${jdn}, jd=${jd})`);
+  }
+
+  console.log(gz);
   return gz;
 }
 
