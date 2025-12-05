@@ -35,6 +35,61 @@ import {
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
+// 🔥 사주 해석 톤 프리셋
+type ToneKey =
+  | "analysis"
+  | "teacher"
+  | "mentor"
+  | "speed"
+  | "dryHumor"
+  | "softWarm"
+  | "pro"
+
+const TONE_META: Record<
+  ToneKey,
+  { label: string; desc: string }
+> = {
+  analysis: {
+    label: "분석관찰형",
+    desc: `- 감정 완전 배제하고, 사주를 데이터처럼 설명
+- "이 명식은 구조적으로 이런 패턴이 반복됨" 같은 방식
+- ST형 냉정 분석 느낌`,
+  },
+  teacher: {
+    label: "선생님형",
+    desc: `- 원리·이유 중심의 설명
+- 사주 구조를 순차적으로 풀어줌
+- 학습용, 설명 듣고 싶은 사용자에게 적합`,
+  },
+  mentor: {
+    label: "조언가형",
+    desc: `- 사주 구조 → 현실적 선택지 → 실행 조언
+- 과한 긍정도 X, 과한 비관도 X
+- “지금 이 흐름이면 ~~ 우선하자” 스타일`,
+  },
+  speed: {
+    label: "스피드컨시스",
+    desc: `- 핵심 요약만 짧게
+- 2~4문장으로 결론만 정리
+- 빠르게 알고 싶은 질문용`,
+  },
+  dryHumor: {
+    label: "냉소유머형",
+    desc: `- 약한 비꼼 + 드라이한 유머
+- “이 조합이면 원래 순탄하긴 힘들지 ㅋㅋ 대신 재능치는 미쳤다” 같은 느낌`,
+  },
+  softWarm: {
+    label: "심플따뜻형",
+    desc: `- 불필요한 말 없이 부드럽게 핵심 전달
+- 공감형보다 담백하고 깔끔한 톤`,
+  },
+  pro: {
+    label: "직업전문가형",
+    desc: `- 직업/산업/커리어 관점 중심 설명
+- “이 명식은 ~~ 업종에 강점” 식의 전문적 분석`,
+  },
+};
+
 type Props = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -258,6 +313,9 @@ export default function PromptCopyCard({
   lunarPillars,
   includeTenGod = false,
 }: Props) {
+  const [tone, setTone] = useState<ToneKey>("analysis");
+  const [friendMode, setFriendMode] = useState(false);
+
   const [date, setDate] = useState<Date>(() => new Date());
 
   const { list, currentId } = useMyeongSikStore.getState();
@@ -912,12 +970,38 @@ export default function PromptCopyCard({
 
   const baseText = isMultiMode ? multiText : normalText;
 
+  // 🔥 톤 적용 프롬프트 텍스트
+  const toneInstruction = useMemo(() => {
+    switch (tone) {
+      case "analysis":
+        return "※ 해석은 감정 배제하고 과학적·분석적으로 설명한다.\n";
+      case "teacher":
+        return "※ 원리를 이해하기 쉽게 '강의하듯' 설명한다.\n";
+      case "mentor":
+        return "※ 현실 조언 중심으로 균형 있게 설명한다.\n";
+      case "speed":
+        return "※ 핵심만 짧고 간결하게 요약해서 설명한다.\n";
+      case "dryHumor":
+        return "※ 드라이한 유머 톤으로, 가벼운 냉소 섞어서 설명한다.\n";
+      case "softWarm":
+        return "※ 담백하지만 따뜻한 톤으로 설명한다.\n";
+      case "pro":
+        return "※ 직업/진로 전문분석 스타일로 설명한다.\n";
+      default:
+        return "";
+    }
+  }, [tone]);
+
+  const friendInstruction = friendMode
+    ? "※ 모든 해석은 반말로, 친구처럼 편하게 말해한다.\n"
+    : "";
+
   const basePrompt = useMemo(
     () =>
       baseText || partnerPromptFragment
-        ? `${baseText}${partnerPromptFragment}`
+        ? `${baseText}${partnerPromptFragment}\n${toneInstruction}${friendInstruction}`
         : "",
-    [baseText, partnerPromptFragment],
+    [toneInstruction, friendInstruction, baseText, partnerPromptFragment],
   );
 
   const [questionDraft, setQuestionDraft] = useState("");
@@ -988,6 +1072,54 @@ export default function PromptCopyCard({
 
       {/* 카테고리 셀렉트 영역 */}
       <div className="flex flex-wrap gap-2 items-center">
+        {/* 🔥 사주 톤 선택 */}
+        <div className="w-full mt-2 p-2 border rounded-md bg-neutral-50 dark:bg-neutral-800">
+          <div className="text-xs font-semibold mb-1 text-neutral-700 dark:text-neutral-200">
+            해석 톤 선택
+          </div>
+
+          {/* 버튼 목록 */}
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {(Object.keys(TONE_META) as ToneKey[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => setTone(key)}
+                className={`flex-1 px-2 py-1 text-[11px] rounded border cursor-pointer ${
+                  tone === key
+                    ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
+                    : "bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
+                }`}
+              >
+                {TONE_META[key].label}
+              </button>
+            ))}
+          </div>
+
+          {/* 설명문 */}
+          <div className="text-[11px] whitespace-pre-line text-neutral-600 dark:text-neutral-300 leading-4">
+            {TONE_META[tone].desc}
+          </div>
+
+          {/* 🔥 친구(반말) 옵션 */}
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="friendMode"
+              checked={friendMode}
+              onChange={(e) => setFriendMode(e.target.checked)}
+              className="w-3 h-3"
+            />
+            <label
+              htmlFor="friendMode"
+              className="text-[11px] text-neutral-700 dark:text-neutral-200 cursor-pointer"
+            >
+              친구처럼 반말로 이야기해줘
+            </label>
+          </div>
+        </div>
+
+        
+
         <select
           value={mainCategory}
           onChange={(e) => {
@@ -1449,7 +1581,7 @@ export default function PromptCopyCard({
           rows={3}
           className="w-full text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
         />
-        <div className="text-right mb-4">
+        <div className="mb-4 text-center">
           <button
             type="button"
             onClick={() => {
@@ -1462,7 +1594,7 @@ export default function PromptCopyCard({
               ]);
               setQuestionDraft("");
             }}
-            className="px-3 py-1.5 text-xs rounded-md border bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black cursor-pointer"
+            className="w-full desk:max-w-[160px] px-1 py-1.5 text-xs rounded-md border bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black cursor-pointer"
           >
             질문 추가
           </button>
