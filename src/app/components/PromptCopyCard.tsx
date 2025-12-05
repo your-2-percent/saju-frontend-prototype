@@ -1424,7 +1424,7 @@ export default function PromptCopyCard({
       )}
 
       {/* 추가 질문 입력 영역 */}
-      <div className="space-y-2">
+      <div className="space-y-1">
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-200">
             추가 질문 입력 (선택)
@@ -1449,7 +1449,7 @@ export default function PromptCopyCard({
           rows={3}
           className="w-full text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
         />
-        <div className="flex items-center justify-between gap-2">
+        <div className="text-right mb-4">
           <button
             type="button"
             onClick={() => {
