@@ -25,7 +25,6 @@
     "korean-lunar-calendar": "^0.3.6",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.544.0",
-    "next": "^16.0.7",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
     "react-hot-toast": "^2.6.0",
