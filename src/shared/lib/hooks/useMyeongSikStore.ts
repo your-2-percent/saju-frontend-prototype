@@ -273,26 +273,26 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     let data;
     let error;
 
+    const baseSelect =
+      "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at";
+
     if (hasSortOrder) {
-      const res = await supabase
+      const withOrder = await supabase
         .from("myeongsik")
-        .select(
-          "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, sort_order, created_at, updated_at",
-        )
+        .select(baseSelect + ", sort_order")
         .order("sort_order", { ascending: true, nullsFirst: true })
         .order("created_at", { ascending: false });
 
-      data = res.data;
-      error = res.error;
+      data = withOrder.data;
+      error = withOrder.error;
 
-      if (error && (error as { code?: string }).code === "42703") {
-        // 컬럼이 없으면 이후부터 sort_order를 쓰지 않고 재조회
+      if (error) {
+        // 어떤 오류든 일단 sort_order 비활성화 후 재조회
+        console.warn("loadFromServer: sort_order query failed, fallback without sort_order", error);
         hasSortOrder = false;
         const fallback = await supabase
           .from("myeongsik")
-          .select(
-            "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at",
-          )
+          .select(baseSelect)
           .order("created_at", { ascending: false });
         data = fallback.data;
         error = fallback.error;
@@ -300,9 +300,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     } else {
       const fallback = await supabase
         .from("myeongsik")
-        .select(
-          "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at",
-        )
+        .select(baseSelect)
         .order("created_at", { ascending: false });
       data = fallback.data;
       error = fallback.error;
