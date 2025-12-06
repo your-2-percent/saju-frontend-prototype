@@ -10,7 +10,6 @@ const preferSortOrder =
   typeof import.meta !== "undefined" &&
   import.meta.env &&
   import.meta.env.VITE_USE_SORT_ORDER === "true";
-let hasSortOrder = preferSortOrder;
 
 type OldPersistRoot = {
   state?: {
@@ -241,7 +240,7 @@ function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
     day_change_rule: m.DayChangeRule ?? null,
     favorite: m.favorite ?? false,
     sort_order:
-      hasSortOrder && typeof (m as MyeongSikWithOrder).sortOrder === "number"
+      preferSortOrder && typeof (m as MyeongSikWithOrder).sortOrder === "number"
         ? ((m as MyeongSikWithOrder).sortOrder as number)
         : null,
     updated_at: new Date().toISOString(),
@@ -276,7 +275,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     const baseSelect =
       "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at";
 
-    if (hasSortOrder) {
+    if (preferSortOrder) {
       const withOrder = await supabase
         .from("myeongsik")
         .select(baseSelect + ", sort_order")
@@ -287,9 +286,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       error = withOrder.error;
 
       if (error) {
-        // 어떤 오류든 일단 sort_order 비활성화 후 재조회
         console.warn("loadFromServer: sort_order query failed, fallback without sort_order", error);
-        hasSortOrder = false;
         const fallback = await supabase
           .from("myeongsik")
           .select(baseSelect)
@@ -498,12 +495,6 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   },
 
   reorder: async (newList) => {
-    // sort_order 컬럼이 없으면 로컬 순서만 반영
-    if (!hasSortOrder) {
-      set({ list: newList });
-      return;
-    }
-
     const withOrder: MyeongSikWithOrder[] = newList.map((item, idx) => ({
       ...item,
       sortOrder: idx + 1,

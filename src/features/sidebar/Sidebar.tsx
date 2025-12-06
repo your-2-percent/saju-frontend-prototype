@@ -458,6 +458,39 @@ export default function Sidebar({
                     e.stopPropagation();
                     const nextFav = !m.favorite;
                     update(m.id, { favorite: nextFav });
+
+                    // 즐겨찾기 토글 시 해당 폴더/미지정 내에서 최상단으로 이동
+                    const folderKey = m.folder ?? "__unassigned__";
+                    const groupMap: Record<string, MyeongSik[]> = {
+                      "__unassigned__": [],
+                    };
+                    orderedFolders.forEach((f) => {
+                      groupMap[f] = [];
+                    });
+
+                    // 현재 리스트를 그룹별로 복사
+                    list.forEach((item) => {
+                      const key = item.folder ?? "__unassigned__";
+                      if (!groupMap[key]) groupMap[key] = [];
+                      groupMap[key].push(item);
+                    });
+
+                    // 대상 아이템을 해당 그룹 맨 앞에 재배치
+                    const arr = groupMap[folderKey] ?? [];
+                    const without = arr.filter((x) => x.id !== m.id);
+                    groupMap[folderKey] = [
+                      { ...m, favorite: nextFav },
+                      ...without,
+                    ];
+
+                    // 새 리스트로 플랫화: 미지정 → 폴더 순서대로
+                    const nextList: MyeongSik[] = [
+                      ...groupMap["__unassigned__"],
+                      ...orderedFolders.flatMap((f) => groupMap[f] ?? []),
+                    ];
+
+                    // 정렬 순서 upsert
+                    void reorder(nextList);
                   }}
                   className={`ml-auto p-1 rounded cursor-pointer ${
                     m.favorite ? "text-yellow-400" : "text-neutral-400"

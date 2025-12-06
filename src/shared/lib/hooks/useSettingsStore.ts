@@ -72,7 +72,7 @@ export const useSettingsStore = create<SettingsState>()(
         } = await supabase.auth.getUser();
 
         if (userError || !user) {
-          set({ syncing: false, loaded: true });
+          set({ syncing: false, loaded: false });
           return;
         }
 
