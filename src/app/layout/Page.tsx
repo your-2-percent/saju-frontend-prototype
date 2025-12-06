@@ -21,12 +21,15 @@ import { buildNatalPillarsFromMs } from "@/features/prompt/natalFromMs";
 import { useLuckChain } from "@/features/prompt/useLuckChain";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 
+import { supabase } from "@/lib/supabase";
+import LoginPage from "@/app/layout/login/page";
+
 /** 훅은 항상 같은 순서로 호출해야 하므로, 데이터 없을 때도 안전하게 돌릴 더미 명식 */
 const EMPTY_MS: MyeongSik = {
   id: "empty",
   name: "",
-  birthDay: "",  // YYYY-MM-DD
-  birthTime: "",  // HH:MM
+  birthDay: "", // YYYY-MM-DD
+  birthTime: "", // HH:MM
   gender: "",
   birthPlace: { name: "", lat: 0, lon: 0 },
   relationship: "",
@@ -37,23 +40,68 @@ const EMPTY_MS: MyeongSik = {
   favorite: false,
 
   // 계산/보정 필드
-  dateObj: new Date(),          // 원본 Date 객체
-  corrected: new Date(),       // 보정된 Date
+  dateObj: new Date(), // 원본 Date 객체
+  corrected: new Date(), // 보정된 Date
   correctedLocal: "", // 보정시 "HH:MM"
   // 간지 관련
-  dayStem: "",       // 일간
-  ganjiText: "",      // 간지 전체 문자열
-  ganji: "",          // (호환용) 간지 전체 문자열
+  dayStem: "", // 일간
+  ganjiText: "", // 간지 전체 문자열
+  ganji: "", // (호환용) 간지 전체 문자열
   calendarType: "solar",
   dir: "forward",
 };
 
+/**
+ * ✅ Wrapper 컴포넌트: 여기서는 Supabase 세션 체크만 하고,
+ *   로그인 상태에 따라 LoginPage 또는 MainApp을 렌더링.
+ *   여기서는 useMyeongSikStore 같은 훅 절대 안 씀.
+ */
 export default function Page() {
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await supabase.auth.getUser();
+
+      if (error) {
+        console.error("Supabase getUser error:", error.message);
+        setIsLoggedIn(false);
+        setAuthChecked(true);
+        return;
+      }
+
+      setIsLoggedIn(!!data.user);
+      setAuthChecked(true);
+    })();
+  }, []);
+
+  if (!authChecked) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-neutral-500">로그인 상태 확인 중...</p>
+      </main>
+    );
+  }
+
+  if (!isLoggedIn) {
+    return <LoginPage onLoginSuccess={() => setIsLoggedIn(true)} />;
+  }
+
+  // ✅ 로그인 된 상태 → 실제 앱 렌더
+  return <MainApp />;
+}
+
+/**
+ * ✅ MainApp: 예전 만세력 UI 전부 여기로.
+ *   여기서는 early return 없이 훅만 쭉 호출 → 룰-of-hooks 만족.
+ */
+function MainApp() {
   const { list } = useMyeongSikStore();
 
   // 초기 currentId는 존재할 때만 세팅
   const [currentId, setCurrentId] = useState<string>(() =>
-    list.length > 0 ? list[0].id : ""
+    list.length > 0 ? list[0].id : "",
   );
 
   // 오버레이/화면 상태
@@ -73,22 +121,24 @@ export default function Page() {
   // 현재 선택
   const current = useMemo<MyeongSik>(
     () => list.find((m) => m.id === currentId) ?? list[0],
-    [list, currentId]
+    [list, currentId],
   );
 
   // 데이터 유효성 (타입 유지 + 런타임 가드)
   const hasCurrent =
-    list.length > 0 &&
-    !!current &&
-    typeof current.birthDay === "string";
+    list.length > 0 && !!current && typeof current.birthDay === "string";
 
   // 훅은 항상 호출: 데이터 없을 땐 더미로 계산
   const msForHooks = hasCurrent ? current : EMPTY_MS;
-  const natal = useMemo(() => buildNatalPillarsFromMs(msForHooks), [msForHooks]);
+  const natal = useMemo(
+    () => buildNatalPillarsFromMs(msForHooks),
+    [msForHooks],
+  );
   const chain = useLuckChain(msForHooks);
 
   // 유틸 가드
-  const isGZ = (s: unknown): s is string => typeof s === "string" && s.length >= 2;
+  const isGZ = (s: unknown): s is string =>
+    typeof s === "string" && s.length >= 2;
   const isValidPillars = (arr: unknown): arr is [string, string, string, string] =>
     Array.isArray(arr) && arr.length === 4 && arr.every(isGZ);
 
