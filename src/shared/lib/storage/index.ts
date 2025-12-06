@@ -11,7 +11,8 @@ export type MyeongSik = {
   birthDay: string;   // YYYY-MM-DD
   birthTime: string;  // HH:MM
   gender: string;
-  birthPlace?: { name: string; lat: number; lon: number };
+  sortOrder?: number;
+birthPlace?: { name: string; lat: number; lon: number };
   relationship?: string;
   memo?: string;
   folder?: string;
@@ -60,6 +61,7 @@ export function makeEmptyMyeongSik(): MyeongSik {
     birthDay: "",
     birthTime: "",
     gender: "",
+    sortOrder: 0,
     birthPlace: { name: "", lat: 0, lon: 0 },
     relationship: "",
     memo: "",
