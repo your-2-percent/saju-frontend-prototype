@@ -69,40 +69,40 @@ export default function Page() {
 
   // ✅ 처음 들어왔을 때 Supabase 세션 확인
   useEffect(() => {
-    let cancelled = false;
+    const client = supabase;
 
-    (async () => {
-      try {
-        const { data, error } = await supabase.auth.getSession();
+    const init = async () => {
+      const { data, error } = await client.auth.getSession();
 
-        if (error) {
-          console.error("Supabase getSession error:", error.message);
-          if (!cancelled) {
-            setIsLoggedIn(false);
-            setAuthChecked(true);
-          }
-          return;
-        }
+      console.log("[AUTH] init session:", data, error);
 
-        const session = data.session;
-
-        if (!cancelled) {
-          setIsLoggedIn(!!session?.user);
-          setAuthChecked(true);
-        }
-      } catch (e) {
-        console.error("Supabase auth check unexpected error:", e);
-        if (!cancelled) {
-          setIsLoggedIn(false);
-          setAuthChecked(true);
-        }
+      if (error) {
+        console.error("Supabase getSession error:", error.message);
+        setIsLoggedIn(false);
+        setAuthChecked(true);
+        return;
       }
-    })();
+
+      setIsLoggedIn(!!data.session);
+      setAuthChecked(true);
+    };
+
+    init();
+
+    // 🔁 세션이 바뀔 때마다 자동으로 로그인 상태 갱신
+    const {
+      data: { subscription },
+    } = client.auth.onAuthStateChange((_event, session) => {
+      console.log("[AUTH] onAuthStateChange:", _event, session);
+      setIsLoggedIn(!!session);
+      setAuthChecked(true);
+    });
 
     return () => {
-      cancelled = true;
+      subscription.unsubscribe();
     };
   }, []);
+
 
   // ✅ 로그인된 뒤에만: 로컬 → 서버 마이그레이션 + 서버에서 명식 로드
   useEffect(() => {
