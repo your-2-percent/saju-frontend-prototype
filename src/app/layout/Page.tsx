@@ -66,12 +66,7 @@ export default function Page() {
   );
   const loadFromServer = useMyeongSikStore((s) => s.loadFromServer);
   const loading = useMyeongSikStore((s) => s.loading);
-
-  useEffect(() => {
-    if (!loading) {
-      loadFromServer();
-    }
-  }, [loading, loadFromServer]);
+  const settingsLoaded = useSettingsStore((s) => s.loaded);
 
   // ✅ 처음 들어왔을 때 Supabase 세션 확인
   useEffect(() => {
@@ -133,6 +128,14 @@ export default function Page() {
   }
 
   // ✅ 로그인은 됐는데 DB에서 명식 불러오는 중이면 로딩 화면
+  if (!settingsLoaded) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-neutral-500">설정 조회 중...</p>
+      </main>
+    );
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
