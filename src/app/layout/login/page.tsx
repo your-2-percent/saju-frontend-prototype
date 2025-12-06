@@ -1,114 +1,53 @@
 // app/pages/LoginPage.tsx
-import { useState } from "react";
 import { supabase } from "@/lib/supabase";
 
-interface LoginPageProps {
-  onLoginSuccess: () => void;
-}
-
-export default function LoginPage({ onLoginSuccess }: LoginPageProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [pending, setPending] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-
-  // ✅ 이메일/비번 로그인
-  const handleLogin = async () => {
-    setErrorMsg("");
-    setPending(true);
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    setPending(false);
-
-    if (error) {
-      setErrorMsg(error.message);
-      return;
-    }
-
-    if (data.user) {
-      onLoginSuccess();
-    }
-  };
-
-  // ✅ 구글 로그인
+export default function LoginPage() {
   const handleGoogleLogin = async () => {
-    setErrorMsg("");
-
-    // 브라우저 환경 가드 (SSR 방지용)
     if (typeof window === "undefined") return;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        // 로그인 완료 후 돌아올 주소
-        // 개발 중이면 보통 http://localhost:5173 (window.location.origin)
         redirectTo: window.location.origin,
       },
     });
 
     if (error) {
-      setErrorMsg(error.message);
+      console.error("Google Login Error:", error);
+      alert("로그인 중 오류가 발생했습니다.");
     }
-
-    // 여기서 따로 onLoginSuccess() 안 불러도 됨.
-    // 구글 → Supabase → redirectTo 순서로 새로고침 되면서
-    // Page.tsx의 useEffect가 다시 getUser() 해서 isLoggedIn=true로 바꿔줄 거라서.
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-neutral-100">
-      <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow">
-        <h1 className="mb-4 text-lg font-bold">로그인</h1>
+    <main className="flex min-h-screen items-center justify-center bg-neutral-950 text-white px-4">
+      <div className="w-full max-w-sm rounded-2xl bg-neutral-900 p-8 shadow-xl border border-neutral-800">
+        
+        {/* 타이틀 */}
+        <h1 className="mb-2 text-2xl font-bold tracking-tight text-white text-center">
+          로그인
+        </h1>
 
-        {/* 이메일/비번 로그인 영역 */}
-        <label className="mb-2 block text-sm text-neutral-600">
-          이메일
-          <input
-            type="email"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-        </label>
-
-        <label className="mb-4 block text-sm text-neutral-600">
-          비밀번호
-          <input
-            type="password"
-            className="mt-1 w-full rounded border px-2 py-1 text-sm"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-        </label>
-
-        {errorMsg && (
-          <p className="mb-2 text-sm text-red-500">
-            {errorMsg}
-          </p>
-        )}
-
-        <button
-          type="button"
-          onClick={handleLogin}
-          disabled={pending}
-          className="mb-3 w-full rounded-md bg-black py-2 text-sm font-medium text-white disabled:opacity-60"
-        >
-          {pending ? "로그인 중..." : "이메일로 로그인"}
-        </button>
+        {/* 안내 문구 */}
+        <p className="mb-6 text-sm text-neutral-400 text-center leading-relaxed">
+          화림만세력에 방문해주셔서 감사합니다.  
+          <br />오늘도 행복한 하루 되세요 🌿
+        </p>
 
         {/* 구글 로그인 버튼 */}
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full rounded-md border border-neutral-300 py-2 text-sm font-medium text-neutral-800 bg-white"
+          className="flex items-center justify-center gap-3 w-full py-3 rounded-lg 
+                     bg-white text-black font-medium text-sm shadow 
+                     hover:bg-neutral-100 active:scale-[0.98] transition-all cursor-pointer"
         >
-          구글 계정으로 로그인
+          {/* 구글 로고 */}
+          <img
+            src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+            alt="Google Logo"
+            className="w-5 h-5"
+          />
+          <span>구글 계정으로 로그인</span>
         </button>
       </div>
     </main>

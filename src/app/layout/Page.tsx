@@ -69,19 +69,39 @@ export default function Page() {
 
   // ✅ 처음 들어왔을 때 Supabase 세션 확인
   useEffect(() => {
+    let cancelled = false;
+
     (async () => {
-      const { data, error } = await supabase.auth.getUser();
+      try {
+        const { data, error } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error("Supabase getUser error:", error.message);
-        setIsLoggedIn(false);
-        setAuthChecked(true);
-        return;
+        if (error) {
+          console.error("Supabase getSession error:", error.message);
+          if (!cancelled) {
+            setIsLoggedIn(false);
+            setAuthChecked(true);
+          }
+          return;
+        }
+
+        const session = data.session;
+
+        if (!cancelled) {
+          setIsLoggedIn(!!session?.user);
+          setAuthChecked(true);
+        }
+      } catch (e) {
+        console.error("Supabase auth check unexpected error:", e);
+        if (!cancelled) {
+          setIsLoggedIn(false);
+          setAuthChecked(true);
+        }
       }
-
-      setIsLoggedIn(!!data.user);
-      setAuthChecked(true);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // ✅ 로그인된 뒤에만: 로컬 → 서버 마이그레이션 + 서버에서 명식 로드
@@ -107,7 +127,7 @@ export default function Page() {
 
   // ✅ 로그인 안 되어 있으면 로그인 페이지
   if (!isLoggedIn) {
-    return <LoginPage onLoginSuccess={() => setIsLoggedIn(true)} />;
+    return <LoginPage />;
   }
 
   // ✅ 로그인은 됐는데 DB에서 명식 불러오는 중이면 로딩 화면
