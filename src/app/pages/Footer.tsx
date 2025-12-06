@@ -121,7 +121,7 @@ export default function Footer() {
 
             <button
               onClick={() => setOpenPolicy(false)}
-              className="mt-4 w-full py-2 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg hover:bg-neutral-800 transition"
+              className="cursor-pointer mt-4 w-full py-2 bg-neutral-900 dark:bg-neutral-700 text-white rounded-lg hover:bg-neutral-800 transition"
             >
               닫기
             </button>
@@ -150,14 +150,14 @@ export default function Footer() {
             <div className="flex gap-3">
               <button
                 onClick={() => setOpenDelete(false)}
-                className="flex-1 py-2 bg-neutral-300 dark:bg-neutral-700 text-black dark:text-white rounded-lg hover:bg-neutral-400 transition"
+                className="cursor-pointer flex-1 py-2 bg-neutral-300 dark:bg-neutral-700 text-black dark:text-white rounded-lg hover:bg-neutral-400 transition"
               >
                 취소
               </button>
 
               <button
                 onClick={handleDeleteAccount}
-                className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                className="cursor-pointer flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
               >
                 탈퇴하기
               </button>

@@ -331,9 +331,6 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     );
 
     if (toInsert.length === 0) {
-      console.log(
-        "migrateLocalToServer: nothing new to insert, just clear localStorage",
-      );
       window.localStorage.removeItem("myeongsik-list");
       return;
     }
