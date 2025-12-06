@@ -62,6 +62,16 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   // 테마 클래스 적용(실시간 미리보기)
   useApplyTheme(localSettings.theme ?? "dark");
 
+  // 테마 동기화: 서버/로컬 값 중 최신을 로컬스토리지와 DOM에 반영
+  const applyTheme = useApplyTheme;
+
+  useEffect(() => {
+    const theme = (localSettings.theme ?? settings.theme ?? "dark") as ThemeMode;
+    setStoredTheme(theme);
+    applyTheme(theme);
+
+  }, [localSettings.theme, settings.theme, applyTheme]);
+
   // 드로어 열 때 스토어 → 로컬로 스냅샷
   useEffect(() => {
     if (!open) return;
