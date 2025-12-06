@@ -454,12 +454,12 @@ export default function Sidebar({
                 {/* 즐겨찾기 */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    const nextFav = !m.favorite;
-                    update(m.id, { favorite: nextFav });
+              onClick={(e) => {
+                e.stopPropagation();
+                const nextFav = !m.favorite;
+                update(m.id, { favorite: nextFav });
 
-                    // 즐겨찾기 토글 시 해당 폴더/미지정 내에서 최상단으로 이동
+                // 즐겨찾기 토글 시 해당 폴더/미지정 내에서 최상단으로 이동
                     const folderKey = m.folder ?? "__unassigned__";
                     const groupMap: Record<string, MyeongSik[]> = {
                       "__unassigned__": [],
@@ -477,11 +477,20 @@ export default function Sidebar({
 
                     // 대상 아이템을 해당 그룹 맨 앞에 재배치
                     const arr = groupMap[folderKey] ?? [];
-                    const without = arr.filter((x) => x.id !== m.id);
-                    groupMap[folderKey] = [
-                      { ...m, favorite: nextFav },
-                      ...without,
-                    ];
+                const without = arr.filter((x) => x.id !== m.id);
+                if (nextFav) {
+                  // 즐겨찾기 ON: 맨 위로
+                  groupMap[folderKey] = [
+                    { ...m, favorite: nextFav },
+                    ...without,
+                  ];
+                } else {
+                  // 즐겨찾기 OFF: 맨 아래로
+                  groupMap[folderKey] = [
+                    ...without,
+                    { ...m, favorite: nextFav },
+                  ];
+                }
 
                     // 새 리스트로 플랫화: 미지정 → 폴더 순서대로
                     const nextList: MyeongSik[] = [
