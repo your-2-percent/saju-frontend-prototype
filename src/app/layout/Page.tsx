@@ -197,6 +197,7 @@ function MainApp() {
     settings,
     loadFromServer: loadSettings,
     saveToServer: saveSettings,
+    loaded: settingsLoaded,
   } = useSettingsStore();
 
   // 설정 로드
@@ -206,8 +207,9 @@ function MainApp() {
 
   // 설정 변경 시 서버에도 반영
   useEffect(() => {
+    if (!settingsLoaded) return;
     void saveSettings();
-  }, [settings, saveSettings]);
+  }, [settingsLoaded, settings, saveSettings]);
 
   const voidBasis = settings.sinsalBase === "일지" ? "day" : "year";
   const samjaeBasis = settings.sinsalBase === "일지" ? "day" : "year";
