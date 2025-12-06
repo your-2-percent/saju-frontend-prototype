@@ -2,9 +2,9 @@
 "use client";
 
 import type { FC } from "react";
-import SajuForm from "@/components/SajuForm";
-import SajuList from "@/components/SajuList";
-import AuthStatus from "@/components/AuthStatus";
+import SajuForm from "@/app/components/SajuForm";
+import SajuList from "@/app/components/SajuList";
+import AuthStatus from "@/app/components/AuthStatus";
 
 interface DashboardClientProps {
   userEmail: string;

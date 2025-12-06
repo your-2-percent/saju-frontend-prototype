@@ -366,29 +366,37 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       return;
     }
 
-    const row = buildRowForUpsert(m, user.id);
+    // 1) 프론트 상태 먼저 반영 (낙관적 업데이트)
+    set((state) => ({
+      list: [m, ...state.list],
+      currentId: state.currentId ?? m.id,
+    }));
 
+    // 2) 서버에 저장 (전체 reload 안 함)
+    const row = buildRowForUpsert(m, user.id);
     const { error } = await supabase
       .from("myeongsik")
       .upsert(row, { onConflict: "id" });
 
     if (error) {
       console.error("add upsert error:", error);
-      return;
+      // 필요하면 여기서 토스트 띄우거나 롤백 로직 추가 가능
     }
-
-    await get().loadFromServer();
   },
 
   update: async (id, patch) => {
     const prev = get().list.find((x) => x.id === id);
     if (!prev) return;
 
-    const merged: MyeongSik = {
-      ...prev,
-      ...patch,
-    };
+    // patch 적용된 최종 객체
+    const merged: MyeongSik = { ...prev, ...patch };
 
+    // 1) 프론트 상태 먼저 반영
+    set((state) => ({
+      list: state.list.map((x) => (x.id === id ? merged : x)),
+    }));
+
+    // 2) 서버에도 반영 (배경 저장)
     const {
       data: { user },
       error: userError,
@@ -408,13 +416,26 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     if (error) {
       console.error("update error:", error);
-      return;
+      // 필요하면 실패 알림 / 롤백도 가능
     }
 
-    await get().loadFromServer();
+    // ❌ 여기서 더 이상 loadFromServer() 호출하지 않음!!
   },
 
   remove: async (id) => {
+    // 1) 프론트 상태 먼저 반영
+    set((state) => {
+      const filtered = state.list.filter((x) => x.id !== id);
+      const newCurrentId =
+        state.currentId === id ? filtered[0]?.id ?? null : state.currentId;
+
+      return {
+        list: filtered,
+        currentId: newCurrentId,
+      };
+    });
+
+    // 2) 서버에서 삭제
     const { error } = await supabase
       .from("myeongsik")
       .delete()
@@ -422,10 +443,9 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     if (error) {
       console.error("remove error:", error);
-      return;
     }
 
-    await get().loadFromServer();
+    // ❌ 여기서도 loadFromServer() 호출하지 않음
   },
 
   reorder: (newList) => {
