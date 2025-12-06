@@ -52,7 +52,7 @@ type MyeongSikStore = {
   migrateLocalToServer: () => Promise<void>;
 
   add: (m: MyeongSik) => Promise<void>;
-  update: (id: string, patch: Partial<MyeongSik>) => Promise<void>;
+  update: (id: string, patch: Partial<MyeongSikWithOrder>) => Promise<void>;
   remove: (id: string) => Promise<void>;
 
   reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
@@ -173,7 +173,7 @@ function reviveAndRecalc(base: MyeongSik): MyeongSik {
 }
 
 /** DB row → MyeongSik */
-function fromRow(row: MyeongSikRow): MyeongSik {
+function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
   const birthPlace: MyeongSik["birthPlace"] = {
     name: row.birth_place_name ?? "",
     lat: row.birth_place_lat ?? 0,
@@ -188,7 +188,7 @@ function fromRow(row: MyeongSikRow): MyeongSik {
       ? sortOrderRaw
       : undefined;
 
-  const base: MyeongSik = {
+  const base: MyeongSikWithOrder = {
     id: row.id,
     name: row.name ?? "",
     birthDay: row.birth_day ?? "",
@@ -219,7 +219,7 @@ function fromRow(row: MyeongSikRow): MyeongSik {
 }
 
 /** MyeongSik → Supabase upsert용 row */
-function buildRowForUpsert(m: MyeongSik, userId: string) {
+function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
   const bp = m.birthPlace ?? { name: "", lat: 0, lon: 127.5 };
 
   return {
@@ -314,7 +314,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       return;
     }
 
-    const filtered = data.filter((row) => row.user_id === user.id);
+    const filtered = (data as unknown as MyeongSikRow[]).filter((row) => row.user_id === user.id);
 
     const list: MyeongSikWithOrder[] = filtered.map(fromRow);
     const prevCurrent = get().currentId;
@@ -392,7 +392,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     const payload = toInsert.map((item) =>
-      buildRowForUpsert(item as MyeongSik, user.id),
+      buildRowForUpsert(item as MyeongSikWithOrder, user.id),
     );
 
     const { error } = await supabase
@@ -410,7 +410,10 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
   add: async (m) => {
     const nextOrder = (get().list.length || 0) + 1;
-    const withOrder = { ...m, sortOrder: (m).sortOrder ?? nextOrder };
+    const withOrder: MyeongSikWithOrder = {
+      ...m,
+      sortOrder: (m as MyeongSikWithOrder).sortOrder ?? nextOrder,
+    };
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
 
@@ -432,7 +435,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
   },
 
-  update: async (id, patch) => {
+  update: async (id, patch: Partial<MyeongSikWithOrder>) => {
     const prev = get().list.find((x) => x.id === id);
     if (!prev) return;
 
