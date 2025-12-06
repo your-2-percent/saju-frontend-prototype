@@ -199,17 +199,15 @@ function MainApp() {
     saveToServer: saveSettings,
   } = useSettingsStore();
 
-  // 로그인 후 설정 로드
+  // 설정 로드
   useEffect(() => {
-    if (!isLoggedIn) return;
     void loadSettings();
-  }, [isLoggedIn, loadSettings]);
+  }, [loadSettings]);
 
   // 설정 변경 시 서버에도 반영
   useEffect(() => {
-    if (!isLoggedIn) return;
     void saveSettings();
-  }, [isLoggedIn, settings, saveSettings]);
+  }, [settings, saveSettings]);
 
   const voidBasis = settings.sinsalBase === "일지" ? "day" : "year";
   const samjaeBasis = settings.sinsalBase === "일지" ? "day" : "year";
