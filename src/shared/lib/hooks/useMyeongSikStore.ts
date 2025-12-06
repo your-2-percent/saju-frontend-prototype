@@ -6,6 +6,11 @@ import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot"
 
 type Direction = MyeongSik extends { dir: infer D } ? D : string;
 type MyeongSikWithOrder = MyeongSik & { sortOrder?: number | null };
+const preferSortOrder =
+  typeof import.meta !== "undefined" &&
+  import.meta.env &&
+  import.meta.env.VITE_USE_SORT_ORDER === "true";
+let hasSortOrder = preferSortOrder;
 
 type OldPersistRoot = {
   state?: {
@@ -236,7 +241,7 @@ function buildRowForUpsert(m: MyeongSik, userId: string) {
     day_change_rule: m.DayChangeRule ?? null,
     favorite: m.favorite ?? false,
     sort_order:
-      typeof (m as MyeongSikWithOrder).sortOrder === "number"
+      hasSortOrder && typeof (m as MyeongSikWithOrder).sortOrder === "number"
         ? ((m as MyeongSikWithOrder).sortOrder as number)
         : null,
     updated_at: new Date().toISOString(),
@@ -265,13 +270,43 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       return;
     }
 
-    const { data, error } = await supabase
-      .from("myeongsik")
-      .select(
-        "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, sort_order, created_at, updated_at",
-      )
-      .order("sort_order", { ascending: true, nullsFirst: true })
-      .order("created_at", { ascending: false });
+    let data;
+    let error;
+
+    if (hasSortOrder) {
+      const res = await supabase
+        .from("myeongsik")
+        .select(
+          "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, sort_order, created_at, updated_at",
+        )
+        .order("sort_order", { ascending: true, nullsFirst: true })
+        .order("created_at", { ascending: false });
+
+      data = res.data;
+      error = res.error;
+
+      if (error && (error as { code?: string }).code === "42703") {
+        // 컬럼이 없으면 이후부터 sort_order를 쓰지 않고 재조회
+        hasSortOrder = false;
+        const fallback = await supabase
+          .from("myeongsik")
+          .select(
+            "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at",
+          )
+          .order("created_at", { ascending: false });
+        data = fallback.data;
+        error = fallback.error;
+      }
+    } else {
+      const fallback = await supabase
+        .from("myeongsik")
+        .select(
+          "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at",
+        )
+        .order("created_at", { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
+    }
 
     if (error || !data) {
       console.error("loadFromServer error:", error);
@@ -462,6 +497,12 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   },
 
   reorder: async (newList) => {
+    // sort_order 컬럼이 없으면 로컬 순서만 반영
+    if (!hasSortOrder) {
+      set({ list: newList });
+      return;
+    }
+
     const withOrder: MyeongSikWithOrder[] = newList.map((item, idx) => ({
       ...item,
       sortOrder: idx + 1,
