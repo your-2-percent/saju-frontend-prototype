@@ -60,6 +60,14 @@ export default function Page() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  // ✅ 명식 스토어에서 서버 동기화 관련 액션/상태 가져오기
+  const migrateLocalToServer = useMyeongSikStore(
+    (s) => s.migrateLocalToServer,
+  );
+  const loadFromServer = useMyeongSikStore((s) => s.loadFromServer);
+  const loading = useMyeongSikStore((s) => s.loading);
+
+  // ✅ 처음 들어왔을 때 Supabase 세션 확인
   useEffect(() => {
     (async () => {
       const { data, error } = await supabase.auth.getUser();
@@ -76,6 +84,19 @@ export default function Page() {
     })();
   }, []);
 
+  // ✅ 로그인된 뒤에만: 로컬 → 서버 마이그레이션 + 서버에서 명식 로드
+  useEffect(() => {
+    if (!isLoggedIn) return; // 로그인 안 되어 있으면 아무 것도 안 함
+
+    (async () => {
+      // 예전 localStorage에 남아있던 명식이 있으면 현재 계정 DB로 업로드
+      await migrateLocalToServer();
+      // 그 다음, 현재 계정 기준으로 DB에서 명식 리스트 불러오기
+      await loadFromServer();
+    })();
+  }, [isLoggedIn, migrateLocalToServer, loadFromServer]);
+
+  // ✅ 아직 세션 체크 전이면 로딩 화면
   if (!authChecked) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -84,11 +105,21 @@ export default function Page() {
     );
   }
 
+  // ✅ 로그인 안 되어 있으면 로그인 페이지
   if (!isLoggedIn) {
     return <LoginPage onLoginSuccess={() => setIsLoggedIn(true)} />;
   }
 
-  // ✅ 로그인 된 상태 → 실제 앱 렌더
+  // ✅ 로그인은 됐는데 DB에서 명식 불러오는 중이면 로딩 화면
+  if (loading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-neutral-500">명식 불러오는 중...</p>
+      </main>
+    );
+  }
+
+  // ✅ 로그인 + 명식 로딩 완료 → 실제 만세력 앱 렌더
   return <MainApp />;
 }
 
@@ -97,6 +128,7 @@ export default function Page() {
  *   여기서는 early return 없이 훅만 쭉 호출 → 룰-of-hooks 만족.
  */
 function MainApp() {
+  
   const { list } = useMyeongSikStore();
 
   // 초기 currentId는 존재할 때만 세팅

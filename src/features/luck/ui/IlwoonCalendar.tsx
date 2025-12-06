@@ -160,7 +160,6 @@ export default function IlwoonCalendar({
   const settings = useSettingsStore((s) => s.settings);
 
   const rule: DayBoundaryRule = (settings.ilunRule as DayBoundaryRule) || "조자시/야자시";
-  console.log("⚡ ilunRule:", settings.ilunRule);
 
   const birthRaw = data ? toCorrected(data) : null;
   const birthSafe = data && birthRaw ? withSafeClockForUnknownTime(data, birthRaw) : null;
@@ -293,7 +292,6 @@ export default function IlwoonCalendar({
             const isActive = isSelected || (!pickerNoon && isToday);
 
             const gz = getDayGanZhiilun(dayLocal, rule);
-            console.log("⛱ ilun", dayLocal.toISOString(), rule, gz);
             const stem = gz.charAt(0) as Stem10sin;
             const branch = gz.charAt(1) as Branch10sin;
 

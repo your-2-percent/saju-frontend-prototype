@@ -179,7 +179,6 @@ export function getDayOffsetForCalendar(dateObj: Date, rule: DayBoundaryRule): n
   }
 
   if (rule === "인시") {
-    console.log('들어오잖아');
     // 03:00 이전은 전날로 계산
     return totalMinutes < 3 * 60 ? -1 : 0;
   }
@@ -234,7 +233,6 @@ export function getDayGanZhiilun(date: Date, rule: DayBoundaryRule) {
     throw new Error(`getDayGanZhi: idx=${idx} out of range (jdn=${jdn}, jd=${jd})`);
   }
 
-  console.log(gz);
   return gz;
 }
 
