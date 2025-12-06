@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 
 type Direction = MyeongSik extends { dir: infer D } ? D : string;
+type MyeongSikWithOrder = MyeongSik & { sortOrder?: number | null };
 
 type OldPersistRoot = {
   state?: {
@@ -30,13 +31,14 @@ interface MyeongSikRow {
   ming_sik_type: string | null;
   day_change_rule: string | null;
   favorite: boolean | null;
+  sort_order: string | number | null;
   created_at: string | null;
   updated_at: string | null;
 }
 
 type MyeongSikStore = {
   currentId: string | null;
-  list: MyeongSik[];
+  list: MyeongSikWithOrder[];
   loading: boolean;
 
   setCurrent: (id: string | null) => void;
@@ -48,7 +50,7 @@ type MyeongSikStore = {
   update: (id: string, patch: Partial<MyeongSik>) => Promise<void>;
   remove: (id: string) => Promise<void>;
 
-  reorder: (newList: MyeongSik[]) => void;
+  reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
   clear: () => void;
 };
 
@@ -172,6 +174,14 @@ function fromRow(row: MyeongSikRow): MyeongSik {
     lat: row.birth_place_lat ?? 0,
     lon: row.birth_place_lon ?? 127.5,
   };
+  const sortOrderRaw =
+    row.sort_order === null || row.sort_order === undefined
+      ? undefined
+      : Number(row.sort_order);
+  const sortOrder =
+    typeof sortOrderRaw === "number" && Number.isFinite(sortOrderRaw)
+      ? sortOrderRaw
+      : undefined;
 
   const base: MyeongSik = {
     id: row.id,
@@ -188,6 +198,7 @@ function fromRow(row: MyeongSikRow): MyeongSik {
       ? row.day_change_rule
       : "자시일수론") as "자시일수론" | "인시일수론",
     favorite: row.favorite ?? false,
+    sortOrder,
 
     dateObj: new Date(),
     corrected: new Date(),
@@ -224,6 +235,10 @@ function buildRowForUpsert(m: MyeongSik, userId: string) {
     ming_sik_type: m.mingSikType ?? null,
     day_change_rule: m.DayChangeRule ?? null,
     favorite: m.favorite ?? false,
+    sort_order:
+      typeof (m as MyeongSikWithOrder).sortOrder === "number"
+        ? ((m as MyeongSikWithOrder).sortOrder as number)
+        : null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -231,7 +246,8 @@ function buildRowForUpsert(m: MyeongSik, userId: string) {
 export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   currentId: null,
   list: [],
-  loading: false,
+  // 초기 진입 시 서버 싱크 전에 메인 UI가 깜빡 보이지 않도록 기본값을 true로 둔다.
+  loading: true,
 
   setCurrent: (id) => set({ currentId: id }),
 
@@ -252,8 +268,9 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     const { data, error } = await supabase
       .from("myeongsik")
       .select(
-        "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at",
+        "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, sort_order, created_at, updated_at",
       )
+      .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false });
 
     if (error || !data) {
@@ -264,8 +281,12 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     const filtered = data.filter((row) => row.user_id === user.id);
 
-    const list: MyeongSik[] = filtered.map(fromRow);
-    const firstId = list[0]?.id ?? null;
+    const list: MyeongSikWithOrder[] = filtered.map(fromRow);
+    const prevCurrent = get().currentId;
+    const firstId =
+      prevCurrent && list.some((m) => m.id === prevCurrent)
+        ? prevCurrent
+        : list[0]?.id ?? null;
 
     set({
       list,
@@ -353,31 +374,26 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   },
 
   add: async (m) => {
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const nextOrder = (get().list.length || 0) + 1;
+    const withOrder = { ...m, sortOrder: (m).sortOrder ?? nextOrder };
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError || !user) {
       console.error("add: user not found", userError);
       return;
     }
 
-    // 1) 프론트 상태 먼저 반영 (낙관적 업데이트)
     set((state) => ({
-      list: [m, ...state.list],
-      currentId: state.currentId ?? m.id,
+      list: [withOrder, ...state.list],
+      currentId: state.currentId ?? withOrder.id,
     }));
 
-    // 2) 서버에 저장 (전체 reload 안 함)
-    const row = buildRowForUpsert(m, user.id);
-    const { error } = await supabase
-      .from("myeongsik")
-      .upsert(row, { onConflict: "id" });
+    const row = buildRowForUpsert(withOrder, user.id);
+    const { error } = await supabase.from("myeongsik").upsert(row, { onConflict: "id" });
 
     if (error) {
       console.error("add upsert error:", error);
-      // 필요하면 여기서 토스트 띄우거나 롤백 로직 추가 가능
     }
   },
 
@@ -386,7 +402,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     if (!prev) return;
 
     // patch 적용된 최종 객체
-    const merged: MyeongSik = { ...prev, ...patch };
+    const merged: MyeongSikWithOrder = { ...prev, ...patch };
 
     // 1) 프론트 상태 먼저 반영
     set((state) => ({
@@ -445,8 +461,33 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     // ❌ 여기서도 loadFromServer() 호출하지 않음
   },
 
-  reorder: (newList) => {
-    set({ list: newList });
+  reorder: async (newList) => {
+    const withOrder: MyeongSikWithOrder[] = newList.map((item, idx) => ({
+      ...item,
+      sortOrder: idx + 1,
+    }));
+
+    // optimistic update
+    set({ list: withOrder });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error("reorder: user not found", userError);
+      return;
+    }
+
+    const rows = withOrder.map((m) => buildRowForUpsert(m, user.id));
+    const { error } = await supabase
+      .from("myeongsik")
+      .upsert(rows, { onConflict: "id" });
+
+    if (error) {
+      console.error("reorder upsert error:", error);
+    }
   },
 
   clear: () => {

@@ -541,7 +541,7 @@ export default function Sidebar({
         ...orderedFolders.flatMap((f) => groupMap[f] ?? []),
       ];
 
-      reorder(nextList);
+      void reorder(nextList);
     }
   };
 
