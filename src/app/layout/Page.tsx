@@ -136,14 +136,14 @@ export default function Page() {
   }
 
   // ✅ 로그인 + 명식 로딩 완료 → 실제 만세력 앱 렌더
-  return <MainApp />;
+  return <MainApp isLoggedIn={isLoggedIn} />;
 }
 
 /**
  * ✅ MainApp: 예전 만세력 UI 전부 여기로.
  *   여기서는 early return 없이 훅만 쭉 호출 → 룰-of-hooks 만족.
  */
-function MainApp() {
+function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   
   const { list } = useMyeongSikStore();
 
@@ -200,16 +200,17 @@ function MainApp() {
     loaded: settingsLoaded,
   } = useSettingsStore();
 
-  // 설정 로드
+  // 설정 로드: 로그인된 상태에서만 실행
   useEffect(() => {
+    if (!isLoggedIn) return;
     void loadSettings();
-  }, [loadSettings]);
+  }, [isLoggedIn, loadSettings]);
 
-  // 설정 변경 시 서버에도 반영
+  // 설정 변경 시 서버에도 반영 (로그인 + 로드 완료 이후)
   useEffect(() => {
-    if (!settingsLoaded) return;
+    if (!isLoggedIn || !settingsLoaded) return;
     void saveSettings();
-  }, [settingsLoaded, settings, saveSettings]);
+  }, [isLoggedIn, settingsLoaded, settings, saveSettings]);
 
   const voidBasis = settings.sinsalBase === "일지" ? "day" : "year";
   const samjaeBasis = settings.sinsalBase === "일지" ? "day" : "year";
