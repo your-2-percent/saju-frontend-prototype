@@ -13,6 +13,8 @@ type Props = {
   onChange?: (value: string) => void;
 };
 
+const ETC_VALUE = "__custom__";
+
 const defaultOptions = [
   { value: "본인", label: "본인 (1인지정만 가능)" },
   { value: "연인/배우자", label: "연인 / 배우자" },
@@ -46,14 +48,15 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
-    setSelected(val);
-    onChange?.(val);
-
-    if (val === "기타입력") {
+    if (val === ETC_VALUE) {
       setShowEtc(true);
+      setSelected("");
+      onChange?.("");
     } else {
       setShowEtc(false);
       setEtcValue("");
+      setSelected(val);
+      onChange?.(val);
     }
   };
 
@@ -146,7 +149,7 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
               {opt.label}
             </option>
           ))}
-          <option value="기타입력">기타입력</option>
+          <option value={ETC_VALUE}>기타 입력</option>
         </select>
         <button
           type="button"
