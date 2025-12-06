@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { supabase } from "@/lib/supabase";
 
 export type Settings = {
   hiddenStem: "all" | "regular";        // 지장간: 전체 / 정기만
@@ -46,16 +47,80 @@ type SettingsState = {
   setSettings: (next: Settings) => void;
   setKey: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   reset: () => void;
+  loadFromServer: () => Promise<void>;
+  saveToServer: () => Promise<void>;
+  syncing: boolean;
 };
 
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
       settings: defaultSettings,
+      syncing: false,
       setSettings: (next) => set({ settings: next }),
       setKey: (key, value) =>
         set({ settings: { ...get().settings, [key]: value } }),
       reset: () => set({ settings: defaultSettings }),
+      loadFromServer: async () => {
+        set({ syncing: true });
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          set({ syncing: false });
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("user_settings")
+          .select("payload")
+          .eq("user_id", user.id)
+          .single();
+
+        if (error && error.code !== "PGRST116") {
+          console.error("loadFromServer(settings) error:", error);
+          set({ syncing: false });
+          return;
+        }
+
+        if (data?.payload) {
+          set({ settings: data.payload as Settings, syncing: false });
+          return;
+        }
+
+        await get().saveToServer();
+        set({ syncing: false });
+      },
+      saveToServer: async () => {
+        set({ syncing: true });
+
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          set({ syncing: false });
+          return;
+        }
+
+        const { error } = await supabase
+          .from("user_settings")
+          .upsert({
+            user_id: user.id,
+            payload: get().settings,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) {
+          console.error("saveToServer(settings) error:", error);
+        }
+
+        set({ syncing: false });
+      },
     }),
     { name: "settings_v1" } // ✅ 한 군데로만 저장
   )

@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { DropResult } from "@hello-pangea/dnd";
 import type { MyeongSik } from "@/shared/lib/storage";
+import { supabase } from "@/lib/supabase";
 import {
   UNASSIGNED_LABEL,
   LS_FOLDER_FAVS,
@@ -83,6 +84,9 @@ export function useSidebarLogic(
   /* ---------- 새 폴더 이름 인풋 ---------- */
   const [newFolderName, setNewFolderName] = useState<string>("");
 
+  // ?? ?? ?? ??? ??
+  const [folderOrderFetched, setFolderOrderFetched] = useState(false);
+
   /* ---------- 실제 표시 폴더 목록 (FolderField와 동일 소스 사용) ---------- */
   const [orderedFolders, setOrderedFolders] = useState<string[]>(() => {
     const effective = getEffectiveFolders();      // 프리셋 숨김 + 커스텀 모두 반영된 목록
@@ -91,6 +95,63 @@ export function useSidebarLogic(
   });
 
   const selfOrderingRef = useRef(false);
+
+  // ???? ?? ?? ??
+  useEffect(() => {
+    const loadFromServer = async () => {
+      if (folderOrderFetched) return;
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      const { data, error } = await supabase
+        .from("user_folder_order")
+        .select("folder_name, sort_order")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: true, nullsFirst: true });
+
+      if (error) {
+        console.error("load folder order from server error:", error);
+        setFolderOrderFetched(true);
+        return;
+      }
+
+      const effective = getEffectiveFolders();
+      const serverOrder = (data ?? [])
+        .map((row: any) => String(row.folder_name))
+        .filter(Boolean);
+      const merged = serverOrder.length
+        ? reconcileFolderOrder(effective, serverOrder)
+        : reconcileFolderOrder(effective, loadFolderOrder());
+
+      setOrderedFolders(merged);
+      setFolderOrderFetched(true);
+    };
+
+    loadFromServer();
+  }, [folderOrderFetched]);
+
+  const saveOrderToServer = useCallback(
+    async (order: string[]) => {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      const rows = order.map((name, idx) => ({
+        user_id: user.id,
+        folder_name: name,
+        sort_order: idx + 1,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error } = await supabase
+        .from("user_folder_order")
+        .upsert(rows, { onConflict: "user_id,folder_name" });
+
+      if (error) {
+        console.error("save folder order to server error:", error);
+      }
+    },
+    []
+  );
 
   // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
     // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
@@ -197,6 +258,7 @@ export function useSidebarLogic(
       if (prev.includes(n)) return prev;
       const next = [...prev, n];
       saveFolderOrder(next);
+      void saveOrderToServer(next);
       return next;
     });
   };
@@ -222,6 +284,7 @@ export function useSidebarLogic(
     setOrderedFolders((prev) => {
       const next = prev.filter((f) => f !== name);
       saveFolderOrder(next);
+      void saveOrderToServer(next);
       return next;
     });
 
