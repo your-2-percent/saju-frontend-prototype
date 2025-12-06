@@ -59,20 +59,16 @@ export default function SettingsDrawer({ open, onClose }: Props) {
 
   //const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
-  // 테마 클래스 적용(실시간 미리보기)
-  useApplyTheme(localSettings.theme ?? "dark");
-
-  // 테마 동기화: 서버/로컬 값 중 최신을 로컬스토리지와 DOM에 반영
-  const applyTheme = useApplyTheme;
-
+  // 1) 최신 테마 계산
+  const currentTheme = (localSettings.theme ?? settings.theme ?? "dark") as ThemeMode;
+  // 2) 훅은 한 번만 호출
+  useApplyTheme(currentTheme);
+  // 3) 로컬스토리지만 동기화
   useEffect(() => {
-    const theme = (localSettings.theme ?? settings.theme ?? "dark") as ThemeMode;
-    setStoredTheme(theme);
-    applyTheme(theme);
+    setStoredTheme(currentTheme);
+  }, [currentTheme]);
 
-  }, [localSettings.theme, settings.theme, applyTheme]);
-
-  // 드로어 열 때 스토어 → 로컬로 스냅샷
+  // 4) 드로어 동기화는 그대로:
   useEffect(() => {
     if (!open) return;
     setLocalSettings(settings);
