@@ -144,7 +144,6 @@ export function elementScoreFromPillars(pillars: (string | undefined)[]): Record
   const valid = pillars.filter((p): p is string => !!p && p.length >= 2);
   for (const gz of valid) {
     const sc = elementScoreFromGZ(gz);
-    console.log("🔥", gz, sc);
     for (const el of Object.keys(out) as Element[]) {
       out[el] += sc[el];
     }

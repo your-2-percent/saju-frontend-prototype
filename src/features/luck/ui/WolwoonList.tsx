@@ -282,7 +282,6 @@ export default function WolwoonList({
                 const delayed = new Date(ev.at);
                 const { start } = getJieRangeByDate(delayed); // ✅ 클릭된 절입 구간 기준
                 onSelect?.(start.getFullYear(), start.getMonth()); // 이 월이 IlwoonCalendar에 전달됨
-                console.log("[WolwoonList] onSelect ->", start.getFullYear(), start.getMonth());
                 setFromEvent({ at: delayed, gz: getMonthGanZhi(delayed, lon) }, "월운");
               }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
