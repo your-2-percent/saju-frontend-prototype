@@ -6,11 +6,6 @@ import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot"
 
 type Direction = MyeongSik extends { dir: infer D } ? D : string;
 type MyeongSikWithOrder = MyeongSik & { sortOrder?: number | null };
-const preferSortOrder =
-  typeof import.meta !== "undefined" &&
-  import.meta.env &&
-  import.meta.env.VITE_USE_SORT_ORDER === "true";
-
 type OldPersistRoot = {
   state?: {
     currentId?: string | null;
@@ -220,6 +215,11 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
 /** MyeongSik → Supabase upsert용 row */
 function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
   const bp = m.birthPlace ?? { name: "", lat: 0, lon: 127.5 };
+  const sortOrderVal =
+    typeof (m as MyeongSikWithOrder).sortOrder === "number" &&
+    Number.isFinite((m as MyeongSikWithOrder).sortOrder as number)
+      ? ((m as MyeongSikWithOrder).sortOrder as number)
+      : null;
 
   return {
     id: m.id,
@@ -239,10 +239,7 @@ function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
     ming_sik_type: m.mingSikType ?? null,
     day_change_rule: m.DayChangeRule ?? null,
     favorite: m.favorite ?? false,
-    sort_order:
-      preferSortOrder && typeof (m as MyeongSikWithOrder).sortOrder === "number"
-        ? ((m as MyeongSikWithOrder).sortOrder as number)
-        : null,
+    sort_order: sortOrderVal,
     updated_at: new Date().toISOString(),
   };
 }
@@ -269,39 +266,17 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       return;
     }
 
-    let data;
-    let error;
-
     const baseSelect =
       "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at";
 
-    if (preferSortOrder) {
-      const withOrder = await supabase
-        .from("myeongsik")
-        .select(baseSelect + ", sort_order")
-        .order("sort_order", { ascending: true, nullsFirst: true })
-        .order("created_at", { ascending: false });
+    const withOrder = await supabase
+      .from("myeongsik")
+      .select(baseSelect + ", sort_order")
+      .order("sort_order", { ascending: true, nullsFirst: true })
+      .order("created_at", { ascending: false });
 
-      data = withOrder.data;
-      error = withOrder.error;
-
-      if (error) {
-        console.warn("loadFromServer: sort_order query failed, fallback without sort_order", error);
-        const fallback = await supabase
-          .from("myeongsik")
-          .select(baseSelect)
-          .order("created_at", { ascending: false });
-        data = fallback.data;
-        error = fallback.error;
-      }
-    } else {
-      const fallback = await supabase
-        .from("myeongsik")
-        .select(baseSelect)
-        .order("created_at", { ascending: false });
-      data = fallback.data;
-      error = fallback.error;
-    }
+    const data = withOrder.data;
+    const error = withOrder.error;
 
     if (error || !data) {
       console.error("loadFromServer error:", error);
