@@ -6,6 +6,7 @@ import {
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
+import { supabase } from "@/lib/supabase";
 import {
   UNASSIGNED_LABEL,
   getFolderOptionsForInputNow,
@@ -42,6 +43,28 @@ export default function FolderField({ value, onChange }: Props) {
   const [inputMode, setInputMode] = useState(false);
   const [text, setText] = useState("");
   const [showModify, setShowModify] = useState(false);
+  const saveOrderToServer = useCallback(async (order: string[]) => {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+    if (userError || !user) return;
+
+    const rows = order.map((name, idx) => ({
+      user_id: user.id,
+      folder_name: name,
+      sort_order: idx + 1,
+      updated_at: new Date().toISOString(),
+    }));
+
+    const { error } = await supabase
+      .from("user_folder_order")
+      .upsert(rows, { onConflict: "user_id,folder_name" });
+
+    if (error) {
+      console.error("save folder order error", error.message);
+    }
+  }, []);
 
   // 🔹 모델 + localStorage 순서를 읽어서 options 동기화
   const syncFromModel = useCallback(() => {
@@ -66,8 +89,9 @@ export default function FolderField({ value, onChange }: Props) {
 
     if (!same) {
       saveFolderOrder(mergedRest);
+      void saveOrderToServer(mergedRest);
     }
-  }, []);
+  }, [saveOrderToServer]);
 
   useEffect(() => {
     // 최초 1회
@@ -91,6 +115,7 @@ export default function FolderField({ value, onChange }: Props) {
   const persistOrder = (opts: string[]) => {
     const { rest } = splitUnassigned(opts);
     saveFolderOrder(rest);
+    void saveOrderToServer(rest);
   };
 
   /** 드래그로 순서 변경 */

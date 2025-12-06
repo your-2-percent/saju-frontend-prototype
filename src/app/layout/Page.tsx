@@ -67,6 +67,12 @@ export default function Page() {
   const loadFromServer = useMyeongSikStore((s) => s.loadFromServer);
   const loading = useMyeongSikStore((s) => s.loading);
 
+  useEffect(() => {
+    if (!loading) {
+      loadFromServer();
+    }
+  }, [loading, loadFromServer]);
+
   // ✅ 처음 들어왔을 때 Supabase 세션 확인
   useEffect(() => {
     const client = supabase;

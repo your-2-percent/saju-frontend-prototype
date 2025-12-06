@@ -6,6 +6,7 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { supabase } from "@/lib/supabase";
 
 type Props = {
   value?: string;
@@ -67,6 +68,43 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
   // localStorage 저장
   useEffect(() => {
     localStorage.setItem("relationshipOptions", JSON.stringify(options));
+
+    // 서버에도 저장 (옵션 순서/값)
+    const syncToServer = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      const { data, error: selectError } = await supabase
+        .from("user_settings")
+        .select("payload")
+        .eq("user_id", user.id)
+        .single();
+
+      if (selectError && selectError.code !== "PGRST116") {
+        console.error("load relationships settings error", selectError.message);
+        return;
+      }
+
+      const nextPayload = {
+        ...(data?.payload ?? {}),
+        relationshipOptions: options,
+      };
+
+      const { error } = await supabase.from("user_settings").upsert({
+        user_id: user.id,
+        payload: nextPayload,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) {
+        console.error("save relationships settings error", error.message);
+      }
+    };
+
+    void syncToServer();
   }, [options]);
 
   const handleAdd = () => {
