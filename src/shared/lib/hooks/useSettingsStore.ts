@@ -50,6 +50,7 @@ type SettingsState = {
   loadFromServer: () => Promise<void>;
   saveToServer: () => Promise<void>;
   syncing: boolean;
+  loaded: boolean;
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -57,6 +58,7 @@ export const useSettingsStore = create<SettingsState>()(
     (set, get) => ({
       settings: defaultSettings,
       syncing: false,
+      loaded: false,
       setSettings: (next) => set({ settings: next }),
       setKey: (key, value) =>
         set({ settings: { ...get().settings, [key]: value } }),
@@ -70,7 +72,7 @@ export const useSettingsStore = create<SettingsState>()(
         } = await supabase.auth.getUser();
 
         if (userError || !user) {
-          set({ syncing: false });
+          set({ syncing: false, loaded: true });
           return;
         }
 
@@ -82,19 +84,24 @@ export const useSettingsStore = create<SettingsState>()(
 
         if (error && error.code !== "PGRST116") {
           console.error("loadFromServer(settings) error:", error);
-          set({ syncing: false });
+          set({ syncing: false, loaded: true });
           return;
         }
 
         if (data?.payload) {
-          set({ settings: data.payload as Settings, syncing: false });
+          set({
+            settings: data.payload as Settings,
+            syncing: false,
+            loaded: true,
+          });
           return;
         }
 
         await get().saveToServer();
-        set({ syncing: false });
+        set({ syncing: false, loaded: true });
       },
       saveToServer: async () => {
+        if (!get().loaded) return;
         set({ syncing: true });
 
         const {
