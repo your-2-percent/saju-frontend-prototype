@@ -74,10 +74,7 @@ export default function Page() {
     const init = async () => {
       const { data, error } = await client.auth.getSession();
 
-      console.log("[AUTH] init session:", data, error);
-
       if (error) {
-        console.error("Supabase getSession error:", error.message);
         setIsLoggedIn(false);
         setAuthChecked(true);
         return;
@@ -93,7 +90,6 @@ export default function Page() {
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((_event, session) => {
-      console.log("[AUTH] onAuthStateChange:", _event, session);
       setIsLoggedIn(!!session);
       setAuthChecked(true);
     });
