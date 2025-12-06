@@ -48,7 +48,7 @@ type SettingsState = {
   setKey: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   reset: () => void;
   loadFromServer: () => Promise<void>;
-  saveToServer: () => Promise<void>;
+  saveToServer: (force?: boolean) => Promise<void>;
   syncing: boolean;
   loaded: boolean;
 };
@@ -97,11 +97,11 @@ export const useSettingsStore = create<SettingsState>()(
           return;
         }
 
-        await get().saveToServer();
+        await get().saveToServer(true);
         set({ syncing: false, loaded: true });
       },
-      saveToServer: async () => {
-        if (!get().loaded) return;
+      saveToServer: async (force = false) => {
+        if (!get().loaded && !force) return;
         set({ syncing: true });
 
         const {
@@ -126,7 +126,7 @@ export const useSettingsStore = create<SettingsState>()(
           console.error("saveToServer(settings) error:", error);
         }
 
-        set({ syncing: false });
+        set({ syncing: false, loaded: true });
       },
     }),
     { name: "settings_v1" } // ✅ 한 군데로만 저장
