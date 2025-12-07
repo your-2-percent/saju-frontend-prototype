@@ -2,6 +2,18 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/lib/supabase";
 
+const LS_KEY = "settings_v1";
+
+const purgeLocalSettings = () => {
+  try {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(LS_KEY);
+    }
+  } catch {
+    /* ignore */
+  }
+};
+
 export type Settings = {
   hiddenStem: "all" | "regular";        // 지장간: 전체 / 정기만
   hiddenStemMode: "classic" | "hgc";    // 지장간 유형: 고전 / 하건충
@@ -107,6 +119,8 @@ type SettingsState = {
   loaded: boolean;
 };
 
+purgeLocalSettings(); // 모듈 로드 시 한 번 제거
+
 export const useSettingsStore = create<SettingsState>()(
   persist(
     (set, get) => ({
@@ -120,6 +134,7 @@ export const useSettingsStore = create<SettingsState>()(
       loadFromServer: async () => {
         try {
           set({ syncing: true });
+          purgeLocalSettings();
 
           const {
             data: { user },
@@ -175,6 +190,7 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           if (!get().loaded && !force) return;
           set({ syncing: true });
+          purgeLocalSettings();
 
           const {
             data: { user },
@@ -208,19 +224,14 @@ export const useSettingsStore = create<SettingsState>()(
       },
     }),
     {
-      name: "settings_v1",
-      // 로컬스토리지에 남아있는 값도 기본값과 병합
-      merge: (persisted, current) => {
-        const p = persisted as Partial<SettingsState>;
-        const mergedSettings = p.settings
-          ? withDefaults(p.settings as Settings)
-          : current.settings;
-        return {
-          ...current,
-          ...p,
-          settings: mergedSettings,
-        };
+      name: LS_KEY,
+      // 로컬스토리지 사용 차단 및 기존 잔여 데이터 무시
+      storage: {
+        getItem: () => null,
+        setItem: () => null,
+        removeItem: () => null,
       },
+      merge: (_persisted, current) => current,
     }
   )
 );
