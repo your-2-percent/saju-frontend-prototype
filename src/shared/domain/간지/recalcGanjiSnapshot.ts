@@ -38,7 +38,7 @@ function pickSL(mod: unknown) {
 const lunar2solarStrict = pickSL(solarlunar);
 
 /* --- 핵심: 간지/보정시 스냅샷 재계산 --- */
-export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLocal" | "ganji"> {
+export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "corrected" | "correctedLocal" | "ganji"> {
   const hourRule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   // 날짜 파싱
@@ -70,7 +70,7 @@ export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLo
   const corr = getCorrectedDate(raw, lon, isUnknownPlace);
   const correctedLocal = unknownTime
     ? ""
-    : corr.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+    : corr.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
 
   // 간지
   const yGZ = getYearGanZhi(corr, lon);
@@ -82,5 +82,5 @@ export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "correctedLo
     .filter(Boolean)
     .join(" ");
 
-  return { correctedLocal, ganji: ganjiText };
+  return { corrected: corr, correctedLocal, ganji: ganjiText };
 }

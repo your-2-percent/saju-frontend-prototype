@@ -193,8 +193,8 @@ export default function MyeongSikEditor({
     };
 
     // 7) 간지 스냅샷/보정시 문자열 재계산
-    const { correctedLocal, ganji } = recalcGanjiSnapshot(base);
-    const payload: Partial<MyeongSik> = { ...base, correctedLocal, ganji };
+    const snapshot = recalcGanjiSnapshot(base);
+    const payload: Partial<MyeongSik> = { ...base, ...snapshot };
 
     // 8) 사용자 폴더 신규면 저장
     if (

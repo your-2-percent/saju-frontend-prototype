@@ -146,7 +146,7 @@ function reviveAndRecalc(base: MyeongSik): MyeongSik {
       ? base.corrected
       : base.corrected
       ? new Date(base.corrected as unknown as string | number | Date)
-      : new Date();
+      : new Date(NaN); // 유효 보정시가 없으면 재계산 유도
 
   const normalized: MyeongSik = {
     ...base,
@@ -200,7 +200,7 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
     sortOrder,
 
     dateObj: new Date(),
-    corrected: new Date(),
+    corrected: new Date(NaN),
     correctedLocal: "",
     dayStem: "",
     ganjiText: "",
