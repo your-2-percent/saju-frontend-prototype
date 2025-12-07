@@ -1599,7 +1599,7 @@ export default function PromptCopyCard({
           }
           placeholder="여기에 GPT에게 추가로 물어보고 싶은 내용을 적고, '질문 추가' 버튼을 눌러주세요."
           rows={3}
-          className="w-full text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
+          className="w-full text-[16px] desk:text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
         />
         <div className="mb-4 text-center">
           <button
