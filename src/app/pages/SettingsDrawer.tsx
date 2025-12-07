@@ -13,6 +13,7 @@ import {
 } from "@/shared/lib/hooks/useSettingsStore";
 import { useApplyTheme } from "@/shared/lib/hooks/useTheme";
 import { setStoredTheme, type ThemeMode } from "@/shared/lib/theme";
+import { useCallback } from "react";
 
 /* 섹션 ID 고정 목록(렌더 키) */
 const DEFAULT_SECTION_KEYS = [
@@ -66,6 +67,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const [order, setOrder] = useState<SectionKey[]>(initialOrder);
   const [localSettings, setLocalSettings] = useState<Settings>(initialSettings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [dirty, setDirty] = useState(false); // 사용자가 편집 중인지 여부
+  const closeToast = useCallback(() => setToastMessage(null), []);
 
   //const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
 
@@ -82,18 +85,21 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     const normalizedOrder = normalizeOrder(settings.sectionOrder);
+    if (dirty) return; // 편집 중이면 외부값으로 덮어쓰지 않음
     setLocalSettings({
       ...defaultSettings,
       ...settings,
       sectionOrder: normalizedOrder,
     });
     setOrder(normalizedOrder);
-  }, [open, settings]);
+    setDirty(false);
+  }, [open, settings, dirty]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setLocalSettings((prev) => {
       const next = { ...prev, [key]: value };
       if (key === "theme") setStoredTheme(value as ThemeMode);
+      setDirty(true);
       return next;
     });
   };
@@ -108,6 +114,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     if (nextSettings.theme) setStoredTheme(nextSettings.theme as ThemeMode);
     void saveToServer(true);
     setToastMessage("설정이 적용되었습니다");
+    setDirty(false);
     onClose();
   };
 
@@ -372,7 +379,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       {toastMessage && (
         <Toast
           message={toastMessage}
-          onClose={() => setToastMessage(null)}
+          onClose={closeToast}
           ms={1800}
         />
       )}
