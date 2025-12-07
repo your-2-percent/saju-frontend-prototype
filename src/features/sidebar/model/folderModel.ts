@@ -64,6 +64,18 @@ export function getCustomFolders(): string[] {
   return readStringArray(LS_FOLDERS);
 }
 
+/** 커스텀 폴더 목록을 통째로 설정 (localStorage + 이벤트) */
+export function setCustomFolders(list: string[]) {
+  const arr = Array.isArray(list)
+    ? list.filter((x): x is string => typeof x === "string" && x.trim() !== "")
+    : [];
+  writeStringArray(LS_FOLDERS, arr);
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(FOLDER_EVENT));
+  }
+}
+
 /** 실제 존재하는 폴더들(UNASSIGNED 제외, 프리셋-숨김 제외 + 커스텀) */
 export function getEffectiveFolders(): string[] {
   const presets = getEffectivePresets();
@@ -93,11 +105,7 @@ export function addCustomFolder(name: string) {
   if (arr.includes(n)) return;
 
   const next = [...arr, n];
-  writeStringArray(LS_FOLDERS, next);
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(FOLDER_EVENT));
-  }
+  setCustomFolders(next);
 }
 
 /** 커스텀 폴더 삭제 */
@@ -106,11 +114,7 @@ export function removeCustomFolder(name: string) {
   const next = arr.filter((x) => x !== name);
   if (next.length === arr.length) return;
 
-  writeStringArray(LS_FOLDERS, next);
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new Event(FOLDER_EVENT));
-  }
+  setCustomFolders(next);
 }
 
 /** 프리셋 폴더 숨기기 */
