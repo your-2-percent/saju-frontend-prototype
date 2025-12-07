@@ -110,6 +110,14 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       ...localSettings,
       sectionOrder: order,
     };
+    // 로컬에 남은 예전 값 제거 (강제 동기화)
+    try {
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("settings_v1");
+      }
+    } catch {
+      /* ignore */
+    }
     setSettings(nextSettings);
     if (nextSettings.theme) setStoredTheme(nextSettings.theme as ThemeMode);
     void saveToServer(true);
