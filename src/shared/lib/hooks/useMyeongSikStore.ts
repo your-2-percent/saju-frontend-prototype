@@ -393,7 +393,8 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     set((state) => ({
-      list: [withOrder, ...state.list],
+      // 새로 추가한 명식을 목록 하단에 붙여서 즉시 순서를 맞춘다
+      list: [...state.list, withOrder],
       currentId: state.currentId ?? withOrder.id,
     }));
 
