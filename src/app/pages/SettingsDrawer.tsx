@@ -9,6 +9,7 @@ import Toast from "@/shared/ui/feedback/Toast";
 import {
   useSettingsStore,
   type Settings,
+  defaultSettings,
 } from "@/shared/lib/hooks/useSettingsStore";
 import { useApplyTheme } from "@/shared/lib/hooks/useTheme";
 import { setStoredTheme, type ThemeMode } from "@/shared/lib/theme";
@@ -45,7 +46,7 @@ function normalizeOrder(saved: unknown): SectionKey[] {
 type Props = { open: boolean; onClose: () => void };
 
 export default function SettingsDrawer({ open, onClose }: Props) {
-  const { settings, setSettings } = useSettingsStore();
+  const { settings, setSettings, saveToServer } = useSettingsStore();
 
   // 섹션 순서 (기본은 스토어)
   const initialOrder = useMemo<SectionKey[]>(
@@ -53,8 +54,17 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     [settings.sectionOrder]
   );
 
+  const initialSettings = useMemo<Settings>(
+    () => ({
+      ...defaultSettings,
+      ...settings,
+      sectionOrder: normalizeOrder(settings.sectionOrder),
+    }),
+    [settings]
+  );
+
   const [order, setOrder] = useState<SectionKey[]>(initialOrder);
-  const [localSettings, setLocalSettings] = useState<Settings>(settings);
+  const [localSettings, setLocalSettings] = useState<Settings>(initialSettings);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   //const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
@@ -71,8 +81,13 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   // 4) 드로어 동기화는 그대로:
   useEffect(() => {
     if (!open) return;
-    setLocalSettings(settings);
-    setOrder(normalizeOrder(settings.sectionOrder));
+    const normalizedOrder = normalizeOrder(settings.sectionOrder);
+    setLocalSettings({
+      ...defaultSettings,
+      ...settings,
+      sectionOrder: normalizedOrder,
+    });
+    setOrder(normalizedOrder);
   }, [open, settings]);
 
   const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
@@ -84,8 +99,14 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   };
 
   const applyChanges = () => {
-    setSettings({ ...localSettings, sectionOrder: order });
-    if (localSettings.theme) setStoredTheme(localSettings.theme as ThemeMode);
+    const nextSettings = {
+      ...defaultSettings,
+      ...localSettings,
+      sectionOrder: order,
+    };
+    setSettings(nextSettings);
+    if (nextSettings.theme) setStoredTheme(nextSettings.theme as ThemeMode);
+    void saveToServer();
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };
