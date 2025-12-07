@@ -48,7 +48,7 @@ export default function Footer() {
         </div>
 
         {/* 버튼 영역 */}
-        <div className="flex flex-col items-center gap-2 mt-3">
+        <div className="flex justify-center items-center gap-4 mt-3">
 
           {/* 개인정보 처리방침 */}
           <button
