@@ -36,9 +36,10 @@ export const defaultSettings: Settings = {
   showSibiUnseong: true,
   showNabeum: true, // ✅ 기본 ON
   theme: "dark",
+  difficultyMode: false,
   sectionOrder: [
     "hiddenStem","hiddenStemMode","ilunRule","sinsalMode","sinsalBase",
-    "sinsalBloom","exposure","charType","thinEum","visibility",
+    "sinsalBloom","exposure","charType","thinEum","visibility","difficultyMode",
   ],
 };
 
@@ -87,6 +88,14 @@ const coerceSettings = (raw: unknown): Settings => {
   return withDefaults((raw ?? {}) as Settings);
 };
 
+const needsMigration = (raw: unknown): boolean => {
+  if (!raw || typeof raw !== "object") return false;
+  const obj = raw as Record<string, unknown>;
+  // 예전 persist 포맷: { state: { settings: {...} } } 또는 { settings: {...} }
+  if (obj.state || obj.settings) return true;
+  return false;
+};
+
 type SettingsState = {
   settings: Settings;
   setSettings: (next: Settings) => void;
@@ -109,74 +118,109 @@ export const useSettingsStore = create<SettingsState>()(
         set({ settings: withDefaults({ ...get().settings, [key]: value }) }),
       reset: () => set({ settings: defaultSettings }),
       loadFromServer: async () => {
-        set({ syncing: true });
+        try {
+          set({ syncing: true });
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
 
-        if (userError || !user) {
-          set({ syncing: false, loaded: false });
-          return;
-        }
+          if (userError || !user) {
+            set({ syncing: false, loaded: false });
+            return;
+          }
 
-        const { data, error } = await supabase
-          .from("user_settings")
-          .select("payload")
-          .eq("user_id", user.id)
-          .single();
+          const { data, error } = await supabase
+            .from("user_settings")
+            .select("payload")
+            .eq("user_id", user.id)
+            .single();
 
-        if (error && error.code !== "PGRST116") {
-          console.error("loadFromServer(settings) error:", error);
+          if (error && error.code !== "PGRST116") {
+            console.error("loadFromServer(settings) error:", error);
+            set({ syncing: false, loaded: true });
+            return;
+          }
+
+          if (data?.payload) {
+            const normalized = coerceSettings(data.payload);
+            set({
+              settings: normalized,
+              syncing: false,
+              loaded: true,
+            });
+
+            // 예전 포맷이면 정규화된 값으로 즉시 갱신
+            if (needsMigration(data.payload)) {
+              await supabase
+                .from("user_settings")
+                .upsert({
+                  user_id: user.id,
+                  payload: normalized,
+                  updated_at: new Date().toISOString(),
+                });
+            }
+            return;
+          }
+
+          await get().saveToServer(true);
           set({ syncing: false, loaded: true });
-          return;
+        } catch (e) {
+          console.error("loadFromServer(settings) exception:", e);
+          set({ syncing: false, loaded: true });
         }
-
-        if (data?.payload) {
-          const normalized = coerceSettings(data.payload);
-          set({
-            settings: normalized,
-            syncing: false,
-            loaded: true,
-          });
-          return;
-        }
-
-        await get().saveToServer(true);
-        set({ syncing: false, loaded: true });
       },
       saveToServer: async (force = false) => {
-        if (!get().loaded && !force) return;
-        set({ syncing: true });
+        try {
+          if (!get().loaded && !force) return;
+          set({ syncing: true });
 
-        const {
-          data: { user },
-          error: userError,
-        } = await supabase.auth.getUser();
+          const {
+            data: { user },
+            error: userError,
+          } = await supabase.auth.getUser();
 
-        if (userError || !user) {
+          if (userError || !user) {
+            set({ syncing: false });
+            return;
+          }
+
+          const normalized = withDefaults(get().settings);
+
+          const { error } = await supabase
+            .from("user_settings")
+            .upsert({
+              user_id: user.id,
+              payload: normalized,
+              updated_at: new Date().toISOString(),
+            });
+
+          if (error) {
+            console.error("saveToServer(settings) error:", error);
+          }
+
+          set({ syncing: false, loaded: true });
+        } catch (e) {
+          console.error("saveToServer(settings) exception:", e);
           set({ syncing: false });
-          return;
         }
-
-        const normalized = withDefaults(get().settings);
-
-        const { error } = await supabase
-          .from("user_settings")
-          .upsert({
-            user_id: user.id,
-            payload: normalized,
-            updated_at: new Date().toISOString(),
-          });
-
-        if (error) {
-          console.error("saveToServer(settings) error:", error);
-        }
-
-        set({ syncing: false, loaded: true, settings: normalized });
       },
     }),
-    { name: "settings_v1" } // ✅ 한 군데로만 저장
+    {
+      name: "settings_v1",
+      // 로컬스토리지에 남아있는 값도 기본값과 병합
+      merge: (persisted, current) => {
+        const p = persisted as Partial<SettingsState>;
+        const mergedSettings = p.settings
+          ? withDefaults(p.settings as Settings)
+          : current.settings;
+        return {
+          ...current,
+          ...p,
+          settings: mergedSettings,
+        };
+      },
+    }
   )
 );
