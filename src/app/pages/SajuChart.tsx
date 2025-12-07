@@ -252,7 +252,10 @@ export default function SajuChart({ data, hourTable }: Props) {
     setParsed(makeParsed(data, useDST));
   }, [data, useDST]);
 
-  const correctedLabel = "모름";
+  const hasCustomUnknownTime = !data.correctedLocal || data.correctedLocal.trim() === "";
+  const correctedLabel = hasCustomUnknownTime || isUnknownTime
+    ? "모름"
+    : formatLocalYMDHM(parsed.corrected);
 
   // ✅ “사람 전환” 키 (상태 리셋 기준)
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
