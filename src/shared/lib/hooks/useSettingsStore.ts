@@ -71,6 +71,22 @@ const withDefaults = (s: Settings): Settings => ({
   sectionOrder: normalizeSectionOrder(s.sectionOrder),
 });
 
+const coerceSettings = (raw: unknown): Settings => {
+  if (raw && typeof raw === "object") {
+    const obj = raw as Record<string, unknown>;
+    if (obj.settings && typeof obj.settings === "object") {
+      return withDefaults(obj.settings as Settings);
+    }
+    if (obj.state && typeof obj.state === "object") {
+      const state = obj.state as Record<string, unknown>;
+      if (state.settings && typeof state.settings === "object") {
+        return withDefaults(state.settings as Settings);
+      }
+    }
+  }
+  return withDefaults((raw ?? {}) as Settings);
+};
+
 type SettingsState = {
   settings: Settings;
   setSettings: (next: Settings) => void;
@@ -118,7 +134,7 @@ export const useSettingsStore = create<SettingsState>()(
         }
 
         if (data?.payload) {
-          const normalized = withDefaults(data.payload as Settings);
+          const normalized = coerceSettings(data.payload);
           set({
             settings: normalized,
             syncing: false,
@@ -158,7 +174,7 @@ export const useSettingsStore = create<SettingsState>()(
           console.error("saveToServer(settings) error:", error);
         }
 
-        set({ syncing: false, loaded: true });
+        set({ syncing: false, loaded: true, settings: normalized });
       },
     }),
     { name: "settings_v1" } // ✅ 한 군데로만 저장
