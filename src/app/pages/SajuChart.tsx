@@ -208,11 +208,17 @@ export default function SajuChart({ data, hourTable }: Props) {
     const lonVal = isUnknownPlace ? 127.5 : d.birthPlace!.lon!;
 
     // 🔥 4) 보정 로직
-    //    - 출생지 "모름"이면: rawBirth 기준에서 정확히 -30분만 깎기
-    //    - 출생지 있는 경우: 기존 getCorrectedDate 사용
+    //    - 데이터에 corrected가 있으면 그대로 사용 (커스텀 명식 등)
+    //    - 없으면 기존 보정 계산
+    const hasCorrected =
+      d.corrected instanceof Date && !Number.isNaN(d.corrected.getTime());
+
     let corrected0: Date;
-    if (isUnknownPlace) {
-      corrected0 = new Date(rawBirth.getTime() - 30 * 60 * 1000); // ← 여기서 -30분 고정
+    if (hasCorrected) {
+      corrected0 = d.corrected;
+    } else if (isUnknownPlace) {
+      // 출생지 모름: 별도 보정 없이 원시 시각 사용
+      corrected0 = rawBirth;
     } else {
       corrected0 = getCorrectedDate(rawBirth, lonVal, unknown);
     }
@@ -245,6 +251,8 @@ export default function SajuChart({ data, hourTable }: Props) {
   useEffect(() => {
     setParsed(makeParsed(data, useDST));
   }, [data, useDST]);
+
+  const correctedLabel = "모름";
 
   // ✅ “사람 전환” 키 (상태 리셋 기준)
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
@@ -346,7 +354,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             {data.birthPlace?.name ? ` · ${"출생지: " + data.birthPlace.name}` : ""}
           </div>
           <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            보정시: {`${isUnknownTime ? "모름" : formatLocalYMDHM(parsed.corrected)}`}
+              보정시: {correctedLabel}
           </div>
         </div>
         <div className="text-xs text-neutral-500 dark:text-neutral-400">

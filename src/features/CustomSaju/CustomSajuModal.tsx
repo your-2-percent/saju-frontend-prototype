@@ -206,12 +206,9 @@ export default function CustomSajuModal({
     }
   }
   const dateObj = new Date(yy, mm - 1, dd, hh, mi);
-  const corrected = new Date(dateObj.getTime() - 30 * 60000);
-  const correctedLocal = corrected.toLocaleTimeString("ko-KR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  // 커스텀 명식은 보정시를 계산하지 않고 원시 입력을 그대로 사용
+  const corrected = dateObj;
+  const correctedLocal = "";
 
   // 성별
   const genderK = gender === "male" ? "남" : "여";
