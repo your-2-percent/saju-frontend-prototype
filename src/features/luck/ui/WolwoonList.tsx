@@ -229,10 +229,10 @@ export default function WolwoonList({
     if (!activeYear) return [];
     const jieStarts = buildSolarMonthStarts(activeYear);
     return jieStarts.map(j => {
-      const at = j.at00;
+      const at = j.termAt;
       // 절입 다음날 0시를 월간지 계산용으로 사용
-      const safeForGz = new Date(j.at00);
-      safeForGz.setDate(safeForGz.getDate() + 1);
+      // getMonthGanZhi는 절입 경계에 +30분을 더해 계산하므로, 그 이후 시각으로 보정
+      const safeForGz = new Date(j.termAt.getTime() + 31 * 60 * 1000);
 
       const gz = getMonthGanZhi(safeForGz, lon);
       return { at, gz, term: j.name, termAt: j.termAt };
