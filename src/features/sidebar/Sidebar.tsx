@@ -249,9 +249,9 @@ export default function Sidebar({
     const genderLabel =
       m.gender === "남" ? "남자" : m.gender === "여" ? "여자" : m.gender;
 
-    const correctedDate = new Date(m.corrected);
-
-    const isUnknownTime = !m.birthTime || m.birthTime === "모름";
+    // 보정시는 표시하지 않고 "모름"으로 처리
+    const correctedDate = null;
+    const isUnknownTime = true;
 
     const rawBirth = String(m.birthDay).trim();
     let birthYear = NaN;
