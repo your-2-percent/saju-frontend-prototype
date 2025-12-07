@@ -36,6 +36,23 @@ import type { DayBoundaryRule } from "@/shared/type";
 type MemoOpenMap = Record<string, boolean>;
 type SearchMode = "name" | "ganji" | "birth";
 
+function formatCorrectedDisplay(
+  correctedLocal: string | null | undefined,
+  corrected: Date,
+  isUnknownTime: boolean
+): string {
+  if (isUnknownTime) return "모름";
+  const local = (correctedLocal ?? "").trim();
+  if (local) {
+    // 12시간제라면 24시간제로 변환
+    const dt = new Date(corrected);
+    return formatLocalHM(dt);
+  }
+  const dt = corrected instanceof Date ? corrected : new Date(corrected);
+  if (Number.isNaN(dt.getTime())) return "모름";
+  return formatLocalHM(dt);
+}
+
 // 🔹 ITEM 드롭 영역 ID 규칙
 const DROPPABLE_UNASSIGNED = "list:__unassigned__";
 const listDroppableId = (folderName: string) => `list:${folderName}`;
@@ -249,14 +266,12 @@ export default function Sidebar({
     const genderLabel =
       m.gender === "남" ? "남자" : m.gender === "여" ? "여자" : m.gender;
 
-    const hasCustomUnknownTime =
-      !m.correctedLocal || String(m.correctedLocal).trim() === "";
-    const correctedDate =
-      hasCustomUnknownTime || !m.corrected
-        ? null
-        : new Date(m.corrected);
-
-    const isUnknownTime = hasCustomUnknownTime || !m.birthTime || m.birthTime === "모름";
+    const isUnknownTime = !m.birthTime || m.birthTime === "모름";
+    const correctedDisplay = formatCorrectedDisplay(
+      m.correctedLocal,
+      m.corrected,
+      isUnknownTime
+    );
 
     const rawBirth = String(m.birthDay).trim();
     let birthYear = NaN;
@@ -321,14 +336,14 @@ export default function Sidebar({
                 {m.calendarType === "lunar" ? "음력" : "양력"}
               </div>
 
-              {(placeDisplay || correctedDate) && (
+              {(placeDisplay || correctedDisplay) && (
                 <div className="text-sm text-neutral-500 dark:text-neutral-400">
                   {placeDisplay}
-                  {correctedDate && (
+                  {correctedDisplay && (
                     <span className="opacity-70">
                       {" "}
                       · 보정시{" "}
-                      {isUnknownTime ? "모름" : formatLocalHM(correctedDate)}
+                      {isUnknownTime ? "모름" : correctedDisplay}
                     </span>
                   )}
                 </div>

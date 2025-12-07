@@ -12,7 +12,7 @@ import type { DayBoundaryRule } from "@/shared/type";
 import { getElementColor, getSipSin } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { useCurrentUnCards } from "@/features/luck/luck-make";
-import { formatLocalYMDHM } from "@/shared/utils";
+import { formatLocalHM } from "@/shared/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import { lunarToSolarStrict, isRecord } from "@/shared/lib/calendar/lunar";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
@@ -252,10 +252,11 @@ export default function SajuChart({ data, hourTable }: Props) {
     setParsed(makeParsed(data, useDST));
   }, [data, useDST]);
 
-  const hasCustomUnknownTime = !data.correctedLocal || data.correctedLocal.trim() === "";
-  const correctedLabel = hasCustomUnknownTime || isUnknownTime
-    ? "모름"
-    : formatLocalYMDHM(parsed.corrected);
+  const correctedLabel = formatCorrectedDisplay(
+    data.correctedLocal,
+    parsed.corrected,
+    isUnknownTime
+  );
 
   // ✅ “사람 전환” 키 (상태 리셋 기준)
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
@@ -645,6 +646,19 @@ export default function SajuChart({ data, hourTable }: Props) {
       )}
     </div>
   );
+}
+
+function formatCorrectedDisplay(
+  correctedLocal: string | null | undefined,
+  corrected: Date,
+  isUnknownTime: boolean
+): string {
+  if (isUnknownTime) return "모름";
+  const local = (correctedLocal ?? "").trim();
+  if (local) return local;
+  const dt = corrected instanceof Date ? corrected : new Date(corrected);
+  if (Number.isNaN(dt.getTime())) return "모름";
+  return formatLocalHM(dt);
 }
 
 /** 납음오행 배지 */

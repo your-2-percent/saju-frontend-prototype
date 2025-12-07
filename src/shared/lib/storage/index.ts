@@ -12,7 +12,7 @@ export type MyeongSik = {
   birthTime: string;  // HH:MM
   gender: string;
   sortOrder?: number;
-birthPlace?: { name: string; lat: number; lon: number };
+  birthPlace?: { name: string; lat: number; lon: number };
   relationship?: string;
   memo?: string;
   folder?: string;
@@ -71,7 +71,7 @@ export function makeEmptyMyeongSik(): MyeongSik {
     favorite: false,
 
     // 선택 필드
-    corrected: new Date(),
+    corrected: new Date(NaN), // 유효 보정시가 없으면 재계산 유도
     correctedLocal: "",
     ganjiText: "",
     ganji: "",
