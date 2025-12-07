@@ -1,4 +1,4 @@
-// features/sidebar/lib/sidebarLogic.ts
+﻿// features/sidebar/lib/sidebarLogic.ts
 import {
   useCallback,
   useEffect,
@@ -41,18 +41,18 @@ type UseSidebarLogicResult = {
   orderedFolders: string[];
   grouped: Record<string, MyeongSik[]>;
   unassignedItems: MyeongSik[];
-  handleDragEnd: (r: DropResult) => void; // 🔹 FOLDER DnD 전용
+  handleDragEnd: (r: DropResult) => void; // ?�� FOLDER DnD ?�용
   createFolder: (name: string) => void;
   deleteFolder: (name: string) => void;
   UNASSIGNED_LABEL: string;
 };
 
 /**
- * ⚠️ 여기서는 "폴더 메타"만 관리한다.
- *  - 폴더 순서, 즐겨찾기, 열린 상태, 새 폴더 생성/삭제
+ * ?�️ ?�기?�는 "?�더 메�?"�?관리한??
+ *  - ?�더 ?�서, 즐겨찾기, ?�린 ?�태, ???�더 ?�성/??��
  *
- * ❌ 아이템 순서는 따로 안 들고, 항상 useMyeongSikStore.list 순서를 그대로 쓴다.
- *    (폴더 이동은 Sidebar.tsx 에서 update(id, { folder })로만 처리)
+ * ???�이???�서???�로 ???�고, ??�� useMyeongSikStore.list ?�서�?그�?�??�다.
+ *    (?�더 ?�동?� Sidebar.tsx ?�서 update(id, { folder })로만 처리)
  */
 export function useSidebarLogic(
   list: MyeongSik[],
@@ -78,25 +78,25 @@ export function useSidebarLogic(
     }
   }, [folderFavMap]);
 
-  /* ---------- 폴더 열림/닫힘, 메모 열림/닫힘 ---------- */
+  /* ---------- ?�더 ?�림/?�힘, 메모 ?�림/?�힘 ---------- */
   const [folderOpenMap, setFolderOpenMap] = useState<BoolMap>({});
   const [memoOpenMap, setMemoOpenMap] = useState<BoolMap>({});
 
-  /* ---------- 새 폴더 이름 인풋 ---------- */
+  /* ---------- ???�더 ?�름 ?�풋 ---------- */
   const [newFolderName, setNewFolderName] = useState<string>("");
 
   // ?? ?? ?? ??? ??
   const [folderOrderFetched, setFolderOrderFetched] = useState(false);
 
-  /* ---------- 실제 표시 폴더 목록 (FolderField와 동일 소스 사용) ---------- */
+  /* ---------- ?�제 ?�시 ?�더 목록 (FolderField?� ?�일 ?�스 ?�용) ---------- */
   const [orderedFolders, setOrderedFolders] = useState<string[]>(() => {
-    const effective = getEffectiveFolders();      // 프리셋 숨김 + 커스텀 모두 반영된 목록
-    const saved = loadFolderOrder();              // 저장된 순서
+    const effective = getEffectiveFolders();      // ?�리???��? + 커스?� 모두 반영??목록
+    const saved = loadFolderOrder();              // ?�?�된 ?�서
     return saved.length ? reconcileFolderOrder(effective, saved) : effective;
   });
 
   const selfOrderingRef = useRef(false);
-  const customFolderSyncDisabledRef = useRef(false); // 테이블 없을 때 404 방지용
+  const customFolderSyncDisabledRef = useRef(false); // ?�이�??�을 ??404 방�???
 
   // ???? ?? ?? ??
   useEffect(() => {
@@ -105,7 +105,7 @@ export function useSidebarLogic(
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) return;
 
-      // 커스텀 폴더 목록을 서버에서 불러와 로컬스토리지와 동기화
+      // 커스?� ?�더 목록???�버?�서 불러?� 로컬?�토리�??� ?�기??
       try {
         if (!customFolderSyncDisabledRef.current) {
           const { data: customRows, error: customErr } = await supabase
@@ -114,12 +114,13 @@ export function useSidebarLogic(
             .eq("user_id", user.id);
 
           if (customErr?.code === "PGRST205") {
-            // 테이블 없으면 이후 시도 스킵
+            // ?�이�??�으�??�후 ?�도 ?�킵
             customFolderSyncDisabledRef.current = true;
           } else if (!customErr && customRows) {
-            const names = (customRows as any[])
-              .map((row) => String(row.folder_name))
-              .filter((v) => v && v.trim() !== "");
+            type CustomFolderRow = { folder_name: string | null };
+            const names = (customRows as CustomFolderRow[])
+              .map((row) => (row.folder_name ? row.folder_name.trim() : ""))
+              .filter((v) => v !== "");
             setCustomFolders(names);
           } else if (customErr) {
             console.error("load custom folders from server error:", customErr);
@@ -143,13 +144,17 @@ export function useSidebarLogic(
 
       const effective = getEffectiveFolders();
       const serverOrder = (data ?? [])
-        .map((row: any) => String(row.folder_name))
-        .filter(Boolean);
+        .map((row) => (row.folder_name ? String(row.folder_name) : ""))
+        .filter((v) => v.trim() !== "");
       const merged = serverOrder.length
         ? reconcileFolderOrder(effective, serverOrder)
         : reconcileFolderOrder(effective, loadFolderOrder());
 
       setOrderedFolders(merged);
+      // ?�버 ?�서??로컬 ?�?�해 ?�기
+      if (serverOrder.length) {
+        saveFolderOrder(serverOrder);
+      }
       setFolderOrderFetched(true);
     };
 
@@ -161,12 +166,20 @@ export function useSidebarLogic(
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) return;
 
-      const rows = order.map((name, idx) => ({
-        user_id: user.id,
-        folder_name: name,
-        sort_order: idx + 1,
-        updated_at: new Date().toISOString(),
-      }));
+      const rows = order
+        .filter((name) => typeof name === "string" && name.trim() !== "")
+        .map((name, idx) => ({
+          user_id: user.id,
+          folder_name: name.trim(),
+          sort_order: idx + 1,
+          updated_at: new Date().toISOString(),
+        }));
+
+      // 비어 ?�으�??�선 ??�� ??종료
+      if (!rows.length) {
+        await supabase.from("user_folder_order").delete().eq("user_id", user.id);
+        return;
+      }
 
       const { error } = await supabase
         .from("user_folder_order")
@@ -217,13 +230,13 @@ export function useSidebarLogic(
     }
   }, []);
 
-  // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
-    // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
+  // FolderField / ?�른 컴포?�트?�서 ?�더 구조가 바뀌면 ?�기??
+    // FolderField / ?�른 컴포?�트?�서 ?�더 구조가 바뀌면 ?�기??
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const handler = () => {
-      // ⬇ 우리가 방금 DnD로 saveFolderOrder를 호출해서 생긴 이벤트면 무시
+      // �??�리가 방금 DnD�?saveFolderOrder�??�출?�서 ?�긴 ?�벤?�면 무시
       if (selfOrderingRef.current) {
         selfOrderingRef.current = false;
         return;
@@ -243,7 +256,7 @@ export function useSidebarLogic(
   }, []);
 
 
-  /* ---------- 기본 열림 설정 ---------- */
+  /* ---------- 기본 ?�림 ?�정 ---------- */
   useEffect(() => {
     setFolderOpenMap((prev) => {
       const next: BoolMap = { ...prev };
@@ -254,7 +267,7 @@ export function useSidebarLogic(
     });
   }, [orderedFolders]);
 
-  /* ---------- 그룹핑: ★ 아이템 순서는 list 순서를 그대로 사용 ★ ---------- */
+  /* ---------- 그룹?? ???�이???�서??list ?�서�?그�?�??�용 ??---------- */
   const { grouped, unassignedItems } = useMemo(() => {
     const g: Record<string, MyeongSik[]> = {};
     orderedFolders.forEach((f) => {
@@ -262,14 +275,14 @@ export function useSidebarLogic(
     });
 
     const unassigned: MyeongSik[] = [];
-    const assignedIds = new Set<string>(); // 🔹 같은 id 두 번 안 들어가게 방지
+    const assignedIds = new Set<string>(); // ?�� 같�? id ??�????�어가�?방�?
 
     for (const m of list) {
-      if (!m.id || assignedIds.has(m.id)) continue; // 이미 들어간 id면 스킵
+      if (!m.id || assignedIds.has(m.id)) continue; // ?��? ?�어�?id�??�킵
 
       const f = m.folder;
       if (f && orderedFolders.includes(f)) {
-        g[f].push(m); // list 순서대로
+        g[f].push(m); // list ?�서?��?
       } else {
         unassigned.push(m);
       }
@@ -280,8 +293,8 @@ export function useSidebarLogic(
     return { grouped: g, unassignedItems: unassigned };
   }, [list, orderedFolders]);
 
-  /* ---------- 폴더 DnD (type === "FOLDER") ---------- */
-      /* ---------- 폴더 DnD (type === "FOLDER") ---------- */
+  /* ---------- ?�더 DnD (type === "FOLDER") ---------- */
+      /* ---------- ?�더 DnD (type === "FOLDER") ---------- */
     const handleDragEnd = useCallback(
     (r: DropResult) => {
       const { source, destination, type } = r;
@@ -299,63 +312,79 @@ export function useSidebarLogic(
         const [moved] = next.splice(srcIdx, 1);
         next.splice(dstIdx, 0, moved);
 
-        // ⬇ 이 변경은 우리 쪽에서 트리거했다는 표시
+        // �???변경�? ?�리 쪽에???�리거했?�는 ?�시
         selfOrderingRef.current = true;
-        saveFolderOrder(next); // 여기서 FOLDER_EVENT 발생
+        saveFolderOrder(next);
+        void saveOrderToServer(next); // ?�기??FOLDER_EVENT 발생
 
         return next;
       });
     },
-    []
+    [saveOrderToServer]
   );
 
-  /* ---------- 새 폴더 생성 ---------- */
+  /* ---------- ???�더 ?�성 ---------- */
   const createFolder = (name: string) => {
     const n = name.trim();
     if (!n || n === UNASSIGNED_LABEL) return;
 
-    // 전역 커스텀 폴더 추가 (localStorage + FOLDER_EVENT)
+    // ?�역 커스?� ?�더 추�? (localStorage + FOLDER_EVENT)
     addCustomFolder(n);
     void saveCustomFolderToServer(n);
 
-    // 현재 순서에 새 폴더를 붙이고 순서도 저장
+    // ?�재 ?�서?????�더�?붙이�??�서???�??
     setOrderedFolders((prev) => {
       if (prev.includes(n)) return prev;
       const next = [...prev, n];
       saveFolderOrder(next);
+      void saveOrderToServer(next);
       void saveOrderToServer(next);
       return next;
     });
   };
 
 
-  /* ---------- 폴더 삭제 (소속 항목은 폴더 미지정으로) ---------- */
+  /* ---------- ?�더 ??�� (?�속 ??��?� ?�더 미�??�으�? ---------- */
   const deleteFolder = (name: string) => {
-    // 1) 이 폴더에 속한 명식들 → 폴더 미지정으로
+    // 1) ???�더???�한 명식?????�더 미�??�으�?
     list.forEach((m) => {
       if (m.folder === name) {
         update(m.id, { folder: undefined });
       }
     });
 
-    // 2) 즐겨찾기 맵에서 제거
+    // 2) 즐겨찾기 맵에???�거
     setFolderFavMap((prev) => {
       const next = { ...prev };
       delete next[name];
       return next;
     });
 
-    // 3) 폴더 순서에서 제거 + 저장
+    // 3) ?�더 ?�서?�서 ?�거 + ?�??    
     setOrderedFolders((prev) => {
       const next = prev.filter((f) => f !== name);
       saveFolderOrder(next);
       void saveOrderToServer(next);
+      void saveOrderToServer(next);
+      // ?�버???��? ?�더 ?�렬 ?�도 ??��
+      void (async () => {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+        if (userError || !user) return;
+        await supabase
+          .from("user_folder_order")
+          .delete()
+          .eq("user_id", user.id)
+          .eq("folder_name", name);
+      })();
       return next;
     });
 
-    // 4) 실제 폴더 정의에서 제거
-    //    - 프리셋이면 disablePresetFolder (숨김)
-    //    - 커스텀이면 removeCustomFolder
+    // 4) ?�제 ?�더 ?�의?�서 ?�거
+    //    - ?�리?�이�?disablePresetFolder (?��?)
+    //    - 커스?�?�면 removeCustomFolder
     if (FOLDER_PRESETS.includes(name)) {
       disablePresetFolder(name);
     } else {
@@ -382,3 +411,4 @@ export function useSidebarLogic(
     UNASSIGNED_LABEL,
   };
 }
+
