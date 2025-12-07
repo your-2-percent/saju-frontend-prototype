@@ -68,6 +68,57 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
     }
   }, []);
 
+  // 서버에 저장된 관계 옵션을 한번 불러와 로컬과 병합
+  useEffect(() => {
+    const loadFromServer = async () => {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError || !user) return;
+
+      const { data, error } = await supabase
+        .from("user_settings")
+        .select("payload")
+        .eq("user_id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("load relationships settings error", error.message);
+        return;
+      }
+
+      const serverOpts = data?.payload?.relationshipOptions;
+      if (!Array.isArray(serverOpts)) return;
+
+      const parsed = serverOpts
+        .map((o) => {
+          if (o && typeof o === "object" && typeof o.value === "string" && typeof o.label === "string") {
+            return { value: o.value, label: o.label };
+          }
+          if (typeof o === "string") return { value: o, label: o };
+          return null;
+        })
+        .filter((v): v is { value: string; label: string } => !!v);
+
+      if (!parsed.length) return;
+
+      setOptions((prev) => {
+        const seen = new Set<string>();
+        // 서버 값 + 로컬 값 + 기본 옵션을 모두 합친 뒤 중복 제거
+        const merged = [...parsed, ...prev, ...defaultOptions].filter((opt) => {
+          if (seen.has(opt.value)) return false;
+          seen.add(opt.value);
+          return true;
+        });
+        localStorage.setItem("relationshipOptions", JSON.stringify(merged));
+        return merged;
+      });
+    };
+
+    void loadFromServer();
+  }, []);
+
   // localStorage 저장
   useEffect(() => {
     localStorage.setItem("relationshipOptions", JSON.stringify(options));
@@ -111,10 +162,12 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
   }, [options]);
 
   const handleAdd = () => {
-    if (!etcValue.trim()) return;
-    const newOption = { value: etcValue, label: etcValue };
-    setOptions([...options, newOption]);
-    setSelected(etcValue);
+    const value = etcValue.trim();
+    if (!value) return;
+    const newOption = { value, label: value };
+    setOptions((prev) => [...prev, newOption]);
+    setSelected(value);
+    onChange?.(value);
     setEtcValue("");
     setShowEtc(false);
   };
