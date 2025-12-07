@@ -7,6 +7,7 @@ import SettingsDrawer from "@/app/pages/SettingsDrawer";
 export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: () => void; onShowCouple: () => void }) {
   const [openSettings, setOpenSettings] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -29,12 +30,46 @@ export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: 
           <NavItem icon={<Home size={22} />} label="오늘의 사주" onClick={onShowToday} />
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />
           <NavItem icon={<Settings size={22} />} label="기타설정" onClick={() => setOpenSettings(true)} />
-          <NavItem icon={<LogOut size={22} />} label="로그아웃" onClick={handleLogout} disabled={loggingOut} />
+          <NavItem icon={<LogOut size={22} />} label="로그아웃" onClick={() => setConfirmLogout(true)} disabled={loggingOut} />
         </nav>
       </div>
 
       {/* 설정 Drawer */}
       <SettingsDrawer open={openSettings} onClose={() => setOpenSettings(false)} />
+
+      {/* 로그아웃 확인 모달 */}
+      {confirmLogout && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50"
+          onClick={() => setConfirmLogout(false)}
+        >
+          <div
+            className="w-full max-w-sm bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-100 p-6 rounded-xl shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold mb-4">로그아웃 하시겠습니까?</h3>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-lg bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 cursor-pointer"
+                onClick={() => setConfirmLogout(false)}
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                className="flex-1 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 cursor-pointer"
+                onClick={() => {
+                  setConfirmLogout(false);
+                  handleLogout();
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

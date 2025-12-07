@@ -96,6 +96,7 @@ export function useSidebarLogic(
   });
 
   const selfOrderingRef = useRef(false);
+  const customFolderSyncDisabledRef = useRef(false); // 테이블 없을 때 404 방지용
 
   // ???? ?? ?? ??
   useEffect(() => {
@@ -106,18 +107,23 @@ export function useSidebarLogic(
 
       // 커스텀 폴더 목록을 서버에서 불러와 로컬스토리지와 동기화
       try {
-        const { data: customRows, error: customErr } = await supabase
-          .from("user_custom_folders")
-          .select("folder_name")
-          .eq("user_id", user.id);
+        if (!customFolderSyncDisabledRef.current) {
+          const { data: customRows, error: customErr } = await supabase
+            .from("user_custom_folders")
+            .select("folder_name")
+            .eq("user_id", user.id);
 
-        if (!customErr && customRows) {
-          const names = (customRows as any[])
-            .map((row) => String(row.folder_name))
-            .filter((v) => v && v.trim() !== "");
-          setCustomFolders(names);
-        } else if (customErr) {
-          console.error("load custom folders from server error:", customErr);
+          if (customErr?.code === "PGRST205") {
+            // 테이블 없으면 이후 시도 스킵
+            customFolderSyncDisabledRef.current = true;
+          } else if (!customErr && customRows) {
+            const names = (customRows as any[])
+              .map((row) => String(row.folder_name))
+              .filter((v) => v && v.trim() !== "");
+            setCustomFolders(names);
+          } else if (customErr) {
+            console.error("load custom folders from server error:", customErr);
+          }
         }
       } catch (e) {
         console.error("load custom folders exception:", e);
@@ -174,6 +180,7 @@ export function useSidebarLogic(
   );
 
   const saveCustomFolderToServer = useCallback(async (name: string) => {
+    if (customFolderSyncDisabledRef.current) return;
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return;
     const { error } = await supabase
@@ -183,10 +190,17 @@ export function useSidebarLogic(
         folder_name: name,
         updated_at: new Date().toISOString(),
       });
-    if (error) console.error("save custom folder error:", error);
+    if (error) {
+      if (error.code === "PGRST205") {
+        customFolderSyncDisabledRef.current = true;
+      } else {
+        console.error("save custom folder error:", error);
+      }
+    }
   }, []);
 
   const deleteCustomFolderFromServer = useCallback(async (name: string) => {
+    if (customFolderSyncDisabledRef.current) return;
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) return;
     const { error } = await supabase
@@ -194,7 +208,13 @@ export function useSidebarLogic(
       .delete()
       .eq("user_id", user.id)
       .eq("folder_name", name);
-    if (error) console.error("delete custom folder error:", error);
+    if (error) {
+      if (error.code === "PGRST205") {
+        customFolderSyncDisabledRef.current = true;
+      } else {
+        console.error("delete custom folder error:", error);
+      }
+    }
   }, []);
 
   // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
