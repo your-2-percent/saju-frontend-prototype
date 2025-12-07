@@ -23,6 +23,7 @@ import {
   removeCustomFolder,
   disablePresetFolder,
   FOLDER_PRESETS,
+  setCustomFolders,
 } from "@/features/sidebar/model/folderModel";
 
 type BoolMap = Record<string, boolean>;
@@ -103,6 +104,25 @@ export function useSidebarLogic(
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       if (userError || !user) return;
 
+      // 커스텀 폴더 목록을 서버에서 불러와 로컬스토리지와 동기화
+      try {
+        const { data: customRows, error: customErr } = await supabase
+          .from("user_custom_folders")
+          .select("folder_name")
+          .eq("user_id", user.id);
+
+        if (!customErr && customRows) {
+          const names = (customRows as any[])
+            .map((row) => String(row.folder_name))
+            .filter((v) => v && v.trim() !== "");
+          setCustomFolders(names);
+        } else if (customErr) {
+          console.error("load custom folders from server error:", customErr);
+        }
+      } catch (e) {
+        console.error("load custom folders exception:", e);
+      }
+
       const { data, error } = await supabase
         .from("user_folder_order")
         .select("folder_name, sort_order")
@@ -152,6 +172,30 @@ export function useSidebarLogic(
     },
     []
   );
+
+  const saveCustomFolderToServer = useCallback(async (name: string) => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return;
+    const { error } = await supabase
+      .from("user_custom_folders")
+      .upsert({
+        user_id: user.id,
+        folder_name: name,
+        updated_at: new Date().toISOString(),
+      });
+    if (error) console.error("save custom folder error:", error);
+  }, []);
+
+  const deleteCustomFolderFromServer = useCallback(async (name: string) => {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) return;
+    const { error } = await supabase
+      .from("user_custom_folders")
+      .delete()
+      .eq("user_id", user.id)
+      .eq("folder_name", name);
+    if (error) console.error("delete custom folder error:", error);
+  }, []);
 
   // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
     // FolderField / 다른 컴포넌트에서 폴더 구조가 바뀌면 동기화
@@ -246,12 +290,13 @@ export function useSidebarLogic(
   );
 
   /* ---------- 새 폴더 생성 ---------- */
-    const createFolder = (name: string) => {
+  const createFolder = (name: string) => {
     const n = name.trim();
     if (!n || n === UNASSIGNED_LABEL) return;
 
     // 전역 커스텀 폴더 추가 (localStorage + FOLDER_EVENT)
     addCustomFolder(n);
+    void saveCustomFolderToServer(n);
 
     // 현재 순서에 새 폴더를 붙이고 순서도 저장
     setOrderedFolders((prev) => {
@@ -265,7 +310,7 @@ export function useSidebarLogic(
 
 
   /* ---------- 폴더 삭제 (소속 항목은 폴더 미지정으로) ---------- */
-    const deleteFolder = (name: string) => {
+  const deleteFolder = (name: string) => {
     // 1) 이 폴더에 속한 명식들 → 폴더 미지정으로
     list.forEach((m) => {
       if (m.folder === name) {
@@ -295,6 +340,7 @@ export function useSidebarLogic(
       disablePresetFolder(name);
     } else {
       removeCustomFolder(name);
+      void deleteCustomFolderFromServer(name);
     }
   };
 
