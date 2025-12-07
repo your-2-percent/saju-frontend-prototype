@@ -46,7 +46,7 @@ function normalizeOrder(saved: unknown): SectionKey[] {
 type Props = { open: boolean; onClose: () => void };
 
 export default function SettingsDrawer({ open, onClose }: Props) {
-  const { settings, setSettings, saveToServer } = useSettingsStore();
+  const { settings, setSettings } = useSettingsStore();
 
   // 섹션 순서 (기본은 스토어)
   const initialOrder = useMemo<SectionKey[]>(
@@ -106,7 +106,6 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     };
     setSettings(nextSettings);
     if (nextSettings.theme) setStoredTheme(nextSettings.theme as ThemeMode);
-    void saveToServer();
     setToastMessage("설정이 적용되었습니다");
     onClose();
   };

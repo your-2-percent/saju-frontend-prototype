@@ -42,6 +42,35 @@ export const defaultSettings: Settings = {
   ],
 };
 
+const SECTION_KEYS = [
+  "theme",
+  "hiddenStem",
+  "hiddenStemMode",
+  "ilunRule",
+  "sinsalMode",
+  "sinsalBase",
+  "sinsalBloom",
+  "exposure",
+  "charType",
+  "thinEum",
+  "visibility",
+  "difficultyMode",
+] as const;
+
+const normalizeSectionOrder = (saved?: unknown): string[] => {
+  const base = Array.isArray(saved)
+    ? (saved as unknown[]).filter((v): v is typeof SECTION_KEYS[number] => typeof v === "string" && (SECTION_KEYS as readonly string[]).includes(v))
+    : [];
+  const missing = SECTION_KEYS.filter((k) => !base.includes(k));
+  return [...base, ...missing];
+};
+
+const withDefaults = (s: Settings): Settings => ({
+  ...defaultSettings,
+  ...s,
+  sectionOrder: normalizeSectionOrder(s.sectionOrder),
+});
+
 type SettingsState = {
   settings: Settings;
   setSettings: (next: Settings) => void;
@@ -59,9 +88,9 @@ export const useSettingsStore = create<SettingsState>()(
       settings: defaultSettings,
       syncing: false,
       loaded: false,
-      setSettings: (next) => set({ settings: next }),
+      setSettings: (next) => set({ settings: withDefaults(next) }),
       setKey: (key, value) =>
-        set({ settings: { ...get().settings, [key]: value } }),
+        set({ settings: withDefaults({ ...get().settings, [key]: value }) }),
       reset: () => set({ settings: defaultSettings }),
       loadFromServer: async () => {
         set({ syncing: true });
@@ -89,8 +118,9 @@ export const useSettingsStore = create<SettingsState>()(
         }
 
         if (data?.payload) {
+          const normalized = withDefaults(data.payload as Settings);
           set({
-            settings: data.payload as Settings,
+            settings: normalized,
             syncing: false,
             loaded: true,
           });
@@ -114,11 +144,13 @@ export const useSettingsStore = create<SettingsState>()(
           return;
         }
 
+        const normalized = withDefaults(get().settings);
+
         const { error } = await supabase
           .from("user_settings")
           .upsert({
             user_id: user.id,
-            payload: get().settings,
+            payload: normalized,
             updated_at: new Date().toISOString(),
           });
 

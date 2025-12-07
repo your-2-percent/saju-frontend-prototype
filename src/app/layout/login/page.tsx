@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { useEffect, useState } from "react";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function LoginPage() {
   const [showBg, setShowBg] = useState(false);
@@ -19,7 +20,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     if (!agree) {
-      alert("개인정보 처리방침에 동의해야 로그인할 수 있습니다.");
+      toast.error("개인정보 처리방침에 동의를 하셔야\n시작하실 수 있습니다.");
       return;
     }
 
@@ -93,12 +94,12 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          disabled={!agree}
-          className={`flex items-center justify-center gap-3 w-full py-3 rounded-lg font-medium text-sm shadow transition-all cursor-pointer 
+          aria-disabled={!agree}
+          className={`flex items-center justify-center gap-3 w-full py-3 rounded-lg font-medium text-sm shadow transition-all 
             ${
               agree
-                ? "bg-white text-black hover:bg-neutral-100 active:scale-[0.98]"
-                : "bg-neutral-700 text-neutral-400 cursor-not-allowed"
+                ? "bg-white text-black hover:bg-neutral-100 active:scale-[0.98] cursor-pointer"
+                : "bg-neutral-700 text-neutral-400 cursor-pointer"
             }`}
         >
           <img
@@ -109,6 +110,8 @@ export default function LoginPage() {
           <span>구글 계정으로 로그인</span>
         </button>
       </div>
+
+      <Toaster position="top-center" toastOptions={{ duration: 2000 }} />
 
       {/* 개인정보 처리방침 모달 */}
       {policyOpen && (
