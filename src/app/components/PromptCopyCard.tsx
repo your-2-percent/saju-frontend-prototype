@@ -34,6 +34,7 @@ import {
 } from "@/features/prompt/buildPrompt";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
+import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
 // 🔥 사주 해석 톤 프리셋
 type ToneKey =
@@ -316,7 +317,12 @@ export default function PromptCopyCard({
   const [friendMode, setFriendMode] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
 
-  const [date, setDate] = useState<Date>(() => new Date());
+  const { date, setDate } = useLuckPickerStore();
+
+  // 명식이 바뀌면 기준 일자를 오늘로 초기화 (LuckGlobalPicker와 동일하게 반응)
+  useEffect(() => {
+    setDate(new Date());
+  }, [ms.id, setDate]);
 
   const { list, currentId } = useMyeongSikStore.getState();
 
