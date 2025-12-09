@@ -14,9 +14,3 @@ export const supabase = createClient(
     },
   }
 );
-
-
-// DEV 환경: 브라우저 콘솔에서 __supabase 로 접근 가능
-if (typeof window !== 'undefined' && import.meta.env.DEV) {
-  (window as any).__supabase = supabase;
-}
