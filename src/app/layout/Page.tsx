@@ -9,6 +9,7 @@ import TopNav from "@/shared/ui/nav/TopNav";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import Sidebar from "@/features/sidebar/Sidebar";
 import MyeongSikEditor from "@/app/pages/MyeongSikEditor";
+import AdminPage from "@/app/pages/AdminPage";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
@@ -24,7 +25,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { supabase } from "@/lib/supabase";
 import LoginPage from "@/app/layout/login/page";
 
-/** 훅은 항상 같은 순서로 호출해야 하므로, 데이터 없을 때도 안전하게 돌릴 더미 명식 */
+/** ?��? ??�� 같�? ?�서�??�출?�야 ?��?�? ?�이???�을 ?�도 ?�전?�게 ?�릴 ?��? 명식 */
 const EMPTY_MS: MyeongSik = {
   id: "empty",
   name: "",
@@ -35,32 +36,36 @@ const EMPTY_MS: MyeongSik = {
   relationship: "",
   memo: "",
   folder: "",
-  mingSikType: "자시",
+  mingSikType: "조자시/야자시",
   DayChangeRule: "자시일수론",
   favorite: false,
 
-  // 계산/보정 필드
-  dateObj: new Date(), // 원본 Date 객체
-  corrected: new Date(), // 보정된 Date
-  correctedLocal: "", // 보정시 "HH:MM"
-  // 간지 관련
-  dayStem: "", // 일간
-  ganjiText: "", // 간지 전체 문자열
-  ganji: "", // (호환용) 간지 전체 문자열
+  // 계산/보정 ?�드
+  dateObj: new Date(), // ?�본 Date 객체
+  corrected: new Date(), // 보정??Date
+  correctedLocal: "", // 보정??"HH:MM"
+  // 간�? 관??
+  dayStem: "", // ?�간
+  ganjiText: "", // 간�? ?�체 문자??
+  ganji: "", // (?�환?? 간�? ?�체 문자??
   calendarType: "solar",
   dir: "forward",
 };
 
 /**
- * ✅ Wrapper 컴포넌트: 여기서는 Supabase 세션 체크만 하고,
- *   로그인 상태에 따라 LoginPage 또는 MainApp을 렌더링.
- *   여기서는 useMyeongSikStore 같은 훅 절대 안 씀.
+ * ??Wrapper 컴포?�트: ?�기?�는 Supabase ?�션 체크�??�고,
+ *   로그???�태???�라 LoginPage ?�는 MainApp???�더�?
+ *   ?�기?�는 useMyeongSikStore 같�? ???��? ???�.
  */
 export default function Page() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [adminMode, setAdminMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.location.pathname.startsWith("/admin");
+  });
 
-  // ✅ 명식 스토어에서 서버 동기화 관련 액션/상태 가져오기
+  // ??명식 ?�토?�에???�버 ?�기??관???�션/?�태 가?�오�?
   const migrateLocalToServer = useMyeongSikStore(
     (s) => s.migrateLocalToServer,
   );
@@ -69,7 +74,21 @@ export default function Page() {
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const loadSettings = useSettingsStore((s) => s.loadFromServer);
 
-  // ✅ 처음 들어왔을 때 Supabase 세션 확인
+  useEffect(() => {
+    const handler = () => {
+      setAdminMode(window.location.pathname.startsWith('/admin'));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handler);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('popstate', handler);
+      }
+    };
+  }, []);
+
+  // ??처음 ?�어?�을 ??Supabase ?�션 ?�인
   useEffect(() => {
     const client = supabase;
 
@@ -88,7 +107,7 @@ export default function Page() {
 
     init();
 
-    // 🔁 세션이 바뀔 때마다 자동으로 로그인 상태 갱신
+    // ?�� ?�션??바�??�마???�동?�로 로그???�태 갱신
     const {
       data: { subscription },
     } = client.auth.onAuthStateChange((_event, session) => {
@@ -102,39 +121,43 @@ export default function Page() {
   }, []);
 
 
-  // ✅ 로그인된 뒤에만: 로컬 → 서버 마이그레이션 + 서버에서 명식 로드
+  // ??로그?�된 ?�에�? 로컬 ???�버 마이그레?�션 + ?�버?�서 명식 로드
   useEffect(() => {
-    if (!isLoggedIn) return; // 로그인 안 되어 있으면 아무 것도 안 함
+    if (!isLoggedIn) return; // 로그?????�어 ?�으�??�무 것도 ????
 
     (async () => {
-      // 예전 localStorage에 남아있던 명식이 있으면 현재 계정 DB로 업로드
+      // ?�전 localStorage???�아?�던 명식???�으�??�재 계정 DB�??�로??
       await migrateLocalToServer();
-      // 그 다음, 현재 계정 기준으로 DB에서 명식 리스트 불러오기
+      // �??�음, ?�재 계정 기�??�로 DB?�서 명식 리스??불러?�기
       await loadFromServer();
-      // 설정도 서버에서 1회 즉시 로드
+      // ?�정???�버?�서 1??즉시 로드
       await loadSettings();
     })();
   }, [isLoggedIn, migrateLocalToServer, loadFromServer, loadSettings]);
 
-  // ✅ 아직 세션 체크 전이면 로딩 화면
+  // ???�직 ?�션 체크 ?�이�?로딩 ?�면
   if (!authChecked) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">로그인 상태 확인 중...</p>
+        <p className="text-sm text-neutral-500">로그인 상태 확인중..</p>
       </main>
     );
   }
 
-  // ✅ 로그인 안 되어 있으면 로그인 페이지
+  // ??로그?????�어 ?�으�?로그???�이지
   if (!isLoggedIn) {
     return <LoginPage />;
   }
 
-  // ✅ 로그인은 됐는데 DB에서 명식 불러오는 중이면 로딩 화면
+  if (adminMode) {
+    return <AdminPage />;
+  }
+
+  // ??로그?��? ?�는??DB?�서 명식 불러?�는 중이�?로딩 ?�면
   if (!settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">설정 조회 중...</p>
+        <p className="text-sm text-neutral-500">?설정 조회 중..</p>
       </main>
     );
   }
@@ -142,29 +165,29 @@ export default function Page() {
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">명식 불러오는 중...</p>
+        <p className="text-sm text-neutral-500">명식 불러오는 중..</p>
       </main>
     );
   }
 
-  // ✅ 로그인 + 명식 로딩 완료 → 실제 만세력 앱 렌더
+  // ??로그??+ 명식 로딩 ?�료 ???�제 만세?????�더
   return <MainApp isLoggedIn={isLoggedIn} />;
 }
 
 /**
- * ✅ MainApp: 예전 만세력 UI 전부 여기로.
- *   여기서는 early return 없이 훅만 쭉 호출 → 룰-of-hooks 만족.
+ * ??MainApp: ?�전 만세??UI ?��? ?�기�?
+ *   ?�기?�는 early return ?�이 ?�만 �??�출 ??�?of-hooks 만족.
  */
 function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   
   const { list } = useMyeongSikStore();
 
-  // 초기 currentId는 존재할 때만 세팅
+  // 초기 currentId??존재???�만 ?�팅
   const [currentId, setCurrentId] = useState<string>(() =>
     list.length > 0 ? list[0].id : "",
   );
 
-  // 오버레이/화면 상태
+  // ?�버?�이/?�면 ?�태
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [editing, setEditing] = useState<MyeongSik | null>(null);
@@ -172,23 +195,23 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [showCouple, setShowCouple] = useState(false);
   const [openCustom, setOpenCustom] = useState(false);
 
-  // 최초 진입 시 Today 우선
+  // 최초 진입 ??Today ?�선
   useEffect(() => {
     setShowToday(true);
     setShowCouple(false);
   }, []);
 
-  // 현재 선택
+  // ?�재 ?�택
   const current = useMemo<MyeongSik>(
     () => list.find((m) => m.id === currentId) ?? list[0],
     [list, currentId],
   );
 
-  // 데이터 유효성 (타입 유지 + 런타임 가드)
+  // ?�이???�효??(?�???��? + ?��???가??
   const hasCurrent =
     list.length > 0 && !!current && typeof current.birthDay === "string";
 
-  // 훅은 항상 호출: 데이터 없을 땐 더미로 계산
+  // ?��? ??�� ?�출: ?�이???�을 ???��?�?계산
   const msForHooks = hasCurrent ? current : EMPTY_MS;
   const natal = useMemo(
     () => buildNatalPillarsFromMs(msForHooks),
@@ -196,13 +219,13 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   );
   const chain = useLuckChain(msForHooks);
 
-  // 유틸 가드
+  // ?�틸 가??
   const isGZ = (s: unknown): s is string =>
     typeof s === "string" && s.length >= 2;
   const isValidPillars = (arr: unknown): arr is [string, string, string, string] =>
     Array.isArray(arr) && arr.length === 4 && arr.every(isGZ);
 
-  // 새 명식 추가
+  // ??명식 추�?
   const openAdd = () => setWizardOpen(true);
 
   const {
@@ -212,13 +235,13 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     loaded: settingsLoaded,
   } = useSettingsStore();
 
-  // 설정 로드: 로그인된 상태에서만 실행
+  // ?�정 로드: 로그?�된 ?�태?�서�??�행
   useEffect(() => {
     if (!isLoggedIn) return;
     void loadSettings();
   }, [isLoggedIn, loadSettings]);
 
-  // 설정 변경 시 서버에도 반영 (로그인 + 로드 완료 이후)
+  // ?�정 변�????�버?�도 반영 (로그??+ 로드 ?�료 ?�후)
   useEffect(() => {
     if (!isLoggedIn || !settingsLoaded) return;
     void saveSettings();
@@ -257,7 +280,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           setShowToday(false);
           setShowCouple(false);
 
-          // 보기 전환 시 날짜 리셋
+          // 보기 ?�환 ???�짜 리셋
           const todayNoon = new Date();
           todayNoon.setHours(12, 0, 0, 0);
           const store = useLuckPickerStore.getState();
@@ -290,10 +313,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         }}
       />
 
-      {/* 오늘의 사주 */}
+      {/* ?�늘???�주 */}
       {showToday && <TodaySaju />}
 
-      {/* Wizard 오버레이 */}
+      {/* Wizard ?�버?�이 */}
       {wizardOpen && (
         <>
           <div
@@ -317,7 +340,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </>
       )}
 
-      {/* 원국 UI: current 유효 + Today/Couple 아님 */}
+      {/* ?�국 UI: current ?�효 + Today/Couple ?�님 */}
       {hasCurrent && !showToday && !showCouple && (
         <>
           <div className="pt-18 pb-4">
@@ -356,7 +379,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      {/* 수정 오버레이 */}
+      {/* ?�정 ?�버?�이 */}
       {editing && (
         <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/60">
           <div className="bg-white dark:bg-neutral-950 p-4 rounded-xl w-full max-h-[90dvh] max-w-xl shadow-lg">
@@ -370,7 +393,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      {/* 하단 네비 */}
+      {/* ?�단 ?�비 */}
       <BottomNav
         onShowToday={() => {
           setShowToday(true);
@@ -386,3 +409,4 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     </div>
   );
 }
+
