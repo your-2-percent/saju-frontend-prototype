@@ -1,11 +1,24 @@
-import "@/shared/lib/themeBoot";   // ✅ 가장 먼저
+import "@/shared/lib/themeBoot";   // 가장 먼저
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+
+// 🔥 HashRouter 추가
+import { HashRouter, Routes, Route } from "react-router-dom";
+
 import Page from "@/app/layout/Page";
+import AdminPage from "@/app/pages/AdminPage"; // 관리자 페이지 추가
 import "./main.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <Page />
+    <HashRouter>
+      <Routes>
+        {/* 메인 페이지 */}
+        <Route path="/" element={<Page />} />
+        
+        {/* 관리자 페이지 */}
+        <Route path="/admin" element={<AdminPage />} />
+      </Routes>
+    </HashRouter>
   </StrictMode>,
 );
