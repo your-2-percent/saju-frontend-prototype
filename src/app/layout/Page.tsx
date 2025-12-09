@@ -157,7 +157,7 @@ export default function Page() {
   if (!settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">?설정 조회 중..</p>
+        <p className="text-sm text-neutral-500">설정 조회 중..</p>
       </main>
     );
   }
