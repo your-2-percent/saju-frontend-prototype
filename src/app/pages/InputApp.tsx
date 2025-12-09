@@ -655,6 +655,7 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
             <div className="space-y-2">
               <BirthPlacePickerBridge
                 onSelect={(p) => setForm({ ...form, birthPlace: p })}
+                value={unknownPlace ? "" : form.birthPlace?.name ?? ""}
               />
               <span className="inline-flex items-center gap-1">
                 <input id="birthPlaceX" type="checkbox" style={{ display: "none" }} />

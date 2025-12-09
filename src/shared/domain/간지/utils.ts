@@ -42,7 +42,7 @@ export function elemToBg(elem?: ElementType, settingsV1?: Settings): string {
   
   if (settingsV1?.difficultyMode) {
     if (settingsV1?.theme === "light") {
-      return "bg-white border border-gray-300 text-white";
+      return "bg-white border border-gray-300 text-neutral-900";
     }
     return "bg-white text-black";
   }
