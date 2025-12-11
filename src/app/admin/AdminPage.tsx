@@ -49,7 +49,7 @@ export default function AdminPage() {
     content = <AdminUserList />;
   }
   // 3️⃣ 로그 페이지
-  else if (path.startsWith("/admin/logs")) {
+  else if (path.startsWith("/admin/logs/page")) {
     content = <AdminLogs />;
   }
   // 4️⃣ 대시보드
