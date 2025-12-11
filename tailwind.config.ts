@@ -8,12 +8,16 @@ export default {
     "./src/**/*.{ts,tsx,js,jsx}",
   ],
   theme: {
-    screens: {          // ✅ extend 말고 여기!
-      desk: "991px",
+    screens: {
+      sm: "640px",
+      md: "768px",
+      desk: "991px", // ← 너가 쓰던 기준
+      lg: "1024px",
+      xl: "1280px",
+      "2xl": "1536px",
     },
-    extend: {},         // 나머지 확장은 여기
-    
+    extend: {},
   },
   plugins: [],
-  darkMode: "class"
+  darkMode: "class",
 } satisfies Config;

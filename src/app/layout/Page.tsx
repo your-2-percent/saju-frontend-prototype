@@ -9,7 +9,7 @@ import TopNav from "@/shared/ui/nav/TopNav";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import Sidebar from "@/features/sidebar/Sidebar";
 import MyeongSikEditor from "@/app/pages/MyeongSikEditor";
-import AdminPage from "@/app/pages/AdminPage";
+import AdminPage from "@/app/admin/AdminPage";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
@@ -60,7 +60,7 @@ const EMPTY_MS: MyeongSik = {
 export default function Page() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [adminMode, setAdminMode] = useState(() => {
+  const [adminMode] = useState(() => {
     if (typeof window === "undefined") return false;
     return window.location.pathname.startsWith("/admin");
   });
@@ -73,20 +73,6 @@ export default function Page() {
   const loading = useMyeongSikStore((s) => s.loading);
   const settingsLoaded = useSettingsStore((s) => s.loaded);
   const loadSettings = useSettingsStore((s) => s.loadFromServer);
-
-  useEffect(() => {
-    const handler = () => {
-      setAdminMode(window.location.pathname.startsWith('/admin'));
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('popstate', handler);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('popstate', handler);
-      }
-    };
-  }, []);
 
   // ??처음 ?�어?�을 ??Supabase ?�션 ?�인
   useEffect(() => {
