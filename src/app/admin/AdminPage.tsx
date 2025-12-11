@@ -8,7 +8,7 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./dashboard/page";
 import AdminUserList from "./user";
 import AdminUserDetail from "./user/[userId]";
-import AdminLogs from "./logs";
+import AdminLogs from "./log";
 
 const ADMIN_UUIDS: string[] = (import.meta.env.VITE_ADMIN_UUIDS ?? "")
   .split(",")
