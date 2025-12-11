@@ -8,7 +8,7 @@ import AdminLayout from "./components/AdminLayout";
 import AdminDashboard from "./dashboard/page";
 import AdminUserList from "./user";
 import AdminUserDetail from "./user/[userId]";
-import AdminLogs from "./logs/page";
+import AdminLogs from "./logs";
 
 const ADMIN_UUIDS: string[] = (import.meta.env.VITE_ADMIN_UUIDS ?? "")
   .split(",")
@@ -49,7 +49,7 @@ export default function AdminPage() {
     content = <AdminUserList />;
   }
   // 3️⃣ 로그 페이지
-  else if (path.startsWith("/admin/logs/page")) {
+  else if (path.startsWith("/admin/logs")) {
     content = <AdminLogs />;
   }
   // 4️⃣ 대시보드
