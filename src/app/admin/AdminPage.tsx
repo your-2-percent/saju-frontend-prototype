@@ -33,7 +33,7 @@ export default function AdminPage() {
   if (!isAdmin) return <div className="p-6 text-white">관리자 권한 없음</div>;
 
   // -------------------------------
-  // URL 기반 라우팅 (순서 매우 중요!)
+  // URL 기반 라우팅 (순서 매우 중요함!)
   // -------------------------------
   const path = window.location.pathname;
 
