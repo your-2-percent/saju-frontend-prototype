@@ -124,6 +124,30 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
   };
 
   // ------------------------
+  // Restore account & myeongsik
+  // ------------------------
+  const handleRestoreAccount = async () => {
+    setSaving(true);
+
+    await supabase.from("profiles").update({ disabled_at: null }).eq("user_id", userId);
+    await supabase.from("myeongsik").update({ deleted_at: null }).eq("user_id", userId);
+
+    setSaving(false);
+    fetchProfile();
+    fetchMyeongsik();
+  };
+
+  // ------------------------
+  // Restore all myeongsik (deleted_at -> null)
+  // ------------------------
+  const handleRestoreAllMyeongsik = async () => {
+    setSaving(true);
+    await supabase.from("myeongsik").update({ deleted_at: null }).eq("user_id", userId);
+    setSaving(false);
+    fetchMyeongsik();
+  };
+
+  // ------------------------
   // Delete / Restore myeongsik
   // ------------------------
   const toggleDeleteMyeongsik = async (
@@ -149,7 +173,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
   // ------------------------
   return (
     <div className="p-6 text-white">
-      <button className="mb-4 underline" onClick={() => goTo("/admin/user")}>
+      <button className="mb-4 underline cursor-pointer" onClick={() => goTo("/admin/user")}>
         ← 유저목록으로 돌아가기
       </button>
 
@@ -212,15 +236,25 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
             <div className="flex gap-2">
               <button
                 onClick={handleSaveProfile}
-                className="px-3 py-2 bg-green-600 rounded cursor-pointer"
+                className="px-3 py-2 bg-green-600 rounded cursor-pointer text-xs"
                 disabled={saving}
               >
                 저장하기
               </button>
 
+              {profile.disabled_at && (
+                <button
+                  onClick={handleRestoreAccount}
+                  className="px-3 py-2 bg-blue-600 rounded cursor-pointer text-xs"
+                  disabled={saving}
+                >
+                  계정복구
+                </button>
+              )}
+
               <button
                 onClick={toggleDisable}
-                className={`px-3 py-2 rounded cursor-pointer ${
+                className={`px-3 py-2 rounded cursor-pointer text-xs ${
                   profile.disabled_at ? "bg-yellow-600" : "bg-gray-600"
                 }`}
               >
@@ -233,7 +267,16 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
 
       {/* Myeongsik Section */}
       <div className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg">
-        <h2 className="text-xl font-semibold mb-4">명식 목록</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">명식 목록</h2>
+          <button
+            className="px-3 py-2 bg-blue-700 rounded text-xs cursor-pointer"
+            onClick={handleRestoreAllMyeongsik}
+            disabled={saving}
+          >
+            명식 전체 복구
+          </button>
+        </div>
 
         {myeongsikList.map((m) => (
           <div
@@ -251,14 +294,14 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
 
               <div className="flex gap-2">
                 <button
-                  className="px-2 py-1 border border-neutral-500 rounded cursor-pointer" 
+                  className="text-nowrap px-2 py-1 border border-neutral-500 rounded cursor-pointer text-xs" 
                   onClick={() => goTo(`/admin/myeongsik/${m.id}`)}
                 >
                   수정
                 </button>
 
                 <button
-                  className={`px-2 py-1 rounded cursor-pointer ${
+                  className={`px-2 py-1 rounded cursor-pointer text-xs text-nowrap ${
                     m.deleted_at ? "bg-green-600" : "bg-red-600"
                   }`}
                   onClick={() => toggleDeleteMyeongsik(m.id, m.deleted_at)}

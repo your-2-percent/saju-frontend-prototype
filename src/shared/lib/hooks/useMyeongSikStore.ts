@@ -32,6 +32,7 @@ interface MyeongSikRow {
   favorite: boolean | null;
   sort_order: string | number | null;
   created_at: string | null;
+  deleted_at: string | null;
   updated_at: string | null;
 }
 
@@ -197,6 +198,7 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
       ? row.day_change_rule
       : "자시일수론") as "자시일수론" | "인시일수론",
     favorite: row.favorite ?? false,
+    deletedAt: row.deleted_at ?? null,
     sortOrder,
 
     dateObj: new Date(),
@@ -239,6 +241,7 @@ function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
     ming_sik_type: m.mingSikType ?? null,
     day_change_rule: m.DayChangeRule ?? null,
     favorite: m.favorite ?? false,
+    deleted_at: m.deletedAt ?? null,
     sort_order: sortOrderVal,
     updated_at: new Date().toISOString(),
   };
@@ -267,11 +270,13 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     const baseSelect =
-      "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, created_at, updated_at";
+      "id, user_id, name, birth_day, birth_time, gender, birth_place_name, birth_place_lat, birth_place_lon, relationship, memo, folder, ming_sik_type, day_change_rule, favorite, deleted_at, created_at, updated_at";
 
     const withOrder = await supabase
       .from("myeongsik")
       .select(baseSelect + ", sort_order")
+      .eq("user_id", user.id)
+      .is("deleted_at", null)
       .order("sort_order", { ascending: true, nullsFirst: true })
       .order("created_at", { ascending: false });
 
@@ -457,10 +462,12 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       };
     });
 
+    const deletedAt = new Date().toISOString();
+
     // 2) 서버에서 삭제
     const { error } = await supabase
       .from("myeongsik")
-      .delete()
+      .update({ deleted_at: deletedAt })
       .eq("id", id);
 
     if (error) {
