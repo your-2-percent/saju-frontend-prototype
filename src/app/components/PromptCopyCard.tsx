@@ -39,7 +39,6 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 // 🔥 사주 해석 톤 프리셋
 type ToneKey =
   | "analysis"
-  | "teacher"
   | "mentor"
   | "speed"
   | "dryHumor"
@@ -55,12 +54,6 @@ const TONE_META: Record<
     desc: `- 감정 완전 배제하고, 사주를 데이터처럼 설명
 - "이 명식은 구조적으로 이런 패턴이 반복됨" 같은 방식
 - ST형 냉정 분석 느낌`,
-  },
-  teacher: {
-    label: "선생님형",
-    desc: `- 원리·이유 중심의 설명
-- 사주 구조를 순차적으로 풀어줌
-- 학습용, 설명 듣고 싶은 사용자에게 적합`,
   },
   mentor: {
     label: "조언가형",
@@ -985,8 +978,6 @@ export default function PromptCopyCard({
     switch (tone) {
       case "analysis":
         return "※ 해석은 감정 배제하고 과학적·분석적으로 설명한다.\n";
-      case "teacher":
-        return "※ 원리를 이해하기 쉽게 '강의하듯' 설명한다.\n";
       case "mentor":
         return "※ 현실 조언 중심으로 균형 있게 설명한다.\n";
       case "speed":

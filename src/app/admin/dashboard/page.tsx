@@ -164,7 +164,7 @@ function KPI({ label, value }: { label: string; value: number }) {
 // -----------------------------
 function Graph({ data }: { data: DailyPoint[] }) {
   return (
-    <div className="w-full h-64 bg-neutral-900 border border-neutral-700 rounded-lg p-2">
+    <div className="w-full h-64 bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-xs">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#333" />

@@ -19,6 +19,7 @@ export type MyeongSik = {
   mingSikType: "자시" | "조자시/야자시" | "인시";
   DayChangeRule: "자시일수론" | "인시일수론";
   favorite?: boolean;
+  deletedAt?: string | null;
 
   // 계산/보정 필드
   dateObj: Date;          // 원본 Date 객체
