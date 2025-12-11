@@ -23,13 +23,14 @@ export default function AdminPage() {
     const init = async () => {
       const { data } = await supabase.auth.getUser();
       const uid = data.user?.id;
+
       setIsAdmin(!!uid && ADMIN_UUIDS.includes(uid));
       setChecked(true);
     };
     init();
   }, []);
 
-  if (!checked) return <div className="p-6 text-white">관리자 인증 중..</div>;
+  if (!checked) return <div className="p-6 text-white">관리자 인증 중임미다...!</div>;
   if (!isAdmin) return <div className="p-6 text-white">관리자 권한 없음</div>;
 
   // -------------------------------
