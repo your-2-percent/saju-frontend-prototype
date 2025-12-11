@@ -6,7 +6,7 @@ import { createRoot } from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";
 
 import Page from "@/app/layout/Page";
-import AdminPage from "@/app/pages/AdminPage"; // 관리자 페이지 추가
+import AdminPage from "@/app/admin/AdminPage"; // 관리자 페이지 추가
 import "./main.css";
 
 createRoot(document.getElementById("root")!).render(

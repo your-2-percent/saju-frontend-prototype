@@ -33,6 +33,7 @@
     "react-responsive": "^10.0.1",
     "react-router-dom": "^7.10.1",
     "react-swipeable": "^7.0.2",
+    "recharts": "^3.5.1",
     "shadcn": "^2.10.0",
     "solarlunar": "^2.0.7",
     "tailwind-merge": "^3.3.1",
