@@ -2,11 +2,10 @@
 "use client";
 
 import { ReactNode, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
   const menu = [
@@ -76,8 +75,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="font-semibold">관리자 페이지</div>
 
           <button
-            className="text-sm text-neutral-400 hover:text-white"
-            onClick={() => navigate("/")}
+            className="text-sm text-neutral-400 hover:text-white cursor-pointer"
+            onClick={() => (window.location.href = "/#/")}
           >
             사용자 화면으로
           </button>

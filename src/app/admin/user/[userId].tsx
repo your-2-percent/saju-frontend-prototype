@@ -145,71 +145,26 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
   };
 
   // ------------------------
-  // Impersonation
-  // ------------------------
-  const impersonateUser = async (targetUserId: string) => {
-    try {
-      // 관리자 세션 백업
-      const current = await supabase.auth.getSession();
-      localStorage.setItem("admin_backup_session", JSON.stringify(current.data.session));
-
-      // Edge Function 호출
-      const res = await fetch(
-        "https://jouhybyquybxbnqztxum.supabase.co/functions/v1/impersonate",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ target_user: targetUserId }),
-        }
-      );
-
-      const result = await res.json();
-
-      const session = result?.data?.session;
-      if (!session) {
-        alert("임퍼소네이션 실패");
-        return;
-      }
-
-      // 세션 교체
-      await supabase.auth.setSession(session);
-
-      // 유저 홈으로 이동
-      window.location.href = "/";
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  // ------------------------
   // UI
   // ------------------------
   return (
     <div className="p-6 text-white">
       <button className="mb-4 underline" onClick={() => goTo("/admin/user")}>
-        ← Back to users
+        ← 유저목록으로 돌아가기
       </button>
 
-      <h1 className="text-2xl font-bold mb-4">User Detail</h1>
+      <h1 className="text-2xl font-bold mb-4">유저 정보</h1>
 
       {/* Profile Section */}
       <div className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">Profile</h2>
-
-          {/* 로그인 버튼 */}
-          <button
-            className="px-3 py-2 bg-indigo-600 rounded"
-            onClick={() => impersonateUser(userId)}
-          >
-            이 유저로 로그인하기
-          </button>
+          <h2 className="text-xl font-semibold">프로필</h2>
         </div>
 
         {!profile && (
           <button
             onClick={handleCreateProfile}
-            className="px-3 py-2 bg-blue-600 rounded"
+            className="px-3 py-2 bg-blue-600 rounded cursor-pointer"
             disabled={saving}
           >
             프로필 생성하기
@@ -257,7 +212,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
             <div className="flex gap-2">
               <button
                 onClick={handleSaveProfile}
-                className="px-3 py-2 bg-green-600 rounded"
+                className="px-3 py-2 bg-green-600 rounded cursor-pointer"
                 disabled={saving}
               >
                 저장하기
@@ -265,7 +220,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
 
               <button
                 onClick={toggleDisable}
-                className={`px-3 py-2 rounded ${
+                className={`px-3 py-2 rounded cursor-pointer ${
                   profile.disabled_at ? "bg-yellow-600" : "bg-gray-600"
                 }`}
               >
@@ -296,14 +251,14 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
 
               <div className="flex gap-2">
                 <button
-                  className="px-2 py-1 border border-neutral-500 rounded"
+                  className="px-2 py-1 border border-neutral-500 rounded cursor-pointer" 
                   onClick={() => goTo(`/admin/myeongsik/${m.id}`)}
                 >
                   수정
                 </button>
 
                 <button
-                  className={`px-2 py-1 rounded ${
+                  className={`px-2 py-1 rounded cursor-pointer ${
                     m.deleted_at ? "bg-green-600" : "bg-red-600"
                   }`}
                   onClick={() => toggleDeleteMyeongsik(m.id, m.deleted_at)}
