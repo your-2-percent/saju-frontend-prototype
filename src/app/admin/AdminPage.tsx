@@ -12,7 +12,7 @@ import AdminLogs from "./log";
 
 const ADMIN_UUIDS: string[] = (import.meta.env.VITE_ADMIN_UUIDS ?? "")
   .split(",")
-  .map((v) => v.trim())
+  .map((v: string) => v.trim())
   .filter(Boolean);
 
 export default function AdminPage() {
