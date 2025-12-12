@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { logAudit } from "@/lib/audit";
 
 type BirthJson = {
   birthDay?: string;
@@ -131,6 +132,11 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
 
     await supabase.from("profiles").update({ disabled_at: null }).eq("user_id", userId);
     await supabase.from("myeongsik").update({ deleted_at: null }).eq("user_id", userId);
+    await logAudit({
+      action: "restore_account",
+      targetUserId: userId,
+      payload: { source: "admin_user_detail" },
+    });
 
     setSaving(false);
     fetchProfile();
@@ -143,8 +149,25 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
   const handleRestoreAllMyeongsik = async () => {
     setSaving(true);
     await supabase.from("myeongsik").update({ deleted_at: null }).eq("user_id", userId);
+    await logAudit({
+      action: "restore_myeongsik_all",
+      targetUserId: userId,
+      payload: { source: "admin_user_detail" },
+    });
     setSaving(false);
     fetchMyeongsik();
+  };
+
+  // ------------------------
+  // View as (read-only via API)
+  // ------------------------
+  const handleViewAsUser = (myeongsikId?: string) => {
+    const base = typeof window !== "undefined" ? window.location.origin : "";
+    // HashRouter 경로 사용 (#/impersonate)
+    const url = myeongsikId
+      ? `${base}/#/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
+      : `${base}/#/impersonate?userId=${userId}`;
+    window.open(url, "_blank");
   };
 
   // ------------------------
@@ -157,6 +180,12 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
     const next = deleted ? null : new Date().toISOString();
 
     await supabase.from("myeongsik").update({ deleted_at: next }).eq("id", id);
+    await logAudit({
+      action: next ? "delete_myeongsik" : "restore_myeongsik",
+      targetUserId: userId,
+      targetRecordId: id,
+      payload: { deleted_at: next, source: "admin_user_detail" },
+    });
 
     fetchMyeongsik();
   };
@@ -182,7 +211,15 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
       {/* Profile Section */}
       <div className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg mb-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-xl font-semibold">프로필</h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold">프로필</h2>
+            <button
+              className="px-3 py-1 bg-blue-700 text-xs rounded cursor-pointer"
+              onClick={() => handleViewAsUser()}
+            >
+              이 유저로 보기(읽기 전용)
+            </button>
+          </div>
         </div>
 
         {!profile && (
@@ -293,6 +330,13 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
               </div>
 
               <div className="flex gap-2">
+                <button
+                  className="text-nowrap px-2 py-1 border border-blue-500 text-blue-100 rounded cursor-pointer text-xs"
+                  onClick={() => handleViewAsUser(m.id)}
+                >
+                  이 명식 보기(읽기 전용)
+                </button>
+
                 <button
                   className="text-nowrap px-2 py-1 border border-neutral-500 rounded cursor-pointer text-xs" 
                   onClick={() => goTo(`/admin/myeongsik/${m.id}`)}

@@ -31,6 +31,14 @@ export default function AdminAuditPage() {
 
   const [loading, setLoading] = useState(false);
 
+  const deleteLog = useCallback(
+    async (id: string) => {
+      await supabase.from("audit_logs").delete().eq("id", id);
+      setLogs((prev) => prev.filter((log) => log.id !== id));
+    },
+    []
+  );
+
   const fetchLogs = useCallback(async () => {
     setLoading(true);
 
@@ -149,7 +157,18 @@ export default function AdminAuditPage() {
               setModalOpen(true);
             }}
           >
-            <div className="font-semibold text-lg">{log.action}</div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="font-semibold text-lg">{log.action}</div>
+              <button
+                className="px-2 py-1 text-xs bg-red-700 hover:bg-red-600 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void deleteLog(log.id);
+                }}
+              >
+                삭제
+              </button>
+            </div>
 
             <div className="text-sm mt-1 text-neutral-400">
               <div>Actor: {log.actor_admin_id}</div>
@@ -213,4 +232,3 @@ export default function AdminAuditPage() {
     </div>
   );
 }
-

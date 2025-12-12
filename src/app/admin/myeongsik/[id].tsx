@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { logAudit } from "@/lib/audit";
 
 type BirthJson = {
   birthDay?: string;
@@ -73,6 +74,13 @@ export default function MyeongsikEditPage({ params }: { params: { id: string } }
       .from("myeongsik")
       .update({ deleted_at: next })
       .eq("id", id);
+
+    await logAudit({
+      action: next ? "delete_myeongsik" : "restore_myeongsik",
+      targetUserId: ms.user_id,
+      targetRecordId: id,
+      payload: { deleted_at: next, source: "admin_myeongsik_detail" },
+    });
 
     fetchMs();
   };
