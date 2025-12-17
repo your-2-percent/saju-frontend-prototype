@@ -36,7 +36,7 @@ import {
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { usePromptSectionsDB } from "@/features/AnalysisReport/hooks/usePromptSections";
+import { usePromptCopySectionsStore } from "@/features/PromptCopyCard/promptCopySectionsStore";
 
 // 🔥 사주 해석 톤 프리셋
 type ToneKey =
@@ -332,8 +332,8 @@ export default function PromptCopyCard({
   includeTenGod = false,
 }: Props) {
 
-  const msId = ms?.id ?? null; // 네가 실제 쓰는 “명식 id”로 연결
-  const { sections, toggleSection, isSaving } = usePromptSectionsDB(msId);
+  const sections = usePromptCopySectionsStore((s) => s.sections);
+  const toggleSection = usePromptCopySectionsStore((s) => s.toggleSection);
 
   const [tone, setTone] = useState<ToneKey>("analysis");
   const [friendMode, setFriendMode] = useState(false);
@@ -1100,7 +1100,6 @@ export default function PromptCopyCard({
             />
             납음오행
           </label>
-          {isSaving ? <span className="text-[11px] text-neutral-400">저장중…</span> : null}
         </div>
       </div>
 
