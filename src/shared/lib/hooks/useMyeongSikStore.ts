@@ -36,100 +36,155 @@ interface MyeongSikRow {
   updated_at: string | null;
 }
 
-type MyeongSikStore = {
-  currentId: string | null;
-  list: MyeongSikWithOrder[];
-  loading: boolean;
+/* =========================
+ * Realtime + 2시간 룰
+ * ========================= */
 
-  setCurrent: (id: string | null) => void;
+const SESSION_STARTED_AT_KEY = "hm_session_started_at_ms";
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 
-  loadFromServer: () => Promise<void>;
-  migrateLocalToServer: () => Promise<void>;
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
 
-  add: (m: MyeongSik) => Promise<void>;
-  update: (id: string, patch: Partial<MyeongSikWithOrder>) => Promise<void>;
-  remove: (id: string) => Promise<void>;
+function getOrInitSessionStartedAt(): number {
+  if (typeof window === "undefined") return Date.now();
+  const raw = window.localStorage.getItem(SESSION_STARTED_AT_KEY);
+  const parsed = raw ? Number(raw) : NaN;
+  if (Number.isFinite(parsed)) return parsed;
 
-  reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
-  clear: () => void;
-};
+  const now = Date.now();
+  window.localStorage.setItem(SESSION_STARTED_AT_KEY, String(now));
+  return now;
+}
+
+function shouldHardReloadBecauseStaleSession(): boolean {
+  if (typeof window === "undefined") return false;
+  const startedAt = getOrInitSessionStartedAt();
+  return Date.now() - startedAt >= TWO_HOURS_MS;
+}
+
+async function safeRemoveRealtimeChannel(channel: unknown): Promise<void> {
+  if (!channel) return;
+
+  // supabase-js v2: removeChannel
+  // supabase-js v1: removeSubscription (혹시)
+  const client = supabase as unknown as {
+    removeChannel?: (ch: unknown) => Promise<unknown>;
+    removeSubscription?: (ch: unknown) => Promise<unknown>;
+  };
+
+  if (typeof client.removeChannel === "function") {
+    await client.removeChannel(channel);
+    return;
+  }
+  if (typeof client.removeSubscription === "function") {
+    await client.removeSubscription(channel);
+    return;
+  }
+}
+
+function sortByOrder(list: MyeongSikWithOrder[]): MyeongSikWithOrder[] {
+  return [...list].sort((a, b) => {
+    const ao = typeof a.sortOrder === "number" && Number.isFinite(a.sortOrder) ? a.sortOrder : -1;
+    const bo = typeof b.sortOrder === "number" && Number.isFinite(b.sortOrder) ? b.sortOrder : -1;
+    if (ao !== bo) return ao - bo;
+
+    const an = (a.name ?? "").toString();
+    const bn = (b.name ?? "").toString();
+    const nc = an.localeCompare(bn);
+    if (nc !== 0) return nc;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function normalizeRowLoose(rowLike: unknown): MyeongSikRow | null {
+  if (!isRecord(rowLike)) return null;
+  const id = typeof rowLike.id === "string" ? rowLike.id : null;
+  const user_id = typeof rowLike.user_id === "string" ? rowLike.user_id : null;
+  if (!id || !user_id) return null;
+
+  const numOrNull = (v: unknown): number | null =>
+    typeof v === "number" && Number.isFinite(v) ? v : null;
+
+  const strOrNull = (v: unknown): string | null => (typeof v === "string" ? v : null);
+
+  const boolOrNull = (v: unknown): boolean | null => (typeof v === "boolean" ? v : null);
+
+  return {
+    id,
+    user_id,
+    name: strOrNull(rowLike.name),
+    birth_day: strOrNull(rowLike.birth_day),
+    birth_time: strOrNull(rowLike.birth_time),
+    gender: strOrNull(rowLike.gender),
+    birth_place_name: strOrNull(rowLike.birth_place_name),
+    birth_place_lat: numOrNull(rowLike.birth_place_lat),
+    birth_place_lon: numOrNull(rowLike.birth_place_lon),
+    relationship: strOrNull(rowLike.relationship),
+    memo: strOrNull(rowLike.memo),
+    folder: strOrNull(rowLike.folder),
+    ming_sik_type: strOrNull(rowLike.ming_sik_type),
+    day_change_rule: strOrNull(rowLike.day_change_rule),
+    favorite: boolOrNull(rowLike.favorite),
+    sort_order:
+      typeof rowLike.sort_order === "string" || typeof rowLike.sort_order === "number"
+        ? rowLike.sort_order
+        : null,
+    created_at: strOrNull(rowLike.created_at),
+    deleted_at: strOrNull(rowLike.deleted_at),
+    updated_at: strOrNull(rowLike.updated_at),
+  };
+}
+
+/* =========================
+ * 기존 로직(네 코드 그대로)
+ * ========================= */
 
 /** "남자"/"여자"로 강제 통일 */
-function normalizeGender(
-  raw: string | null | undefined,
-): "남자" | "여자" {
+function normalizeGender(raw: string | null | undefined): "남자" | "여자" {
   const v = (raw ?? "").trim();
 
   if (!v) return "남자";
 
-  if (
-    v === "여자" ||
-    v.toLowerCase() === "female" ||
-    v === "2" ||
-    v.toUpperCase() === "F"
-  ) {
+  if (v === "여자" || v.toLowerCase() === "female" || v === "2" || v.toUpperCase() === "F") {
     return "여자";
   }
 
-  if (
-    v === "남자" ||
-    v.toLowerCase() === "male" ||
-    v === "1" ||
-    v.toUpperCase() === "M"
-  ) {
+  if (v === "남자" || v.toLowerCase() === "male" || v === "1" || v.toUpperCase() === "M") {
     return "남자";
   }
 
-  // 이상한 값 들어오면 남자로 처리 (기존 로직과 동일한 디폴트)
   return "남자";
 }
 
 /** "갑자년 경자월 …" 이런 문자열에서 연간(첫 글자) 뽑기 */
-// ✅ "원국 : 병자년 경자월..." / "병자년 경자월..." 둘 다에서 연간만 정확히 뽑기
-function extractYearStem(
-  text: string | null | undefined,
-): string | null {
+function extractYearStem(text: string | null | undefined): string | null {
   if (!text) return null;
 
-  // 1) "병자년" 패턴에서 천간+지지 매칭
   const m = text.match(
     /(갑|을|병|정|무|기|경|신|임|계)(자|축|인|묘|진|사|오|미|신|유|술|해)년/,
   );
-  if (m) {
-    return m[1]; // "병자년" → "병"
-  }
+  if (m) return m[1];
 
-  // 2) 공백 기준 토큰 중에서 "~년"으로 끝나는 것 찾아서 첫 글자를 천간으로 사용
-  const token = text
-    .split(/\s+/)
-    .find((t) => t.endsWith("년"));
-  if (token && token.length > 0) {
-    return token.charAt(0); // "병자년" → "병"
-  }
+  const token = text.split(/\s+/).find((t) => t.endsWith("년"));
+  if (token && token.length > 0) return token.charAt(0);
 
   return null;
 }
 
-
 /** 성별 + 연간 음양 기반으로 대운 방향 계산 */
 function computeDaewoonDir(ms: MyeongSik): Direction {
   const gender = normalizeGender(ms.gender);
+  const yearStem = extractYearStem(ms.ganjiText) ?? extractYearStem(ms.ganji);
 
-  const yearStem =
-    extractYearStem(ms.ganjiText) ?? extractYearStem(ms.ganji);
-
-  if (!yearStem) {
-    // 연간 못 뽑으면 일단 순행 기본
-    return "forward" as Direction;
-  }
+  if (!yearStem) return "forward" as Direction;
 
   const yangStems = ["갑", "병", "무", "경", "임"];
   const isYang = yangStems.includes(yearStem);
   const isFemale = gender === "여자";
 
-  // 양간: 남 순 / 여 역, 음간: 남 역 / 여 순
   const isForward = (isYang && !isFemale) || (!isYang && isFemale);
-
   return (isForward ? "forward" : "backward") as Direction;
 }
 
@@ -139,15 +194,15 @@ function reviveAndRecalc(base: MyeongSik): MyeongSik {
     base.dateObj instanceof Date
       ? base.dateObj
       : base.dateObj
-      ? new Date(base.dateObj as unknown as string | number | Date)
-      : new Date();
+        ? new Date(base.dateObj as unknown as string | number | Date)
+        : new Date();
 
   const corrected =
     base.corrected instanceof Date
       ? base.corrected
       : base.corrected
-      ? new Date(base.corrected as unknown as string | number | Date)
-      : new Date(NaN); // 유효 보정시가 없으면 재계산 유도
+        ? new Date(base.corrected as unknown as string | number | Date)
+        : new Date(NaN);
 
   const normalized: MyeongSik = {
     ...base,
@@ -174,14 +229,10 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
     lat: row.birth_place_lat ?? 0,
     lon: row.birth_place_lon ?? 127.5,
   };
+
   const sortOrderRaw =
-    row.sort_order === null || row.sort_order === undefined
-      ? undefined
-      : Number(row.sort_order);
-  const sortOrder =
-    typeof sortOrderRaw === "number" && Number.isFinite(sortOrderRaw)
-      ? sortOrderRaw
-      : undefined;
+    row.sort_order === null || row.sort_order === undefined ? undefined : Number(row.sort_order);
+  const sortOrder = typeof sortOrderRaw === "number" && Number.isFinite(sortOrderRaw) ? sortOrderRaw : undefined;
 
   const base: MyeongSikWithOrder = {
     id: row.id,
@@ -193,7 +244,9 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
     relationship: row.relationship ?? "",
     memo: row.memo ?? "",
     folder: row.folder ?? "",
-    mingSikType: (["자시", "조자시/야자시", "인시"].includes(row.ming_sik_type as string) ? row.ming_sik_type : "자시") as "자시" | "조자시/야자시" | "인시",
+    mingSikType: (["자시", "조자시/야자시", "인시"].includes(row.ming_sik_type as string)
+      ? row.ming_sik_type
+      : "자시") as "자시" | "조자시/야자시" | "인시",
     DayChangeRule: (row.day_change_rule === "자시일수론" || row.day_change_rule === "인시일수론"
       ? row.day_change_rule
       : "자시일수론") as "자시일수론" | "인시일수론",
@@ -217,11 +270,9 @@ function fromRow(row: MyeongSikRow): MyeongSikWithOrder {
 /** MyeongSik → Supabase upsert용 row */
 function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
   const bp = m.birthPlace ?? { name: "", lat: 0, lon: 127.5 };
+
   const sortOrderVal =
-    typeof (m as MyeongSikWithOrder).sortOrder === "number" &&
-    Number.isFinite((m as MyeongSikWithOrder).sortOrder as number)
-      ? ((m as MyeongSikWithOrder).sortOrder as number)
-      : null;
+    typeof m.sortOrder === "number" && Number.isFinite(m.sortOrder) ? m.sortOrder : null;
 
   return {
     id: m.id,
@@ -231,10 +282,8 @@ function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
     birth_time: m.birthTime ?? null,
     gender: normalizeGender(m.gender),
     birth_place_name: bp.name ?? null,
-    birth_place_lat:
-      typeof bp.lat === "number" ? (bp.lat as number) : null,
-    birth_place_lon:
-      typeof bp.lon === "number" ? (bp.lon as number) : null,
+    birth_place_lat: typeof bp.lat === "number" ? bp.lat : null,
+    birth_place_lon: typeof bp.lon === "number" ? bp.lon : null,
     relationship: m.relationship ?? null,
     memo: m.memo ?? null,
     folder: m.folder ?? null,
@@ -247,13 +296,138 @@ function buildRowForUpsert(m: MyeongSikWithOrder, userId: string) {
   };
 }
 
+type MyeongSikStore = {
+  currentId: string | null;
+  list: MyeongSikWithOrder[];
+  loading: boolean;
+
+  // realtime
+  realtimeReady: boolean;
+  startRealtime: () => Promise<void>;
+  stopRealtime: () => Promise<void>;
+
+  setCurrent: (id: string | null) => void;
+
+  loadFromServer: () => Promise<void>;
+  migrateLocalToServer: () => Promise<void>;
+
+  add: (m: MyeongSik) => Promise<void>;
+  update: (id: string, patch: Partial<MyeongSikWithOrder>) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+
+  reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
+  clear: () => void;
+
+  _rtChannel: unknown;
+  _rtUserId: string | null;
+};
+
 export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   currentId: null,
   list: [],
-  // 초기 진입 시 서버 싱크 전에 메인 UI가 깜빡 보이지 않도록 기본값을 true로 둔다.
   loading: true,
 
+  realtimeReady: false,
+  _rtChannel: null,
+  _rtUserId: null,
+
   setCurrent: (id) => set({ currentId: id }),
+
+  stopRealtime: async () => {
+    const ch = get()._rtChannel;
+    await safeRemoveRealtimeChannel(ch);
+    set({ _rtChannel: null, _rtUserId: null, realtimeReady: false });
+  },
+
+  startRealtime: async () => {
+    getOrInitSessionStartedAt();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      await get().stopRealtime();
+      return;
+    }
+
+    if (get()._rtChannel && get()._rtUserId === user.id) {
+      set({ realtimeReady: true });
+      return;
+    }
+
+    await get().stopRealtime();
+
+    const channel = supabase
+      .channel(`myeongsik:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "myeongsik",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload: unknown) => {
+          // 2시간 넘었으면 “DB 변경 들어오는 순간” 하드 리로드
+          if (shouldHardReloadBecauseStaleSession()) {
+            if (typeof window !== "undefined") window.location.reload();
+            return;
+          }
+
+          if (!isRecord(payload)) return;
+          const eventType = typeof payload.eventType === "string" ? payload.eventType : "";
+          const newLike = isRecord(payload["new"]) ? payload["new"] : null;
+          const oldLike = isRecord(payload["old"]) ? payload["old"] : null;
+
+          const newRow = normalizeRowLoose(newLike);
+          const oldRow = normalizeRowLoose(oldLike);
+
+          const id = newRow?.id ?? oldRow?.id ?? null;
+          if (!id) return;
+
+          // UPDATE로 soft delete 올 수 있음
+          const deletedAt =
+            newRow && typeof newRow.deleted_at === "string" && newRow.deleted_at.trim()
+              ? newRow.deleted_at
+              : null;
+
+          set((state) => {
+            // DELETE 또는 deleted_at 처리
+            if (eventType === "DELETE" || deletedAt) {
+              const filtered = state.list.filter((x) => x.id !== id);
+              const newCurrentId =
+                state.currentId === id ? filtered[0]?.id ?? null : state.currentId;
+              return { list: filtered, currentId: newCurrentId };
+            }
+
+            // INSERT/UPDATE upsert
+            if (newRow) {
+              const item = fromRow(newRow);
+              const exists = state.list.some((x) => x.id === item.id);
+              const merged = exists
+                ? state.list.map((x) => (x.id === item.id ? item : x))
+                : [...state.list, item];
+
+              return {
+                list: sortByOrder(merged),
+                currentId: state.currentId ?? item.id,
+              };
+            }
+
+            return state;
+          });
+        },
+      )
+      .subscribe((status: unknown) => {
+        if (status === "SUBSCRIBED") {
+          set({ realtimeReady: true });
+        }
+      });
+
+    set({ _rtChannel: channel, _rtUserId: user.id });
+  },
 
   loadFromServer: async () => {
     set({ loading: true });
@@ -266,6 +440,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     if (userError || !user) {
       console.error("loadFromServer: user not found / error", userError);
       set({ list: [], currentId: null, loading: false });
+      await get().stopRealtime();
       return;
     }
 
@@ -290,19 +465,16 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     const filtered = (data as unknown as MyeongSikRow[]).filter((row) => row.user_id === user.id);
+    const list: MyeongSikWithOrder[] = sortByOrder(filtered.map(fromRow));
 
-    const list: MyeongSikWithOrder[] = filtered.map(fromRow);
     const prevCurrent = get().currentId;
     const firstId =
-      prevCurrent && list.some((m) => m.id === prevCurrent)
-        ? prevCurrent
-        : list[0]?.id ?? null;
+      prevCurrent && list.some((m) => m.id === prevCurrent) ? prevCurrent : list[0]?.id ?? null;
 
-    set({
-      list,
-      currentId: firstId,
-      loading: false,
-    });
+    set({ list, currentId: firstId, loading: false });
+
+    // ✅ 서버 로딩 끝나면 Realtime 자동 시작
+    await get().startRealtime();
   },
 
   migrateLocalToServer: async () => {
@@ -338,48 +510,32 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       return;
     }
 
-    // 1) 서버에 이미 있는 내 명식들의 id 목록 가져오기
     const { data: existing, error: existingError } = await supabase
       .from("myeongsik")
       .select("id")
       .eq("user_id", user.id);
 
     if (existingError) {
-      console.error(
-        "migrateLocalToServer: fetch existing ids error",
-        existingError,
-      );
+      console.error("migrateLocalToServer: fetch existing ids error", existingError);
       return;
     }
 
-    const existingIds = new Set<string>(
-      (existing ?? []).map((row) => row.id as string),
-    );
+    const existingIds = new Set<string>((existing ?? []).map((row) => row.id as string));
 
-    // 2) 서버에 아직 없는 id 만 추려서 insert 대상으로 삼기
-    const toInsert = localList.filter(
-      (item): item is MyeongSik => !!item && !existingIds.has(item.id),
-    );
-
+    const toInsert = localList.filter((item): item is MyeongSik => !!item && !existingIds.has(item.id));
     if (toInsert.length === 0) {
       window.localStorage.removeItem("myeongsik-list");
       return;
     }
 
-    const payload = toInsert.map((item) =>
-      buildRowForUpsert(item as MyeongSikWithOrder, user.id),
-    );
-
-    const { error } = await supabase
-      .from("myeongsik")
-      .upsert(payload, { onConflict: "id" });
+    const payload = toInsert.map((item) => buildRowForUpsert(item as MyeongSikWithOrder, user.id));
+    const { error } = await supabase.from("myeongsik").upsert(payload, { onConflict: "id" });
 
     if (error) {
       console.error("migrateLocalToServer upsert error:", error);
       return;
     }
 
-    // 3) 이 기기 로컬 데이터는 더 이상 필요 없으니 제거
     window.localStorage.removeItem("myeongsik-list");
   },
 
@@ -390,7 +546,10 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       sortOrder: (m as MyeongSikWithOrder).sortOrder ?? nextOrder,
     };
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
       console.error("add: user not found", userError);
@@ -398,32 +557,26 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     set((state) => ({
-      // 새로 추가한 명식을 목록 하단에 붙여서 즉시 순서를 맞춘다
-      list: [...state.list, withOrder],
+      list: sortByOrder([...state.list, withOrder]),
       currentId: state.currentId ?? withOrder.id,
     }));
 
     const row = buildRowForUpsert(withOrder, user.id);
     const { error } = await supabase.from("myeongsik").upsert(row, { onConflict: "id" });
 
-    if (error) {
-      console.error("add upsert error:", error);
-    }
+    if (error) console.error("add upsert error:", error);
   },
 
-  update: async (id, patch: Partial<MyeongSikWithOrder>) => {
+  update: async (id, patch) => {
     const prev = get().list.find((x) => x.id === id);
     if (!prev) return;
 
-    // patch 적용된 최종 객체
     const merged: MyeongSikWithOrder = { ...prev, ...patch };
 
-    // 1) 프론트 상태 먼저 반영
     set((state) => ({
-      list: state.list.map((x) => (x.id === id ? merged : x)),
+      list: sortByOrder(state.list.map((x) => (x.id === id ? merged : x))),
     }));
 
-    // 2) 서버에도 반영 (배경 저장)
     const {
       data: { user },
       error: userError,
@@ -435,46 +588,20 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     const row = buildRowForUpsert(merged, user.id);
-
-    const { error } = await supabase
-      .from("myeongsik")
-      .update(row)
-      .eq("id", id);
-
-    if (error) {
-      console.error("update error:", error);
-      // 필요하면 실패 알림 / 롤백도 가능
-    }
-
-    // ❌ 여기서 더 이상 loadFromServer() 호출하지 않음!!
+    const { error } = await supabase.from("myeongsik").update(row).eq("id", id);
+    if (error) console.error("update error:", error);
   },
 
   remove: async (id) => {
-    // 1) 프론트 상태 먼저 반영
     set((state) => {
       const filtered = state.list.filter((x) => x.id !== id);
-      const newCurrentId =
-        state.currentId === id ? filtered[0]?.id ?? null : state.currentId;
-
-      return {
-        list: filtered,
-        currentId: newCurrentId,
-      };
+      const newCurrentId = state.currentId === id ? filtered[0]?.id ?? null : state.currentId;
+      return { list: filtered, currentId: newCurrentId };
     });
 
     const deletedAt = new Date().toISOString();
-
-    // 2) 서버에서 삭제
-    const { error } = await supabase
-      .from("myeongsik")
-      .update({ deleted_at: deletedAt })
-      .eq("id", id);
-
-    if (error) {
-      console.error("remove error:", error);
-    }
-
-    // ❌ 여기서도 loadFromServer() 호출하지 않음
+    const { error } = await supabase.from("myeongsik").update({ deleted_at: deletedAt }).eq("id", id);
+    if (error) console.error("remove error:", error);
   },
 
   reorder: async (newList) => {
@@ -483,8 +610,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       sortOrder: idx + 1,
     }));
 
-    // optimistic update
-    set({ list: withOrder });
+    set({ list: sortByOrder(withOrder) });
 
     const {
       data: { user },
@@ -497,13 +623,8 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     }
 
     const rows = withOrder.map((m) => buildRowForUpsert(m, user.id));
-    const { error } = await supabase
-      .from("myeongsik")
-      .upsert(rows, { onConflict: "id" });
-
-    if (error) {
-      console.error("reorder upsert error:", error);
-    }
+    const { error } = await supabase.from("myeongsik").upsert(rows, { onConflict: "id" });
+    if (error) console.error("reorder upsert error:", error);
   },
 
   clear: () => {
