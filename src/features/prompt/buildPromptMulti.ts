@@ -60,6 +60,14 @@ export type DaewoonInfo = {
   endYear: number;
 };
 
+export type PromptSectionToggles = {
+  tenGod?: boolean;          // 십신 강약
+  twelveUnseong?: boolean;   // 십이운성
+  twelveShinsal?: boolean;   // 십이신살
+  shinsal?: boolean;         // 기타신살(신살)
+  nabeum?: boolean;          // 납음오행
+};
+
 type MultiPromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -86,6 +94,7 @@ type MultiPromptInput = {
   // 🔥 추가
   teacherMode?: boolean;
   friendMode?: boolean;
+  sections?: PromptSectionToggles;
 };
 
 function getDaeStartDate(d: DaewoonInfo): Date {
@@ -413,7 +422,8 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     ilDays,
     topic,
     subTopic,
-    teacherMode
+    teacherMode,
+    sections
   } = input;
 
   const natal: Pillars4 = [
@@ -422,6 +432,12 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     normalizeGZ(natalRaw[2] ?? ""),
     normalizeGZ(natalRaw[3] ?? ""),
   ];
+
+  const showTenGod = sections?.tenGod ?? true;
+  const showTwelveUnseong = sections?.twelveUnseong ?? true;
+  const showTwelveShinsal = sections?.twelveShinsal ?? true;
+  const showShinsal = sections?.shinsal ?? true;
+  const showNabeum = sections?.nabeum ?? true;
 
   const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
   const posLabels = getActivePosLabels(natal, ms);
@@ -487,15 +503,15 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
         : ""),
   ].join("\n");
 
-  const sections: string[] = [];
+  const sectionModel: string[] = [];
 
   // 1) 원국 고정 섹션
 
   // 신강도
-  sections.push(sectionPlain("신강도", shinLine));
+  sectionModel.push(sectionPlain("신강도", shinLine));
 
   // 오행강약(원국)
-  sections.push(
+  sectionModel.push(
     sectionPlain(
       "오행강약(원국)",
       Object.fromEntries(
@@ -510,15 +526,63 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
   );
 
   // 십신 강약(원국)
-  sections.push(
-    sectionPlain(
-      "십신 강약(소분류 10개·원국·합계 100)",
-      unified.natalFixed.totalsSub,
-    ),
-  );
+  if (showTenGod) {
+    sectionModel.push(
+      sectionPlain(
+        "십신 강약(소분류 10개·원국·합계 100)",
+        unified.natalFixed.totalsSub,
+      ),
+    );
+  }
+
+  // 십이운성(원국)
+  if (showTwelveUnseong) {
+    sectionModel.push(
+      sectionPlain(
+        "십이운성(원국)",
+        natal
+          .map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              unseong: getTwelveUnseong(
+                natal[2]?.charAt(0) ?? "",
+                gz.charAt(1),
+              ),
+            };
+          })
+          .filter(Boolean),
+      ),
+    );
+  }
+
+  // 십이신살(원국)
+  if (showTwelveShinsal) {
+    sectionModel.push(
+      sectionPlain(
+        "십이신살(원국)",
+        natal
+          .map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            return {
+              pos: posLabels[i],
+              gz,
+              shinsal: getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: gz.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              }),
+            };
+          })
+          .filter(Boolean),
+      ),
+    );
+  }
 
   // 형충회합(원국)
-  sections.push(
+  sectionModel.push(
     sectionPlain(
       "형충회합(원국)",
       buildHarmonyTags(
@@ -527,89 +591,53 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
     ),
   );
 
-  // 신살(원국)
-  const shinsalNatal = buildShinsalTags({
-    natal,
-    daewoon: null,
-    sewoon: null,
-    wolwoon: null,
-    ilwoon: null,
-    basis,
-  });
-
-  sections.push(
-    sectionPlain("신살(원국)", {
-      good: shinsalNatal.good,
-      bad: shinsalNatal.bad,
-      meta: shinsalNatal.meta,
-    }),
-  );
-
   // 납음오행(원국)
-  sections.push(
-    sectionPlain(
-      "납음오행(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          const info = getNabeum(gz);
-          return info
-            ? {
-                pos: posLabels[i],
-                gz,
-                nabeum: info.name,
-                element: info.element,
-                code: info.code,
-              }
-            : { pos: posLabels[i], gz, nabeum: null };
-        })
-        .filter(Boolean),
-    ),
-  );
+  if (showNabeum) {
+    sectionModel.push(
+      sectionPlain(
+        "납음오행(원국)",
+        natal
+          .map((gz, i) => {
+            if (!gz || i >= posLabels.length) return null;
+            const info = getNabeum(gz);
+            return info
+              ? {
+                  pos: posLabels[i],
+                  gz,
+                  nabeum: info.name,
+                  element: info.element,
+                  code: info.code,
+                }
+              : { pos: posLabels[i], gz, nabeum: null };
+          })
+          .filter(Boolean),
+      ),
+    );
+  }
 
-  // 십이운성(원국)
-  sections.push(
-    sectionPlain(
-      "십이운성(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          return {
-            pos: posLabels[i],
-            gz,
-            unseong: getTwelveUnseong(
-              natal[2]?.charAt(0) ?? "",
-              gz.charAt(1),
-            ),
-          };
-        })
-        .filter(Boolean),
-    ),
-  );
+  // 신살(원국)
+  if (showShinsal) {
+    const shinsalNatal = buildShinsalTags({
+      natal,
+      daewoon: null,
+      sewoon: null,
+      wolwoon: null,
+      ilwoon: null,
+      basis,
+    });
 
-  // 십이신살(원국)
-  sections.push(
-    sectionPlain(
-      "십이신살(원국)",
-      natal
-        .map((gz, i) => {
-          if (!gz || i >= posLabels.length) return null;
-          return {
-            pos: posLabels[i],
-            gz,
-            shinsal: getTwelveShinsalBySettings({
-              baseBranch,
-              targetBranch: gz.charAt(1),
-              era: shinsalEra,
-              gaehwa: shinsalGaehwa,
-            }),
-          };
-        })
-        .filter(Boolean),
-    ),
-  );
+    sectionModel.push(
+      sectionPlain("신살(원국)", {
+        good: shinsalNatal.good,
+        bad: shinsalNatal.bad,
+        meta: shinsalNatal.meta,
+      }),
+    );
+  }
 
   // 2) 대운 개별 섹션 (선택된 리스트)
+
+// ✅ 여기부터 교체 (daeList 블록 ~ ilDays 블록 끝까지)
 
   if (daeList.length > 0) {
     for (const dae of selectedDaeList) {
@@ -624,28 +652,31 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
         ilwoon: undefined,
       });
 
-      const shinsalWithDae = buildShinsalTags({
-        natal,
-        daewoon: dae.gz,
-        sewoon: undefined,
-        wolwoon: undefined,
-        ilwoon: undefined,
-        basis,
-      });
+      const shinsalWithDae = showShinsal
+        ? buildShinsalTags({
+            natal,
+            daewoon: dae.gz,
+            sewoon: undefined,
+            wolwoon: undefined,
+            ilwoon: undefined,
+            basis,
+          })
+        : null;
 
-      const daeNabeum = getNabeum(dae.gz);
-      const daeUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        dae.gz.charAt(1),
-      );
-      const daeShinsal = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: dae.gz.charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+      const daeNabeum = showNabeum ? getNabeum(dae.gz) : null;
+      const daeUnseong = showTwelveUnseong
+        ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", dae.gz.charAt(1))
+        : null;
+      const daeShinsal = showTwelveShinsal
+        ? getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: dae.gz.charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          })
+        : null;
 
-      sections.push(
+      sectionModel.push(
         sectionPlain(`${dae.age}대운 ${dae.gz} (${dae.startYear}~${dae.endYear})`, {
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
@@ -653,26 +684,41 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
+
+          ...(showTenGod ? { 십신강약: overlay.totalsSub } : {}),
+
           형충회합: relWithDae,
-          신살: filterShinsalByScope(shinsalWithDae, "대운"),
-          납음오행: daeNabeum
+
+          ...(showShinsal
+            ? { 신살: filterShinsalByScope(shinsalWithDae, "대운") }
+            : {}),
+
+          ...(showNabeum
             ? {
-                gz: dae.gz,
-                nabeum: daeNabeum.name,
-                element: daeNabeum.element,
-                code: daeNabeum.code,
+                납음오행: daeNabeum
+                  ? {
+                      gz: dae.gz,
+                      nabeum: daeNabeum.name,
+                      element: daeNabeum.element,
+                      code: daeNabeum.code,
+                    }
+                  : null,
               }
-            : null,
-          십이운성: { pos: "대운", gz: dae.gz, unseong: daeUnseong },
-          십이신살: { pos: "대운", gz: dae.gz, shinsal: daeShinsal },
+            : {}),
+
+          ...(showTwelveUnseong
+            ? { 십이운성: { pos: "대운", gz: dae.gz, unseong: daeUnseong } }
+            : {}),
+
+          ...(showTwelveShinsal
+            ? { 십이신살: { pos: "대운", gz: dae.gz, shinsal: daeShinsal } }
+            : {}),
         }),
       );
     }
   }
 
   // 3) 세운 탭 섹션
-
   if (seYears.length > 0) {
     const rangeStartYear = seYears[0];
     const rangeEndYear = seYears[seYears.length - 1];
@@ -699,6 +745,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           };
 
           const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
+
           const relWithDae = buildAllRelationTags({
             natal,
             daewoon: daa.gz,
@@ -706,60 +753,81 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
             wolwoon: undefined,
             ilwoon: undefined,
           });
-          const shinsalWithDae = buildShinsalTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
 
-          const daeNabeum = getNabeum(daa.gz);
-          const daeUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            daa.gz.charAt(1),
-          );
-          const daeShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: daa.gz.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
+          const shinsalWithDae = showShinsal
+            ? buildShinsalTags({
+                natal,
+                daewoon: daa.gz,
+                sewoon: seNormRef || undefined,
+                wolwoon: undefined,
+                ilwoon: undefined,
+                basis,
+              })
+            : null;
+
+          const daeNabeum = showNabeum ? getNabeum(daa.gz) : null;
+          const daeUnseong = showTwelveUnseong
+            ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", daa.gz.charAt(1))
+            : null;
+          const daeShinsal12 = showTwelveShinsal
+            ? getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: daa.gz.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              })
+            : null;
 
           return {
             기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
             간지: daa.gz,
+
             오행강약: Object.fromEntries(
-              Object.entries(daeOverlay.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: daeOverlay.totalsSub,
+
+            ...(showTenGod ? { 십신강약: daeOverlay.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
-            신살: filterShinsalByScope(shinsalWithDae, "대운"),
-            납음오행: daeNabeum
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithDae, "대운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: daa.gz,
-                  nabeum: daeNabeum.name,
-                  element: daeNabeum.element,
-                  code: daeNabeum.code,
+                  납음오행: daeNabeum
+                    ? {
+                        gz: daa.gz,
+                        nabeum: daeNabeum.name,
+                        element: daeNabeum.element,
+                        code: daeNabeum.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: { pos: "대운", gz: daa.gz, unseong: daeUnseong },
-            십이신살: {
-              pos: "대운",
-              gz: daa.gz,
-              shinsal: daeShinsal12,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "대운", gz: daa.gz, unseong: daeUnseong } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? {
+                  십이신살: {
+                    pos: "대운",
+                    gz: daa.gz,
+                    shinsal: daeShinsal12,
+                  },
+                }
+              : {}),
           };
         }),
       };
 
-      sections.push(sectionPlain("대운", daeSectionData));
+      sectionModel.push(sectionPlain("대운", daeSectionData));
     }
 
     // (3-2) 세운 연도별 리스트
@@ -776,6 +844,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
       };
 
       const overlay = makeOverlayByLuck(unified, "세운", chain);
+
       const relWithSe = buildAllRelationTags({
         natal,
         daewoon: mainDaeForYear?.gz,
@@ -783,67 +852,80 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
         wolwoon: undefined,
         ilwoon: undefined,
       });
-      const shinsalWithSe = buildShinsalTags({
-        natal,
-        daewoon: mainDaeForYear?.gz,
-        sewoon: normalizeGZ(seGZ || ""),
-        wolwoon: undefined,
-        ilwoon: undefined,
-        basis,
-      });
 
-      const seNabeum = getNabeum(normalizeGZ(seGZ || ""));
-      const seUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        (seGZ || "").charAt(1),
-      );
-      const seShinsal = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: (seGZ || "").charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+      const shinsalWithSe = showShinsal
+        ? buildShinsalTags({
+            natal,
+            daewoon: mainDaeForYear?.gz,
+            sewoon: normalizeGZ(seGZ || ""),
+            wolwoon: undefined,
+            ilwoon: undefined,
+            basis,
+          })
+        : null;
+
+      const seNorm = normalizeGZ(seGZ || "");
+      const seNabeum = showNabeum ? getNabeum(seNorm) : null;
+      const seUnseong = showTwelveUnseong
+        ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", (seGZ || "").charAt(1))
+        : null;
+      const seShinsal = showTwelveShinsal
+        ? getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: (seGZ || "").charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          })
+        : null;
 
       const sectionData: Record<string, unknown> = {
         세운: {
-          기본정보: `${year}년 ${normalizeGZ(seGZ || "")}`,
-          간지: normalizeGZ(seGZ || ""),
+          기본정보: `${year}년 ${seNorm}`,
+          간지: seNorm,
+
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
+
+          ...(showTenGod ? { 십신강약: overlay.totalsSub } : {}),
+
           형충회합: filterHarmonyTagsByScope(relWithSe, "세운"),
-          신살: filterShinsalByScope(shinsalWithSe, "세운"),
-          납음오행: seNabeum
+
+          ...(showShinsal
+            ? { 신살: filterShinsalByScope(shinsalWithSe, "세운") }
+            : {}),
+
+          ...(showNabeum
             ? {
-                gz: normalizeGZ(seGZ || ""),
-                nabeum: seNabeum.name,
-                element: seNabeum.element,
-                code: seNabeum.code,
+                납음오행: seNabeum
+                  ? {
+                      gz: seNorm,
+                      nabeum: seNabeum.name,
+                      element: seNabeum.element,
+                      code: seNabeum.code,
+                    }
+                  : null,
               }
-            : null,
-          십이운성: {
-            pos: "세운",
-            gz: normalizeGZ(seGZ || ""),
-            unseong: seUnseong,
-          },
-          십이신살: {
-            pos: "세운",
-            gz: normalizeGZ(seGZ || ""),
-            shinsal: seShinsal,
-          },
+            : {}),
+
+          ...(showTwelveUnseong
+            ? { 십이운성: { pos: "세운", gz: seNorm, unseong: seUnseong } }
+            : {}),
+
+          ...(showTwelveShinsal
+            ? { 십이신살: { pos: "세운", gz: seNorm, shinsal: seShinsal } }
+            : {}),
         },
       };
 
-      sections.push(sectionPlain(`세운 ${year}`, sectionData));
+      sectionModel.push(sectionPlain(`세운 ${year}`, sectionData));
     }
   }
 
   // 4) 월운 탭 섹션
-
   if (wolMonths.length > 0) {
     const daeUnion: DaewoonInfo[] = [];
     const seRepMap = new Map<string, { year: number; month: number }>();
@@ -885,6 +967,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           };
 
           const daeOverlay = makeOverlayByLuck(unified, "대운", daeChain);
+
           const relWithDae = buildAllRelationTags({
             natal,
             daewoon: daa.gz,
@@ -892,64 +975,81 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
             wolwoon: undefined,
             ilwoon: undefined,
           });
-          const shinsalWithDae = buildShinsalTags({
-            natal,
-            daewoon: daa.gz,
-            sewoon: seNormRef || undefined,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
 
-          const daeNabeum = getNabeum(daa.gz);
-          const daeUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            daa.gz.charAt(1),
-          );
-          const daeShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: daa.gz.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
+          const shinsalWithDae = showShinsal
+            ? buildShinsalTags({
+                natal,
+                daewoon: daa.gz,
+                sewoon: seNormRef || undefined,
+                wolwoon: undefined,
+                ilwoon: undefined,
+                basis,
+              })
+            : null;
+
+          const daeNabeum = showNabeum ? getNabeum(daa.gz) : null;
+          const daeUnseong = showTwelveUnseong
+            ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", daa.gz.charAt(1))
+            : null;
+          const daeShinsal12 = showTwelveShinsal
+            ? getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: daa.gz.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              })
+            : null;
 
           return {
             기본정보: `${daa.age}대운 ${daa.gz} (${daa.startYear}~${daa.endYear})`,
             간지: daa.gz,
+
             오행강약: Object.fromEntries(
-              Object.entries(daeOverlay.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(daeOverlay.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: daeOverlay.totalsSub,
+
+            ...(showTenGod ? { 십신강약: daeOverlay.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithDae, "대운"),
-            신살: filterShinsalByScope(shinsalWithDae, "대운"),
-            납음오행: daeNabeum
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithDae, "대운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: daa.gz,
-                  nabeum: daeNabeum.name,
-                  element: daeNabeum.element,
-                  code: daeNabeum.code,
+                  납음오행: daeNabeum
+                    ? {
+                        gz: daa.gz,
+                        nabeum: daeNabeum.name,
+                        element: daeNabeum.element,
+                        code: daeNabeum.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: {
-              pos: "대운",
-              gz: daa.gz,
-              unseong: daeUnseong,
-            },
-            십이신살: {
-              pos: "대운",
-              gz: daa.gz,
-              shinsal: daeShinsal12,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "대운", gz: daa.gz, unseong: daeUnseong } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? {
+                  십이신살: {
+                    pos: "대운",
+                    gz: daa.gz,
+                    shinsal: daeShinsal12,
+                  },
+                }
+              : {}),
           };
         }),
       };
 
-      sections.push(sectionPlain("대운", daeSectionData));
+      sectionModel.push(sectionPlain("대운", daeSectionData));
     }
 
     // (4-2) 월운 탭 상단: 세운 요약
@@ -971,6 +1071,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           };
 
           const seOverlay = makeOverlayByLuck(unified, "세운", seChain);
+
           const relWithSeTop = buildAllRelationTags({
             natal,
             daewoon: mainDaeForSe?.gz,
@@ -978,64 +1079,75 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
             wolwoon: undefined,
             ilwoon: undefined,
           });
-          const shinsalWithSeTop = buildShinsalTags({
-            natal,
-            daewoon: mainDaeForSe?.gz,
-            sewoon: se,
-            wolwoon: undefined,
-            ilwoon: undefined,
-            basis,
-          });
 
-          const seNabeum = getNabeum(se);
-          const seUnseong = getTwelveUnseong(
-            natal[2]?.charAt(0) ?? "",
-            se.charAt(1),
-          );
-          const seShinsal12 = getTwelveShinsalBySettings({
-            baseBranch,
-            targetBranch: se.charAt(1),
-            era: shinsalEra,
-            gaehwa: shinsalGaehwa,
-          });
+          const shinsalWithSeTop = showShinsal
+            ? buildShinsalTags({
+                natal,
+                daewoon: mainDaeForSe?.gz,
+                sewoon: se,
+                wolwoon: undefined,
+                ilwoon: undefined,
+                basis,
+              })
+            : null;
+
+          const seNabeum = showNabeum ? getNabeum(se) : null;
+          const seUnseong = showTwelveUnseong
+            ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", se.charAt(1))
+            : null;
+          const seShinsal12 = showTwelveShinsal
+            ? getTwelveShinsalBySettings({
+                baseBranch,
+                targetBranch: se.charAt(1),
+                era: shinsalEra,
+                gaehwa: shinsalGaehwa,
+              })
+            : null;
 
           return {
             기본정보: `${y}년 ${se}`,
             간지: se,
+
             오행강약: Object.fromEntries(
-              Object.entries(seOverlay.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(seOverlay.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: seOverlay.totalsSub,
+
+            ...(showTenGod ? { 십신강약: seOverlay.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithSeTop, "세운"),
-            신살: filterShinsalByScope(shinsalWithSeTop, "세운"),
-            납음오행: seNabeum
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithSeTop, "세운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: se,
-                  nabeum: seNabeum.name,
-                  element: seNabeum.element,
-                  code: seNabeum.code,
+                  납음오행: seNabeum
+                    ? {
+                        gz: se,
+                        nabeum: seNabeum.name,
+                        element: seNabeum.element,
+                        code: seNabeum.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: {
-              pos: "세운",
-              gz: se,
-              unseong: seUnseong,
-            },
-            십이신살: {
-              pos: "세운",
-              gz: se,
-              shinsal: seShinsal12,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "세운", gz: se, unseong: seUnseong } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? { 십이신살: { pos: "세운", gz: se, shinsal: seShinsal12 } }
+              : {}),
           };
         }),
       };
 
-      sections.push(sectionPlain("세운", seSectionData));
+      sectionModel.push(sectionPlain("세운", seSectionData));
     }
 
     // (4-3) 월운 리스트 (각 월별)
@@ -1058,6 +1170,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
       };
 
       const overlay = makeOverlayByLuck(unified, "월운", chain);
+
       const relWithWol = buildAllRelationTags({
         natal,
         daewoon: mainDae?.gz,
@@ -1065,67 +1178,80 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
         wolwoon: normalizeGZ(wolGZ || ""),
         ilwoon: undefined,
       });
-      const shinsalWithWol = buildShinsalTags({
-        natal,
-        daewoon: mainDae?.gz,
-        sewoon: mainSe || undefined,
-        wolwoon: normalizeGZ(wolGZ || ""),
-        ilwoon: undefined,
-        basis,
-      });
 
-      const wolNabeum = getNabeum(normalizeGZ(wolGZ || ""));
-      const wolUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        (wolGZ || "").charAt(1),
-      );
-      const wolShinsal = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: (wolGZ || "").charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+      const shinsalWithWol = showShinsal
+        ? buildShinsalTags({
+            natal,
+            daewoon: mainDae?.gz,
+            sewoon: mainSe || undefined,
+            wolwoon: normalizeGZ(wolGZ || ""),
+            ilwoon: undefined,
+            basis,
+          })
+        : null;
+
+      const wolNorm = normalizeGZ(wolGZ || "");
+      const wolNabeum = showNabeum ? getNabeum(wolNorm) : null;
+      const wolUnseong = showTwelveUnseong
+        ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", (wolGZ || "").charAt(1))
+        : null;
+      const wolShinsal = showTwelveShinsal
+        ? getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: (wolGZ || "").charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          })
+        : null;
 
       const sectionData: Record<string, unknown> = {
         월운: {
-          기본정보: `${ym} ${normalizeGZ(wolGZ || "")}`,
-          간지: normalizeGZ(wolGZ || ""),
+          기본정보: `${ym} ${wolNorm}`,
+          간지: wolNorm,
+
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
+
+          ...(showTenGod ? { 십신강약: overlay.totalsSub } : {}),
+
           형충회합: filterHarmonyTagsByScope(relWithWol, "월운"),
-          신살: filterShinsalByScope(shinsalWithWol, "월운"),
-          납음오행: wolNabeum
+
+          ...(showShinsal
+            ? { 신살: filterShinsalByScope(shinsalWithWol, "월운") }
+            : {}),
+
+          ...(showNabeum
             ? {
-                gz: normalizeGZ(wolGZ || ""),
-                nabeum: wolNabeum.name,
-                element: wolNabeum.element,
-                code: wolNabeum.code,
+                납음오행: wolNabeum
+                  ? {
+                      gz: wolNorm,
+                      nabeum: wolNabeum.name,
+                      element: wolNabeum.element,
+                      code: wolNabeum.code,
+                    }
+                  : null,
               }
-            : null,
-          십이운성: {
-            pos: "월운",
-            gz: normalizeGZ(wolGZ || ""),
-            unseong: wolUnseong,
-          },
-          십이신살: {
-            pos: "월운",
-            gz: normalizeGZ(wolGZ || ""),
-            shinsal: wolShinsal,
-          },
+            : {}),
+
+          ...(showTwelveUnseong
+            ? { 십이운성: { pos: "월운", gz: wolNorm, unseong: wolUnseong } }
+            : {}),
+
+          ...(showTwelveShinsal
+            ? { 십이신살: { pos: "월운", gz: wolNorm, shinsal: wolShinsal } }
+            : {}),
         },
       };
 
-      sections.push(sectionPlain(`월운 ${ym}`, sectionData));
+      sectionModel.push(sectionPlain(`월운 ${ym}`, sectionData));
     }
   }
 
   // 5) 일운 탭 섹션
-
   if (ilDays.length > 0) {
     const rule: DayBoundaryRule =
       (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
@@ -1156,7 +1282,9 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wol: normWol0,
           il: normIl0,
         };
+
         const daeOverlay0 = makeOverlayByLuck(unified, "대운", daeChain0);
+
         const relWithDae0 = buildAllRelationTags({
           natal,
           daewoon: mainDae0.gz,
@@ -1164,60 +1292,77 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wolwoon: normWol0,
           ilwoon: normIl0,
         });
-        const shinsalWithDae0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
 
-        const daeNabeum0 = getNabeum(mainDae0.gz);
-        const daeUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          mainDae0.gz.charAt(1),
-        );
-        const daeShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: mainDae0.gz.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
+        const shinsalWithDae0 = showShinsal
+          ? buildShinsalTags({
+              natal,
+              daewoon: mainDae0.gz,
+              sewoon: normSe0,
+              wolwoon: normWol0,
+              ilwoon: normIl0,
+              basis,
+            })
+          : null;
 
-        sections.push(
+        const daeNabeum0 = showNabeum ? getNabeum(mainDae0.gz) : null;
+        const daeUnseong0 = showTwelveUnseong
+          ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", mainDae0.gz.charAt(1))
+          : null;
+        const daeShinsal12_0 = showTwelveShinsal
+          ? getTwelveShinsalBySettings({
+              baseBranch,
+              targetBranch: mainDae0.gz.charAt(1),
+              era: shinsalEra,
+              gaehwa: shinsalGaehwa,
+            })
+          : null;
+
+        sectionModel.push(
           sectionPlain("대운", {
             기본정보: `${mainDae0.age}대운 ${mainDae0.gz} (${mainDae0.startYear}~${mainDae0.endYear})`,
             간지: mainDae0.gz,
+
             오행강약: Object.fromEntries(
-              Object.entries(daeOverlay0.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(daeOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: daeOverlay0.totalsSub,
+
+            ...(showTenGod ? { 십신강약: daeOverlay0.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithDae0, "대운"),
-            신살: filterShinsalByScope(shinsalWithDae0, "대운"),
-            납음오행: daeNabeum0
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithDae0, "대운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: mainDae0.gz,
-                  nabeum: daeNabeum0.name,
-                  element: daeNabeum0.element,
-                  code: daeNabeum0.code,
+                  납음오행: daeNabeum0
+                    ? {
+                        gz: mainDae0.gz,
+                        nabeum: daeNabeum0.name,
+                        element: daeNabeum0.element,
+                        code: daeNabeum0.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: {
-              pos: "대운",
-              gz: mainDae0.gz,
-              unseong: daeUnseong0,
-            },
-            십이신살: {
-              pos: "대운",
-              gz: mainDae0.gz,
-              shinsal: daeShinsal12_0,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "대운", gz: mainDae0.gz, unseong: daeUnseong0 } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? {
+                  십이신살: {
+                    pos: "대운",
+                    gz: mainDae0.gz,
+                    shinsal: daeShinsal12_0,
+                  },
+                }
+              : {}),
           }),
         );
       }
@@ -1230,7 +1375,9 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wol: normWol0,
           il: normIl0,
         };
+
         const seOverlay0 = makeOverlayByLuck(unified, "세운", seChain0);
+
         const relWithSe0 = buildAllRelationTags({
           natal,
           daewoon: mainDae0?.gz,
@@ -1238,56 +1385,71 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wolwoon: normWol0,
           ilwoon: normIl0,
         });
-        const shinsalWithSe0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
 
-        const seNabeum0 = getNabeum(normSe0);
-        const seUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          normSe0.charAt(1),
-        );
-        const seShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normSe0.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
+        const shinsalWithSe0 = showShinsal
+          ? buildShinsalTags({
+              natal,
+              daewoon: mainDae0?.gz,
+              sewoon: normSe0,
+              wolwoon: normWol0,
+              ilwoon: normIl0,
+              basis,
+            })
+          : null;
 
-        sections.push(
+        const seNabeum0 = showNabeum ? getNabeum(normSe0) : null;
+        const seUnseong0 = showTwelveUnseong
+          ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", normSe0.charAt(1))
+          : null;
+        const seShinsal12_0 = showTwelveShinsal
+          ? getTwelveShinsalBySettings({
+              baseBranch,
+              targetBranch: normSe0.charAt(1),
+              era: shinsalEra,
+              gaehwa: shinsalGaehwa,
+            })
+          : null;
+
+        sectionModel.push(
           sectionPlain("세운", {
             기본정보: `${y0}년 ${normSe0}`,
             간지: normSe0,
+
             오행강약: Object.fromEntries(
-              Object.entries(seOverlay0.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(seOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: seOverlay0.totalsSub,
+
+            ...(showTenGod ? { 십신강약: seOverlay0.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithSe0, "세운"),
-            신살: filterShinsalByScope(shinsalWithSe0, "세운"),
-            납음오행: seNabeum0
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithSe0, "세운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: normSe0,
-                  nabeum: seNabeum0.name,
-                  element: seNabeum0.element,
-                  code: seNabeum0.code,
+                  납음오행: seNabeum0
+                    ? {
+                        gz: normSe0,
+                        nabeum: seNabeum0.name,
+                        element: seNabeum0.element,
+                        code: seNabeum0.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: { pos: "세운", gz: normSe0, unseong: seUnseong0 },
-            십이신살: {
-              pos: "세운",
-              gz: normSe0,
-              shinsal: seShinsal12_0,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "세운", gz: normSe0, unseong: seUnseong0 } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? { 십이신살: { pos: "세운", gz: normSe0, shinsal: seShinsal12_0 } }
+              : {}),
           }),
         );
       }
@@ -1300,7 +1462,9 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wol: normWol0,
           il: normIl0,
         };
+
         const wolOverlay0 = makeOverlayByLuck(unified, "월운", wolChain0);
+
         const relWithWol0 = buildAllRelationTags({
           natal,
           daewoon: mainDae0?.gz,
@@ -1308,56 +1472,71 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
           wolwoon: normWol0,
           ilwoon: normIl0,
         });
-        const shinsalWithWol0 = buildShinsalTags({
-          natal,
-          daewoon: mainDae0?.gz,
-          sewoon: normSe0,
-          wolwoon: normWol0,
-          ilwoon: normIl0,
-          basis,
-        });
 
-        const wolNabeum0 = getNabeum(normWol0);
-        const wolUnseong0 = getTwelveUnseong(
-          natal[2]?.charAt(0) ?? "",
-          normWol0.charAt(1),
-        );
-        const wolShinsal12_0 = getTwelveShinsalBySettings({
-          baseBranch,
-          targetBranch: normWol0.charAt(1),
-          era: shinsalEra,
-          gaehwa: shinsalGaehwa,
-        });
+        const shinsalWithWol0 = showShinsal
+          ? buildShinsalTags({
+              natal,
+              daewoon: mainDae0?.gz,
+              sewoon: normSe0,
+              wolwoon: normWol0,
+              ilwoon: normIl0,
+              basis,
+            })
+          : null;
 
-        sections.push(
+        const wolNabeum0 = showNabeum ? getNabeum(normWol0) : null;
+        const wolUnseong0 = showTwelveUnseong
+          ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", normWol0.charAt(1))
+          : null;
+        const wolShinsal12_0 = showTwelveShinsal
+          ? getTwelveShinsalBySettings({
+              baseBranch,
+              targetBranch: normWol0.charAt(1),
+              era: shinsalEra,
+              gaehwa: shinsalGaehwa,
+            })
+          : null;
+
+        sectionModel.push(
           sectionPlain("월운", {
             기본정보: `${y0}-${String(m0).padStart(2, "0")} ${normWol0}`,
             간지: normWol0,
+
             오행강약: Object.fromEntries(
-              Object.entries(wolOverlay0.elementPercent).map(
-                ([el, val]) => [
-                  `${el}(${elementToTenGod(dayEl, el as Element)})`,
-                  val,
-                ],
-              ),
+              Object.entries(wolOverlay0.elementPercent).map(([el, val]) => [
+                `${el}(${elementToTenGod(dayEl, el as Element)})`,
+                val,
+              ]),
             ),
-            십신강약: wolOverlay0.totalsSub,
+
+            ...(showTenGod ? { 십신강약: wolOverlay0.totalsSub } : {}),
+
             형충회합: filterHarmonyTagsByScope(relWithWol0, "월운"),
-            신살: filterShinsalByScope(shinsalWithWol0, "월운"),
-            납음오행: wolNabeum0
+
+            ...(showShinsal
+              ? { 신살: filterShinsalByScope(shinsalWithWol0, "월운") }
+              : {}),
+
+            ...(showNabeum
               ? {
-                  gz: normWol0,
-                  nabeum: wolNabeum0.name,
-                  element: wolNabeum0.element,
-                  code: wolNabeum0.code,
+                  납음오행: wolNabeum0
+                    ? {
+                        gz: normWol0,
+                        nabeum: wolNabeum0.name,
+                        element: wolNabeum0.element,
+                        code: wolNabeum0.code,
+                      }
+                    : null,
                 }
-              : null,
-            십이운성: { pos: "월운", gz: normWol0, unseong: wolUnseong0 },
-            십이신살: {
-              pos: "월운",
-              gz: normWol0,
-              shinsal: wolShinsal12_0,
-            },
+              : {}),
+
+            ...(showTwelveUnseong
+              ? { 십이운성: { pos: "월운", gz: normWol0, unseong: wolUnseong0 } }
+              : {}),
+
+            ...(showTwelveShinsal
+              ? { 십이신살: { pos: "월운", gz: normWol0, shinsal: wolShinsal12_0 } }
+              : {}),
           }),
         );
       }
@@ -1390,6 +1569,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
       };
 
       const overlay = makeOverlayByLuck(unified, "일운", chain);
+
       const relWithIl = buildAllRelationTags({
         natal,
         daewoon: mainDae?.gz,
@@ -1397,66 +1577,79 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
         wolwoon: normWol || undefined,
         ilwoon: normIl || undefined,
       });
-      const shinsalWithIl = buildShinsalTags({
-        natal,
-        daewoon: mainDae?.gz,
-        sewoon: normSe || undefined,
-        wolwoon: normWol || undefined,
-        ilwoon: normIl || undefined,
-        basis,
-      });
 
-      const ilNabeum = getNabeum(normIl);
-      const ilUnseong = getTwelveUnseong(
-        natal[2]?.charAt(0) ?? "",
-        normIl.charAt(1),
-      );
-      const ilShinsal12 = getTwelveShinsalBySettings({
-        baseBranch,
-        targetBranch: normIl.charAt(1),
-        era: shinsalEra,
-        gaehwa: shinsalGaehwa,
-      });
+      const shinsalWithIl = showShinsal
+        ? buildShinsalTags({
+            natal,
+            daewoon: mainDae?.gz,
+            sewoon: normSe || undefined,
+            wolwoon: normWol || undefined,
+            ilwoon: normIl || undefined,
+            basis,
+          })
+        : null;
+
+      const ilNabeum = showNabeum ? getNabeum(normIl) : null;
+      const ilUnseong = showTwelveUnseong
+        ? getTwelveUnseong(natal[2]?.charAt(0) ?? "", normIl.charAt(1))
+        : null;
+      const ilShinsal12 = showTwelveShinsal
+        ? getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: normIl.charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          })
+        : null;
 
       const sectionData: Record<string, unknown> = {
         일운: {
           기본정보: `${dateStr} ${normIl}`,
           간지: normIl,
+
           오행강약: Object.fromEntries(
             Object.entries(overlay.elementPercent).map(([el, val]) => [
               `${el}(${elementToTenGod(dayEl, el as Element)})`,
               val,
             ]),
           ),
-          십신강약: overlay.totalsSub,
+
+          ...(showTenGod ? { 십신강약: overlay.totalsSub } : {}),
+
           형충회합: filterHarmonyTagsByScope(relWithIl, "일운"),
-          신살: filterShinsalByScope(shinsalWithIl, "일운"),
-          납음오행: ilNabeum
+
+          ...(showShinsal
+            ? { 신살: filterShinsalByScope(shinsalWithIl, "일운") }
+            : {}),
+
+          ...(showNabeum
             ? {
-                gz: normIl,
-                nabeum: ilNabeum.name,
-                element: ilNabeum.element,
-                code: ilNabeum.code,
+                납음오행: ilNabeum
+                  ? {
+                      gz: normIl,
+                      nabeum: ilNabeum.name,
+                      element: ilNabeum.element,
+                      code: ilNabeum.code,
+                    }
+                  : null,
               }
-            : null,
-          십이운성: {
-            pos: "일운",
-            gz: normIl,
-            unseong: ilUnseong,
-          },
-          십이신살: {
-            pos: "일운",
-            gz: normIl,
-            shinsal: ilShinsal12,
-          },
+            : {}),
+
+          ...(showTwelveUnseong
+            ? { 십이운성: { pos: "일운", gz: normIl, unseong: ilUnseong } }
+            : {}),
+
+          ...(showTwelveShinsal
+            ? { 십이신살: { pos: "일운", gz: normIl, shinsal: ilShinsal12 } }
+            : {}),
         },
       };
 
-      sections.push(sectionPlain(`일운 ${dateStr}`, sectionData));
+      sectionModel.push(sectionPlain(`일운 ${dateStr}`, sectionData));
     }
   }
 
-  const body = sections.filter((s) => s.trim().length > 0).join("\n\n");
+  const body = sectionModel.filter((s) => s.trim().length > 0).join("\n\n");
   const topicGuide = buildTopicGuide({
     topic,
     subTopic,
