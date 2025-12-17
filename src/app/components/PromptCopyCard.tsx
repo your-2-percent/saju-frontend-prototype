@@ -1011,7 +1011,6 @@ export default function PromptCopyCard({
       </div>
     );
   }
-  
 
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-3">
@@ -1022,7 +1021,7 @@ export default function PromptCopyCard({
         </div>
 
         {/* 모바일: 세로 / PC: 가로 */}
-        <div className="flex flex-col desk:flex-row gap-2 w-full desk:w-auto">
+        <div className="flex gap-2 w-full desk:w-auto">
           <button
             type="button"
             onClick={onCopyInfoOnly}
@@ -1060,7 +1059,7 @@ export default function PromptCopyCard({
           프롬프트 포함 데이터
         </div>
 
-        <div className="grid grid-cols-2 desk:grid-cols-8 gap-2 text-[11px] text-neutral-700 dark:text-neutral-200">
+        <div className="grid grid-cols-5 desk:grid-cols-8 gap-2 text-[11px] text-neutral-700 dark:text-neutral-200">
 
           <label className="flex items-center gap-2 cursor-pointer">
             <input
