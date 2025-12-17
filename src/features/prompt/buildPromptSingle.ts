@@ -47,6 +47,14 @@ function getActivePosLabels(natal: Pillars4, ms: MyeongSik): string[] {
   return ["연", "월", "일"];
 }
 
+export type PromptSectionToggles = {
+  tenGod?: boolean;          // 십신 강약
+  twelveUnseong?: boolean;   // 십이운성
+  twelveShinsal?: boolean;   // 십이신살
+  shinsal?: boolean;         // 기타신살(신살)
+  nabeum?: boolean;          // 납음오행
+};
+
 export type SinglePromptInput = {
   ms: MyeongSik;
   natal: Pillars4;
@@ -66,6 +74,7 @@ export type SinglePromptInput = {
   // 🔥 추가
   teacherMode?: boolean;     
   friendMode?: boolean;
+  sections?: PromptSectionToggles;
 };
 
 /* ===========================
@@ -143,8 +152,15 @@ export function buildChatPrompt(input: SinglePromptInput): string {
     topic,
     subTopic,
     relationMode,
-    teacherMode
+    teacherMode,
+    sections
   } = input;
+
+  const showTenGod = sections?.tenGod ?? true;
+  const showTwelveUnseong = sections?.twelveUnseong ?? true;
+  const showTwelveShinsal = sections?.twelveShinsal ?? true;
+  const showShinsal = sections?.shinsal ?? true;
+  const showNabeum = sections?.nabeum ?? true;
 
   const natal: Pillars4 = [
     normalizeGZ(natalRaw[0] ?? ""),
@@ -309,43 +325,31 @@ export function buildChatPrompt(input: SinglePromptInput): string {
   }
 
   // 십신 강약(원국 고정)
-  bodyParts.push(
-    section(
-      "십신 강약(소분류 10개·원국·합계 100)",
-      unified.natalFixed.totalsSub,
-    ),
-  );
-
-  // 십신 강약(현재 탭 기준) — 원국 탭이 아니면만 출력
-  if (tab !== "원국") {
+  if (showTenGod) {
     bodyParts.push(
       section(
-        `십신 강약(소분류 10개·탭=${tab}·합계 100)`,
-        totalsSub,
+        "십신 강약(소분류 10개·원국·합계 100)",
+        unified.natalFixed.totalsSub,
       ),
     );
+
+    if (tab !== "원국") {
+      bodyParts.push(
+        section(
+          `십신 강약(소분류 10개·탭=${tab}·합계 100)`,
+          totalsSub,
+        ),
+      );
+    }
   }
 
   // 십이운성(원국+운 반영)
-  bodyParts.push(
-    section(
-      "십이운성(원국+운 반영)",
-      tab === "원국"
-        ? natal
-            .map((gz, i) => {
-              if (!gz || i >= posLabels.length) return null;
-              return {
-                pos: posLabels[i],
-                gz,
-                unseong: getTwelveUnseong(
-                  natal[2]?.charAt(0) ?? "",
-                  gz.charAt(1),
-                ),
-              };
-            })
-            .filter(Boolean)
-        : [
-            ...natal
+  if (showTwelveUnseong) {
+    bodyParts.push(
+      section(
+        "십이운성(원국+운 반영)",
+        tab === "원국"
+          ? natal
               .map((gz, i) => {
                 if (!gz || i >= posLabels.length) return null;
                 return {
@@ -357,82 +361,82 @@ export function buildChatPrompt(input: SinglePromptInput): string {
                   ),
                 };
               })
-              .filter(Boolean),
-            ...(chain?.dae
-              ? [
-                  {
-                    pos: "대운",
-                    gz: chain.dae,
+              .filter(Boolean)
+          : [
+              ...natal
+                .map((gz, i) => {
+                  if (!gz || i >= posLabels.length) return null;
+                  return {
+                    pos: posLabels[i],
+                    gz,
                     unseong: getTwelveUnseong(
                       natal[2]?.charAt(0) ?? "",
-                      chain.dae.charAt(1),
+                      gz.charAt(1),
                     ),
-                  },
-                ]
-              : []),
-            ...((tab === "세운" || tab === "월운" || tab === "일운") &&
-            chain?.se
-              ? [
-                  {
-                    pos: "세운",
-                    gz: chain.se,
-                    unseong: getTwelveUnseong(
-                      natal[2]?.charAt(0) ?? "",
-                      chain.se.charAt(1),
-                    ),
-                  },
-                ]
-              : []),
-            ...((tab === "월운" || tab === "일운") && chain?.wol
-              ? [
-                  {
-                    pos: "월운",
-                    gz: chain.wol,
-                    unseong: getTwelveUnseong(
-                      natal[2]?.charAt(0) ?? "",
-                      chain.wol.charAt(1),
-                    ),
-                  },
-                ]
-              : []),
-            ...(tab === "일운" && chain?.il
-              ? [
-                  {
-                    pos: "일운",
-                    gz: chain.il,
-                    unseong: getTwelveUnseong(
-                      natal[2]?.charAt(0) ?? "",
-                      chain.il.charAt(1),
-                    ),
-                  },
-                ]
-              : []),
-          ].filter(Boolean),
-    ),
-  );
+                  };
+                })
+                .filter(Boolean),
+              ...(chain?.dae
+                ? [
+                    {
+                      pos: "대운",
+                      gz: chain.dae,
+                      unseong: getTwelveUnseong(
+                        natal[2]?.charAt(0) ?? "",
+                        chain.dae.charAt(1),
+                      ),
+                    },
+                  ]
+                : []),
+              ...((tab === "세운" || tab === "월운" || tab === "일운") &&
+              chain?.se
+                ? [
+                    {
+                      pos: "세운",
+                      gz: chain.se,
+                      unseong: getTwelveUnseong(
+                        natal[2]?.charAt(0) ?? "",
+                        chain.se.charAt(1),
+                      ),
+                    },
+                  ]
+                : []),
+              ...((tab === "월운" || tab === "일운") && chain?.wol
+                ? [
+                    {
+                      pos: "월운",
+                      gz: chain.wol,
+                      unseong: getTwelveUnseong(
+                        natal[2]?.charAt(0) ?? "",
+                        chain.wol.charAt(1),
+                      ),
+                    },
+                  ]
+                : []),
+              ...(tab === "일운" && chain?.il
+                ? [
+                    {
+                      pos: "일운",
+                      gz: chain.il,
+                      unseong: getTwelveUnseong(
+                        natal[2]?.charAt(0) ?? "",
+                        chain.il.charAt(1),
+                      ),
+                    },
+                  ]
+                : []),
+            ].filter(Boolean),
+      ),
+    );
+  }
 
   // 십이신살(원국+운 반영·설정 적용)
-  bodyParts.push(
-    section(
-      "십이신살(원국+운 반영·설정 적용)",
-      tab === "원국"
-        ? natal
-            .map((gz, i) => {
-              if (!gz || i >= posLabels.length) return null;
-              return {
-                pos: posLabels[i],
-                gz,
-                shinsal: getTwelveShinsalBySettings({
-                  baseBranch,
-                  targetBranch: gz.charAt(1),
-                  era: shinsalEra,
-                  gaehwa: shinsalGaehwa,
-                }),
-              };
-            })
-            .filter(Boolean)
-        : [
-            ...natal
+  if (showTwelveShinsal) {
+    bodyParts.push(
+      section(
+        "십이신살(원국+운 반영·설정 적용)",
+        tab === "원국"
+          ? natal
               .map((gz, i) => {
                 if (!gz || i >= posLabels.length) return null;
                 return {
@@ -446,90 +450,92 @@ export function buildChatPrompt(input: SinglePromptInput): string {
                   }),
                 };
               })
-              .filter(Boolean),
-            ...(chain?.dae
-              ? [
-                  {
-                    pos: "대운",
-                    gz: chain.dae,
-                    shinsal: getTwelveShinsalBySettings({
-                      baseBranch,
-                      targetBranch: chain.dae.charAt(1),
-                      era: shinsalEra,
-                      gaehwa: shinsalGaehwa,
-                    }),
-                  },
-                ]
-              : []),
-            ...((tab === "세운" || tab === "월운" || tab === "일운") &&
-            chain?.se
-              ? [
-                  {
-                    pos: "세운",
-                    gz: chain.se,
-                    shinsal: getTwelveShinsalBySettings({
-                      baseBranch,
-                      targetBranch: chain.se.charAt(1),
-                      era: shinsalEra,
-                      gaehwa: shinsalGaehwa,
-                    }),
-                  },
-                ]
-              : []),
-            ...((tab === "월운" || tab === "일운") && chain?.wol
-              ? [
-                  {
-                    pos: "월운",
-                    gz: chain.wol,
-                    shinsal: getTwelveShinsalBySettings({
-                      baseBranch,
-                      targetBranch: chain.wol.charAt(1),
-                      era: shinsalEra,
-                      gaehwa: shinsalGaehwa,
-                    }),
-                  },
-                ]
-              : []),
-            ...(tab === "일운" && chain?.il
-              ? [
-                  {
-                    pos: "일운",
-                    gz: chain.il,
-                    shinsal: getTwelveShinsalBySettings({
-                      baseBranch,
-                      targetBranch: chain.il.charAt(1),
-                      era: shinsalEra,
-                      gaehwa: shinsalGaehwa,
-                    }),
-                  },
-                ]
-              : []),
-          ].filter(Boolean),
-    ),
-  );
-
-  // 납음오행(원국+운 반영)
-  bodyParts.push(
-    section(
-      "납음오행(원국+운 반영)",
-      tab === "원국"
-        ? natal
-            .map((gz, i) => {
-              if (!gz || i >= posLabels.length) return null;
-              const info = getNabeum(gz);
-              return info
-                ? {
+              .filter(Boolean)
+          : [
+              ...natal
+                .map((gz, i) => {
+                  if (!gz || i >= posLabels.length) return null;
+                  return {
                     pos: posLabels[i],
                     gz,
-                    nabeum: info.name,
-                    element: info.element,
-                    code: info.code,
-                  }
-                : { pos: posLabels[i], gz, nabeum: null };
-            })
-            .filter(Boolean)
-        : [
-            ...natal
+                    shinsal: getTwelveShinsalBySettings({
+                      baseBranch,
+                      targetBranch: gz.charAt(1),
+                      era: shinsalEra,
+                      gaehwa: shinsalGaehwa,
+                    }),
+                  };
+                })
+                .filter(Boolean),
+              ...(chain?.dae
+                ? [
+                    {
+                      pos: "대운",
+                      gz: chain.dae,
+                      shinsal: getTwelveShinsalBySettings({
+                        baseBranch,
+                        targetBranch: chain.dae.charAt(1),
+                        era: shinsalEra,
+                        gaehwa: shinsalGaehwa,
+                      }),
+                    },
+                  ]
+                : []),
+              ...((tab === "세운" || tab === "월운" || tab === "일운") &&
+              chain?.se
+                ? [
+                    {
+                      pos: "세운",
+                      gz: chain.se,
+                      shinsal: getTwelveShinsalBySettings({
+                        baseBranch,
+                        targetBranch: chain.se.charAt(1),
+                        era: shinsalEra,
+                        gaehwa: shinsalGaehwa,
+                      }),
+                    },
+                  ]
+                : []),
+              ...((tab === "월운" || tab === "일운") && chain?.wol
+                ? [
+                    {
+                      pos: "월운",
+                      gz: chain.wol,
+                      shinsal: getTwelveShinsalBySettings({
+                        baseBranch,
+                        targetBranch: chain.wol.charAt(1),
+                        era: shinsalEra,
+                        gaehwa: shinsalGaehwa,
+                      }),
+                    },
+                  ]
+                : []),
+              ...(tab === "일운" && chain?.il
+                ? [
+                    {
+                      pos: "일운",
+                      gz: chain.il,
+                      shinsal: getTwelveShinsalBySettings({
+                        baseBranch,
+                        targetBranch: chain.il.charAt(1),
+                        era: shinsalEra,
+                        gaehwa: shinsalGaehwa,
+                      }),
+                    },
+                  ]
+                : []),
+            ].filter(Boolean),
+      ),
+    );
+  }
+
+  if (showNabeum) {
+    // 납음오행(원국+운 반영)
+    bodyParts.push(
+      section(
+        "납음오행(원국+운 반영)",
+          tab === "원국"
+          ? natal
               .map((gz, i) => {
                 if (!gz || i >= posLabels.length) return null;
                 const info = getNabeum(gz);
@@ -543,57 +549,73 @@ export function buildChatPrompt(input: SinglePromptInput): string {
                     }
                   : { pos: posLabels[i], gz, nabeum: null };
               })
-              .filter(Boolean),
-            ...(chain?.dae
-              ? (() => {
-                  const info = getNabeum(chain.dae);
+              .filter(Boolean)
+          : [
+              ...natal
+                .map((gz, i) => {
+                  if (!gz || i >= posLabels.length) return null;
+                  const info = getNabeum(gz);
                   return info
-                    ? [
-                        {
-                          pos: "대운",
-                          gz: chain.dae,
-                          nabeum: info.name,
-                          element: info.element,
-                          code: info.code,
-                        },
-                      ]
-                    : [];
-                })()
-              : []),
-            ...(((tab === "세운" || tab === "월운" || tab === "일운") &&
-              chain?.se)
-              ? (() => {
-                  const info = getNabeum(chain.se!);
-                  return info
-                    ? [
-                        {
-                          pos: "세운",
-                          gz: chain.se!,
-                          nabeum: info.name,
-                          element: info.element,
-                          code: info.code,
-                        },
-                      ]
-                    : [];
-                })()
-              : []),
-            ...(((tab === "월운" || tab === "일운") && chain?.wol)
-              ? (() => {
-                  const info = getNabeum(chain.wol!);
-                  return info
-                    ? [
-                        {
-                          pos: "월운",
-                          gz: chain.wol!,
-                          nabeum: info.name,
-                          element: info.element,
-                          code: info.code,
-                        },
-                      ]
-                    : [];
-                })()
-              : []),
-            ...((tab === "일운" && chain?.il)
+                    ? {
+                        pos: posLabels[i],
+                        gz,
+                        nabeum: info.name,
+                        element: info.element,
+                        code: info.code,
+                      }
+                    : { pos: posLabels[i], gz, nabeum: null };
+                })
+                .filter(Boolean),
+              ...(chain?.dae
+                ? (() => {
+                    const info = getNabeum(chain.dae);
+                    return info
+                      ? [
+                          {
+                            pos: "대운",
+                            gz: chain.dae,
+                            nabeum: info.name,
+                            element: info.element,
+                            code: info.code,
+                          },
+                        ]
+                      : [];
+                  })()
+                : []),
+              ...(((tab === "세운" || tab === "월운" || tab === "일운") &&
+                chain?.se)
+                ? (() => {
+                    const info = getNabeum(chain.se!);
+                    return info
+                      ? [
+                          {
+                            pos: "세운",
+                            gz: chain.se!,
+                            nabeum: info.name,
+                            element: info.element,
+                            code: info.code,
+                          },
+                        ]
+                      : [];
+                  })()
+                : []),
+              ...(((tab === "월운" || tab === "일운") && chain?.wol)
+                ? (() => {
+                    const info = getNabeum(chain.wol!);
+                    return info
+                      ? [
+                          {
+                            pos: "월운",
+                            gz: chain.wol!,
+                            nabeum: info.name,
+                            element: info.element,
+                            code: info.code,
+                          },
+                        ]
+                      : [];
+                  })()
+                : []),
+              ...((tab === "일운" && chain?.il)
               ? (() => {
                   const info = getNabeum(chain.il!);
                   return info
@@ -610,8 +632,9 @@ export function buildChatPrompt(input: SinglePromptInput): string {
                 })()
               : []),
           ].filter(Boolean),
-    ),
-  );
+      ),
+    );
+  }
 
   // 형충회합(원국)
   bodyParts.push(
@@ -627,27 +650,29 @@ export function buildChatPrompt(input: SinglePromptInput): string {
   bodyParts.push(section("형충회합(운 포함: 탭 연동)", relWithLuck));
 
   // 신살(원국 / 운 포함)
-  if (tab === "원국") {
-    const baseShinsal = buildShinsalTags({
-      natal,
-      daewoon: null,
-      sewoon: null,
-      wolwoon: null,
-      ilwoon: null,
-      basis,
-    });
+  if (showShinsal) {
+    if (tab === "원국") {
+      const baseShinsal = buildShinsalTags({
+        natal,
+        daewoon: null,
+        sewoon: null,
+        wolwoon: null,
+        ilwoon: null,
+        basis,
+      });
 
-    bodyParts.push(
-      section("신살(원국 전용)", {
-        good: baseShinsal.good,
-        bad: baseShinsal.bad,
-        meta: baseShinsal.meta,
-      }),
-    );
-  } else {
-    bodyParts.push(
-      section(`신살(운 포함·탭=${tab})`, sinsalWithLuck),
-    );
+      bodyParts.push(
+        section("신살(원국 전용)", {
+          good: baseShinsal.good,
+          bad: baseShinsal.bad,
+          meta: baseShinsal.meta,
+        }),
+      );
+    } else {
+      bodyParts.push(
+        section(`신살(운 포함·탭=${tab})`, sinsalWithLuck),
+      );
+    }
   }
 
   const body = bodyParts

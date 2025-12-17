@@ -36,12 +36,12 @@ import {
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { usePromptSectionsDB } from "@/features/AnalysisReport/hooks/usePromptSections";
 
 // 🔥 사주 해석 톤 프리셋
 type ToneKey =
   | "analysis"
   | "mentor"
-  | "speed"
   | "dryHumor"
   | "softWarm"
   | "ect";
@@ -59,12 +59,6 @@ const TONE_META: Record<ToneKey, { label: string; desc: string }> = {
 - 과한 긍정도 X, 과한 비관도 X
 - “지금 이 흐름이면 ~~ 우선하자” 스타일`,
   },
-  speed: {
-    label: "스피드컨시스",
-    desc: `- 핵심 요약만 짧게
-- 2~4문장으로 결론만 정리
-- 빠르게 알고 싶은 질문용`,
-  },
   dryHumor: {
     label: "냉소유머형",
     desc: `- 약한 비꼼 + 드라이한 유머
@@ -76,7 +70,7 @@ const TONE_META: Record<ToneKey, { label: string; desc: string }> = {
 - 공감형보다 담백하고 깔끔한 톤`,
   },
   ect: {
-    label: "기타",
+    label: "톤 지정 X",
     desc: `- 톤 지정 따로 없음`,
   },
 };
@@ -337,6 +331,10 @@ export default function PromptCopyCard({
   lunarPillars,
   includeTenGod = false,
 }: Props) {
+
+  const msId = ms?.id ?? null; // 네가 실제 쓰는 “명식 id”로 연결
+  const { sections, toggleSection, isSaving } = usePromptSectionsDB(msId);
+
   const [tone, setTone] = useState<ToneKey>("analysis");
   const [friendMode, setFriendMode] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
@@ -742,6 +740,7 @@ export default function PromptCopyCard({
           ? partnerMs ?? null
           : null,
       teacherMode,
+      sections
     });
   }, [
     ms,
@@ -758,6 +757,7 @@ export default function PromptCopyCard({
     relationMode,
     partnerMs,
     teacherMode,
+    sections
   ]);
 
   const multiText = useMemo(() => {
@@ -841,6 +841,7 @@ export default function PromptCopyCard({
           ? partnerMs ?? null
           : null,
       teacherMode,
+      sections
     });
   }, [
     ms,
@@ -865,6 +866,7 @@ export default function PromptCopyCard({
     relationMode,
     partnerMs,
     teacherMode,
+    sections
   ]);
 
   const partnerPromptFragment = useMemo(() => {
@@ -924,8 +926,6 @@ export default function PromptCopyCard({
         return "※ 해석은 감정 배제하고 과학적·분석적으로 설명한다.\n";
       case "mentor":
         return "※ 현실 조언 중심으로 균형 있게 설명한다.\n";
-      case "speed":
-        return "※ 핵심만 짧고 간결하게 요약해서 설명한다.\n";
       case "dryHumor":
         return "※ 드라이한 유머 톤으로, 가벼운 냉소 섞어서 설명한다.\n";
       case "softWarm":
@@ -1011,6 +1011,7 @@ export default function PromptCopyCard({
       </div>
     );
   }
+  
 
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-3">
@@ -1054,12 +1055,62 @@ export default function PromptCopyCard({
         </div>
       </div>
 
+      <div className="mt-3 border-t pt-2">
+        <div className="text-[11px] font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
+          프롬프트 포함 데이터
+        </div>
+
+        <div className="grid grid-cols-2 desk:grid-cols-8 gap-2 text-[11px] text-neutral-700 dark:text-neutral-200">
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sections.twelveUnseong}
+              onChange={() => toggleSection("twelveUnseong")}
+              className="w-3 h-3"
+            />
+            십이운성
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sections.twelveShinsal}
+              onChange={() => toggleSection("twelveShinsal")}
+              className="w-3 h-3"
+            />
+            십이신살
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sections.shinsal}
+              onChange={() => toggleSection("shinsal")}
+              className="w-3 h-3"
+            />
+            기타 신살
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={sections.nabeum}
+              onChange={() => toggleSection("nabeum")}
+              className="w-3 h-3"
+            />
+            납음오행
+          </label>
+          {isSaving ? <span className="text-[11px] text-neutral-400">저장중…</span> : null}
+        </div>
+      </div>
+
       {/* 카테고리 셀렉트 영역 */}
       <div className="flex flex-wrap gap-2 items-center">
         {/* 🔥 사주 톤 선택 */}
         <div className="w-full mt-2 p-2 border rounded-md bg-neutral-50 dark:bg-neutral-800">
           <div className="text-xs font-semibold mb-1 text-neutral-700 dark:text-neutral-200">
-            해석 톤 선택
+            해석 모드 선택
           </div>
 
           {/* 버튼 목록 */}
@@ -1068,7 +1119,7 @@ export default function PromptCopyCard({
               <button
                 key={key}
                 onClick={() => setTone(key)}
-                className={`flex-1 px-2 py-1 text-[10px] rounded border cursor-pointer ${
+                className={`flex-1 p-1 text-[10px] rounded border cursor-pointer ${
                   tone === key
                     ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
                     : "bg-white dark:bg-neutral-700 text-neutral-700 dark:text-neutral-200"
@@ -1234,7 +1285,7 @@ export default function PromptCopyCard({
               : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
           }`}
         >
-          임의기간입력
+          멀티모드(일정기간입력)
         </button>
       </div>
 
@@ -1450,7 +1501,7 @@ export default function PromptCopyCard({
           onChange={(e) => setQuestionDraft(e.target.value)}
           placeholder="여기에 GPT에게 추가로 물어보고 싶은 내용을 적고, '질문 추가' 버튼을 눌러주세요."
           rows={3}
-          className="w-full text-[16px] desk:text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
+          className="w-full placeholder:text-xs text-[16px] desk:text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
         />
         <div className="mb-4 text-center">
           <button
