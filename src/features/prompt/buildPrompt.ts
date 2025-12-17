@@ -13,6 +13,7 @@ export type MainCategoryKey =
   | "career"
   | "money"
   | "family"
+  | "baby"
   | "health"
   | "move"
   | "social"
@@ -73,6 +74,11 @@ export type SubCategoryKey =
   | "family_siblings"
   | "family_children"
   | "family_care"
+
+  // 임신 · 출산 · 택일 (baby)
+  | "baby_pregnancy"
+  | "baby_birth"
+  | "baby_selection"
 
   // 건강 · 컨디션 (health)
   | "health_overall"
@@ -443,6 +449,34 @@ export function buildTopicGuide(ctx: TopicContext & { teacherMode?: boolean; }) 
         );
       }
 
+      break;
+    }
+
+    case "baby": {
+      lines.push(
+        "- 이 해석은 ‘임신/출산/택일’ 이슈에 초점을 둔다.",
+        "- 임신과 출산의 가능성, 준비해야 할 부분, 택일 시 고려할 점을 중심으로 본다."
+      );
+      if (!subTopic || subTopic === "overview") {
+        lines.push(
+          "- 임신과 출산이 잘 이루어지기 위해 어떤 준비와 마음가짐이 필요한지, 전반적인 흐름을 설명한다."
+        );
+      }
+      if (subTopic === "baby_pregnancy") {
+        lines.push(
+          "- 임신과 관련된 이슈를 다룰 때는, 신체적·정신적 준비 상태와 주의해야 할 점을 중심으로 말한다."
+        );
+      }
+      if (subTopic === "baby_birth") {
+        lines.push(
+          "- 출산과 관련된 이슈를 다룰 때는, 출산 시기, 방법, 회복 과정에서 고려해야 할 점을 설명한다."
+        );
+      }
+      if (subTopic === "baby_selection") {
+        lines.push(
+          "- 택일과 관련된 이슈를 다룰 때는, 좋은 날짜 선택 기준과 피해야 할 시기를 중심으로 이야기한다."
+        );
+      }
       break;
     }
 
