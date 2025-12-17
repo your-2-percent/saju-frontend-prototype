@@ -128,6 +128,7 @@ const MAIN_CATEGORY_META: Record<MainCategoryKey, { label: string }> = {
   career: { label: "직업 · 진로 · 학업 · 시험" },
   money: { label: "돈 · 재물 · 사업 · 투자" },
   family: { label: "가족 · 부모 · 형제자매 · 자녀" },
+  baby: { label: "임신 · 출산 · 택일" },
   health: { label: "건강 · 체질 · 사고 · 멘탈" },
   move: { label: "이사 · 이직 · 이동 · 환경 변화" },
   social: { label: "인간관계 · 사회생활 · 대인 스트레스" },
@@ -191,6 +192,12 @@ const CATEGORY_SUBS: Record<MainCategoryKey, SubMeta[]> = {
     { key: "family_siblings", label: "형제자매와의 관계" },
     { key: "family_children", label: "자녀운·양육" },
     { key: "family_care", label: "돌봄·부양 이슈" },
+  ],
+  baby: [
+    { key: "overview", label: "임신·출산·택일 전체" },
+    { key: "baby_pregnancy", label: "임신 관련 이슈" },
+    { key: "baby_birth", label: "출산 관련 이슈" },
+    { key: "baby_selection", label: "택일 관련 이슈" },
   ],
   health: [
     { key: "overview", label: "건강·사고·멘탈 전체" },
