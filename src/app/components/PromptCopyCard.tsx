@@ -1,3 +1,4 @@
+
 // features/prompt/PromptCopyCard.tsx
 import { useMemo, useState, useEffect } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
@@ -43,12 +44,9 @@ type ToneKey =
   | "speed"
   | "dryHumor"
   | "softWarm"
-  | "ect"
+  | "ect";
 
-const TONE_META: Record<
-  ToneKey,
-  { label: string; desc: string }
-> = {
+const TONE_META: Record<ToneKey, { label: string; desc: string }> = {
   analysis: {
     label: "분석관찰형",
     desc: `- 감정 완전 배제하고, 사주를 데이터처럼 설명
@@ -80,7 +78,7 @@ const TONE_META: Record<
   ect: {
     label: "기타",
     desc: `- 톤 지정 따로 없음`,
-  }
+  },
 };
 
 type Props = {
@@ -305,6 +303,32 @@ function normalizePillars(input?: string[] | null): string[] {
   });
 }
 
+/**
+ * "명식 정보만" 복사용: 프롬프트 중에서 카테고리(해석 요청) 섹션 이전까지만 잘라냄.
+ * (buildChatPrompt / buildMultiLuckPrompt 쪽에서 "## 카테고리"를 쓰는 구조를 전제로 함)
+ */
+function extractMyeongSikInfoOnly(raw: string): string {
+  const text = (raw ?? "").trim();
+  if (!text) return "";
+
+  // 가장 먼저 등장하는 "해석 지시문" 시작점을 찾아서 그 전까지만 남김
+  const markers: RegExp[] = [
+    /\r?\n-----\s*\r?\n/,              // ✅ 네가 올린 블록 시작점
+    /\r?\n🧭\s*해석\s*가이드/,          // 혹시 ----- 없이 바로 시작하는 경우 대비
+    /\r?\n🎯\s*질문\s*포커스/,
+    /\r?\n##\s*시간\s*모드/,
+    /\r?\n##\s*카테고리/,
+  ];
+
+  let cut = -1;
+  for (const re of markers) {
+    const idx = text.search(re);
+    if (idx >= 0) cut = cut < 0 ? idx : Math.min(cut, idx);
+  }
+
+  return cut >= 0 ? text.slice(0, cut).trimEnd() : text;
+}
+
 export default function PromptCopyCard({
   ms,
   natal,
@@ -330,8 +354,7 @@ export default function PromptCopyCard({
 
   const [mainCategory, setMainCategory] =
     useState<MainCategoryKey>("personality");
-  const [subCategory, setSubCategory] =
-    useState<SubCategoryKey>("overview");
+  const [subCategory, setSubCategory] = useState<SubCategoryKey>("overview");
 
   const partnerMs = useMemo<MyeongSik | null>(() => {
     if (!partnerId) return null;
@@ -339,8 +362,7 @@ export default function PromptCopyCard({
   }, [partnerId, list]);
 
   const [activeTab, setActiveTab] = useState<BlendTab>("원국");
-  const [relationMode, setRelationMode] =
-    useState<RelationMode>("solo");
+  const [relationMode, setRelationMode] = useState<RelationMode>("solo");
 
   useEffect(() => {
     if (mainCategory !== "love" && mainCategory !== "compat") {
@@ -350,28 +372,28 @@ export default function PromptCopyCard({
   }, [mainCategory]);
 
   const [isMultiMode, setIsMultiMode] = useState(false);
-  const [multiTab, setMultiTab] = useState<
-    "대운" | "세운" | "월운" | "일운"
-  >("대운");
+  const [multiTab, setMultiTab] = useState<"대운" | "세운" | "월운" | "일운">(
+    "대운",
+  );
 
   const [selectedDaeIdx, setSelectedDaeIdx] = useState<number[]>([]);
-  const [seStartYear, setSeStartYear] = useState<number>(
-    new Date().getFullYear(),
-  );
-  const [seEndYear, setSeEndYear] = useState<number>(
-    new Date().getFullYear(),
-  );
+
+  useEffect(() => {
+    // 대운 탭에서 고른 항목은, 다른 탭(세/월/일)로 넘어가면 자동 취소
+    if (multiTab !== "대운") {
+      setSelectedDaeIdx([]);
+    }
+  }, [multiTab]);
+
+  const [seStartYear, setSeStartYear] = useState<number>(new Date().getFullYear());
+  const [seEndYear, setSeEndYear] = useState<number>(new Date().getFullYear());
   const [wolStartYM, setWolStartYM] = useState<string>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(
-      now.getMonth() + 1,
-    ).padStart(2, "0")}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [wolEndYM, setWolEndYM] = useState<string>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(
-      now.getMonth() + 1,
-    ).padStart(2, "0")}`;
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [ilStartDate, setIlStartDate] = useState<string>(() => {
     const now = new Date();
@@ -391,22 +413,21 @@ export default function PromptCopyCard({
   const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
   function diffMonths(a: Date, b: Date) {
-    return (
-      (b.getFullYear() - a.getFullYear()) * 12 +
-      (b.getMonth() - a.getMonth())
-    );
+    return (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth());
   }
 
-  function formatYM(date: Date) {
-    return `${date.getFullYear()}-${String(
-      date.getMonth() + 1,
-    ).padStart(2, "0")}`;
+  function formatYM(dateObj: Date) {
+    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}`;
   }
 
-  function formatYMD(date: Date) {
-    return `${date.getFullYear()}-${String(
-      date.getMonth() + 1,
-    ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  function formatYMD(dateObj: Date) {
+    return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(
+      2,
+      "0",
+    )}-${String(dateObj.getDate()).padStart(2, "0")}`;
   }
 
   const handleSeStartChange = (year: number) => {
@@ -503,9 +524,7 @@ export default function PromptCopyCard({
       return;
     }
 
-    const diffDays = Math.floor(
-      (end.getTime() - start.getTime()) / MS_PER_DAY,
-    );
+    const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
     if (diffDays > 7) {
       const newEnd = new Date(start);
       newEnd.setDate(start.getDate() + 6);
@@ -531,9 +550,7 @@ export default function PromptCopyCard({
       return;
     }
 
-    const diffDays = Math.floor(
-      (end.getTime() - start.getTime()) / MS_PER_DAY,
-    );
+    const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY);
     if (diffDays > 7) {
       const newStart = new Date(end);
       newStart.setDate(end.getDate() - 6);
@@ -541,8 +558,7 @@ export default function PromptCopyCard({
     }
   };
 
-  const rule: DayBoundaryRule =
-    (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
+  const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   const fallbackChain = useMemo<LuckChain>(() => {
     if (chain) {
@@ -569,37 +585,26 @@ export default function PromptCopyCard({
 
   const manualHour = useHourPredictionStore.getState().manualHour;
 
-  const solarKo = useMemo(
-    () => normalizePillars(natal),
-    [natal],
-  );
-  const lunarKo = useMemo(
-    () => normalizePillars(lunarPillars),
-    [lunarPillars],
-  );
+  const solarKo = useMemo(() => normalizePillars(natal), [natal]);
+  const lunarKo = useMemo(() => normalizePillars(lunarPillars), [lunarPillars]);
 
   const solarKoWithHour = useMemo(() => {
     const arr = [...solarKo] as [string, string, string, string];
-    if ((!arr[3] || arr[3] === "") && manualHour)
-      arr[3] = manualHour.stem + manualHour.branch;
+    if ((!arr[3] || arr[3] === "") && manualHour) arr[3] = manualHour.stem + manualHour.branch;
     return arr;
   }, [solarKo, manualHour]);
 
   const lunarKoWithHour = useMemo(() => {
     const arr = [...lunarKo] as [string, string, string, string];
-    if ((!arr[3] || arr[3] === "") && manualHour)
-      arr[3] = manualHour.stem + manualHour.branch;
+    if ((!arr[3] || arr[3] === "") && manualHour) arr[3] = manualHour.stem + manualHour.branch;
     return arr;
   }, [lunarKo, manualHour]);
 
-  const computedFallback = useMemo<
-    [string, string, string, string] | null
-  >(() => {
+  const computedFallback = useMemo<[string, string, string, string] | null>(() => {
     const y = Number(ms.birthDay?.slice(0, 4));
     const m = Number(ms.birthDay?.slice(4, 6));
     const d = Number(ms.birthDay?.slice(6, 8));
-    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d))
-      return null;
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
     const base = new Date(y, m - 1, d, 12, 4, 0, 0);
     const yn = normalizeGZLocal(getYearGanZhi(base) || "");
     const wl = normalizeGZLocal(getMonthGanZhi(base) || "");
@@ -617,32 +622,29 @@ export default function PromptCopyCard({
       ? lunarValid
         ? "lunar"
         : solarValid
-        ? "solar"
-        : "lunar"
+          ? "solar"
+          : "lunar"
       : solarValid
-      ? "solar"
-      : lunarValid
-      ? "lunar"
-      : "solar";
+        ? "solar"
+        : lunarValid
+          ? "lunar"
+          : "solar";
 
-  const activePillars = useMemo<
-    [string, string, string, string]
-  >(() => {
+  const activePillars = useMemo<[string, string, string, string]>(() => {
     const source =
       effectiveBasis === "lunar"
         ? lunarValid
           ? lunarKoWithHour
           : solarValid
-          ? solarKoWithHour
-          : computedFallback ?? ["", "", "", ""]
+            ? solarKoWithHour
+            : computedFallback ?? ["", "", "", ""]
         : solarValid
-        ? solarKoWithHour
-        : lunarValid
-        ? lunarKoWithHour
-        : computedFallback ?? ["", "", "", ""];
+          ? solarKoWithHour
+          : lunarValid
+            ? lunarKoWithHour
+            : computedFallback ?? ["", "", "", ""];
     const arr = [...source] as [string, string, string, string];
-    if ((!arr[3] || arr[3] === "") && manualHour)
-      arr[3] = manualHour.stem + manualHour.branch;
+    if ((!arr[3] || arr[3] === "") && manualHour) arr[3] = manualHour.stem + manualHour.branch;
     return arr;
   }, [
     effectiveBasis,
@@ -655,10 +657,7 @@ export default function PromptCopyCard({
   ]);
 
   const hourKey = useMemo(
-    () =>
-      manualHour
-        ? manualHour.stem + manualHour.branch
-        : activePillars[3] || "",
+    () => (manualHour ? manualHour.stem + manualHour.branch : activePillars[3] || ""),
     [manualHour, activePillars],
   );
 
@@ -666,9 +665,7 @@ export default function PromptCopyCard({
     natal = buildNatalPillarsFromMs(ms);
   }
 
-  const manualHourStr = manualHour
-    ? manualHour.stem + manualHour.branch
-    : "";
+  const manualHourStr = manualHour ? manualHour.stem + manualHour.branch : "";
 
   const natalWithPrediction = useMemo(() => {
     const pillars = buildNatalPillarsFromMs(ms);
@@ -687,9 +684,7 @@ export default function PromptCopyCard({
     });
   }, [natalWithPrediction, activeTab, fallbackChain, hourKey]);
 
-  function getDayElementPercent(
-    natalArr: string[],
-  ): number {
+  function getDayElementPercent(natalArr: string[]): number {
     const shinPct = natalShinPercent(natalArr, {
       criteriaMode: "modern",
       useHarmonyOverlay: true,
@@ -699,29 +694,19 @@ export default function PromptCopyCard({
 
   const value = getDayElementPercent(natalWithPrediction);
   const percent = useMemo(() => clamp01(value), [value]);
-  const category: ShinCategory = useMemo(
-    () => getShinCategory(percent),
-    [percent],
-  );
+  const category: ShinCategory = useMemo(() => getShinCategory(percent), [percent]);
 
   const daeList = useMemo(() => {
     const rawList = getDaewoonList(ms).slice(0, 10);
-    const birthYear = ms.birthDay
-      ? Number(ms.birthDay.slice(0, 4))
-      : 0;
+    const birthYear = ms.birthDay ? Number(ms.birthDay.slice(0, 4)) : 0;
 
     return rawList.map((str, idx) => {
-      const match = str.match(
-        /(\d{4})년\s+(\d{1,2})월\s+([가-힣]{2})\s+대운/,
-      );
+      const match = str.match(/(\d{4})년\s+(\d{1,2})월\s+([가-힣]{2})\s+대운/);
       const startYear = match ? Number(match[1]) : 0;
       const startMonth = match ? Number(match[2]) : 1;
       const startDay = 1;
       const gz = match ? match[3] : "";
-      const age =
-        birthYear > 0
-          ? koreanAgeByYear(birthYear, startYear)
-          : idx * 10;
+      const age = birthYear > 0 ? koreanAgeByYear(birthYear, startYear) : idx * 10;
 
       return {
         gz,
@@ -753,12 +738,10 @@ export default function PromptCopyCard({
       timeMode: "single",
       relationMode,
       partnerMs:
-        (mainCategory === "love" ||
-          mainCategory === "compat") &&
-        relationMode === "couple"
+        (mainCategory === "love" || mainCategory === "compat") && relationMode === "couple"
           ? partnerMs ?? null
           : null,
-      teacherMode
+      teacherMode,
     });
   }, [
     ms,
@@ -774,25 +757,19 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
-    teacherMode
+    teacherMode,
   ]);
 
   const multiText = useMemo(() => {
     if (!ms || !isMultiMode) return "";
 
-    const selectedDaeList = selectedDaeIdx
-      .map((idx) => daeList[idx])
-      .filter((v) => v);
+    const selectedDaeList = selectedDaeIdx.map((idx) => daeList[idx]).filter((v) => v);
 
     const seYears =
       multiTab === "세운"
         ? (() => {
             const years: number[] = [];
-            for (
-              let y = seStartYear;
-              y <= seEndYear && years.length < 10;
-              y++
-            ) {
+            for (let y = seStartYear; y <= seEndYear && years.length < 10; y++) {
               years.push(y);
             }
             return years;
@@ -803,21 +780,14 @@ export default function PromptCopyCard({
       multiTab === "월운"
         ? (() => {
             const months: string[] = [];
-            const [startY, startM] =
-              wolStartYM.split("-").map(Number);
-            const [endY, endM] =
-              wolEndYM.split("-").map(Number);
+            const [startY, startM] = wolStartYM.split("-").map(Number);
+            const [endY, endM] = wolEndYM.split("-").map(Number);
             const curDate = new Date(startY, startM - 1);
             const endDate = new Date(endY, endM - 1);
 
-            while (
-              curDate <= endDate &&
-              months.length < 12
-            ) {
+            while (curDate <= endDate && months.length < 12) {
               months.push(
-                `${curDate.getFullYear()}-${String(
-                  curDate.getMonth() + 1,
-                ).padStart(2, "0")}`,
+                `${curDate.getFullYear()}-${String(curDate.getMonth() + 1).padStart(2, "0")}`,
               );
               curDate.setMonth(curDate.getMonth() + 1);
             }
@@ -829,46 +799,19 @@ export default function PromptCopyCard({
       multiTab === "일운"
         ? (() => {
             const days: string[] = [];
-            const [sY, sM, sD] =
-              ilStartDate.split("-").map(Number);
-            const [eY, eM, eD] =
-              ilEndDate.split("-").map(Number);
+            const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+            const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-            const start = new Date(
-              sY,
-              sM - 1,
-              sD,
-              4,
-              0,
-              0,
-            );
-            const end = new Date(
-              eY,
-              eM - 1,
-              eD,
-              4,
-              0,
-              0,
-            );
+            const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+            const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
-            if (
-              isNaN(start.getTime()) ||
-              isNaN(end.getTime())
-            )
-              return days;
+            if (isNaN(start.getTime()) || isNaN(end.getTime())) return days;
 
             const cur = new Date(start);
-            while (
-              cur <= end &&
-              days.length < 31
-            ) {
+            while (cur <= end && days.length < 31) {
               const yyyy = cur.getFullYear();
-              const mm = String(
-                cur.getMonth() + 1,
-              ).padStart(2, "0");
-              const dd = String(
-                cur.getDate(),
-              ).padStart(2, "0");
+              const mm = String(cur.getMonth() + 1).padStart(2, "0");
+              const dd = String(cur.getDate()).padStart(2, "0");
               days.push(`${yyyy}-${mm}-${dd}`);
               cur.setDate(cur.getDate() + 1);
             }
@@ -892,18 +835,12 @@ export default function PromptCopyCard({
       topic: mainCategory,
       subTopic: subCategory,
       timeMode: "multi",
-      relationMode:
-        mainCategory === "love" ||
-        mainCategory === "compat"
-          ? relationMode
-          : undefined,
+      relationMode: mainCategory === "love" || mainCategory === "compat" ? relationMode : undefined,
       partnerMs:
-        (mainCategory === "love" ||
-          mainCategory === "compat") &&
-        relationMode === "couple"
+        (mainCategory === "love" || mainCategory === "compat") && relationMode === "couple"
           ? partnerMs ?? null
           : null,
-      teacherMode
+      teacherMode,
     });
   }, [
     ms,
@@ -927,7 +864,7 @@ export default function PromptCopyCard({
     subCategory,
     relationMode,
     partnerMs,
-    teacherMode
+    teacherMode,
   ]);
 
   const partnerPromptFragment = useMemo(() => {
@@ -998,9 +935,7 @@ export default function PromptCopyCard({
     }
   }, [tone]);
 
-  const friendInstruction = friendMode
-    ? "※ 모든 해석은 반말로, 친구처럼 편하게 말한다.\n"
-    : "";
+  const friendInstruction = friendMode ? "※ 모든 해석은 반말로, 친구처럼 편하게 말한다.\n" : "";
 
   const basePrompt = useMemo(
     () =>
@@ -1011,9 +946,7 @@ export default function PromptCopyCard({
   );
 
   const [questionDraft, setQuestionDraft] = useState("");
-  const [extraQuestions, setExtraQuestions] = useState<string[]>(
-    [],
-  );
+  const [extraQuestions, setExtraQuestions] = useState<string[]>([]);
 
   // ✅ 명식이 바뀌면 추가 질문/입력 드래프트 초기화
   useEffect(() => {
@@ -1030,23 +963,44 @@ export default function PromptCopyCard({
       "-----",
       "📝 사용자가 추가로 궁금한 질문 목록",
       "",
-      ...extraQuestions.map(
-        (q, idx) => `${idx + 1}. ${q}`,
-      ),
+      ...extraQuestions.map((q, idx) => `${idx + 1}. ${q}`),
     ];
 
     return `${basePrompt}\n${lines.join("\n")}`;
   }, [basePrompt, extraQuestions]);
 
-  const [copied, setCopied] = useState(false);
-  async function onCopy() {
-    if (!finalText) return;
+  // ✅ "명식정보만" 복사용 텍스트 (톤/반말/추가질문 제외)
+  const infoOnlyText = useMemo(() => {
+    const infoPart = extractMyeongSikInfoOnly(baseText);
+    const merged = `${infoPart}${partnerPromptFragment}`.trim();
+    return merged;
+  }, [baseText, partnerPromptFragment]);
+
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [copiedInfo, setCopiedInfo] = useState(false);
+
+  const canCopyAll = Boolean(finalText && finalText.trim().length > 0);
+  const canCopyInfo = Boolean(infoOnlyText && infoOnlyText.trim().length > 0);
+
+  async function onCopyAll() {
+    if (!canCopyAll) return;
     try {
       await navigator.clipboard.writeText(finalText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1200);
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 1200);
     } catch {
-      setCopied(false);
+      setCopiedAll(false);
+    }
+  }
+
+  async function onCopyInfoOnly() {
+    if (!canCopyInfo) return;
+    try {
+      await navigator.clipboard.writeText(infoOnlyText);
+      setCopiedInfo(true);
+      setTimeout(() => setCopiedInfo(false), 1200);
+    } catch {
+      setCopiedInfo(false);
     }
   }
 
@@ -1060,20 +1014,44 @@ export default function PromptCopyCard({
 
   return (
     <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
+      {/* 헤더 + 복사 버튼(2개) */}
+      <div className="flex flex-col desk:flex-row desk:items-center desk:justify-between gap-2">
         <div className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">
           GPT 프롬프트 제공용
         </div>
-        <button
-          onClick={onCopy}
-          className={`px-3 py-1 rounded-md text-xs cursor-pointer ${
-            copied
-              ? "bg-green-600 text-white"
-              : "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
-          }`}
-        >
-          {copied ? "복사됨!" : "프롬프트 복사"}
-        </button>
+
+        {/* 모바일: 세로 / PC: 가로 */}
+        <div className="flex flex-col desk:flex-row gap-2 w-full desk:w-auto">
+          <button
+            type="button"
+            onClick={onCopyInfoOnly}
+            disabled={!canCopyInfo}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap border",
+              canCopyInfo ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+              copiedInfo
+                ? "bg-green-600 text-white border-green-600"
+                : "bg-orange-600 text-white dark:bg-orange-600 cursor-pointer",
+            ].join(" ")}
+          >
+            {copiedInfo ? "복사됨!" : "명식정보만 복사"}
+          </button>
+
+          <button
+            type="button"
+            onClick={onCopyAll}
+            disabled={!canCopyAll}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              canCopyAll ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+              copiedAll
+                ? "bg-green-600 text-white"
+                : "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black",
+            ].join(" ")}
+          >
+            {copiedAll ? "복사됨!" : "전체 프롬프트 복사"}
+          </button>
+        </div>
       </div>
 
       {/* 카테고리 셀렉트 영역 */}
@@ -1139,10 +1117,7 @@ export default function PromptCopyCard({
               </label>
             </div>
           </div>
-          
         </div>
-
-        
 
         <select
           value={mainCategory}
@@ -1163,16 +1138,14 @@ export default function PromptCopyCard({
           }}
           className="px-2.5 h-30 h-8 text-[11px] rounded-md border bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 border-neutral-200 dark:border-neutral-700"
         >
-          {(Object.keys(MAIN_CATEGORY_META) as MainCategoryKey[]).map(
-            (key) => {
-              const meta = MAIN_CATEGORY_META[key];
-              return (
-                <option key={key} value={key}>
-                  {meta.label}
-                </option>
-              );
-            },
-          )}
+          {(Object.keys(MAIN_CATEGORY_META) as MainCategoryKey[]).map((key) => {
+            const meta = MAIN_CATEGORY_META[key];
+            return (
+              <option key={key} value={key}>
+                {meta.label}
+              </option>
+            );
+          })}
         </select>
 
         {currentSubList.length > 0 && (
@@ -1190,19 +1163,14 @@ export default function PromptCopyCard({
         )}
       </div>
 
-      {(mainCategory === "love" ||
-        mainCategory === "compat") && (
+      {(mainCategory === "love" || mainCategory === "compat") && (
         <div className="flex flex-col gap-1.5 text-[11px] text-neutral-700 dark:text-neutral-200">
           <div className="flex items-center gap-2">
-            <span className="font-semibold">
-              연애 기준
-            </span>
+            <span className="font-semibold">연애 기준</span>
             <div className="inline-flex rounded-full border border-neutral-200 dark:border-neutral-700 overflow-hidden">
               <button
                 type="button"
-                onClick={() =>
-                  setRelationMode("solo")
-                }
+                onClick={() => setRelationMode("solo")}
                 className={`px-3 py-1 cursor-pointer ${
                   relationMode === "solo"
                     ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
@@ -1213,9 +1181,7 @@ export default function PromptCopyCard({
               </button>
               <button
                 type="button"
-                onClick={() =>
-                  setRelationMode("couple")
-                }
+                onClick={() => setRelationMode("couple")}
                 className={`px-3 py-1 cursor-pointer ${
                   relationMode === "couple"
                     ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
@@ -1229,32 +1195,18 @@ export default function PromptCopyCard({
 
           {relationMode === "couple" && (
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-semibold">
-                상대 명식 선택
-              </span>
+              <span className="font-semibold">상대 명식 선택</span>
               <select
                 value={partnerId}
-                onChange={(e) =>
-                  setPartnerId(e.target.value)
-                }
+                onChange={(e) => setPartnerId(e.target.value)}
                 className="min-w-[180px] h-30 px-2 py-1 border rounded bg-white dark:bg-neutral-800"
               >
-                <option value="">
-                  선택 안 함
-                </option>
+                <option value="">선택 안 함</option>
                 {list
-                  .filter(
-                    (m) => m.id !== currentId,
-                  )
+                  .filter((m) => m.id !== currentId)
                   .map((m) => (
-                    <option
-                      key={m.id}
-                      value={m.id}
-                    >
-                      {m.name || "이름 없음"}{" "}
-                      {m.birthDay
-                        ? `(${m.birthDay})`
-                        : ""}
+                    <option key={m.id} value={m.id}>
+                      {m.name || "이름 없음"} {m.birthDay ? `(${m.birthDay})` : ""}
                     </option>
                   ))}
               </select>
@@ -1293,9 +1245,7 @@ export default function PromptCopyCard({
               {TABS.map((t) => (
                 <button
                   key={t}
-                  onClick={() =>
-                    setActiveTab(t)
-                  }
+                  onClick={() => setActiveTab(t)}
                   className={`px-2 py-1 text-xs rounded-md border cursor-pointer ${
                     activeTab === t
                       ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
@@ -1306,23 +1256,13 @@ export default function PromptCopyCard({
                 </button>
               ))}
             </div>
-            <DateInput
-              date={date}
-              onChange={setDate}
-            />
+            <DateInput date={date} onChange={setDate} />
           </div>
 
           <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            <p>
-              위에 피커로 날짜를 조정할 수 있습니다.
-            </p>
-            <p>
-              각 탭에 따라서, 기준이 달라집니다.
-            </p>
-            <p>
-              프롬프트를 복사하여 마음껏 커스텀하여,
-              사용할 수 있습니다.
-            </p>
+            <p>위에 피커로 날짜를 조정할 수 있습니다.</p>
+            <p>각 탭에 따라서, 기준이 달라집니다.</p>
+            <p>프롬프트를 복사하여 마음껏 커스텀하여, 사용할 수 있습니다.</p>
           </div>
         </>
       )}
@@ -1330,23 +1270,19 @@ export default function PromptCopyCard({
       {isMultiMode && (
         <div className="space-y-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
           <div className="flex gap-1.5 border-b pb-2">
-            {(["대운", "세운", "월운", "일운"] as const).map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() =>
-                    setMultiTab(tab)
-                  }
-                  className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
-                    multiTab === tab
-                      ? "bg-blue-600 text-white font-semibold"
-                      : "bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-600"
-                  }`}
-                >
-                  {tab}
-                </button>
-              ),
-            )}
+            {(["대운", "세운", "월운", "일운"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setMultiTab(tab)}
+                className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
+                  multiTab === tab
+                    ? "bg-blue-600 text-white font-semibold"
+                    : "bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-600"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
 
           {multiTab === "대운" && (
@@ -1359,30 +1295,19 @@ export default function PromptCopyCard({
                   <button
                     key={idx}
                     onClick={() => {
-                      setSelectedDaeIdx(
-                        (prev) =>
-                          prev.includes(idx)
-                            ? prev.filter(
-                                (i) => i !== idx,
-                              )
-                            : [...prev, idx],
+                      setSelectedDaeIdx((prev) =>
+                        prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx],
                       );
                     }}
                     className={`px-2 py-1.5 text-xs rounded border cursor-pointer text-left ${
-                      selectedDaeIdx.includes(
-                        idx,
-                      )
+                      selectedDaeIdx.includes(idx)
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white dark:bg-neutral-700 border-neutral-300 dark:border-neutral-600"
                     }`}
                   >
-                    <div className="font-mono">
-                      {dae.gz}
-                    </div>
+                    <div className="font-mono">{dae.gz}</div>
                     <div className="text-[10px] opacity-80">
-                      {dae.age}세 (
-                      {dae.startYear}~
-                      {dae.endYear})
+                      {dae.age}세 ({dae.startYear}~{dae.endYear})
                     </div>
                   </button>
                 ))}
@@ -1399,35 +1324,23 @@ export default function PromptCopyCard({
                 <input
                   type="number"
                   value={seStartYear}
-                  onChange={(e) =>
-                    handleSeStartChange(
-                      Number(e.target.value),
-                    )
-                  }
+                  onChange={(e) => handleSeStartChange(Number(e.target.value))}
                   onBlur={fixStartYear}
                   className="w-24 h-30 px-2 text-[16px] desk:text-xs border rounded bg-white dark:bg-neutral-700"
                   placeholder="시작년도"
                 />
-                <span className="text-xs">
-                  ~
-                </span>
+                <span className="text-xs">~</span>
                 <input
                   type="number"
                   value={seEndYear}
-                  onChange={(e) =>
-                    handleSeEndChange(
-                      Number(e.target.value),
-                    )
-                  }
+                  onChange={(e) => handleSeEndChange(Number(e.target.value))}
                   onBlur={fixEndYear}
                   className="w-24 h-30 px-2 text-[16px] desk:text-xs border rounded bg-white dark:bg-neutral-700"
                   placeholder="종료년도"
                 />
               </div>
               <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
-                선택 범위:{" "}
-                {seEndYear - seStartYear + 1}
-                년
+                선택 범위: {seEndYear - seStartYear + 1}년
               </div>
             </div>
           )}
@@ -1441,25 +1354,15 @@ export default function PromptCopyCard({
                 <input
                   type="month"
                   value={wolStartYM}
-                  onChange={(e) =>
-                    handleWolStartChange(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => handleWolStartChange(e.target.value)}
                   onBlur={handleWolStartBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
-                <span className="text-xs">
-                  ~
-                </span>
+                <span className="text-xs">~</span>
                 <input
                   type="month"
                   value={wolEndYM}
-                  onChange={(e) =>
-                    handleWolEndChange(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => handleWolEndChange(e.target.value)}
                   onBlur={handleWolEndBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
@@ -1467,18 +1370,9 @@ export default function PromptCopyCard({
               <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
                 선택 범위:{" "}
                 {(() => {
-                  const [startY, startM] =
-                    wolStartYM
-                      .split("-")
-                      .map(Number);
-                  const [endY, endM] =
-                    wolEndYM
-                      .split("-")
-                      .map(Number);
-                  const months =
-                    (endY - startY) * 12 +
-                    (endM - startM) +
-                    1;
+                  const [startY, startM] = wolStartYM.split("-").map(Number);
+                  const [endY, endM] = wolEndYM.split("-").map(Number);
+                  const months = (endY - startY) * 12 + (endM - startM) + 1;
                   return months;
                 })()}
                 개월
@@ -1495,25 +1389,15 @@ export default function PromptCopyCard({
                 <input
                   type="date"
                   value={ilStartDate}
-                  onChange={(e) =>
-                    handleIlStartChange(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => handleIlStartChange(e.target.value)}
                   onBlur={handleIlStartBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
-                <span className="text-xs">
-                  ~
-                </span>
+                <span className="text-xs">~</span>
                 <input
                   type="date"
                   value={ilEndDate}
-                  onChange={(e) =>
-                    handleIlEndChange(
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => handleIlEndChange(e.target.value)}
                   onBlur={handleIlEndBlur}
                   className="px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
                 />
@@ -1521,45 +1405,15 @@ export default function PromptCopyCard({
               <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1">
                 선택 범위:{" "}
                 {(() => {
-                  const [sY, sM, sD] =
-                    ilStartDate
-                      .split("-")
-                      .map(Number);
-                  const [eY, eM, eD] =
-                    ilEndDate
-                      .split("-")
-                      .map(Number);
+                  const [sY, sM, sD] = ilStartDate.split("-").map(Number);
+                  const [eY, eM, eD] = ilEndDate.split("-").map(Number);
 
-                  const start = new Date(
-                    sY,
-                    sM - 1,
-                    sD,
-                    4,
-                    0,
-                    0,
-                  );
-                  const end = new Date(
-                    eY,
-                    eM - 1,
-                    eD,
-                    4,
-                    0,
-                    0,
-                  );
+                  const start = new Date(sY, sM - 1, sD, 4, 0, 0);
+                  const end = new Date(eY, eM - 1, eD, 4, 0, 0);
 
-                  if (
-                    isNaN(start.getTime()) ||
-                    isNaN(end.getTime()) ||
-                    end < start
-                  )
-                    return 0;
+                  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) return 0;
 
-                  const diffDays =
-                    Math.floor(
-                      (end.getTime() -
-                        start.getTime()) /
-                        MS_PER_DAY,
-                    ) + 1;
+                  const diffDays = Math.floor((end.getTime() - start.getTime()) / MS_PER_DAY) + 1;
                   return diffDays;
                 })()}
                 일
@@ -1568,13 +1422,8 @@ export default function PromptCopyCard({
           )}
 
           <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-            <p>
-              선택한 {multiTab}
-              의 데이터가 프롬프트에 포함됩니다.
-            </p>
-            <p>
-              각 운마다 별도 섹션으로 출력됩니다.
-            </p>
+            <p>선택한 {multiTab}의 데이터가 프롬프트에 포함됩니다.</p>
+            <p>각 운마다 별도 섹션으로 출력됩니다.</p>
           </div>
         </div>
       )}
@@ -1598,9 +1447,7 @@ export default function PromptCopyCard({
 
         <textarea
           value={questionDraft}
-          onChange={(e) =>
-            setQuestionDraft(e.target.value)
-          }
+          onChange={(e) => setQuestionDraft(e.target.value)}
           placeholder="여기에 GPT에게 추가로 물어보고 싶은 내용을 적고, '질문 추가' 버튼을 눌러주세요."
           rows={3}
           className="w-full text-[16px] desk:text-xs rounded-md border bg-white dark:bg-neutral-800 p-2"
@@ -1609,13 +1456,9 @@ export default function PromptCopyCard({
           <button
             type="button"
             onClick={() => {
-              const trimmed =
-                questionDraft.trim();
+              const trimmed = questionDraft.trim();
               if (!trimmed) return;
-              setExtraQuestions((prev) => [
-                ...prev,
-                trimmed,
-              ]);
+              setExtraQuestions((prev) => [...prev, trimmed]);
               setQuestionDraft("");
             }}
             className="w-full desk:max-w-[160px] px-1 py-1.5 text-xs rounded-md border bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black cursor-pointer"
@@ -1624,43 +1467,27 @@ export default function PromptCopyCard({
           </button>
           {extraQuestions.length > 0 && (
             <div className="flex-1 text-[11px] text-neutral-500 dark:text-neutral-400 text-right">
-              추가된 질문{" "}
-              {extraQuestions.length}개
+              추가된 질문 {extraQuestions.length}개
             </div>
           )}
         </div>
         {extraQuestions.length > 0 && (
           <ul className="mt-1 space-y-1 max-h-24 overflow-y-auto text-[11px] text-neutral-700 dark:text-neutral-200">
-            {extraQuestions.map(
-              (q, idx) => (
-                <li
-                  key={idx}
-                  className="flex gap-1 items-start"
+            {extraQuestions.map((q, idx) => (
+              <li key={idx} className="flex gap-1 items-start">
+                <span className="shrink-0">{idx + 1}.</span>
+                <span className="whitespace-pre-wrap break-words flex-1">{q}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExtraQuestions((prev) => prev.filter((_, i) => i !== idx));
+                  }}
+                  className="shrink-0 ml-2 text-[10px] text-red-500 hover:underline"
                 >
-                  <span className="shrink-0">
-                    {idx + 1}.
-                  </span>
-                  <span className="whitespace-pre-wrap break-words flex-1">
-                    {q}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setExtraQuestions(
-                        (prev) =>
-                          prev.filter(
-                            (_, i) =>
-                              i !== idx,
-                          ),
-                      );
-                    }}
-                    className="shrink-0 ml-2 text-[10px] text-red-500 hover:underline"
-                  >
-                    삭제
-                  </button>
-                </li>
-              ),
-            )}
+                  삭제
+                </button>
+              </li>
+            ))}
           </ul>
         )}
       </div>
@@ -1675,9 +1502,6 @@ export default function PromptCopyCard({
   );
 }
 
-function koreanAgeByYear(
-  birthYear: number,
-  targetYear: number,
-): number {
+function koreanAgeByYear(birthYear: number, targetYear: number): number {
   return targetYear - birthYear + 1;
 }

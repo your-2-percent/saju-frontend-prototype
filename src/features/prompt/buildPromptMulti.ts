@@ -1460,7 +1460,7 @@ export function buildMultiLuckPrompt(input: MultiPromptInput): string {
   const topicGuide = buildTopicGuide({
     topic,
     subTopic,
-    timeMode: "single",
+    timeMode: "multi",
     teacherMode,          // 🔥 추가
   });
 
