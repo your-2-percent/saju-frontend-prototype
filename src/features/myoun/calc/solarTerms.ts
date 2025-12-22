@@ -1,4 +1,5 @@
-﻿import { findSolarTermUTC } from "@/shared/domain/solar-terms";
+﻿// @/features/myoun/calc/solarTerms.ts
+import { findSolarTermUTC } from "@/shared/domain/solar-terms";
 import { roundToMinute } from "@/features/myoun/calc/time";
 
 const JIE_DEGREES = [315, 345, 15, 45, 75, 105, 135, 165, 195, 225, 255, 285] as const;

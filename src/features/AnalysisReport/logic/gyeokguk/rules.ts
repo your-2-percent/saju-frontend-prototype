@@ -1,4 +1,4 @@
-// features/AnalysisReport/logic/gyeokguk/rules.ts
+﻿// features/AnalysisReport/logic/gyeokguk/rules.ts
 import type { Element } from "./types";
 import { type StemKo } from "./utils";
 
@@ -52,16 +52,16 @@ export const DIST_MAP: Record<
 > = {
   자: { 초기: { stem: "임", w: 10 }, 정기: { stem: "계", w: 20 } },
   축: { 초기: { stem: "계", w: 9 }, 중기: { stem: "신", w: 3 }, 정기: { stem: "기", w: 18 } },
-  인: { 초기: { stem: "갑", w: 10 }, 중기: { stem: "병", w: 7 }, 정기: { stem: "갑", w: 16 } },
-  묘: { 초기: { stem: "을", w: 9 }, 정기: { stem: "을", w: 20 } },
-  진: { 초기: { stem: "무", w: 7 }, 중기: { stem: "계", w: 3 }, 정기: { stem: "무", w: 18 } },
-  사: { 초기: { stem: "병", w: 10 }, 중기: { stem: "경", w: 7 }, 정기: { stem: "병", w: 16 } },
-  오: { 초기: { stem: "정", w: 10 }, 중기: { stem: "기", w: 9 }, 정기: { stem: "정", w: 11 } },
-  미: { 초기: { stem: "기", w: 9 }, 중기: { stem: "을", w: 3 }, 정기: { stem: "기", w: 18 } },
-  신: { 초기: { stem: "경", w: 10 }, 중기: { stem: "임", w: 7 }, 정기: { stem: "경", w: 16 } },
-  유: { 초기: { stem: "신", w: 9 }, 정기: { stem: "신", w: 20 } },
-  술: { 초기: { stem: "무", w: 7 }, 중기: { stem: "정", w: 3 }, 정기: { stem: "무", w: 18 } },
-  해: { 초기: { stem: "임", w: 16 }, 중기: { stem: "갑", w: 7 }, 정기: { stem: "임", w: 16 } },
+  인: { 초기: { stem: "무", w: 10 }, 중기: { stem: "병", w: 7 }, 정기: { stem: "갑", w: 16 } },
+  묘: { 초기: { stem: "갑", w: 9 }, 정기: { stem: "을", w: 20 } },
+  진: { 초기: { stem: "을", w: 7 }, 중기: { stem: "계", w: 3 }, 정기: { stem: "무", w: 18 } },
+  사: { 초기: { stem: "무", w: 10 }, 중기: { stem: "경", w: 7 }, 정기: { stem: "병", w: 16 } },
+  오: { 초기: { stem: "병", w: 10 }, 중기: { stem: "기", w: 9 }, 정기: { stem: "정", w: 11 } },
+  미: { 초기: { stem: "정", w: 9 }, 중기: { stem: "을", w: 3 }, 정기: { stem: "기", w: 18 } },
+  신: { 초기: { stem: "무", w: 10 }, 중기: { stem: "임", w: 7 }, 정기: { stem: "경", w: 16 } },
+  유: { 초기: { stem: "경", w: 9 }, 정기: { stem: "신", w: 20 } },
+  술: { 초기: { stem: "신", w: 7 }, 중기: { stem: "정", w: 3 }, 정기: { stem: "무", w: 18 } },
+  해: { 초기: { stem: "무", w: 16 }, 중기: { stem: "갑", w: 7 }, 정기: { stem: "임", w: 16 } },
 };
 
 /* =========================

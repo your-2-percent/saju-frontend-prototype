@@ -1,10 +1,11 @@
-// features/AnalysisReport/logic/gyeokguk/formatter.ts
+﻿// features/AnalysisReport/logic/gyeokguk/formatter.ts
 import type { TenGodSubtype } from "./types";
 
 export type SaryeongPickFrom = "초기" | "중기" | "정기";
 
 export type ReasonToken =
   | { kind: "WANGJI_FIXED_JUNGI" }
+  | { kind: "BUNIL_PICK"; from: SaryeongPickFrom }  // ✅ 추가
   | { kind: "SAENGJI_EMITTED_ONE"; from: SaryeongPickFrom }
   | { kind: "SAENGJI_EMITTED_MULTI"; from: SaryeongPickFrom }
   | { kind: "SAENGJI_NOT_EMITTED_USE_JUNGI" }
@@ -21,6 +22,9 @@ export function formatReasons(tokens: ReasonToken[]): string[] {
   const out: string[] = [];
   for (const t of tokens) {
     switch (t.kind) {
+       case "BUNIL_PICK":
+        out.push(`분일: ${t.from} 채택`);
+      break;
       case "WANGJI_FIXED_JUNGI":
         out.push("왕지: 정기 그대로 채택");
         break;

@@ -1,4 +1,4 @@
-// features/AnalysisReport/logic/gyeokguk/utils.ts
+﻿// features/AnalysisReport/logic/gyeokguk/utils.ts
 import { getSolarTermBoundaries } from "@/features/myoun";
 import type { Element, TenGodSubtype } from "./types";
 import {
