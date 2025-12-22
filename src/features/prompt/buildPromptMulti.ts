@@ -49,7 +49,6 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
     subTopic,
     timeMode,
     teacherMode,
-    friendMode,
     sections,
   } = input;
 
@@ -68,7 +67,7 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
 
   const posLabels = getActivePosLabels(ms, natal);
   const dayStem = natal[2]?.charAt(0) ?? "";
-  const dayEl = STEM_TO_ELEMENT[dayStem] ?? unified.dayElement;
+  const dayEl = STEM_TO_ELEMENT[dayStem] ?? STEM_TO_ELEMENT[unified.dayStem] ?? "목";
 
   // 섹션 토글
   const showTenGod = !!includeTenGod && (sections?.tenGod ?? true);
@@ -278,10 +277,9 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
     subTopic,
     timeMode,
     teacherMode,
-    friendMode,
   });
 
-  const body = pruneEmptyDeep(sectionModel.join("\n\n")).toString();
+  const body = (pruneEmptyDeep(sectionModel.join("\n\n")) ?? "").toString();
   return { header, body, guide };
 }
 

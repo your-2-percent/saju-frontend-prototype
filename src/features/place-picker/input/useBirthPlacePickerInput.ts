@@ -7,10 +7,10 @@ export type BirthPlacePickerInput = {
   setOpen: Dispatch<SetStateAction<boolean>>;
   localValue: string;
   setLocalValue: Dispatch<SetStateAction<string>>;
-  nameRef: React.RefObject<HTMLInputElement>;
-  latRef: React.RefObject<HTMLInputElement>;
-  lonRef: React.RefObject<HTMLInputElement>;
-  triggerBtnRef: React.RefObject<HTMLButtonElement>;
+  nameRef: React.RefObject<HTMLInputElement | null>;
+  latRef: React.RefObject<HTMLInputElement | null>;
+  lonRef: React.RefObject<HTMLInputElement | null>;
+  triggerBtnRef: React.RefObject<HTMLButtonElement | null>;
 };
 
 type UseBirthPlacePickerInputArgs = {

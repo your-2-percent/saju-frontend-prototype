@@ -1,7 +1,8 @@
-﻿import { useCallback } from "react";
+import { useCallback } from "react";
+import type { LuckScope } from "@/shared/lib/hooks/useLuckPickerStore";
 
 type UseIlwoonCalendarSaveArgs = {
-  setFromEvent: (payload: { at: Date }, label?: string) => void;
+  setFromEvent: (payload: { at: Date; gz?: string }, scope: LuckScope) => void;
 };
 
 type IlwoonCalendarSave = {

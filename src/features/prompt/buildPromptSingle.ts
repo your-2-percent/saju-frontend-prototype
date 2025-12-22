@@ -150,7 +150,10 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
 
   const posLabels = getActivePosLabels(ms, natal);
   const dayStem = unified.dayStem; // ex) "정"
-  const dayEl = (STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT] ?? unified.dayElement) as Element;
+  const dayEl =
+    (STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT] ??
+      STEM_TO_ELEMENT[unified.dayStem as keyof typeof STEM_TO_ELEMENT] ??
+      "목") as Element;
 
   const header = [
     `📌 명식: ${ms.name ?? "이름없음"} (${formatBirthForPrompt(ms, unknownTime)}) 성별: ${ms.gender}`,
@@ -230,23 +233,26 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
 
   // 납음오행(원국+운 반영)
   if (showNabeum) {
-    const rows = gzItems.flatMap((it) => {
+    type NabeumRow =
+      | { pos: string; gz: string; nabeum: null }
+      | { pos: string; gz: string; nabeum: string; element: Element; code: string };
+
+    const rows: NabeumRow[] = [];
+    for (const it of gzItems) {
       const info = getNabeum(it.gz);
       if (!info) {
-        // 원국은 null이라도 남기고, 운은(이상치)면 빼버림
-        return it.kind === "natal" ? [{ pos: it.pos, gz: it.gz, nabeum: null }] : [];
+        if (it.kind === "natal") rows.push({ pos: it.pos, gz: it.gz, nabeum: null });
+        continue;
       }
 
-      return [
-        {
-          pos: it.pos,
-          gz: it.gz,
-          nabeum: info.name,
-          element: info.element,
-          code: info.code,
-        },
-      ];
-    });
+      rows.push({
+        pos: it.pos,
+        gz: it.gz,
+        nabeum: info.name,
+        element: info.element,
+        code: info.code,
+      });
+    }
 
     bodyParts.push(sectionJson("납음오행(원국+운 반영)", rows));
   }

@@ -27,13 +27,12 @@ export function buildSingleGzItems(args: {
 }): GzItem[] {
   const { tab, natal, posLabels, chain } = args;
 
-  const base: GzItem[] = posLabels
-    .map((pos, i) => {
-      const gz = natal[i] ?? "";
-      if (!gz) return null;
-      return { kind: "natal", pos, gz } as const;
-    })
-    .filter((v): v is GzItem => v !== null);
+  const base: GzItem[] = [];
+  for (let i = 0; i < posLabels.length; i++) {
+    const gz = natal[i] ?? "";
+    if (!gz) continue;
+    base.push({ kind: "natal", pos: posLabels[i], gz });
+  }
 
   if (tab === "원국") return base;
   if (!chain) return base;
