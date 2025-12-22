@@ -107,7 +107,7 @@ export function useAnalysisReportCalc({
   const solarValid = hasValidYmd(solarKoWithHour);
   const lunarValid = hasValidYmd(lunarKoWithHour);
 
-  const basis: "solar" | "lunar" = "solar";
+  const basis: "solar" | "lunar" = data.calendarType === "lunar" ? "lunar" : "solar";
   const effectiveBasis: "solar" | "lunar" =
     basis === "lunar"
       ? (lunarValid ? "lunar" : solarValid ? "solar" : "lunar")

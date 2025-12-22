@@ -100,7 +100,7 @@ export function buildCoupleHarmonyTags_AB(a: Pillars4, b: Pillars4): CoupleHarmo
   const pushBranchPair = (
     bucket: keyof Pick<
       CoupleHarmony,
-      "지지육합" | "지지충" | "지지파" | "지지해" | "지지원진" | "지지귀문"
+      "지지육합" | "지지충" | "지지파" | "지지해" | "지지원진" | "지지귀문" | "지지형"
     >,
     table: Array<{ pair: [string, string]; label: string }>,
   ) => {

@@ -4,11 +4,13 @@ import type { Element } from "../../utils/types";
 import { POS } from "./constants";
 import { BANGHAP_GROUPS, SANHE_GROUPS, type KoBranch } from "./groups";
 import { normalizeGZ, gzBranch } from "./normalize";
-import type { HarmonyOptions, HarmonyResult, Pillars4, StrengthLevel } from "./types";
+import type { HarmonyOptions, HarmonyResult, Pillars4 } from "./types";
 
 // ───────── 오행 상생/상극 맵 ─────────
 
 import { KE, KE_INV, SHENG_NEXT, SHENG_PREV, LV_ADJ } from "./types";
+
+type StrengthLevel3 = "강" | "중" | "약";
 
 function isClustered3(idx: number, indices: number[]) {
   const sorted = Array.from(new Set(indices)).sort((a, b) => a - b);
@@ -25,7 +27,7 @@ function isClustered3(idx: number, indices: number[]) {
   return false;
 }
 
-function strengthFromPos(indices: number[]): StrengthLevel {
+function strengthFromPos(indices: number[]): StrengthLevel3 {
   // 월 중심(득령) + 3개 이상이면 강
   const hasMonth = indices.includes(POS.month);
   const clustered3 = isClustered3(POS.month, indices) || indices.length >= 3;
@@ -38,7 +40,7 @@ function overlayElement(
   base: Record<Element, number>,
   from: Element,
   to: Element,
-  strength: StrengthLevel,
+  strength: StrengthLevel3,
 ) {
   const delta = strength === "강" ? 2 : strength === "중" ? 1 : 0.5;
   base[from] = (base[from] ?? 0) - delta;
@@ -61,7 +63,7 @@ export function applyHarmonyOverlay(
 
   const branches = natalKo.map((gz) => gzBranch(gz) as KoBranch).filter(Boolean);
 
-  const applied: Array<{ type: "삼합" | "방합"; name: string; out: Element; strength: StrengthLevel }> = [];
+  const applied: Array<{ type: "삼합" | "방합"; name: string; out: Element; strength: StrengthLevel3 }> = [];
   const score: Record<Element, number> = { ...baseScore };
 
   const applyGroup = (type: "삼합" | "방합", g: { name: string; members: [KoBranch, KoBranch, KoBranch]; out: Element; wang: KoBranch }) => {
