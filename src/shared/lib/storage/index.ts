@@ -8,8 +8,8 @@ export type BirthPlace = {
 export type MyeongSik = {
   id: string;
   name: string;
-  birthDay: string;   // YYYY-MM-DD
-  birthTime: string;  // HH:MM
+  birthDay: string;   // YYYYMMDD
+  birthTime: string;  // HHmm (또는 "모름")
   gender: string;
   sortOrder?: number;
   birthPlace?: { name: string; lat: number; lon: number };

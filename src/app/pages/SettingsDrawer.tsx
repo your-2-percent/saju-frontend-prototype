@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect } from "react";
 import {
   DragDropContext,
   Droppable,
@@ -6,124 +6,36 @@ import {
   type DropResult,
 } from "@hello-pangea/dnd";
 import Toast from "@/shared/ui/feedback/Toast";
-import {
-  useSettingsStore,
-  type Settings,
-  defaultSettings,
-} from "@/shared/lib/hooks/useSettingsStore";
+import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useApplyTheme } from "@/shared/lib/hooks/useTheme";
-import { setStoredTheme, type ThemeMode } from "@/shared/lib/theme";
-import { useCallback } from "react";
-
-/* 섹션 ID 고정 목록(렌더 키) */
-const DEFAULT_SECTION_KEYS = [
-  "theme",            // ✅ 테마 토글
-  "hiddenStem",       // 지장간 표시 타입
-  "hiddenStemMode",   // 지장간 유형
-  //"ilunRule",         // 일운 달력 시간타입
-  "sinsalMode",       // 십이신살타입
-  "sinsalBase",       // 십이신살기준
-  "sinsalBloom",      // 개화론 적용여부
-  "exposure",         // 상단 노출
-  "charType",         // 글자 타입
-  "thinEum",          // 음간 얇게
-  "visibility",       // 표시 항목(묶음)
-  "difficultyMode",   // 난이도 모드 (신규)
-] as const;
-
-type SectionKey = (typeof DEFAULT_SECTION_KEYS)[number];
-
-function isSectionKey(v: unknown): v is SectionKey {
-  return typeof v === "string" && (DEFAULT_SECTION_KEYS as readonly string[]).includes(v);
-}
-
-/* 저장된 섹션 순서 정규화: 유효 키만 살리고 누락은 뒤에 보충 */
-function normalizeOrder(saved: unknown): SectionKey[] {
-  const base = Array.isArray(saved) ? (saved as unknown[]).filter(isSectionKey) : [];
-  const missing = (DEFAULT_SECTION_KEYS as readonly SectionKey[]).filter((k) => !base.includes(k as SectionKey));
-  return [...base, ...missing] as SectionKey[];
-}
+import type { ThemeMode } from "@/shared/lib/theme";
+import { useSettingsDrawerInput } from "@/app/pages/settingsDrawer/input/useSettingsDrawerInput";
+import { useSettingsDrawerSave } from "@/app/pages/settingsDrawer/save/useSettingsDrawerSave";
+import { type SectionKey } from "@/app/pages/settingsDrawer/calc/sectionOrder";
+import { getCurrentTheme } from "@/app/pages/settingsDrawer/calc/settingsDerive";
+import { persistTheme } from "@/app/pages/settingsDrawer/saveInterface/settingsPersistence";
 
 type Props = { open: boolean; onClose: () => void };
 
 export default function SettingsDrawer({ open, onClose }: Props) {
   const { settings, setSettings, saveToServer } = useSettingsStore();
+  const input = useSettingsDrawerInput({ open, settings });
+  const save = useSettingsDrawerSave({ setSettings, saveToServer });
 
-  // 섹션 순서 (기본은 스토어)
-  const initialOrder = useMemo<SectionKey[]>(
-    () => normalizeOrder(settings.sectionOrder),
-    [settings.sectionOrder]
-  );
+  const closeToast = () => input.setToastMessage(null);
 
-  const initialSettings = useMemo<Settings>(
-    () => ({
-      ...defaultSettings,
-      ...settings,
-      sectionOrder: normalizeOrder(settings.sectionOrder),
-    }),
-    [settings]
-  );
-
-  const [order, setOrder] = useState<SectionKey[]>(initialOrder);
-  const [localSettings, setLocalSettings] = useState<Settings>(initialSettings);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [dirty, setDirty] = useState(false); // 사용자가 편집 중인지 여부
-  const closeToast = useCallback(() => setToastMessage(null), []);
-
-  //const ilunRuleValue = localSettings.ilunRule ?? "조자시/야자시";
-
-  // 1) 최신 테마 계산
-  const currentTheme = (localSettings.theme ?? settings.theme ?? "dark") as ThemeMode;
-  // 2) 훅은 한 번만 호출
+  const currentTheme = getCurrentTheme(input.localSettings, settings);
   useApplyTheme(currentTheme);
-  // 3) 로컬스토리지만 동기화
   useEffect(() => {
-    setStoredTheme(currentTheme);
+    persistTheme(currentTheme);
   }, [currentTheme]);
 
-  // 4) 드로어 동기화는 그대로:
-  useEffect(() => {
-    if (!open) return;
-    const normalizedOrder = normalizeOrder(settings.sectionOrder);
-    if (dirty) return; // 편집 중이면 외부값으로 덮어쓰지 않음
-    setLocalSettings({
-      ...defaultSettings,
-      ...settings,
-      sectionOrder: normalizedOrder,
+  const handleApply = () => {
+    void save.applyChanges(input.localSettings, input.order, () => {
+      input.setToastMessage("설정이 적용되었습니다");
+      input.setDirty(false);
+      onClose();
     });
-    setOrder(normalizedOrder);
-    setDirty(false);
-  }, [open, settings, dirty]);
-
-  const update = <K extends keyof Settings>(key: K, value: Settings[K]) => {
-    setLocalSettings((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "theme") setStoredTheme(value as ThemeMode);
-      setDirty(true);
-      return next;
-    });
-  };
-
-  const applyChanges = () => {
-    const nextSettings = {
-      ...defaultSettings,
-      ...localSettings,
-      sectionOrder: order,
-    };
-    // 로컬에 남은 예전 값 제거 (강제 동기화)
-    try {
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("settings_v1");
-      }
-    } catch {
-      /* ignore */
-    }
-    setSettings(nextSettings);
-    if (nextSettings.theme) setStoredTheme(nextSettings.theme as ThemeMode);
-    void saveToServer(true);
-    setToastMessage("설정이 적용되었습니다");
-    setDirty(false);
-    onClose();
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -131,10 +43,10 @@ export default function SettingsDrawer({ open, onClose }: Props) {
     if (!destination) return;
     if (destination.index === source.index) return;
 
-    const next = Array.from(order);
+    const next = Array.from(input.order);
     const [moved] = next.splice(source.index, 1);
     next.splice(destination.index, 0, moved);
-    setOrder(next);
+    input.setOrder(next);
   };
 
   /* ── 섹션 렌더러 ──────────────────────────────────────────── */
@@ -144,8 +56,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="테마">
             <ThemeSwitch
-              value={(localSettings.theme as ThemeMode) ?? "dark"}
-              onChange={(v) => update("theme", v)}
+              value={(input.localSettings.theme as ThemeMode) ?? "dark"}
+              onChange={(v) => input.updateSetting("theme", v)}
             />
           </Section>
         );
@@ -154,8 +66,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="지장간 표시 타입">
             <SegmentedControl
-              value={localSettings.hiddenStem}
-              onChange={(v) => update("hiddenStem", v)}
+              value={input.localSettings.hiddenStem}
+              onChange={(v) => input.updateSetting("hiddenStem", v)}
               options={[
                 { label: "전체보기", value: "all" },
                 { label: "정기만 보기", value: "regular" },
@@ -168,8 +80,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="지장간 유형">
             <SegmentedControl
-              value={localSettings.hiddenStemMode}
-              onChange={(v) => update("hiddenStemMode", v)}
+              value={input.localSettings.hiddenStemMode}
+              onChange={(v) => input.updateSetting("hiddenStemMode", v)}
               options={[
                 { label: "고전", value: "classic" },
                 { label: "하건충", value: "hgc" },
@@ -178,27 +90,12 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           </Section>
         );
 
-      // case "ilunRule":
-      //   return (
-      //     <Section title="일운 달력 시간타입">
-      //       <SegmentedControl
-      //         value={ilunRuleValue}
-      //         onChange={(v) => update("ilunRule", v)}
-      //         options={[
-      //           { label: "자시", value: "자시" },
-      //           { label: "조자시/야자시", value: "조자시/야자시" },
-      //           { label: "인시", value: "인시" },
-      //         ]}
-      //       />
-      //     </Section>
-      //   );
-
       case "sinsalMode":
         return (
           <Section title="십이신살타입">
             <SegmentedControl
-              value={localSettings.sinsalMode}
-              onChange={(v) => update("sinsalMode", v)}
+              value={input.localSettings.sinsalMode}
+              onChange={(v) => input.updateSetting("sinsalMode", v)}
               options={[
                 { label: "고전", value: "classic" },
                 { label: "현대", value: "modern" },
@@ -211,8 +108,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="십이신살기준">
             <SegmentedControl
-              value={localSettings.sinsalBase}
-              onChange={(v) => update("sinsalBase", v)}
+              value={input.localSettings.sinsalBase}
+              onChange={(v) => input.updateSetting("sinsalBase", v)}
               options={[
                 { label: "일지", value: "일지" },
                 { label: "연지", value: "연지" },
@@ -226,8 +123,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="개화론 적용여부">
             <Switch
               label="개화론 적용"
-              checked={Boolean(localSettings.sinsalBloom)}
-              onChange={(v) => update("sinsalBloom", v)}
+              checked={Boolean(input.localSettings.sinsalBloom)}
+              onChange={(v) => input.updateSetting("sinsalBloom", v)}
             />
           </Section>
         );
@@ -236,8 +133,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="상단 노출">
             <SegmentedControl
-              value={localSettings.exposure}
-              onChange={(v) => update("exposure", v)}
+              value={input.localSettings.exposure}
+              onChange={(v) => input.updateSetting("exposure", v)}
               options={[
                 { label: "원국", value: "원국" },
                 { label: "대운", value: "대운" },
@@ -252,8 +149,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
         return (
           <Section title="글자 타입">
             <SegmentedControl
-              value={localSettings.charType}
-              onChange={(v) => update("charType", v)}
+              value={input.localSettings.charType}
+              onChange={(v) => input.updateSetting("charType", v)}
               options={[
                 { label: "한자", value: "한자" },
                 { label: "한글", value: "한글" },
@@ -267,8 +164,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="음간 얇게">
             <Switch
               label="음간 얇게"
-              checked={Boolean(localSettings.thinEum)}
-              onChange={(v) => update("thinEum", v)}
+              checked={Boolean(input.localSettings.thinEum)}
+              onChange={(v) => input.updateSetting("thinEum", v)}
             />
           </Section>
         );
@@ -279,24 +176,38 @@ export default function SettingsDrawer({ open, onClose }: Props) {
             <div className="space-y-2 w-full max-w-[180px] mx-auto">
               <Switch
                 label="십신 표시"
-                checked={Boolean(localSettings.showSipSin)}
-                onChange={(v) => update("showSipSin", v)}
+                checked={Boolean(input.localSettings.showSipSin)}
+                onChange={(v) => input.updateSetting("showSipSin", v)}
               />
               <Switch
                 label="운성 표시"
-                checked={Boolean(localSettings.showSibiUnseong)}
-                onChange={(v) => update("showSibiUnseong", v)}
+                checked={Boolean(input.localSettings.showSibiUnseong)}
+                onChange={(v) => input.updateSetting("showSibiUnseong", v)}
               />
               <Switch
                 label="신살 표시"
-                checked={Boolean(localSettings.showSibiSinsal)}
-                onChange={(v) => update("showSibiSinsal", v)}
+                checked={Boolean(input.localSettings.showSibiSinsal)}
+                onChange={(v) => input.updateSetting("showSibiSinsal", v)}
               />
-              {/* ✅ 납음 표시: 스토어에 정식 반영 */}
               <Switch
                 label="납음 표시"
-                checked={Boolean(localSettings.showNabeum)}
-                onChange={(v) => update("showNabeum", v)}
+                checked={Boolean(input.localSettings.showNabeum)}
+                onChange={(v) => input.updateSetting("showNabeum", v)}
+              />
+              <Switch
+                label="기타신살 BOX 표시"
+                checked={Boolean(input.localSettings.showEtcShinsal)}
+                onChange={(v) => input.updateSetting("showEtcShinsal", v)}
+              />
+              <Switch
+                label="형충회합 BOX 표시"
+                checked={Boolean(input.localSettings.showRelationBox)}
+                onChange={(v) => input.updateSetting("showRelationBox", v)}
+              />
+              <Switch
+                label="프롬프트 BOX 표시"
+                checked={Boolean(input.localSettings.showPromptBox)}
+                onChange={(v) => input.updateSetting("showPromptBox", v)}
               />
             </div>
           </Section>
@@ -307,8 +218,8 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <Section title="난이도 UP ver.">
             <Switch
               label="난이도 UP 적용"
-              checked={Boolean(localSettings.difficultyMode)}
-              onChange={(v) => update("difficultyMode", v)}
+              checked={Boolean(input.localSettings.difficultyMode)}
+              onChange={(v) => input.updateSetting("difficultyMode", v)}
             />
           </Section>
         );
@@ -342,7 +253,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-bold">설정</h2>
             <button
-              onClick={applyChanges}
+              onClick={handleApply}
               className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm cursor-pointer"
             >
               적용하기
@@ -360,7 +271,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                   {...provided.droppableProps}
                   className="flex flex-col gap-2 p-4 overflow-y-auto max-h-[80dvh] list-none"
                 >
-                  {order.map((id, idx) => (
+                  {input.order.map((id, idx) => (
                     <Draggable key={id} draggableId={id} index={idx}>
                       {(prov) => (
                         <li
@@ -369,7 +280,7 @@ export default function SettingsDrawer({ open, onClose }: Props) {
                           {...prov.dragHandleProps}
                           className="!flex justify-between items-center bg-white dark:bg-neutral-800 p-2 rounded border text-sm desk:text-base select-none cursor-grab active:cursor-grabbing"
                         >
-                          <span className="mr-2 select-none">☰</span>
+                          <span className="mr-2 select-none text-neutral-500">::</span>
                           <div className="flex-1 min-w-0">{renderSection(id)}</div>
                         </li>
                       )}
@@ -384,9 +295,9 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       </div>
 
       {/* Toast */}
-      {toastMessage && (
+      {input.toastMessage && (
         <Toast
-          message={toastMessage}
+          message={input.toastMessage}
           onClose={closeToast}
           ms={1800}
         />

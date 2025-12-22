@@ -1,74 +1,33 @@
 // shared/domain/meongsik/ensureSolarBirthDay.ts
-import * as solarlunar from "solarlunar";
+
 import type { MyeongSik } from "@/shared/lib/storage";
+import { parseBirthDayLoose } from "@/shared/lib/core/birthFields";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
-/* ── solarlunar interop ── */
-type Lunar2SolarRaw = { cYear: number; cMonth: number; cDay: number; isLeap?: boolean };
-type SolarLunarAPI = {
-  lunar2solar: (y: number, m: number, d: number, isLeap?: boolean) => Lunar2SolarRaw;
-};
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-function hasDefault(v: unknown): v is { default: unknown } {
-  return isRecord(v) && "default" in v;
-}
-function hasLunar2Solar(v: unknown): v is { lunar2solar: SolarLunarAPI["lunar2solar"] } {
-  return isRecord(v) && typeof (v)["lunar2solar"] === "function";
-}
-function assertL2S(v: unknown): Lunar2SolarRaw {
-  if (!isRecord(v)) throw new Error("Invalid lunar2solar result");
-  const y = v["cYear"], m = v["cMonth"], d = v["cDay"], leap = v["isLeap"];
-  if (typeof y !== "number" || typeof m !== "number" || typeof d !== "number") {
-    throw new Error("Invalid lunar2solar fields");
-  }
-  return { cYear: y, cMonth: m, cDay: d, isLeap: typeof leap === "boolean" ? leap : undefined };
-}
-function pickSolarLunar(mod: unknown): SolarLunarAPI {
-  const base: unknown = hasDefault(mod) ? (mod as { default: unknown }).default : mod;
-  if (!hasLunar2Solar(base)) throw new Error("solarlunar.lunar2solar not found");
-  const lunar2solar = (y: number, m: number, d: number, isLeap?: boolean): Lunar2SolarRaw => {
-    const res = (base).lunar2solar(y, m, d, !!isLeap);
-    return assertL2S(res);
-  };
-  return { lunar2solar };
-}
-const SL = pickSolarLunar(solarlunar);
-
-/* ── 메인: 음→양 보장 ── */
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
+/**
+ * 음력 입력을 “양력 YYYYMMDD”로 변환해주기.
+ * - 변환 실패 시 원본 그대로 반환 (안전)
+ * - 현재 프로젝트 기준: lunarToSolarStrict(윤달 미적용) 유지
+ */
 export function ensureSolarBirthDay(ms: MyeongSik): MyeongSik {
-  const any = ms;
-  const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
-  const calType  = typeof any.calendarType === "string" ? any.calendarType : "solar";
-  if (birthDay.length < 8 || calType !== "lunar") return ms;
+  if (ms.calendarType !== "lunar") return ms;
 
-  const y = Number(birthDay.slice(0, 4));
-  const m = Number(birthDay.slice(4, 6));
-  const d = Number(birthDay.slice(6, 8));
-
-  // 다양한 윤달 필드 수용
-  const leapFlags = ["isLeap", "isLeapMonth", "leapMonth", "leap", "lunarLeap"] as const;
-  let isLeap = false;
-  for (const k of leapFlags) {
-    const v = (any as Record<string, unknown>)[k]; // 안전하게 string 인덱싱
-    if (typeof v === "boolean") { isLeap = v; break; }
-    if (typeof v === "number")  { isLeap = v === 1; break; }
-    if (typeof v === "string")  { isLeap = v === "1" || v.toLowerCase() === "true"; break; }
-  }
+  const parsed = parseBirthDayLoose(ms.birthDay ?? "");
+  if (!parsed) return ms;
 
   try {
-    const res = SL.lunar2solar(y, m, d, isLeap);
-    const newBirthDay = `${res.cYear}${pad2(res.cMonth)}${pad2(res.cDay)}`;
+    const solar = lunarToSolarStrict(parsed.y, parsed.m, parsed.d, 0, 0);
+    const yyyy = solar.getFullYear();
+    const mm = solar.getMonth() + 1;
+    const dd = solar.getDate();
     return {
       ...ms,
-      birthDay: newBirthDay,
+      birthDay: `${yyyy}${pad2(mm)}${pad2(dd)}`,
       calendarType: "solar",
-    } as MyeongSik;
+    };
   } catch {
-    // 실패 시 원본 유지(최소 안전)
     return ms;
   }
 }

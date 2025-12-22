@@ -1,19 +1,13 @@
-// components/MyeongSikEditor.tsx
-import { useEffect, useMemo, useState } from "react";
+﻿// components/MyeongSikEditor.tsx
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
-import { getYearGanZhi } from "@/shared/domain/간지/공통";
 import BirthPlacePickerBridge from "@/features/place-picker/BirthPlacePicker";
 import { RelationshipSelector } from "@/features/relationship/RelationshipSelector";
-import { normalizeFolderValue, UNASSIGNED_LABEL } from "@/features/sidebar/model/folderModel";
-import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
-import { type CalendarType, lunarToSolarStrict }  from "@/shared/lib/calendar/lunar";
-
-
-type FormState = Partial<MyeongSik> & { calendarType: CalendarType };
-
-const LS_KEY = "ms_folders";
+import { UNASSIGNED_LABEL } from "@/features/sidebar/model/folderModel";
+import type { CalendarType } from "@/shared/type";
+import { useMyeongSikEditorInput } from "@/app/pages/myeongSikEditor/input/useMyeongSikEditorInput";
+import { useMyeongSikEditorCalc } from "@/app/pages/myeongSikEditor/calc/useMyeongSikEditorCalc";
+import { useMyeongSikEditorSave } from "@/app/pages/myeongSikEditor/save/useMyeongSikEditorSave";
 
 /* ===== 테마 공통 클래스 ===== */
 const inputBase =
@@ -53,180 +47,34 @@ export default function MyeongSikEditor({
   onClose?: () => void;
 }) {
   const { list, update, remove } = useMyeongSikStore();
-  const [isEditing, setIsEditing] = useState(false);
-
-  const [form, setForm] = useState<FormState>({
-    ...item,
-    calendarType: (item.calendarType as CalendarType) ?? "solar",
+  const input = useMyeongSikEditorInput(item);
+  const calc = useMyeongSikEditorCalc({
+    list,
+    customFolders: input.customFolders,
+    form: input.form,
   });
-  const [unknownTime, setUnknownTime] = useState(!item.birthTime || item.birthTime === "모름");
-  const [unknownPlace, setUnknownPlace] = useState(!item.birthPlace || item.birthPlace.name === "모름");
-
-  // 폴더 옵션
-  const FOLDER_PRESETS = useMemo(() => ["가족", "친구", "직장", "지인", "고객", "기타"], []);
-  const [customFolders, setCustomFolders] = useState<string[]>([]);
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(LS_KEY) || "[]");
-      if (Array.isArray(saved)) setCustomFolders(saved);
-    } catch { /* noop */ }
-  }, []);
-  const folderOptions = useMemo(() => {
-    const fromStore = Array.from(new Set(list.map((m) => m.folder).filter(Boolean))) as string[];
-    const set = new Set<string>([...FOLDER_PRESETS, ...customFolders, ...fromStore]);
-    const arr = Array.from(set).sort((a, b) => a.localeCompare(b));
-    return [UNASSIGNED_LABEL, ...arr];
-  }, [list, customFolders, FOLDER_PRESETS]);
-
-  const resetForm = () => {
-    setForm({
-      ...item,
-      calendarType: (item.calendarType as CalendarType) ?? "solar",
-    });
-    setUnknownTime(!item.birthTime || item.birthTime === "모름");
-    setUnknownPlace(!item.birthPlace || item.birthPlace.name === "모름");
-  };
-
-  const validate = (): string | null => {
-    if (!form.name || form.name.trim() === "") return "이름을 입력해주세요.";
-    if (!form.birthDay || !/^\d{8}$/.test(form.birthDay))
-      return "생년월일은 YYYYMMDD 형식으로 입력해주세요.";
-
-    const y = Number(form.birthDay.slice(0, 4));
-    const mo = Number(form.birthDay.slice(4, 6));
-    const d = Number(form.birthDay.slice(6, 8));
-
-    if (form.calendarType === "lunar") {
-      try {
-        lunarToSolarStrict(y, mo, d);
-      } catch (e: unknown) {
-        return e instanceof Error ? e.message : "음력 날짜가 유효하지 않습니다.";
-      }
-    } else {
-      const date = new Date(y, mo - 1, d);
-      if (date.getFullYear() !== y || date.getMonth() + 1 !== mo || date.getDate() !== d)
-        return "존재하지 않는 양력 날짜입니다.";
-    }
-
-    if (!unknownTime) {
-      if (!form.birthTime || !/^\d{4}$/.test(form.birthTime))
-        return "태어난 시간은 0000–2359 형식(4자리)으로 입력해주세요.";
-      const hh = Number(form.birthTime.slice(0, 2));
-      const mm = Number(form.birthTime.slice(2, 4));
-      if (hh < 0 || hh > 23 || mm < 0 || mm > 59)
-        return "태어난 시간은 0000–2359 범위여야 합니다.";
-    }
-    if (!unknownPlace && !form.birthPlace)
-      return "태어난 지역을 선택하거나 '모름'을 체크해주세요.";
-    return null;
-  };
-
-  const save = () => {
-    const err = validate();
-    if (err) {
-      alert(err);
-      return;
-    }
-
-    // 1) 입력값(편집중 값)으로 Y/M/D 결정
-    const y0 = Number(form.birthDay!.slice(0, 4));
-    const mo0 = Number(form.birthDay!.slice(4, 6));
-    const d0 = Number(form.birthDay!.slice(6, 8));
-
-    let y = y0, mo = mo0, d = d0;
-    if (form.calendarType === "lunar") {
-      const solar = lunarToSolarStrict(y0, mo0, d0); // 필요시 윤달 플래그 추가 가능
-      y = solar.getFullYear(); mo = solar.getMonth() + 1; d = solar.getDate();
-    }
-
-    // 2) 시간/분
-    const hh = unknownTime ? 4 : Number((form.birthTime ?? "0430").slice(0, 2));
-    const mi = unknownTime ? 30 : Number((form.birthTime ?? "0430").slice(2, 4));
-
-    // 3) 장소/경도
-    const lon =
-      unknownPlace || !form.birthPlace || form.birthPlace.lon === 0
-        ? 127.5
-        : form.birthPlace.lon;
-
-    // 4) 원시 Date 및 보정
-    const rawBirth = new Date(y, mo - 1, d, hh, mi, 0, 0);
-    const isUnknownPlace = !form.birthPlace || (typeof form.birthPlace === "object" && form.birthPlace.name === "모름");
-    const corrected = getCorrectedDate(rawBirth, lon, isUnknownPlace);
-
-    // 5) 연간지로 대운방향 결정
-    const yGZ = getYearGanZhi(corrected, lon); // 기존 시그니처 유지
-    const yearStem = yGZ.charAt(0);
-    const calcDaewoonDir = (stem: string, gender: string): "forward" | "backward" => {
-      const yangStems = ["甲","丙","戊","庚","壬","갑","병","무","경","임"];
-      const isYang = yangStems.includes(stem);
-      const isMale = (gender ?? "남자") === "남자";
-      return isYang ? (isMale ? "forward" : "backward") : (isMale ? "backward" : "forward");
-    };
-    const dir = calcDaewoonDir(yearStem, form.gender ?? "남자");
-
-    // 6) 저장 payload 구성(편집값 기준)
-    const normalizedFolder = normalizeFolderValue(
-      form.folder === UNASSIGNED_LABEL ? undefined : form.folder
-    );
-
-    const base: MyeongSik = {
-      ...item, // id 등 고정 필드 유지
-      name: (form.name ?? "").trim() || "이름없음",
-      birthDay: form.birthDay!,                    // 원본 입력(YYYYMMDD, lunar일 수도 있음)
-      birthTime: unknownTime ? "모름" : (form.birthTime ?? "0430"),
-      gender: form.gender ?? "남자",
-      birthPlace: unknownPlace
-        ? { name: "모름", lat: 0, lon: 127.5 }
-        : (form.birthPlace ?? { name: "모름", lat: 0, lon: 127.5 }),
-      relationship: form.relationship ?? "",
-      memo: form.memo ?? "",
-      folder: normalizedFolder,
-      calendarType: form.calendarType ?? "solar",
-      mingSikType: form.mingSikType ?? "조자시/야자시",
-      DayChangeRule: (form.mingSikType ?? "조자시/야자시") === "인시" ? "인시일수론" : "자시일수론",
-      dir,
-      corrected,                 // ✅ 새로 계산한 보정 Date 반영
-      // 아래 필드는 recalcGanjiSnapshot가 다시 채움
-      correctedLocal: "",
-      ganji: "",
-    };
-
-    // 7) 간지 스냅샷/보정시 문자열 재계산
-    const snapshot = recalcGanjiSnapshot(base);
-    const payload: Partial<MyeongSik> = { ...base, ...snapshot };
-
-    // 8) 사용자 폴더 신규면 저장
-    if (
-      payload.folder &&
-      !FOLDER_PRESETS.includes(payload.folder) &&
-      !customFolders.includes(payload.folder)
-    ) {
-      const next = [...customFolders, payload.folder];
-      setCustomFolders(next);
-      localStorage.setItem(LS_KEY, JSON.stringify(next));
-    }
-
-    // 9) 저장
-    update(item.id, payload);
-    setIsEditing(false);
-    if (onClose) onClose();
-  };
-
-
-  const removeThis = () => {
-    if (confirm(`'${item.name}' 명식을 삭제할까요?`)) remove(item.id);
-  };
+  const save = useMyeongSikEditorSave({
+    item,
+    form: input.form,
+    unknownTime: input.unknownTime,
+    unknownPlace: input.unknownPlace,
+    customFolders: input.customFolders,
+    setCustomFolders: input.setCustomFolders,
+    update,
+    remove,
+    onClose,
+    onSaved: () => input.setIsEditing(false),
+  });
 
   // ===== 뷰 모드 =====
-  if (!isEditing) {
+  if (!input.isEditing) {
     return (
       <div className="p-4 space-y-3 transition-colors duration-200 bg-white text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold"> {item.name} </h3>
           <div className="flex gap-2">
-            <button className={btnAmber} onClick={() => setIsEditing(true)}>수정</button>
-            <button className={btnRed} onClick={removeThis}>삭제</button>
+            <button className={btnAmber} onClick={() => input.setIsEditing(true)}>수정</button>
+            <button className={btnRed} onClick={save.removeThis}>삭제</button>
             {onClose && (
               <button className={btnNeutral} onClick={onClose}>닫기</button>
             )}
@@ -272,8 +120,8 @@ export default function MyeongSikEditor({
         <label className={labelBase}>이름</label>
         <input
           className={inputBase}
-          value={form.name || ""}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          value={input.form.name || ""}
+          onChange={(e) => input.updateForm("name", e.target.value)}
           placeholder="이름"
         />
       </div>
@@ -284,12 +132,12 @@ export default function MyeongSikEditor({
           <label className={labelBase}>생년월일 (YYYYMMDD)</label>
           <input
             className={inputBase}
-            value={form.birthDay || ""}
+            value={input.form.birthDay || ""}
             onChange={(e) =>
-              setForm({
-                ...form,
-                birthDay: e.target.value.replace(/\D/g, "").slice(0, 8),
-              })
+              input.updateForm(
+                "birthDay",
+                e.target.value.replace(/\D/g, "").slice(0, 8)
+              )
             }
             inputMode="numeric"
             maxLength={8}
@@ -302,8 +150,8 @@ export default function MyeongSikEditor({
                   type="radio"
                   className={radioAccent}
                   name="calendarType"
-                  checked={form.calendarType === "solar"}
-                  onChange={() => setForm({ ...form, calendarType: "solar" })}
+                  checked={input.form.calendarType === "solar"}
+                  onChange={() => input.updateForm("calendarType", "solar" as CalendarType)}
                   id="editor_calendar_solar"
                 />
                 <label htmlFor="editor_calendar_solar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer">양력</label>
@@ -313,28 +161,15 @@ export default function MyeongSikEditor({
                   type="radio"
                   className={radioAccent}
                   name="calendarType"
-                  checked={form.calendarType === "lunar"}
-                  onChange={() => setForm({ ...form, calendarType: "lunar" })}
+                  checked={input.form.calendarType === "lunar"}
+                  onChange={() => input.updateForm("calendarType", "lunar" as CalendarType)}
                   id="editor_calendar_lunar"
                 />
                 <label htmlFor="editor_calendar_lunar" className="inline-flex items-center gap-1 text-sm text-neutral-800 dark:text-neutral-200 cursor-pointer">음력</label>
               </span>
             </div>
-            {form.calendarType === "lunar" && form.birthDay?.length === 8 && (
-              <span className={smallMuted}>
-                {(() => {
-                  try {
-                    const y = Number(form.birthDay.slice(0, 4));
-                    const m = Number(form.birthDay.slice(4, 6));
-                    const d = Number(form.birthDay.slice(6, 8));
-                    const out = lunarToSolarStrict(y, m, d);
-                    return `→ 양력 ${out.getFullYear()}-${String(out.getMonth() + 1).padStart(2, "0")}-${String(out.getDate()).padStart(2, "0")}`;
-                  } catch (e: unknown) {
-                    const msg = e instanceof Error ? e.message : undefined;
-                    return `→ 변환 실패${msg ? `: ${msg}` : ""}`;
-                  }
-                })()}
-              </span>
+            {calc.lunarPreview && (
+              <span className={smallMuted}>{calc.lunarPreview}</span>
             )}
           </div>
         </div>
@@ -343,24 +178,24 @@ export default function MyeongSikEditor({
           <label className={labelBase}>태어난 시간 (HHMM)</label>
           <input
             className={`${inputBase} disabled:opacity-50`}
-            value={unknownTime ? "" : form.birthTime || ""}
+            value={input.unknownTime ? "" : input.form.birthTime || ""}
             onChange={(e) =>
-              setForm({
-                ...form,
-                birthTime: e.target.value.replace(/\D/g, "").slice(0, 4),
-              })
+              input.updateForm(
+                "birthTime",
+                e.target.value.replace(/\D/g, "").slice(0, 4)
+              )
             }
             inputMode="numeric"
             maxLength={4}
             placeholder="예: 1524"
-            disabled={unknownTime}
+            disabled={input.unknownTime}
           />
           <div className="mt-1 text-sm flex items-center gap-2">
             <input
               type="checkbox"
               className={checkboxAccent}
-              checked={unknownTime}
-              onChange={(e) => setUnknownTime(e.target.checked)}
+              checked={input.unknownTime}
+              onChange={(e) => input.setUnknownTime(e.target.checked)}
               id="editor_birthTimeX"
             />
             <label htmlFor="editor_birthTimeX" className="text-neutral-800 dark:text-neutral-200 cursor-pointer">
@@ -383,8 +218,8 @@ export default function MyeongSikEditor({
                     type="radio"
                     className={radioAccent}
                     name="mingSikType"
-                    checked={(form.mingSikType ?? "자시") === v}
-                    onChange={() => setForm({ ...form, mingSikType: v })}
+                    checked={(input.form.mingSikType ?? "자시") === v}
+                    onChange={() => input.updateForm("mingSikType", v)}
                     id={id}
                   />
                   <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200 cursor-pointer">{v}</label>
@@ -404,9 +239,9 @@ export default function MyeongSikEditor({
                     type="radio"
                     className={radioAccent}
                     name="gender"
-                    value={g}                       
-                    checked={form.gender === g}     
-                    onChange={(e) => setForm({ ...form, gender: e.target.value })}
+                    value={g}
+                    checked={input.form.gender === g}
+                    onChange={(e) => input.updateForm("gender", e.target.value)}
                     id={id}
                   />
                   <label htmlFor={id} className="text-neutral-800 dark:text-neutral-200 cursor-pointer">{g}</label>
@@ -422,16 +257,16 @@ export default function MyeongSikEditor({
         <label className={labelBase}>태어난 지역</label>
         <BirthPlacePickerBridge
           onSelect={(p: { name: string; lat: number; lon: number }) =>
-            setForm({ ...form, birthPlace: p })
+            input.updateForm("birthPlace", p)
           }
-          value={unknownPlace ? "출생지선택" : form.birthPlace?.name ?? ""}
+          value={input.unknownPlace ? "출생지선택" : input.form.birthPlace?.name ?? ""}
         />
         <div className="mt-1 text-sm flex items-center gap-2">
           <input
             type="checkbox"
             className={checkboxAccent}
-            checked={unknownPlace}
-            onChange={(e) => setUnknownPlace(e.target.checked)}
+            checked={input.unknownPlace}
+            onChange={(e) => input.setUnknownPlace(e.target.checked)}
             id="editor_birthPlaceX"
           />
           <label htmlFor="editor_birthPlaceX" className="text-neutral-800 dark:text-neutral-200 cursor-pointer">
@@ -444,8 +279,8 @@ export default function MyeongSikEditor({
       <div>
         <label className={labelBase}>관계</label>
         <RelationshipSelector
-          value={form.relationship || ""}
-          onChange={(value: string) => setForm({ ...form, relationship: value })}
+          value={input.form.relationship || ""}
+          onChange={(value: string) => input.updateForm("relationship", value)}
         />
       </div>
 
@@ -454,17 +289,17 @@ export default function MyeongSikEditor({
         <label className={labelBase}>폴더</label>
         <select
           className={selectBase}
-          value={form.folder ?? UNASSIGNED_LABEL}
+          value={input.form.folder ?? UNASSIGNED_LABEL}
           onChange={(e) => {
             const v = e.target.value;
             if (v === UNASSIGNED_LABEL) {
-              setForm({ ...form, folder: undefined });
+              input.updateForm("folder", undefined);
             } else {
-              setForm({ ...form, folder: v });
+              input.updateForm("folder", v);
             }
           }}
         >
-          {folderOptions.map((f) => (
+          {calc.folderOptions.map((f) => (
             <option key={f} value={f === UNASSIGNED_LABEL ? UNASSIGNED_LABEL : f}>
               {f}
             </option>
@@ -477,8 +312,8 @@ export default function MyeongSikEditor({
         <label className={labelBase}>메모</label>
         <textarea
           className={textareaBase}
-          value={form.memo || ""}
-          onChange={(e) => setForm({ ...form, memo: e.target.value })}
+          value={input.form.memo || ""}
+          onChange={(e) => input.updateForm("memo", e.target.value)}
           placeholder="메모를 입력하세요"
         />
       </div>
@@ -488,15 +323,15 @@ export default function MyeongSikEditor({
         <button
           className={btnNeutral}
           onClick={() => {
-            resetForm();
-            setIsEditing(false);
+            input.resetForm();
+            input.setIsEditing(false);
           }}
         >
           취소
         </button>
         <button
           className={btnGreen}
-          onClick={save}
+          onClick={save.save}
         >
           저장
         </button>

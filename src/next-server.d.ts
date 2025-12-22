@@ -1,6 +1,6 @@
-declare module "next/server" {
-  export interface NextRequest {}
+﻿declare module "next/server" {
+  export type NextRequest = Request;
   export class NextResponse {
-    static json(body: any, init?: any): any;
+    static json(body: unknown, init?: ResponseInit): Response;
   }
 }

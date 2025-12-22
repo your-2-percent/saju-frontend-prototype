@@ -1,9 +1,7 @@
 import type { Element, TenGod } from "./types";
+import { STEM_H2K } from "@/shared/domain/간지/const";
 
 /* 한자→한글 보정(일간/오행 모두 커버) */
-const STEM_H2K: Record<string, string> = {
-  "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무","己":"기","庚":"경","辛":"신","壬":"임","癸":"계",
-};
 const EL_H2K: Record<string, Element> = { "木":"목","火":"화","土":"토","金":"금","水":"수" };
 
 /**

@@ -1,3 +1,4 @@
+// src/features/relationship/RelationshipSelector.tsx
 import { useState, useEffect } from "react";
 import {
   DragDropContext,
@@ -34,11 +35,14 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
 
   const { list } = useMyeongSikStore();
 
-  // 이미 본인 지정된 명식이 있는지 체크
-  const hasSelf = list.some((m) => m.relationship === "본인");
+  const currentValue = (value ?? selected ?? "").trim();
+  const isCurrentSelf = currentValue === "본인";
 
-  // 옵션 목록에서 본인 제거 (이미 본인이 있는 경우)
-  const filteredOptions = hasSelf
+  // 이미 본인 지정된 명식이 있는지 체크
+  const hasSelf = list.some((m) => (m.relationship ?? "").trim() === "본인");
+
+  // 옵션 목록에서 본인 제거 (이미 본인이 있는 경우, 단 현재 값이 본인이면 유지)
+  const filteredOptions = hasSelf && !isCurrentSelf
     ? options.filter((o) => o.value !== "본인")
     : options;
 

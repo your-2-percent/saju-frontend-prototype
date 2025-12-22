@@ -1,5 +1,6 @@
-// features/AnalysisReport/strength.ts
+﻿// features/AnalysisReport/strength.ts
 import type { Element, TenGod } from "./types";
+import { STEM_H2K, BRANCH_H2K } from "@/shared/domain/간지/const";
 
 /**
  * Day Stem → Element
@@ -31,14 +32,6 @@ const ZERO_ELEM: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수
 const ZERO_TG: Record<TenGod, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 };
 
 /* ────────────── 한자→한글 보정 ────────────── */
-const STEM_H2K: Record<string, string> = {
-  甲: "갑", 乙: "을", 丙: "병", 丁: "정", 戊: "무",
-  己: "기", 庚: "경", 辛: "신", 壬: "임", 癸: "계",
-};
-const BRANCH_H2K: Record<string, string> = {
-  子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
-  午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해",
-};
 const toKoStem = (ch: string) => STEM_H2K[ch] ?? ch;
 const toKoBranch = (ch: string) => BRANCH_H2K[ch] ?? ch;
 function toKoGZ(raw: string): string {
@@ -292,3 +285,4 @@ export function computeDeukFlags10(
 
   return { flags, monthBranch: monthB, dayEl };
 }
+

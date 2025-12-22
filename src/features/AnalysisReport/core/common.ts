@@ -1,19 +1,13 @@
 // features/AnalysisReport/core/common.ts
 import type { Element } from "../utils/types";
+import { BRANCH_H2K, STEM_H2K } from "@/shared/domain/간지/const";
+import { isYinUnified, toDisplayChar } from "@/shared/domain/간지/convert";
 
-/** 한자↔한글 매핑 */
-export const STEM_H2K: Record<string, string> = {
-  甲: "갑", 乙: "을", 丙: "병", 丁: "정", 戊: "무",
-  己: "기", 庚: "경", 辛: "신", 壬: "임", 癸: "계",
-};
-export const BRANCH_H2K: Record<string, string> = {
-  子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
-  午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해",
-};
 export const STEM_K2H: Record<string, string> =
   Object.fromEntries(Object.entries(STEM_H2K).map(([h,k]) => [k,h]));
 export const BRANCH_K2H: Record<string, string> =
   Object.fromEntries(Object.entries(BRANCH_H2K).map(([h,k]) => [k,h]));
+export { STEM_H2K, BRANCH_H2K };
 
 /** 천간/지지 → 오행 */
 export const STEM_TO_ELEMENT: Record<string, Element> = {
@@ -46,24 +40,7 @@ export function isValidPillars(p: string[]): p is [string,string,string,string] 
   return p.length === 4 && p.every((x) => x.length === 2);
 }
 
-/** 한자/한글 표시 */
-export function toDisplayChar(
-  value: string,
-  kind: "stem" | "branch",
-  charType: "한자" | "한글"
-) {
-  if (charType === "한글") {
-    return kind === "stem" ? (STEM_H2K[value] ?? value) : (BRANCH_H2K[value] ?? value);
-  }
-  return kind === "stem" ? (STEM_K2H[value] ?? value) : (BRANCH_K2H[value] ?? value);
-}
-
-/** 음간/음지 판별(통합셋) */
-export const YIN_STEMS_ALL = new Set<string>(["乙","丁","己","辛","癸","을","정","기","신","계"]);
-export const YIN_BRANCHES_ALL = new Set<string>(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]);
-export function isYinUnified(value: string, kind: "stem" | "branch") {
-  return kind === "stem" ? YIN_STEMS_ALL.has(value) : YIN_BRANCHES_ALL.has(value);
-}
+export { toDisplayChar, isYinUnified };
 
 /** 문자열 → 오행 라벨 정규화 */
 export function normElLabel(raw?: unknown): Element | null {

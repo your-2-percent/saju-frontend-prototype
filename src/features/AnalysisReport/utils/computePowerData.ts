@@ -1,288 +1,40 @@
-// features/AnalysisReport/utils/computePowerData.ts
+﻿// features/AnalysisReport/utils/computePowerData.ts
 import type { PowerData, TenGod, Element } from "./types";
-import {
-  STEM_TO_ELEMENT as STEM_TO_ELEMENT_BASE,
-  BRANCH_MAIN_ELEMENT as BRANCH_MAIN_ELEMENT_BASE,
-} from "./hiddenStem";
 import { getTenGodColors } from "./colors";
 import { TONGGEUN_HAGEONCHUNG, TONGGEUN_CLASSIC } from "./tonggeun";
 import { applyHarmonyOverlay, normalizeGZ } from "../logic/relations";
-import { computeDeukFlags, type DeukFlags, type CriteriaMode } from "./strength";
+import { computeDeukFlags } from "./strength";
+import type { ComputeOptions, ComputeResult, TenGodSubtype } from "../calc/powerDataTypes";
+import {
+  BRANCH_EL,
+  BRANCH_MAIN_STEM,
+  LV_ADJ,
+  KE,
+  PILLAR_ORDER,
+  SHENG_NEXT,
+  SHENG_PREV,
+  STEM_EL,
+  WEIGHTS_CLASSIC,
+  WEIGHTS_MODERN,
+  allocateByLargestRemainder,
+  branchPolarity,
+  elementOfGodMajor,
+  gzBranch,
+  gzStem,
+  normalizeTo100Strict,
+  projectionPercent,
+  relationLevel,
+  stemPolarity,
+  toKoGZ,
+  type YinYang,
+} from "../calc/powerDataPrimitives";
+import {
+  buildEmptyPowerDataResult,
+  deriveDayStemAndElement,
+  hasRequiredPillars,
+} from "../calc/powerDataBuilders";
 
-/* =========================
- * 한자↔한글 보정
- * ========================= */
-const STEM_H2K: Record<string, string> = {
-  甲: "갑",
-  乙: "을",
-  丙: "병",
-  丁: "정",
-  戊: "무",
-  己: "기",
-  庚: "경",
-  辛: "신",
-  壬: "임",
-  癸: "계",
-};
-const BRANCH_H2K: Record<string, string> = {
-  子: "자",
-  丑: "축",
-  寅: "인",
-  卯: "묘",
-  辰: "진",
-  巳: "사",
-  午: "오",
-  未: "미",
-  申: "신",
-  酉: "유",
-  戌: "술",
-  亥: "해",
-};
-const STEM_K2H: Record<string, string> = {
-  갑: "甲",
-  을: "乙",
-  병: "丙",
-  정: "丁",
-  무: "戊",
-  기: "己",
-  경: "庚",
-  신: "辛",
-  임: "壬",
-  계: "癸",
-};
-const BRANCH_K2H: Record<string, string> = {
-  자: "子",
-  축: "丑",
-  인: "寅",
-  묘: "卯",
-  진: "辰",
-  사: "巳",
-  오: "午",
-  미: "未",
-  신: "申",
-  유: "酉",
-  술: "戌",
-  해: "亥",
-};
-const toKoStem = (ch: string) => STEM_H2K[ch] ?? ch;
-const toKoBranch = (ch: string) => BRANCH_H2K[ch] ?? ch;
-function toKoGZ(raw: string): string {
-  if (!raw || raw.length < 2) return "";
-  return `${toKoStem(raw[0]!)}` + `${toKoBranch(raw[1]!)}`;
-}
-
-/* =========================
- * 안전 게터 (한자/한글 둘 다 대응)
- * ========================= */
-function STEM_EL(s: string): Element | undefined {
-  return (STEM_TO_ELEMENT_BASE as Record<string, Element>)[s]
-    ?? (STEM_TO_ELEMENT_BASE as Record<string, Element>)[STEM_K2H[s] ?? ""];
-}
-function BRANCH_EL(b: string): Element | undefined {
-  return (BRANCH_MAIN_ELEMENT_BASE as Record<string, Element>)[b]
-    ?? (BRANCH_MAIN_ELEMENT_BASE as Record<string, Element>)[BRANCH_K2H[b] ?? ""];
-}
-
-/* =========================
- * 자리 가중치(현대/고전)
- * ========================= */
-type PillarPos = "year" | "month" | "day" | "hour";
-const PILLAR_ORDER: PillarPos[] = ["year", "month", "day", "hour"];
-
-// 현대
-const WEIGHTS_MODERN: Record<PillarPos, { stem: number; branch: number }> = {
-  year: { stem: 10, branch: 10 },
-  month: { stem: 15, branch: 30 },
-  day: { stem: 25, branch: 25 },
-  hour: { stem: 15, branch: 15 },
-};
-
-// 고전
-const WEIGHTS_CLASSIC: Record<PillarPos, { stem: number; branch: number }> = {
-  year: { stem: 10, branch: 10 },
-  month: { stem: 15, branch: 45 },
-  day: { stem: 25, branch: 40 },
-  hour: { stem: 15, branch: 12.5 },
-};
-
-/* =========================
- * 음양
- * ========================= */
-type YinYang = "양" | "음";
-const YIN_STEMS = new Set(["을", "정", "기", "신", "계"]);
-const BRANCH_YANG = new Set(["자", "인", "진", "오", "신", "술"]);
-const BRANCH_INVERT = new Set(["사", "오", "자", "해"]); // 반전 유지
-
-const stemPolarity = (s: string): YinYang => (YIN_STEMS.has(s) ? "음" : "양");
-const branchPolarity = (b: string): YinYang => {
-  const base: YinYang = BRANCH_YANG.has(b) ? "양" : "음";
-  return BRANCH_INVERT.has(b) ? (base === "양" ? "음" : "양") : base;
-};
-
-/* =========================
- * 정규화(합 100, 정수) — 표준 유틸
- * ========================= */
-export function normalizeTo100Strict(values: number[]): number[] {
-  const sum = values.reduce((a, b) => a + b, 0);
-  if (sum <= 0) return values.map(() => 0);
-  const pct = values.map((v) => (v * 100) / sum);
-  const base = pct.map((v) => Math.floor(v + 0.5));
-  const diff = 100 - base.reduce((a, b) => a + b, 0);
-  if (diff === 0) return base;
-
-  const order = pct
-    .map((v, i) => ({ i, frac: v - Math.floor(v + 0.5) }))
-    .sort((a, b) => b.frac - a.frac);
-
-  const out = base.slice();
-  if (diff > 0) {
-    for (let k = 0; k < diff; k++) out[order[k]!.i] += 1;
-  } else {
-    for (let k = 0; k < -diff; k++) out[order[order.length - 1 - k]!.i] -= 1;
-  }
-  return out;
-}
-
-/* =========================
- * 투출 가중
- * ========================= */
-function projectionPercent(dist: 0 | 1 | 2, samePol: boolean): number {
-  if (dist === 0) return samePol ? 1.0 : 0.8;
-  if (dist === 1) return samePol ? 0.6 : 0.5;
-  return samePol ? 0.3 : 0.2;
-}
-
-/* =========================
- * 상생/상극 + 십신↔오행 매핑
- * ========================= */
-type StrengthLevel = "왕" | "상" | "휴" | "수" | "사";
-const LV_ADJ: Record<StrengthLevel, number> = { 왕: +0.15, 상: +0.10, 휴: -0.15, 수: -0.20, 사: -0.25 };
-
-const SHENG_NEXT: Record<Element, Element> = { 목: "화", 화: "토", 토: "금", 금: "수", 수: "목" };
-const SHENG_PREV: Record<Element, Element> = { 화: "목", 토: "화", 금: "토", 수: "금", 목: "수" };
-const KE: Record<Element, Element> = { 목: "토", 화: "금", 토: "수", 금: "목", 수: "화" };
-const KE_REV: Record<Element, Element> = { 토: "목", 금: "화", 수: "토", 목: "금", 화: "수" };
-
-function relationLevel(me: Element, nb: Element): StrengthLevel {
-  if (me === nb) return "왕";
-  if (SHENG_NEXT[nb] === me) return "상";
-  if (SHENG_NEXT[me] === nb) return "휴";
-  if (KE[me] === nb) return "수";
-  if (KE[nb] === me) return "사";
-  return "휴";
-}
-
-/* =========================
- * 유틸
- * ========================= */
-const gzStem = (gz: string) => (gz && gz.length >= 1 ? gz[0]! : "");
-const gzBranch = (gz: string) => (gz && gz.length >= 2 ? gz[1]! : "");
-
-/* =========================
- * 타입
- * ========================= */
-export type TenGodSubtype =
-  | "비견"
-  | "겁재"
-  | "식신"
-  | "상관"
-  | "정재"
-  | "편재"
-  | "정관"
-  | "편관"
-  | "정인"
-  | "편인";
-
-export interface ComputeOptions {
-  pillars: string[];
-  dayStem?: string;
-  mode?: "hgc" | "classic";
-  hidden?: "all" | "regular";
-  debug?: boolean;
-  useHarmonyOverlay?: boolean;
-  criteriaMode?: CriteriaMode;
-  luck?: {
-    tab: "원국" | "대운" | "세운" | "월운" | "일운";
-    dae?: string | null;
-    se?: string | null;
-    wol?: string | null;
-    il?: string | null;
-  };
-  hourKey: string; // UI 트리거용
-}
-
-type PerTenGodSub = {
-  비견: number; 겁재: number; 식신: number; 상관: number;
-  정재: number; 편재: number; 정관: number; 편관: number;
-  정인: number; 편인: number;
-};
-
-export interface ComputeResult {
-  overlay: {
-    /** 십신 소분류 10개 (비견~편인) */
-    totalsSub: PerTenGodSub;
-    /** 천간별 세부 오행 기여 (예: 경금, 신금, 임수 등) */
-    perStemAugBare: Record<string, number>;
-    /** 해밀턴 배분 완료된 오행별 정규화 수치 */
-    perStemAugFull: Record<string, number>;
-  };
-  PerTenGodSub: PerTenGodSub;
-  totals: PowerData[]; // 대분류(비겁·식상·재성·관성·인성) — 합 100 정수
-  perTenGod: Record<TenGod, { a: TenGodSubtype; b: TenGodSubtype; aVal: number; bVal: number }>;
-  elementScoreRaw: Record<Element, number>;
-  deukFlags: DeukFlags;
-  /** 천간별 세부 오행 기여(예: 갑목/을목/경금/신금 …) */
-  perStemElement: Record<string, number>;
-  /** 위 값을 대분류 totals에 맞춰 비례 스케일(해밀턴 배분) */
-  perStemElementScaled: Record<string, number>;
-  stemScoreRaw: Record<string, number>;
-
-  /** ✅ 프롬프트/펜타곤 공용: 대분류→오행 역매핑 결과(합 100, 정수) */
-  elementPercent100: Record<Element, number>;
-}
-
-/* =========================
- * 해밀턴(최대잔여) 배분: totalUnits(정수) 를 weights 비율로 분배
- * ========================= */
-function allocateByLargestRemainder(weights: number[], totalUnits: number): number[] {
-  const sum = weights.reduce((a, b) => a + b, 0);
-  if (sum <= 0 || totalUnits <= 0) return new Array(weights.length).fill(0);
-
-  const quotas = weights.map((w) => (w / sum) * totalUnits);
-  const floors = quotas.map((q) => Math.floor(q));
-  let rem = totalUnits - floors.reduce((a, b) => a + b, 0);
-
-  const order = quotas
-    .map((q, i) => ({ i, frac: q - Math.floor(q) }))
-    .sort((a, b) => b.frac - a.frac);
-
-  const out = floors.slice();
-  for (let k = 0; k < order.length && rem > 0; k++) {
-    out[order[k]!.i] += 1;
-    rem -= 1;
-  }
-  return out;
-}
-
-/* =========================
- * 대분류 → 오행 역매핑 (외부 재사용 가능)
- * ========================= */
-export function elementOfGodMajor(god: TenGod, dEl: Element): Element {
-  switch (god) {
-    case "비겁":
-      return dEl;
-    case "식상":
-      return SHENG_NEXT[dEl];
-    case "재성":
-      return KE[dEl];
-    case "관성":
-      return KE_REV[dEl];
-    case "인성":
-      return SHENG_PREV[dEl];
-    default:
-      return dEl;
-  }
-}
+export { elementOfGodMajor, normalizeTo100Strict };
 
 /* =========================
  * 메인 계산기
@@ -306,111 +58,13 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   const elementScore: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
   const stemScoreRaw: Record<string, number> = {}; // 디버깅 추적용
 
-  // 지지→대표천간(본기) 매핑: 한글/한자 키 모두 지원
-  const BRANCH_MAIN_STEM: Record<string, string> = {
-    자: "계",
-    축: "기",
-    인: "갑",
-    묘: "을",
-    진: "무",
-    사: "병",
-    오: "정",
-    미: "기",
-    신: "경",
-    유: "신",
-    술: "무",
-    해: "임",
-    子: "계",
-    丑: "기",
-    寅: "갑",
-    卯: "을",
-    辰: "무",
-    巳: "병",
-    午: "정",
-    未: "기",
-    申: "경",
-    酉: "신",
-    戌: "무",
-    亥: "임",
-  };
-
   // 입력 정규화 (항상 한글 간지)
   const pillarsKo = (pillars ?? []).slice(0, 4).map(toKoGZ);
-  const requiredOK =
-    pillarsKo.length === 4 &&
-    pillarsKo[0] &&
-    pillarsKo[0].length >= 2 &&
-    pillarsKo[1] &&
-    pillarsKo[1].length >= 2 &&
-    pillarsKo[2] &&
-    pillarsKo[2].length >= 2;
-
-  const emptyOverlay = {
-    totalsSub: {
-      비견: 0, 겁재: 0, 식신: 0, 상관: 0,
-      정재: 0, 편재: 0, 정관: 0, 편관: 0,
-      정인: 0, 편인: 0,
-    },
-    perStemAugBare: {},
-    perStemAugFull: {},
-  };
-
-
-  if (!requiredOK) {
-    const zeros: PowerData[] = (["비겁", "식상", "재성", "관성", "인성"] as TenGod[]).map((n) => ({
-      name: n,
-      value: 0,
-      color: "#999999",
-    }));
-    return {
-      overlay: emptyOverlay,
-      totals: zeros,
-      perTenGod: {
-        비겁: { a: "비견", b: "겁재", aVal: 0, bVal: 0 },
-        식상: { a: "식신", b: "상관", aVal: 0, bVal: 0 },
-        재성: { a: "정재", b: "편재", aVal: 0, bVal: 0 },
-        관성: { a: "정관", b: "편관", aVal: 0, bVal: 0 },
-        인성: { a: "정인", b: "편인", aVal: 0, bVal: 0 },
-      },
-      PerTenGodSub : {
-        비견: 0,
-        겁재: 0,
-        식신: 0,
-        상관: 0,
-        정재: 0,
-        편재: 0,
-        정관: 0,
-        편관: 0,
-        정인: 0,
-        편인: 0
-      },
-      elementScoreRaw: elementScore,
-      deukFlags: {
-        비겁: { 령: false, 지: false, 세: false },
-        식상: { 령: false, 지: false, 세: false },
-        재성: { 령: false, 지: false, 세: false },
-        관성: { 령: false, 지: false, 세: false },
-        인성: { 령: false, 지: false, 세: false },
-      },
-      perStemElement: {},
-      perStemElementScaled: {},
-      stemScoreRaw: {},
-      elementPercent100: { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 },
-    };
+  if (!hasRequiredPillars(pillarsKo)) {
+    return buildEmptyPowerDataResult(elementScore);
   }
 
-  const dayStemFromPillars = gzStem(pillarsKo[2]!);
-  const dayStem = dayStemOverride ?? dayStemFromPillars;
-  const dayEl: Element =
-    dayStem === "갑" || dayStem === "을"
-      ? "목"
-      : dayStem === "병" || dayStem === "정"
-      ? "화"
-      : dayStem === "무" || dayStem === "기"
-      ? "토"
-      : dayStem === "경" || dayStem === "신"
-      ? "금"
-      : "수";
+  const { dayStem, dayEl } = deriveDayStemAndElement(pillarsKo, dayStemOverride);
 
   // 파트 트래킹
   type StemPart = { stem?: string; el?: Element; pol?: YinYang; val: number };
@@ -834,3 +488,5 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     elementPercent100,
   };
 }
+
+

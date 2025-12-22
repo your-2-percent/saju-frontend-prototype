@@ -10,7 +10,6 @@ import {
   usePromptCopySectionsStore,
   type PromptCopySections,
 } from "@/features/PromptCopyCard/promptCopySectionsStore";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 
 type SyncTable = {
   table: string;
@@ -66,20 +65,10 @@ export function useAppDbSync(userId: string | null) {
     });
 
     // 2) Realtime 구독 테이블 목록
-    //    ✅ 여기서 한 군데에서만 구독 관리하는 걸 추천 (중복구독하면 난리남 ㅠ)
+    //    ✅ 테이블별 Realtime 구독은 “단일 책임”으로 운영한다.
+    //    예) myeongsik은 useMyeongSikStore가 자체 Realtime을 갖고 있으니 여기서는 구독하지 않는다.
     const tables: SyncTable[] = [
       { table: "user_settings_kv", filterByUserId: true },
-
-      // ✅ 명식: DB에서 바뀌면(다른 기기 포함) loadFromServer로 싱크
-      // reorder 같이 이벤트가 연속으로 들어올 수 있어서 debounce 걸어둠
-      {
-        table: "myeongsik",
-        filterByUserId: true,
-        debounceMs: 200,
-        onChange: () => {
-          void useMyeongSikStore.getState().loadFromServer();
-        },
-      },
 
       // TODO: 다른 테이블도 동일 패턴으로 추가
       // { table: "folders", filterByUserId: true, debounceMs: 200, onChange: () => void useFolderStore.getState().loadFromServer() },

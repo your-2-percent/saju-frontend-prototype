@@ -6,3 +6,5 @@ export type DayChangeRule = "자시일수론" | "인시일수론";
 export type WoljuAlign = "prev-grid" | "dir-delta";
 // 시간 기준
 export type DayBoundaryRule = "자시" | "조자시/야자시" | "인시";
+// 달력 종류
+export type CalendarType = "solar" | "lunar";
