@@ -1,5 +1,6 @@
 // shared/domain/ganji/recalcGanjiSnapshot.ts
 import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
+import { parseBirthDayLoose, parseBirthTimeLoose } from "@/shared/lib/core/birthFields";
 import {
   getYearGanZhi,
   getMonthGanZhi,
@@ -8,64 +9,64 @@ import {
 } from "@/shared/domain/간지/공통";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
-import * as solarlunar from "solarlunar";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 
-/* --- solarlunar 래퍼 (CJS/ESM 안전) --- */
-type L2SRaw = { cYear: number; cMonth: number; cDay: number; isLeap?: boolean };
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-function assertL2S(v: unknown): L2SRaw {
-  if (!isRecord(v)) throw new Error("Invalid lunar2solar result");
-  const r = v as Record<string, unknown>;
-  const yVal = r["cYear"], mVal = r["cMonth"], dVal = r["cDay"];
-  if (typeof yVal !== "number" || typeof mVal !== "number" || typeof dVal !== "number") {
-    throw new Error("Invalid lunar2solar fields");
-  }
-  const leapVal = r["isLeap"];
-  const isLeap = typeof leapVal === "boolean" ? leapVal : undefined;
-  return { cYear: yVal, cMonth: mVal, cDay: dVal, isLeap };
-}
-function pickSL(mod: unknown) {
-  const base = (isRecord(mod) && "default" in mod ? (mod as { default?: unknown }).default : mod);
-  if (!isRecord(base)) throw new Error("solarlunar module invalid");
-  const fn = (base as Record<string, unknown>)["lunar2solar"];
-  if (typeof fn !== "function") throw new Error("solarlunar.lunar2solar not found");
-  return (y: number, m: number, d: number) => assertL2S(
-    (fn as (y: number, m: number, d: number, isLeap?: boolean) => unknown)(y, m, d, false)
-  );
-}
-const lunar2solarStrict = pickSL(solarlunar);
-
-/* --- 핵심: 간지/보정시 스냅샷 재계산 --- */
-export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "corrected" | "correctedLocal" | "ganji"> {
+/**
+ * 간지/보정시 스냅샷 재계산 (원국 기준)
+ * - birthDay: YYYYMMDD / YYYY-MM-DD 허용
+ * - birthTime: HHmm / HH:MM 허용
+ * - 음력 → 양력 변환은 현재 프로젝트 기준(lunarToSolarStrict: 윤달 미적용) 유지
+ */
+export function recalcGanjiSnapshot(
+  ms: MyeongSik,
+): Pick<MyeongSik, "corrected" | "correctedLocal" | "ganji" | "ganjiText" | "dayStem"> {
   const hourRule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
-  // 날짜 파싱
-  let y = Number(ms.birthDay.slice(0, 4));
-  let mo = Number(ms.birthDay.slice(4, 6));
-  let d = Number(ms.birthDay.slice(6, 8));
+  // ✅ 날짜 파싱(YYYYMMDD / YYYY-MM-DD 모두 허용)
+  const parsedDay = parseBirthDayLoose(ms.birthDay ?? "");
+  if (!parsedDay) {
+    // 포맷이 완전히 깨진 데이터면 여기서 터지지 말고, 기존 값 유지(최대한 안전).
+    const corrected = ms.corrected instanceof Date ? ms.corrected : new Date(NaN);
+    const ganji = typeof ms.ganji === "string" ? ms.ganji : "";
+    const ganjiText = typeof ms.ganjiText === "string" ? ms.ganjiText : ganji;
+    const dayStem = typeof ms.dayStem === "string" ? ms.dayStem : "";
+    return {
+      corrected,
+      correctedLocal: typeof ms.correctedLocal === "string" ? ms.correctedLocal : "",
+      ganji,
+      ganjiText,
+      dayStem,
+    };
+  }
+
+  let y = parsedDay.y;
+  let mo = parsedDay.m;
+  let d = parsedDay.d;
 
   // 음력 → 양력
   if (ms.calendarType === "lunar") {
-    const s = lunar2solarStrict(y, mo, d);
-    y = s.cYear; mo = s.cMonth; d = s.cDay;
+    try {
+      const solar = lunarToSolarStrict(y, mo, d, 0, 0);
+      y = solar.getFullYear();
+      mo = solar.getMonth() + 1;
+      d = solar.getDate();
+    } catch {
+      // 변환 실패 시: 원본 유지(터지지 않게)
+    }
   }
 
-  // 시간
-  const unknownTime = !ms.birthTime || ms.birthTime === "모름";
-  const hh = unknownTime ? 4 : Number(ms.birthTime.slice(0, 2));
-  const mi = unknownTime ? 30 : Number(ms.birthTime.slice(2, 4));
+  // ✅ 시간 파싱(HHmm / HH:MM 모두 허용)
+  const parsedTime = parseBirthTimeLoose(ms.birthTime ?? "");
+  const unknownTime = !ms.birthTime || ms.birthTime === "모름" || !parsedTime;
+  const hh = unknownTime ? 4 : parsedTime.hh;
+  const mi = unknownTime ? 30 : parsedTime.mm;
 
   // 경도 (모름이면 127.5)
   const lon =
-    !ms.birthPlace || ms.birthPlace.name === "모름" || ms.birthPlace.lon === 0
-      ? 127.5
-      : ms.birthPlace.lon;
+    !ms.birthPlace || ms.birthPlace.name === "모름" || ms.birthPlace.lon === 0 ? 127.5 : ms.birthPlace.lon;
 
   // 보정
   const raw = new Date(y, mo - 1, d, hh, mi, 0, 0);
-  //const isUnknownTime = !ms.birthTime || ms.birthTime === "모름";
   const isUnknownPlace = !ms.birthPlace || (typeof ms.birthPlace === "object" && ms.birthPlace.name === "모름");
   const corr = getCorrectedDate(raw, lon, isUnknownPlace);
   const correctedLocal = unknownTime
@@ -82,5 +83,11 @@ export function recalcGanjiSnapshot(ms: MyeongSik): Pick<MyeongSik, "corrected" 
     .filter(Boolean)
     .join(" ");
 
-  return { corrected: corr, correctedLocal, ganji: ganjiText };
+  return {
+    corrected: corr,
+    correctedLocal,
+    ganji: ganjiText,
+    ganjiText,
+    dayStem: dGZ.charAt(0),
+  };
 }

@@ -1,0 +1,147 @@
+// features/prompt/topicGuide/topicGuidesA.ts
+
+import type { MainCategoryKey, RelationMode, SubCategoryKey } from "./types";
+
+type Args = {
+  topic: MainCategoryKey;
+  subTopic?: SubCategoryKey;
+  relationMode?: RelationMode;
+  isStudyTone: boolean;
+};
+
+export function appendTopicGuidesA(lines: string[], args: Args): boolean {
+  const { topic, subTopic, relationMode, isStudyTone } = args;
+  const push = (...xs: string[]) => lines.push(...xs);
+
+  switch (topic) {
+    case "personality": {
+      if (!isStudyTone) {
+        push(
+          "",
+          "## 카테고리(성격·기질)",
+          "- 타고난 성향/성격에 초점을 둔다.",
+          "- 타고난 기질과 환경·경험 때문에 만들어진 행동 패턴을 구분해서 짚는다."
+        );
+      } else {
+        push(
+          "",
+          "## 카테고리(성격·기질·분석형)",
+          "- 사건 예언이 아니라 ‘반응 패턴/트리거/결정 습관’을 구조로 정리한다.",
+          "- 십신 단독 설명 금지. 오행 밸런스 + 용신/희기(사용 중인 체계 기준) + 합충형파해 트리거와 연결해서, 실제 행동으로 번역한다.",
+          "- 결론은 한 문장으로: “이 타입은 XX 상황에서 YY로 반응한다.” 같은 형태로 쓴다."
+        );
+      }
+
+      if (subTopic === "personality_shadow") {
+        push(
+          "- 약점·그림자 성향은 비난 없이, 실제 문제로 이어지는 트리거/상황을 짚고, 대응은 ‘행동 레벨’로만 제안한다."
+        );
+      }
+      if (subTopic === "personality_relationshipStyle") {
+        push("- 관계에서 거리두기/붙기 패턴, 오해 트리거를 사건/장면 단위로 쓴다.");
+      }
+      if (subTopic === "personality_workStyle") {
+        push("- 업무 스타일은 ‘잘 되는 환경/망하는 환경’을 구체 장면으로만 쓴다.");
+      }
+      if (subTopic === "personality_stressPattern") {
+        push("- 스트레스는 ‘터지는 조건’과 ‘무너지는 방식’을 구체적으로 적는다.");
+      }
+      return true;
+    }
+
+    case "lifeFlow": {
+      if (!isStudyTone) {
+        push(
+          "",
+          "## 카테고리(인생 흐름)",
+          "- 인생 전반의 큰 흐름과 사이클에 초점을 둔다.",
+          "- 반복되는 테마와 분위기 변화를 설명한다."
+        );
+      } else {
+        push(
+          "",
+          "## 카테고리(인생 흐름·분석형)",
+          "- 장황한 서사 금지. ‘전환기/피크/다운 구간’만 잡아서 구조적으로 정리한다.",
+          "- 전환기 판단 근거는: 대운 교체 + 세운 트리거(합충형파해) + 운성/신살 중첩 + 십신의 유기성으로만 제시한다.",
+          "- 결과는 ‘구간별 핵심 사건/의사결정 포인트’로만 쓴다."
+        );
+      }
+
+      if (subTopic === "lifeFlow_turningPoint") {
+        push("- 갈림길은 ‘선택지 A/B’로 쪼개고, 각각의 리스크를 사건 단위로 적는다.");
+      }
+      return true;
+    }
+
+    case "love": {
+      if (!isStudyTone) {
+        push(
+          "",
+          "## 카테고리(사랑·연애·결혼)",
+          "- 사랑/연애/결혼 이슈에 초점을 둔다.",
+          "- 감정선 변화, 애정 표현 방식, 관계 패턴을 중심으로 서술한다."
+        );
+      } else {
+        push(
+          "",
+          "## 카테고리(사랑·연애·결혼·분석형)",
+          "- ‘관계 사건’만 쓴다: 만남/재회/동거/혼인/파혼/이별/절연/소송성 분쟁.",
+          "- 십신(재·관·식상 등) 단독 해석 금지. 원국+운의 작용으로 ‘관계에 실제로 생기는 사건’만 도출한다.",
+          "- 합/충/파/형이 ‘관계 단절/격상’으로 작동하는 달(구간)만 강조한다."
+        );
+      }
+
+      if (relationMode === "solo") {
+        push("- 솔로 기준: 인연 유입/정리 시기, 관계가 사건으로 바뀌는 트리거만 적는다.");
+      } else if (relationMode === "couple") {
+        push("- 커플 기준: 싸움의 원인 분석 말고 ‘이 시기 이 사건(갈등/합의/결정)’이 난다로 적는다.");
+      }
+      return true;
+    }
+
+    case "career": {
+      if (!isStudyTone) {
+        push(
+          "",
+          "## 카테고리(직업·커리어)",
+          "- 직업/커리어/진로/공부·시험 이슈에 초점을 둔다."
+        );
+      } else {
+        push(
+          "",
+          "## 카테고리(직업·커리어·분석형)",
+          "- 커리어는 ‘사건’으로만: 이직/퇴사/해고/부서이동/승진/프로젝트 실패·성공/사업 시작·정리.",
+          "- 관성/식상/인성/재성의 유기성이 실제 직장 이벤트로 어떻게 번역되는지 명확히 쓴다.",
+          "- 문서(계약/평가/결재) 이슈는 신살·납음은 보조로만, 핵심은 합충형파해+십신 상호작용으로 찍는다."
+        );
+      }
+
+      if (subTopic === "career_jobChange") push("- 이동은 ‘언제 움직여야 이득/손해’로만 정리.");
+      if (subTopic === "career_promotion") push("- 승진은 조건 설명 말고 ‘승진/권한/책임 증가’ 사건으로 표현.");
+      return true;
+    }
+
+    case "money": {
+      if (!isStudyTone) {
+        push("", "## 카테고리(돈·재물)", "- 돈/재물/수입·지출 이슈에 초점을 둔다.");
+      } else {
+        push(
+          "",
+          "## 카테고리(돈·재물·분석형)",
+          "- 돈은 ‘큰 이벤트’만: 목돈 유입/유출, 대출/채무 재편, 투자 손익 확정, 보너스/정산, 세금·환급, 사업자금, 개인회생/법적 금융 절차.",
+          "- 재성 단독 해석 금지. 원국 구조 + 운의 합충형파해 + 십신 유기성으로 ‘돈이 들어오고/깨지는 사건’만 말한다.",
+          "- 납음오행·신살은 “확증(왜 그 달이 더 강한지)” 용도로만 한 줄 보조한다."
+        );
+      }
+
+      if (subTopic === "money_debt") push("- 빚/회생/조정은 절차 이벤트 중심으로(인가/보정/변제변경 등)."
+      );
+      if (subTopic === "money_bigEvent") {
+        push("- 이사·결혼·사업 같은 목돈 이벤트는 ‘돈이 어디서 땡겨지고 어디서 터지는지’로 적는다.");
+      }
+      return true;
+    }
+  }
+
+  return false;
+}

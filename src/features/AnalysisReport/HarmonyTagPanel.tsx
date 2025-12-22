@@ -131,6 +131,7 @@ type HarmonyLike = {
   cheonganHap?: string[];
   cheonganChung?: string[];
   jijiSamhap?: string[];
+  jijiBanhap?: string[];
   jijiBanghap?: string[];
   jijiYukhap?: string[];
   amhap?: string[];
@@ -205,6 +206,7 @@ export default function HarmonyTagPanel({
     cheonganHap: mk("cheonganHap"),
     cheonganChung: mk("cheonganChung"),
     jijiSamhap: mk("jijiSamhap"),
+    jijiBanhap: mk("jijiBanhap"),
     jijiBanghap: mk("jijiBanghap"),
     jijiYukhap: mk("jijiYukhap"),
     amhap: mk("amhap"),
@@ -245,6 +247,7 @@ export default function HarmonyTagPanel({
       <Row label="천간충" {...pick(K.cheonganChung)} />
       <div className="border-t border-neutral-200 dark:border-neutral-800 my-2" />
       <Row label="지지삼합" {...pick(K.jijiSamhap)} />
+      <Row label="지지반합" {...pick(K.jijiBanhap)} />
       <Row label="지지방합" {...pick(K.jijiBanghap)} />
       <Row label="지지육합" {...pick(K.jijiYukhap)} />
       <Row label="암합" {...pick(K.amhap)} />

@@ -1,169 +1,41 @@
-// /admin/user/index.tsx
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { useEffect, useMemo } from "react";
+import { useAdminUserInput } from "./input/useAdminUserInput";
+import { useAdminUserSave } from "./save/useAdminUserSave";
+import { getPagedUserIds, getTotalPages, initDrafts } from "./calc/adminUserCalc";
+import { PLAN_OPTIONS, isPlanTier, periodLabel, planLabel } from "./calc/planUtils";
 
-// ---------- Types ----------
-type ProfileRow = {
-  id: string;
-  user_id?: string | null;
-  name?: string | null;
-  nickname?: string | null;
-  email?: string | null;
-};
-
-type UserSummary = {
-  user_id: string;
-  profile: ProfileRow | null;
-  myeongsikCount: number;
-  lastCreatedAt: string | null;
-};
-
-// ---------- Constants ----------
-const PAGE_SIZE = 20;
-
-// ---------- Component ----------
 export default function AdminUserListPage() {
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
+  const input = useAdminUserInput();
+  const { search, setSearch, page, setPage, draftByUser, setDraftByUser, setDraft } = input;
+  const {
+    userIds,
+    summaries,
+    loading,
+    error,
+    fetchUserIdList,
+    fetchSummaries,
+    saveEntitlements,
+  } = useAdminUserSave();
 
-  const [userIds, setUserIds] = useState<string[]>([]);
-  const [summaries, setSummaries] = useState<UserSummary[]>([]);
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // -----------------------------
-  // ① DISTINCT user_id 목록 가져오기 (검색 포함)
-  // -----------------------------
-  const fetchUserIdList = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      let query = supabase
-        .from("myeongsik")
-        .select("user_id,name");
-
-      if (search.trim()) {
-        const term = `%${search.trim()}%`;
-        query = query.or(
-          `name.ilike.${term},user_id.ilike.${term},birth_json->>birthDay.ilike.${term}`
-        );
-      }
-
-      const { data, error: err } = await query as unknown as {
-        data: { user_id: string; created_at: string | null }[] | null;
-        error: { message: string } | null;
-      };
-
-      if (err) throw new Error(err.message);
-
-      const ids = Array.from(new Set((data || []).map(r => r.user_id).filter(Boolean)));
-      setUserIds(ids);
-      setPage(1);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    }
-
-    setLoading(false);
-  }, [search]);
-
-  // -----------------------------
-  // ② 페이징된 user_id 계산
-  // -----------------------------
-  const pagedUserIds = useMemo(() => {
-    const start = (page - 1) * PAGE_SIZE;
-    return userIds.slice(start, start + PAGE_SIZE);
-  }, [page, userIds]);
-
-  const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(userIds.length / PAGE_SIZE));
-  }, [userIds]);
-
-  // -----------------------------
-  // ③ 유저 요약(summary) 가져오기
-  // -----------------------------
-  const fetchSummaries = useCallback(async () => {
-    if (!pagedUserIds.length) {
-      setSummaries([]);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const safeIds = pagedUserIds.length ? pagedUserIds : ["__NO_MATCH__"];
-
-      // profiles
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("id,user_id,name,nickname,email")
-        .in("user_id", safeIds) as unknown as {
-        data: ProfileRow[] | null;
-        error: { message: string } | null;
-      };
-
-      const profileMap: Record<string, ProfileRow | null> = {};
-      (profiles || []).forEach((p) => {
-        const key = p.user_id || p.id;
-        if (key) profileMap[key] = p;
-      });
-
-      // myeongsik count + last created_at
-      const { data: msRows } = await supabase
-        .from("myeongsik")
-        .select("user_id, created_at")
-        .in("user_id", safeIds)
-        .order("created_at", { ascending: false }) as unknown as {
-        data: { user_id: string; created_at: string | null }[] | null;
-      };
-
-      const summaryMap: Record<string, UserSummary> = {};
-
-      safeIds.forEach((uid) => {
-        summaryMap[uid] = {
-          user_id: uid,
-          profile: profileMap[uid] || null,
-          myeongsikCount: 0,
-          lastCreatedAt: null
-        };
-      });
-
-      (msRows || []).forEach((row) => {
-        summaryMap[row.user_id].myeongsikCount++;
-        if (!summaryMap[row.user_id].lastCreatedAt) {
-          summaryMap[row.user_id].lastCreatedAt = row.created_at;
-        }
-      });
-
-      setSummaries(Object.values(summaryMap));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
-    }
-
-    setLoading(false);
-  }, [pagedUserIds]);
-
-  // -----------------------------
-  // Effects
-  // -----------------------------
-  useEffect(() => {
-    fetchUserIdList();
-  }, [fetchUserIdList]);
+  const pagedUserIds = useMemo(() => getPagedUserIds(userIds, page), [userIds, page]);
+  const totalPages = useMemo(() => getTotalPages(userIds), [userIds]);
 
   useEffect(() => {
-    fetchSummaries();
-  }, [fetchSummaries]);
+    fetchUserIdList(search, () => setPage(1));
+  }, [fetchUserIdList, search, setPage]);
 
-  // -----------------------------
-  // UI Rendering
-  // -----------------------------
+  useEffect(() => {
+    fetchSummaries(pagedUserIds);
+  }, [fetchSummaries, pagedUserIds]);
+
+  useEffect(() => {
+    setDraftByUser((prev) => initDrafts(prev, summaries));
+  }, [summaries, setDraftByUser]);
+
   return (
     <div className="p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">Users</h1>
 
-      {/* Search */}
       <input
         className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded w-full max-w-sm mb-4"
         placeholder="Search user (name, email, birth, userId...)"
@@ -171,61 +43,132 @@ export default function AdminUserListPage() {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {error && (
-        <div className="text-red-400 mb-2">{error}</div>
-      )}
-
+      {error && <div className="text-red-400 mb-2">{error}</div>}
       {loading && <div>Loading...</div>}
 
-      {/* 리스트 */}
       <div className="space-y-3">
         {summaries.map((s) => {
-          const displayName =
-            s.profile?.name ||
-            s.profile?.nickname ||
-            s.profile?.email ||
-            "(no profile)";
+          const displayName = s.profile?.name || s.profile?.nickname || "(no profile)";
+          const email = s.profile?.email || "";
+
+          const draft = draftByUser[s.user_id] ?? {
+            plan: "PROMPT_LOCKED",
+            startDate: "",
+            endDate: "",
+            saving: false,
+          };
 
           return (
             <div
               key={s.user_id}
-              className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg cursor-pointer hover:bg-neutral-800"
-              onClick={() => location.href = `/admin/user/${s.user_id}`}
+              className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg hover:bg-neutral-800"
             >
-              <div className="font-semibold text-lg flex items-center justify-between">
-                <span className="text-nowrap mr-2">{displayName}</span>
-                <span className="text-neutral-500 text-sm">{s.user_id}</span>
+              <div className="font-semibold text-lg flex items-center justify-between gap-3">
+                <div className="min-w-0 flex items-center gap-2">
+                  <span className="text-nowrap mr-1">{displayName}</span>
+                  {email ? <span className="text-sm text-neutral-400 truncate">({email})</span> : null}
+                </div>
+
+                <span className="text-neutral-500 text-sm shrink-0">{s.user_id}</span>
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
                 명식 {s.myeongsikCount}개
-                {s.lastCreatedAt && (
-                  <> · 최근 생성 {new Date(s.lastCreatedAt).toLocaleString()}</>
-                )}
+                {s.lastCreatedAt && <> · 최근 생성 {new Date(s.lastCreatedAt).toLocaleString()}</>}
+              </div>
+
+              <div className="text-sm text-neutral-400 mt-1">
+                플랜 {planLabel(s.ent?.plan)} · {periodLabel(s.ent)}
+              </div>
+
+              <div className="mt-3 flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-xs text-neutral-400">시작</label>
+                  <input
+                    type="date"
+                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                    value={draft.startDate}
+                    onChange={(e) => setDraft(s.user_id, { startDate: e.target.value })}
+                  />
+
+                  <span className="text-neutral-500">~</span>
+
+                  <label className="text-xs text-neutral-400">종료</label>
+                  <input
+                    type="date"
+                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                    value={draft.endDate}
+                    onChange={(e) => setDraft(s.user_id, { endDate: e.target.value })}
+                  />
+
+                  <select
+                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                    value={draft.plan}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (!isPlanTier(v)) return;
+                      setDraft(s.user_id, { plan: v });
+                    }}
+                  >
+                    {PLAN_OPTIONS.map((p) => (
+                      <option key={p.value} value={p.value}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    disabled={draft.saving}
+                    onClick={() =>
+                      void saveEntitlements(s.user_id, draft, input.setDraft, () =>
+                        fetchSummaries(pagedUserIds)
+                      )
+                    }
+                    className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 cursor-pointer"
+                  >
+                    {draft.saving ? "저장 중..." : "저장"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => (location.href = `/admin/user/${s.user_id}`)}
+                    className="px-3 py-1 rounded bg-neutral-700 hover:bg-neutral-600 cursor-pointer"
+                  >
+                    상세
+                  </button>
+                </div>
+
+                {draft.lastSavedAt ? (
+                  <div className="text-xs text-emerald-400">
+                    저장됨 · {new Date(draft.lastSavedAt).toLocaleString()}
+                  </div>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Pagination */}
       <div className="flex items-center justify-center gap-3 mt-6">
         <button
           disabled={page <= 1}
-          onClick={() => setPage(p => p - 1)}
+          onClick={() => setPage((p) => p - 1)}
           className="px-3 py-1 border border-neutral-700 rounded disabled:opacity-50"
         >
-          ←
+          이전
         </button>
 
-        <span>{page} / {totalPages}</span>
+        <span>
+          {page} / {totalPages}
+        </span>
 
         <button
           disabled={page >= totalPages}
-          onClick={() => setPage(p => p + 1)}
+          onClick={() => setPage((p) => p + 1)}
           className="px-3 py-1 border border-neutral-700 rounded disabled:opacity-50"
         >
-          →
+          다음
         </button>
       </div>
     </div>

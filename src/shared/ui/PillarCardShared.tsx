@@ -1,88 +1,17 @@
 import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
-import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
+import type { Stem10sin } from "@/shared/domain/간지/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
-import { 간지_MAP, 간지_한자_MAP } from "@/shared/domain/간지/const";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
-
-/* ── 표시 변환 테이블 ── */
-const STEM_H2K = {
-  "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무",
-  "己":"기","庚":"경","辛":"신","壬":"임","癸":"계",
-} as const;
-const STEM_K2H = Object.fromEntries(
-  Object.entries(STEM_H2K).map(([h, k]) => [k, h])
-) as Record<string, string>;
-
-const BR_H2K = {
-  "子":"자","丑":"축","寅":"인","卯":"묘","辰":"진","巳":"사",
-  "午":"오","未":"미","申":"신","酉":"유","戌":"술","亥":"해",
-} as const;
-const BR_K2H = Object.fromEntries(
-  Object.entries(BR_H2K).map(([h, k]) => [k, h])
-) as Record<string, string>;
-
-function isKoStem(s: string): s is Stem10sin {
-  return (간지_MAP.천간 as readonly string[]).includes(s);
-}
-function isKoBranch(s: string): s is Branch10sin {
-  return (간지_MAP.지지 as readonly string[]).includes(s);
-}
-function isHanjaStem(s: string): s is Stem10sin {
-  return (간지_한자_MAP.천간 as readonly string[]).includes(s);
-}
-function isHanjaBranch(s: string): s is Branch10sin {
-  return (간지_한자_MAP.지지 as readonly string[]).includes(s);
-}
-
-/* ── 표시용: 글자 변환 (사용자 설정 반영) ── */
-function toDisplayChar(
-  ch: string,
-  kind: "stem" | "branch",
-  type: Settings["charType"]
-) {
-  if (type === "한글") {
-    return kind === "stem"
-      ? (STEM_H2K as Record<string, string>)[ch] ?? ch
-      : (BR_H2K   as Record<string, string>)[ch] ?? ch;
-  }
-  // "한자"
-  return kind === "stem"
-    ? (STEM_K2H as Record<string, string>)[ch] ?? ch
-    : (BR_K2H   as Record<string, string>)[ch] ?? ch;
-}
-
-/* ── 유틸/색상/십신용: 항상 ‘한자’로 정규화 ── */
-function toHanjaStemKey(ch: string): Stem10sin {
-  const h = (STEM_K2H as Record<string, string>)[ch] ?? ch; // 한글→한자 시도
-  if (isHanjaStem(h)) return h;
-  return "갑"; // fallback (기본값 지정)
-}
-
-function toHanjaBranchKey(ch: string): Branch10sin {
-  const h = (BR_K2H as Record<string, string>)[ch] ?? ch; // 한글→한자 시도
-  if (isHanjaBranch(h)) return h;
-  return "자"; // fallback (기본값 지정)
-}
-
-/* ── HiddenStems용: 항상 ‘한글’로 정규화 ── */
-function toKoStemKey(ch: string): Stem10sin {
-  if (isKoStem(ch)) return ch;
-  const k = (STEM_H2K as Record<string, string>)[ch] ?? ch;
-  return isKoStem(k) ? k : "갑";
-}
-function toKoBranchKey(ch: string): Branch10sin {
-  if (isKoBranch(ch)) return ch;
-  const k = (BR_H2K as Record<string, string>)[ch] ?? ch;
-  return isKoBranch(k) ? k : "자";
-}
-
-/* ── 얇게(음간/음지) ── */
-const YIN_STEMS  = new Set(["乙","丁","己","辛","癸","을","정","기","신","계"]);
-const YIN_BRANCH = new Set(["丑","卯","巳","未","酉","亥","축","묘","사","미","유","해"]);
-const isYinStem   = (ch: string) => YIN_STEMS.has(ch);
-const isYinBranch = (ch: string) => YIN_BRANCH.has(ch);
+import {
+  isYinUnified,
+  toDisplayChar,
+  toHanjaBranch,
+  toHanjaStem,
+  toKoBranch,
+  toKoStem,
+} from "@/shared/domain/간지/convert";
 
 type Variant = "auto" | "white";
 
@@ -122,13 +51,13 @@ export function PillarCardShared({
   const branchDisp = toDisplayChar(branch, "branch", settings.charType);
 
   /* 유틸/색상/십신용 키는 ‘한자’로 통일 */
-  const stemKeyForUtil    = toHanjaStemKey(stem);
-  const branchKeyForUtil  = toHanjaBranchKey(branch);
-  const dayStemKeyForUtil = toHanjaStemKey(dayStem);   // 일간 → 한자 키
+  const stemKeyForUtil    = toHanjaStem(stem);
+  const branchKeyForUtil  = toHanjaBranch(branch);
+  const dayStemKeyForUtil = toHanjaStem(dayStem);   // 일간 → 한자 키
 
   /* HiddenStems용 키는 ‘한글’로 통일 */
-  const branchKeyForHidden  = toKoBranchKey(branch);
-  const dayStemKeyForHidden = toKoStemKey(dayStem);
+  const branchKeyForHidden  = toKoBranch(branch);
+  const dayStemKeyForHidden = toKoStem(dayStem);
 
   /* 십신 */
   const sipSinStem = settings.showSipSin
@@ -140,8 +69,8 @@ export function PillarCardShared({
     : null;
 
   /* 얇게 */
-  const thinStemClass   = settings.thinEum && isYinStem(stem)     ? "font-thin" : "font-bold";
-  const thinBranchClass = settings.thinEum && isYinBranch(branch) ? "font-thin" : "font-bold";
+  const thinStemClass   = settings.thinEum && isYinUnified(stem, "stem")     ? "font-thin" : "font-bold";
+  const thinBranchClass = settings.thinEum && isYinUnified(branch, "branch") ? "font-thin" : "font-bold";
 
   const sizeMap = {
     sm: "w-10 h-10 sm:w-12 sm:h-12",

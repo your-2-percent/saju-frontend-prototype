@@ -28,6 +28,9 @@ export type Settings = {
   showSibiSinsal: boolean;              // 십이신살
   showSibiUnseong: boolean;             // 십이운성
   showNabeum: boolean;                  // ✅ 납음 표시 (스토어에 정식 편입)
+  showEtcShinsal: boolean;              // 기타신살 BOX 표시
+  showRelationBox: boolean;             // 형충회합 BOX 표시
+  showPromptBox: boolean;               // 프롬프트 BOX 표시
   theme: "dark" | "light";
   sectionOrder?: string[];
   difficultyMode?: boolean;
@@ -47,6 +50,9 @@ export const defaultSettings: Settings = {
   showSibiSinsal: true,
   showSibiUnseong: true,
   showNabeum: true, // ✅ 기본 ON
+  showEtcShinsal: true,
+  showRelationBox: true,
+  showPromptBox: true,
   theme: "dark",
   difficultyMode: false,
   sectionOrder: [

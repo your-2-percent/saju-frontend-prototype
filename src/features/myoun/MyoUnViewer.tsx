@@ -16,11 +16,12 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import { ensureSolarBirthDay } from "@/shared/domain/meongsik/ensureSolarBirthDay";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
-import * as Twelve from "@/shared/domain/간지/twelve";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { STEMS_ALL, BR_ALL, 간지_MAP } from "@/shared/domain/간지/const";
+import { STEMS_ALL, BR_ALL } from "@/shared/domain/간지/const";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import type { DayBoundaryRule } from "@/shared/type";
+import { toDisplayChar, toKoStem } from "@/shared/domain/간지/convert";
+import { mapEra } from "@/shared/domain/간지/era";
 
 /* ===== 간단 유틸 ===== */
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
@@ -45,39 +46,6 @@ const BRANCH_TO_HOUR: Record<string, number> = {
   "술": 20,
   "해": 22,
 };
-const STEM_H2K: Record<string,string> = { "甲":"갑","乙":"을","丙":"병","丁":"정","戊":"무","己":"기","庚":"경","辛":"신","壬":"임","癸":"계" };
-const BR_H2K:   Record<string,string> = { "子":"자","丑":"축","寅":"인","卯":"묘","辰":"진","巳":"사","午":"오","未":"미","申":"신","酉":"유","戌":"술","亥":"해" };
-function isKoStem(s: string | undefined): s is Stem10sin {
-  return !!s && (간지_MAP.천간 as readonly string[]).includes(s);
-}
-function toKoreanStem(ch: string)  { return STEM_H2K[ch] ?? ch; }
-function toKoreanBranch(ch: string){ return BR_H2K[ch] ?? ch; }
-function toKoStemStrict(ch: string): Stem10sin {
-  if (isKoStem(ch)) return ch;
-  const k = STEM_H2K[ch];
-  if (isKoStem(k)) return k;
-  return "갑";
-}
-
-// Era 매핑
-type EraRuntime = {
-  Classic?: Twelve.EraType;
-  Modern?: Twelve.EraType;
-  classic?: Twelve.EraType;
-  modern?: Twelve.EraType;
-};
-function isEraRuntime(v: unknown): v is EraRuntime {
-  return typeof v === "object" && v !== null && ("Classic" in v || "Modern" in v || "classic" in v || "modern" in v);
-}
-function mapEra(mode: "classic" | "modern"): Twelve.EraType {
-  const exported = (Twelve as Record<string, unknown>).EraType;
-  if (isEraRuntime(exported)) {
-    return mode === "classic"
-      ? (exported.Classic ?? exported.classic)!
-      : (exported.Modern ?? exported.modern)!;
-  }
-  return mode as unknown as Twelve.EraType;
-}
 
 // 이벤트 검색
 function lastAtOrNull<T extends { at: Date }>(arr: T[], t: Date): T | null {
@@ -101,7 +69,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const natal = useMemo(() => computeNatalPillars(solarized, "조자시/야자시"), [solarized]);
 
   const natalDayStem = useMemo<Stem10sin>(
-    () => toKoStemStrict(natal.day?.charAt(0) ?? "갑"),
+    () => toKoStem(natal.day?.charAt(0) ?? "갑"),
     [natal.day]
   );
 
@@ -183,9 +151,9 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   const calcTexts = (gz: string) => {
     if (!gz) return { unseong: "", shinsal: "" };
-    const dsK = toKoreanStem(natalDayStem);
-    const tbK = toKoreanBranch(gz.charAt(1));
-    const bbK = toKoreanBranch(baseBranch);
+    const dsK = toDisplayChar(natalDayStem, "stem", "한글");
+    const tbK = toDisplayChar(gz.charAt(1), "branch", "한글");
+    const bbK = toDisplayChar(baseBranch, "branch", "한글");
     return {
       unseong: showSibiUnseong ? (getTwelveUnseong(dsK, tbK) || "") : "",
       shinsal: showSibiSinsal ? (getTwelveShinsalBySettings({ baseBranch: bbK, targetBranch: tbK, era, gaehwa: !!sinsalBloom }) || "") : "",

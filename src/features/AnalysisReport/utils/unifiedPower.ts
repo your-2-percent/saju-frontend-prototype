@@ -6,18 +6,11 @@ import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
 import { defaultSettings } from "@/shared/lib/hooks/useSettingsStore";
 import { computePowerDataDetailed } from "./computePowerData";
 import type { Element, PowerData, TenGod } from "./types";
+import { BRANCH_H2K, STEM_H2K } from "@/shared/domain/간지/const";
 
 /* =========================
  * 유틸/상수
  * ========================= */
-const STEM_H2K: Record<string, string> = {
-  甲: "갑", 乙: "을", 丙: "병", 丁: "정", 戊: "무",
-  己: "기", 庚: "경", 辛: "신", 壬: "임", 癸: "계",
-};
-const BRANCH_H2K: Record<string, string> = {
-  子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
-  午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해",
-};
 /** 지지 → 본기 천간(한글) */
 const BRANCH_MAIN_STEM: Record<string, string> = {
   자: "계", 축: "기", 인: "갑", 묘: "을", 진: "무", 사: "병",
