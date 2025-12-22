@@ -5,7 +5,9 @@ export type SaryeongPickFrom = "초기" | "중기" | "정기";
 
 export type ReasonToken =
   | { kind: "WANGJI_FIXED_JUNGI" }
-  | { kind: "BUNIL_PICK"; from: SaryeongPickFrom }  // ✅ 추가
+  | { kind: "BUNIL_PICK"; from: SaryeongPickFrom }
+  | { kind: "BUNIL_FALLBACK_USE_WOLRYEONG" }
+  | { kind: "DANRYEONG_CONFIRMED_BY_EMIT" }
   | { kind: "SAENGJI_EMITTED_ONE"; from: SaryeongPickFrom }
   | { kind: "SAENGJI_EMITTED_MULTI"; from: SaryeongPickFrom }
   | { kind: "SAENGJI_NOT_EMITTED_USE_JUNGI" }

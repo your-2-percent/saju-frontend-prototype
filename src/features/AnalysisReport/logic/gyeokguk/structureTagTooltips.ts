@@ -77,11 +77,11 @@ const STATIC: Record<string, StructureTagTooltip> = {
   },
   인다관설: {
     title: "인다관설",
-    short: "인성이 강하고 관성이 함께 있는 경우.",
+    short: "인성이 강해 관성을 설기하는 경우.",
   },
   재다신약: {
     title: "재다신약",
-    short: "재성이 많은데 비겁·인성이 약한 경우.",
+    short: "재성이 많은데 신약한 경우.",
   },
   재자약살: {
     title: "재자약살",

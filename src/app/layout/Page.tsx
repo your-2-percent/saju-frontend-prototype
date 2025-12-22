@@ -163,11 +163,11 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             />
           </div>
 
-          <LuckGlobalPicker ms={calc.current as MyeongSik} />
-
           <div>
             <UnMyounTabs data={calc.current as MyeongSik} />
           </div>
+
+          <LuckGlobalPicker ms={calc.current as MyeongSik} />
 
           {settings.showPromptBox && (
             <div className="max-w-[640px] mx-auto mb-8">

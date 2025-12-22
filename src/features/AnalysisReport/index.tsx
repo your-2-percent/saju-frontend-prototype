@@ -58,7 +58,6 @@ function parseYYYYMMDD(v: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-
 export default function AnalysisReport({
   data,
   pillars,
