@@ -25,6 +25,7 @@ export function applyWoldu(
 ): { next: Pillars; monthBranchChoices: Branch[] | null } {
   if (!useWoldu || !p.yearStem) return { next: p, monthBranchChoices: null };
   const next = { ...p };
+  if (!next.yearStem) return { next, monthBranchChoices: null };
 
   if (changed === "monthStem" && next.monthStem) {
     const hits = branchesForMonthStem(next.yearStem, next.monthStem);
@@ -63,8 +64,9 @@ export function applySiju(
 ): Pillars {
   if (!useSiju || !p.dayStem) return p;
   const next = { ...p };
+  if (!next.dayStem) return next;
 
-  const map = buildHourMap(p.dayStem, hourRule);
+  const map = buildHourMap(next.dayStem, hourRule);
   const byStem = (s: Stem) =>
     (Object.entries(map) as [Branch, string][]).find(([, gz]) => gz.startsWith(s));
   const byBranch = (b: Branch) => map[b];

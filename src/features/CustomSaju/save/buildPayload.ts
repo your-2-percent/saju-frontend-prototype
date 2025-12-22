@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
 import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
 import type { DayBoundaryRule } from "@/shared/type";
+import type { MyeongSik } from "@/shared/lib/storage";
 import type { FormState, HourRule, MatchRow } from "../input/customSajuTypes";
 import { HOUR_BRANCH_TO_TIME } from "../calc/ganjiRules";
 
@@ -50,7 +51,7 @@ export function buildCustomSajuPayload(params: {
     .filter(Boolean)
     .join(" ");
 
-  const payload = {
+  const payload: MyeongSik = {
     id: uuidv4(),
     name: "커스텀명식",
     birthDay: `${yy}${String(mm).padStart(2, "0")}${String(dd).padStart(2, "0")}`,
@@ -67,10 +68,6 @@ export function buildCustomSajuPayload(params: {
     DayChangeRule: form.mingSikType === "인시" ? "인시일수론" : "자시일수론",
     calendarType: form.calendarType ?? "solar",
 
-    yearGZ: picked.year,
-    monthGZ: picked.month,
-    dayGZ: picked.day,
-    hourGZ: picked.hour,
     ganjiText: `원국: ${picked.year} ${picked.month} ${picked.day} ${picked.hour}`,
     ganji: ganjiText,
     dayStem: picked.day.charAt(0),
@@ -79,6 +76,7 @@ export function buildCustomSajuPayload(params: {
     corrected,
     correctedLocal,
     dir,
+    favorite: false,
   };
 
   return { payload };

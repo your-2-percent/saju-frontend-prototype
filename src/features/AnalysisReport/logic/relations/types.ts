@@ -28,6 +28,8 @@ export interface RelationTags {
 export interface HarmonyOptions {
   emitGanjiAmhap?: boolean;
   fillNone?: boolean;
+  includeSamhap?: boolean;
+  includeBanghap?: boolean;
 }
 
 export interface LuckOptions {

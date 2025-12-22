@@ -58,7 +58,7 @@ export function uniqKeepMaxPerTag(items: TagBucketPos[]): TagBucketPos[] {
 
 export function toBucketsByPos(
   items: TagBucketPos[],
-  posToKey: ((p: PosIndex) => keyof TagBucketsByPos) | undefined
+  posToKey?: (p: PosIndex) => keyof TagBucketsByPos
 ): TagBucketsByPos {
   const buckets: TagBucketsByPos = { si: [], il: [], yeon: [], wol: [] };
 
