@@ -27,6 +27,14 @@ export const FORMATTER_REASON_TOOLTIPS: Record<ReasonToken["kind"], ReasonToolti
     title: "분일",
     text: "분일은 사령을 결정할 때 초/중/정기 중 하나를 선택하여 사용하는 방법임.",
   },  
+  BUNIL_FALLBACK_USE_WOLRYEONG: {
+    title: "분일 폴백",
+    text: "분일 정보를 구하지 못해 월령(정기)을 사령으로 사용하는 폴백 상황임.",
+  },
+  DANRYEONG_CONFIRMED_BY_EMIT: {
+    title: "당령 확정",
+    text: "사령이 투출되었고 무력화되지 않아 당령으로 확정된 상황임.",
+  },
   WANGJI_FIXED_JUNGI: {
     title: "왕지",
     text: "왕지는 월령이 가장 안정된 상태라 정기를 그대로 사용함.",
