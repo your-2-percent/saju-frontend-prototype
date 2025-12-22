@@ -4,13 +4,22 @@ import type { Element } from "../../utils/types";
 import { POS } from "./constants";
 import { BANGHAP_GROUPS, SANHE_GROUPS, type KoBranch } from "./groups";
 import { normalizeGZ, gzBranch } from "./normalize";
-import type { HarmonyOptions, HarmonyResult, Pillars4 } from "./types";
+import type { HarmonyOptions, Pillars4 } from "./types";
 
 // ───────── 오행 상생/상극 맵 ─────────
 
 import { KE, KE_INV, SHENG_NEXT, SHENG_PREV, LV_ADJ } from "./types";
 
 type StrengthLevel3 = "강" | "중" | "약";
+type HarmonyOverlayResult = {
+  applied: Array<{ type: "삼합" | "방합"; name: string; out: Element; strength: StrengthLevel3 }>;
+  score: Record<Element, number>;
+  strengthAdj: typeof LV_ADJ;
+  shengNext: typeof SHENG_NEXT;
+  shengPrev: typeof SHENG_PREV;
+  ke: typeof KE;
+  keInv: typeof KE_INV;
+};
 
 function isClustered3(idx: number, indices: number[]) {
   const sorted = Array.from(new Set(indices)).sort((a, b) => a - b);
@@ -51,7 +60,7 @@ export function applyHarmonyOverlay(
   natal: Pillars4,
   baseScore: Record<Element, number>,
   opts: HarmonyOptions = {},
-): HarmonyResult {
+): HarmonyOverlayResult {
   const { includeBanghap = true, includeSamhap = true } = opts;
 
   const natalKo: Pillars4 = [
