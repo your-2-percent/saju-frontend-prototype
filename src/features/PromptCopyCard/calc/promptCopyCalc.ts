@@ -129,10 +129,11 @@ export function buildNatalWithPrediction(
   allowManual: boolean
 ): [string, string, string, string] {
   const pillars = buildNatalPillarsFromMs(ms);
+  const arr = [...pillars] as [string, string, string, string];
   if (allowManual && manualHourStr && manualHourStr.length === 2) {
-    pillars[3] = manualHourStr;
+    arr[3] = manualHourStr;
   }
-  return pillars;
+  return arr;
 }
 
 export function computeShinCategory(natalArr: string[]): { percent: number; category: ShinCategory } {

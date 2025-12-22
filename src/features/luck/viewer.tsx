@@ -6,7 +6,6 @@ import WolwoonList from "@/features/luck/ui/WolwoonList";
 import IlwoonCalendar from "@/features/luck/ui/IlwoonCalendar";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getSewoonListInDaewoon } from "@/features/luck/useSewoonList";
-import type { DayBoundaryRule } from "@/shared/type";
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 
@@ -106,7 +105,6 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
           data={data}
           year={ilwoonTarget.year}
           month={ilwoonTarget.month + 1}
-          hourTable={data?.mingSikType as DayBoundaryRule}
           selectedMonth={selectedMonth}
         />
       )}
