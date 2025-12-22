@@ -157,7 +157,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       {calc.hasCurrent && !input.showToday && !input.showCouple && (
         <>
           <div className="pt-18 pb-4">
-            <SajuChart data={calc.current} hourTable={calc.current?.mingSikType ?? "조자시/야자시"} />
+            <SajuChart
+              data={calc.current as MyeongSik}
+              hourTable={calc.current?.mingSikType ?? "조자시/야자시"}
+            />
           </div>
 
           <LuckGlobalPicker ms={calc.current as MyeongSik} />

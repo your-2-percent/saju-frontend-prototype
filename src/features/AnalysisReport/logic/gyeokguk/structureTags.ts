@@ -144,7 +144,8 @@ export function detectStructureTags(
   };
 
 
-  const hasType = (targets: TenGodSubtype[]) => seq.some((tg) => targets.includes(tg));
+  const hasType = (targets: TenGodSubtype[]) =>
+    seq.some((tg) => !!tg && targets.includes(tg as TenGodSubtype));
 
   // 화상위재
   const cntSiksang = cntSub("식신") + cntSub("상관");
