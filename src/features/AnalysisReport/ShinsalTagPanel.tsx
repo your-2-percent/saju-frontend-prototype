@@ -60,7 +60,7 @@ function Section({
 
         return (
           <div
-            className="flex items-start gap-3 border border-gray-700 dark:border-gray-400 p-2 rounded-sm"
+            className="flex items-start gap-3 p-1 rounded-sm"
             key={`${title}-${row.label}`}
           >
             <div className={labelClass}>{row.label}</div>

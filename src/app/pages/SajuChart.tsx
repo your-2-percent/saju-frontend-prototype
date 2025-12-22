@@ -34,6 +34,41 @@ type Props = {
   hourTable?: DayBoundaryRule;
 };
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function formatBirthDisplayWithLunar(
+  birthDay?: string,
+  birthTime?: string | undefined,
+  calendarType?: string
+): string {
+  if (!birthDay || birthDay.length < 8) {
+    return formatBirthDisplay(birthDay, birthTime);
+  }
+
+  const base = formatBirthDisplay(birthDay, birthTime);
+
+  if (calendarType !== "lunar") {
+    return base;
+  }
+
+  try {
+    const y = Number(birthDay.slice(0, 4));
+    const m = Number(birthDay.slice(4, 6));
+    const d = Number(birthDay.slice(6, 8));
+
+    const solar = lunarToSolarStrict(y, m, d);
+    const solarStr = `${solar.getFullYear()}.${pad2(
+      solar.getMonth() + 1
+    )}.${pad2(solar.getDate())}`;
+
+    return `음력 ${base}  (양력 ${solarStr})`;
+  } catch {
+    return `음력 ${base}`;
+  }
+}
+
 export default function SajuChart({ data, hourTable }: Props) {
   const { date } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
@@ -314,10 +349,11 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     return next;
   }, [activeRelationTag, tagKindMap]);
+  
 
   return (
     <div className="w-full max-w-[640px] mx-auto">
-      <div className="mb-1 flex flex-wrap items-end justify-between gap-2 p-2">
+      <div className="mb-1 gap-2 p-2">
         <div>
           <div className="text-md desk:text-xl font-bold text-neutral-900 dark:text-neutral-100">
             {(data.name?.trim() || "이름없음") + " "}
@@ -338,16 +374,17 @@ export default function SajuChart({ data, hourTable }: Props) {
               </button>
             )}
           </div>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            {formatBirthDisplay(data.birthDay, data.birthTime)}
-            {data.birthPlace?.name ? ` · 출생지: ${data.birthPlace.name}` : ""}
-          </div>
-          <div className="text-sm text-neutral-600 dark:text-neutral-400">
-            보정시각: {correctedLabel}
+          <div className="text-xs desk:text-sm text-neutral-600 dark:text-neutral-400">
+            {formatBirthDisplayWithLunar(
+              data.birthDay,
+              data.birthTime,
+              data.calendarType
+            )}
+            &nbsp;· 보정시각: {correctedLabel}
           </div>
         </div>
         <div className="text-xs text-neutral-500 dark:text-neutral-400">
-          기준 경도: {lon.toFixed(2)}° · {rule} 기준
+          {data.birthPlace?.name ? `출생지: ${data.birthPlace.name}` : ""} / 기준 경도: {lon.toFixed(2)}° · {rule} 기준
         </div>
       </div>
 

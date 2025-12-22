@@ -62,7 +62,7 @@ function Row({
     : "shrink-0 w-20 text-xs font-semibold text-neutral-700 dark:text-neutral-400 mt-1";
 
   return (
-    <div className="flex items-start gap-3 border border-gray-700 dark:border-gray-200 p-2 rounded-sm">
+    <div className="flex items-start gap-3 p-1 rounded-sm">
       <div className={labelClass}>{label}</div>
       <div className="flex flex-wrap gap-2">
         {displayNatal.map((t, i) => (

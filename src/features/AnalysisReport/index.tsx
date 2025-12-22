@@ -10,6 +10,54 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { useAnalysisReportInput } from "./input/useAnalysisReportInput";
 import { useAnalysisReportCalc } from "./calc/useAnalysisReportCalc";
 import type { MyeongSik } from "@/shared/lib/storage";
+import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
+
+const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
+  const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
+  const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
+  const calType =
+    typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+  if (birthDay.length < 8) return data;
+
+  const y = Number(birthDay.slice(0, 4));
+  const m = Number(birthDay.slice(4, 6));
+  const d = Number(birthDay.slice(6, 8));
+
+  if (calType === "lunar") {
+    try {
+      const solarDate = lunarToSolarStrict(y, m, d);
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(
+        solarDate.getMonth() + 1
+      )}${pad2(solarDate.getDate())}`;
+      const out: MyeongSik = {
+        ...data,
+        birthDay: newBirthDay,
+        calendarType: "solar",
+      } as MyeongSik;
+      return out;
+    } catch {
+      return data;
+    }
+  }
+  return data;
+}
+
+function parseYYYYMMDD(v: unknown): Date | null {
+  if (typeof v !== "number" && typeof v !== "string") return null;
+
+  const s = String(v);
+  if (!/^\d{8}$/.test(s)) return null;
+
+  const y = Number(s.slice(0, 4));
+  const m = Number(s.slice(4, 6));
+  const d = Number(s.slice(6, 8));
+
+  const date = new Date(y, m - 1, d);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 
 export default function AnalysisReport({
   data,
@@ -24,8 +72,11 @@ export default function AnalysisReport({
 }) {
   const settings = useSettingsStore((s) => s.settings);
   const input = useAnalysisReportInput();
+  const normalizedData = ensureSolarBirthDay(data);
+  const birthDateParsed =
+  parseYYYYMMDD(normalizedData.birthDay) || undefined;
   const calc = useAnalysisReportCalc({
-    data,
+    data: normalizedData,   // ✅ 핵심
     pillars,
     lunarPillars,
     daewoonGzProp,
@@ -191,6 +242,7 @@ export default function AnalysisReport({
           pillars={calc.activePillars}
           tab={input.blendTab}
           mapping={settings.hiddenStemMode}
+          birthDate={birthDateParsed}
         />
       )}
     </div>

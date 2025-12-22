@@ -158,8 +158,6 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         .eq("user_id", userId)
         .maybeSingle();
 
-      console.log("[ENT RAW ROW]", data);
-
       if (error || !data) {
         set({ loaded: true, loading: false, userId, ...DEFAULT });
         return;
@@ -187,8 +185,6 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         startsAt: toDateOrNull(row.starts_at ?? null),
         expiresAt: toDateOrNull(row.expires_at ?? null),
       });
-
-      console.log("[ENT STORE SET]", { plan, maxMyeongsik, caps });
     } finally {
       set({ loading: false });
     }
