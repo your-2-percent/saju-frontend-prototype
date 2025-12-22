@@ -88,7 +88,7 @@ function TagList({
   }
 
   return (
-    <div className="flex flex-row flex-wrap desk:flex-col gap-1 desk:gap-2">
+    <div className="flex flex-row flex-wrap desk:flex-col gap-1">
       {list.map((tag, idx) => {
         const id = `${idPrefix}-${idx}`;
         return (
@@ -186,7 +186,7 @@ function ShinsalTooltipChip({
           ].join(" ")}
         >
           <div
-            className="relative whitespace-pre-wrap break-words break-keep rounded-md border border-neutral-700 bg-neutral-900 text-neutral-100 text-[10px] leading-4 p-2 shadow-lg"
+            className="relative whitespace-pre-wrap break-words break-keep rounded-md border border-neutral-700 bg-neutral-900 text-neutral-100 text-[10px] leading-4 p-2 shadow-lg text-center"
             style={{ width: "min(190px, calc(100vw - 24px))" }}
           >
             {text}
