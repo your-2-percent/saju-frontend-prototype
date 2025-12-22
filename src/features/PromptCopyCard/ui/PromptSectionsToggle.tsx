@@ -12,7 +12,7 @@ export default function PromptSectionsToggle({ sections, toggleSection }: Props)
         프롬프트 포함 데이터 <span className="text-amber-500">(TIP.현재 구글 제미나이에서 제일 훌륭히 작동합니다. - 2025/12월 기준)</span>
       </div>
 
-      <div className="grid grid-cols-5 desk:grid-cols-8 gap-2 text-[11px] text-neutral-700 dark:text-neutral-200">
+      <div className="grid grid-cols-4 desk:grid-cols-8 gap-2 text-[11px] text-neutral-700 dark:text-neutral-200">
         <label className="flex items-center gap-2 cursor-pointer">
           <input
             type="checkbox"
