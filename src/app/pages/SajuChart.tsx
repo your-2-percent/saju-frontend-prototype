@@ -63,7 +63,7 @@ function formatBirthDisplayWithLunar(
       solar.getMonth() + 1
     )}.${pad2(solar.getDate())}`;
 
-    return `음력 ${base}  (양력 ${solarStr})`;
+    return `양력 ${solarStr} (음력 ${base})`;
   } catch {
     return `음력 ${base}`;
   }

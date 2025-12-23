@@ -28,6 +28,17 @@ import {
   type TenGodMain,
 } from "./reportCalc";
 
+// ✅ 멀티 용신
+import {
+  buildMultiYongshin,
+  type YongshinMultiResult,
+  type YongshinItem as MultiYongshinItem,
+} from "../calc/yongshin/multi";
+
+// ✅ 격국 판정 + 격국용신 후보 변환
+import { computeNaegyeok } from "../logic/gyeokguk/resolver";
+import { buildGyeokgukYongshinCandidates } from "@/features/AnalysisReport/logic/gyeokguk/gyeokgukYongshin";
+
 type YongshinItem = { element: string; elNorm: Element | null; score: number; reasons: string[] };
 type YongshinResult = { ordered: Array<{ element: string; score?: number; reasons?: string[] }> } | null;
 
@@ -39,6 +50,19 @@ type Args = {
   blendTab: BlendTab;
   demoteAbsent: boolean;
 };
+
+const safeStem = (gz: string) => (gz && gz.length >= 1 ? gz.charAt(0) : "");
+const safeBranch = (gz: string) => (gz && gz.length >= 2 ? gz.charAt(1) : "");
+
+function parseBirthDateNoon(birthDay?: string | null): Date {
+  const s = String(birthDay ?? "");
+  if (!/^\d{8}$/.test(s)) return new Date();
+  const y = Number(s.slice(0, 4));
+  const m = Number(s.slice(4, 6));
+  const d = Number(s.slice(6, 8));
+  const dt = new Date(y, m - 1, d, 12, 0, 0, 0);
+  return Number.isNaN(dt.getTime()) ? new Date() : dt;
+}
 
 export function useAnalysisReportCalc({
   data,
@@ -84,6 +108,7 @@ export function useAnalysisReportCalc({
     }
     return arr;
   }, [solarKo, manualHour]);
+
   const lunarKoWithHour = useMemo(() => {
     const arr = [...lunarKo] as [string, string, string, string];
     if ((!arr[3] || arr[3] === "" || arr[3] === "--") && manualHour) {
@@ -118,7 +143,9 @@ export function useAnalysisReportCalc({
       effectiveBasis === "lunar"
         ? (lunarValid ? lunarKoWithHour : solarValid ? solarKoWithHour : computedFallback ?? ["", "", "", ""])
         : (solarValid ? solarKoWithHour : lunarValid ? lunarKoWithHour : computedFallback ?? ["", "", "", ""]);
+
     const arr = [...source] as [string, string, string, string];
+
     if ((!arr[3] || arr[3] === "" || arr[3] === "--") && manualHour) {
       arr[3] = manualHour.stem + manualHour.branch;
     }
@@ -126,17 +153,24 @@ export function useAnalysisReportCalc({
     return arr;
   }, [effectiveBasis, solarValid, lunarValid, solarKoWithHour, lunarKoWithHour, computedFallback, manualHour]);
 
+  const dayStem = useMemo(() => safeStem(activePillars[2] ?? ""), [activePillars]);
+  const monthBranch = useMemo(() => safeBranch(activePillars[1] ?? ""), [activePillars]);
+  const birthDateForGyeok = useMemo(() => parseBirthDateNoon(data.birthDay), [data.birthDay]);
+
   const hourKeyForUi = useMemo(
     () => (manualHour ? manualHour.stem + manualHour.branch : activePillars[3] || ""),
     [manualHour, activePillars]
   );
 
-  const chain = useMemo(() => ({
-    dae: blendTab !== "원국" ? daewoonGz ?? null : null,
-    se: (blendTab === "세운" || blendTab === "월운" || blendTab === "일운") ? (seGz ?? null) : null,
-    wol: (blendTab === "월운" || blendTab === "일운") ? (wolGz ?? null) : null,
-    il: (blendTab === "일운") ? (ilGz ?? null) : null,
-  }), [blendTab, daewoonGz, seGz, wolGz, ilGz]);
+  const chain = useMemo(
+    () => ({
+      dae: blendTab !== "원국" ? daewoonGz ?? null : null,
+      se: blendTab === "세운" || blendTab === "월운" || blendTab === "일운" ? (seGz ?? null) : null,
+      wol: blendTab === "월운" || blendTab === "일운" ? (wolGz ?? null) : null,
+      il: blendTab === "일운" ? (ilGz ?? null) : null,
+    }),
+    [blendTab, daewoonGz, seGz, wolGz, ilGz]
+  );
 
   const unified = useMemo(() => {
     return computeUnifiedPower({ natal: activePillars, tab: blendTab, chain, hourKey: hourKeyForUi });
@@ -172,12 +206,14 @@ export function useAnalysisReportCalc({
     () => elementPresenceFromPillars(activePillars, { includeBranches: true }),
     [activePillars]
   );
+
   const hasAbsent = useMemo(
     () => (["목", "화", "토", "금", "수"] as Element[]).some((el) => !presentMap[el]),
     [presentMap]
   );
 
-  const elemForFallback = overlay?.elemPct100 ?? unified?.elementPercent100 ?? lightElementScoreFromPillars(activePillars);
+  const elemForFallback =
+    overlay?.elemPct100 ?? unified?.elementPercent100 ?? lightElementScoreFromPillars(activePillars);
 
   const chartData = useMemo(() => {
     if (!unified || !overlay) return [] as Array<{ name: TenGodMain; value: number; color: string }>;
@@ -209,10 +245,10 @@ export function useAnalysisReportCalc({
 
   const revKey = useMemo(() => {
     const subsSig = tenSubTotals100
-      ? (Object.entries(tenSubTotals100)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([k, v]) => `${k}:${v}`)
-        .join(","))
+      ? Object.entries(tenSubTotals100)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k}:${v}`)
+          .join(",")
       : "none";
 
     const dataSig = chartData.map((d) => `${d.name}:${d.value}`).join(",");
@@ -220,14 +256,17 @@ export function useAnalysisReportCalc({
     return `${luckKey}||${activePillars.join("")}||${dataSig}||${subsSig}`;
   }, [luckKey, activePillars, chartData, tenSubTotals100]);
 
+  // --------------------
+  // 기존 억부용신(= computeYongshin 결과)
+  // --------------------
   const yongshinRaw: YongshinResult =
     typeof computeYongshin === "function"
       ? (computeYongshin(activePillars, unified?.totals) as YongshinResult)
       : null;
 
-  const yongshinList = useMemo<YongshinItem[]>(() => {
+  const eokbuList = useMemo<YongshinItem[]>(() => {
     const rawArr = yongshinRaw?.ordered ?? [];
-    const list: YongshinItem[] = rawArr.map((rec) => {
+    return rawArr.map((rec) => {
       const element = rec.element ?? "";
       const elNorm: Element | null =
         /목|木|wood/i.test(element) ? "목" :
@@ -235,35 +274,93 @@ export function useAnalysisReportCalc({
         /토|土|earth/i.test(element) ? "토" :
         /금|金|metal/i.test(element) ? "금" :
         /수|水|water/i.test(element) ? "수" : null;
+
       const score = typeof rec.score === "number"
         ? rec.score
         : elNorm
           ? (elemForFallback[elNorm] ?? 0)
           : 0;
+
       const reasons = Array.isArray(rec.reasons) ? rec.reasons : [];
       return { element, elNorm, score, reasons };
     });
+  }, [yongshinRaw, elemForFallback]);
 
-    const getPresent = (el: Element | null): boolean => (el ? presentMap[el] : false);
+  // ✅ 멀티에 넣을 억부 후보(타입 맞춤)
+  const eokbuListForMulti = useMemo<MultiYongshinItem[]>(
+    () => eokbuList.map((x) => ({ element: x.element, elNorm: x.elNorm, score: x.score, reasons: x.reasons })),
+    [eokbuList]
+  );
 
-    const demoted = demoteAbsent
-      ? list.map((it) =>
-        it.elNorm && !getPresent(it.elNorm)
-          ? { ...it, score: 0, reasons: [...it.reasons, "부재후순위: 원국 부재 → 0점"] }
-          : it
-      )
-      : list;
+  // --------------------
+  // ✅ 격국용신 후보(내격/진신/가신 기반) 자동 생성
+  // --------------------
+  const gyeokgukList = useMemo<MultiYongshinItem[]>(() => {
+    if (!dayStem || !monthBranch) return [];
 
-    demoted.sort((a, b) => {
-      const ap = getPresent(a.elNorm) ? 1 : 0;
-      const bp = getPresent(b.elNorm) ? 1 : 0;
-      if (demoteAbsent && ap !== bp) return bp - ap;
-      if ((b.score ?? 0) !== (a.score ?? 0)) return (b.score ?? 0) - (a.score ?? 0);
-      return (a.elNorm ?? a.element).localeCompare(b.elNorm ?? b.element);
+    const [yGZ, mGZ, dGZ, hGZ] = activePillars;
+
+    const emittedStems = [safeStem(yGZ), safeStem(mGZ), safeStem(dGZ), safeStem(hGZ)].filter(Boolean);
+    const otherBranches = [safeBranch(yGZ), safeBranch(dGZ), safeBranch(hGZ)].filter(Boolean);
+
+    const inner = computeNaegyeok({
+      dayStem,
+      monthBranch,
+      date: birthDateForGyeok,
+      pillars: activePillars,
+      emittedStems,
+      otherBranches,
     });
 
-    return demoted;
-  }, [yongshinRaw, demoteAbsent, elemForFallback, presentMap]);
+    // buildGyeokgukYongshinCandidates는 (inner, dayStem) → YongshinItem[] 형태로 만든다고 가정
+    const items = buildGyeokgukYongshinCandidates(inner, dayStem);
+
+    const toElNorm = (label: string): Element | null => {
+      if (/목|木|wood/i.test(label)) return "목";
+      if (/화|火|fire/i.test(label)) return "화";
+      if (/토|土|earth/i.test(label)) return "토";
+      if (/금|金|metal/i.test(label)) return "금";
+      if (/수|水|water/i.test(label)) return "수";
+      return null;
+    };
+
+    return (items ?? []).map((it) => ({
+      element: it.element,
+      elNorm: toElNorm(it.element),
+      score: Number.isFinite(it.score) ? it.score : 0,
+      reasons: Array.isArray(it.reasons) ? it.reasons : [],
+    }));
+  }, [activePillars, dayStem, monthBranch, birthDateForGyeok]);
+
+  // --------------------
+  // ✅ 멀티 용신(억부/조후/통관/병약/격국)
+  // --------------------
+  const yongshinMulti: YongshinMultiResult = useMemo(() => {
+    const monthGzForJohu = activePillars[1] || "";
+
+    return buildMultiYongshin({
+      eokbuList: eokbuListForMulti,
+      monthGz: monthGzForJohu,
+      elemPct: elemForFallback,
+      presentMap,
+      demoteAbsent,
+      gyeokgukList,
+    });
+  }, [activePillars, eokbuListForMulti, elemForFallback, presentMap, demoteAbsent, gyeokgukList]);
+
+  // 기존 UI 호환용: best 후보 리스트(없으면 억부)
+  const yongshinList = useMemo<YongshinItem[]>(() => {
+    const best = yongshinMulti.best;
+    if (best?.candidates?.length) {
+      return best.candidates.map((c) => ({
+        element: c.element,
+        elNorm: c.elNorm,
+        score: c.score,
+        reasons: c.reasons,
+      }));
+    }
+    return eokbuList;
+  }, [yongshinMulti, eokbuList]);
 
   const maxScore = useMemo(
     () => Math.max(0, ...yongshinList.map((it) => (Number.isFinite(it.score) ? it.score : 0))),
@@ -289,9 +386,14 @@ export function useAnalysisReportCalc({
     tenSubTotals100,
     hourKeyForUi,
     revKey,
+
+    // ✅ 추가/호환
+    yongshinMulti,
+    yongshinRecommend: yongshinMulti, // AnalysisReport.tsx에서 calc.yongshinRecommend 쓰는 거 대응
     yongshinList,
     maxScore,
     hasAbsent,
+
     dayElementPercent,
     isValidActive: hasValidYmd(activePillars),
   };

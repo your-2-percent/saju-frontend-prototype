@@ -93,7 +93,6 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
       {tab === "un" && <UnViewer data={data} />}
       {tab === "myoun" && <MyoUnViewer data={data} />}
       {tab === "report" && (
-        // pillars(양력)만 확실히 전달 — lunarPillars는 생략
         <AnalysisReport data={data} pillars={isValidPillars(pillars) ? pillars : []} />
       )}
     </div>

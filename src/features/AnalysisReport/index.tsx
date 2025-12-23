@@ -11,6 +11,7 @@ import { useAnalysisReportInput } from "./input/useAnalysisReportInput";
 import { useAnalysisReportCalc } from "./calc/useAnalysisReportCalc";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
+import YongshinRecommendCard from "@/features/AnalysisReport/YongshinRecommendCard";
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
@@ -113,7 +114,7 @@ export default function AnalysisReport({
 
       {/* 섹션 탭 */}
       <div className="flex gap-2 mb-4 justify-center flex-wrap">
-        {(["격국 · 물상론", "일간 · 오행 강약", "형충회합", "신살"] as const).map((t) => (
+        {(["격국 · 물상론", "일간 · 오행 강약", "용신추천", "형충회합", "신살"] as const).map((t) => (
           <button
             key={t}
             onClick={() => input.setBigTab(t)}
@@ -156,69 +157,18 @@ export default function AnalysisReport({
 
           <StrengthBar value={calc.dayElementPercent} />
           <ClimateBars natal={calc.activePillars} />
-
-          <div className="w-full p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-sm font-bold">용신 추천</div>
-              {calc.hasAbsent && (
-                <button
-                  type="button"
-                  onClick={() => input.setDemoteAbsent((v) => !v)}
-                  className={`text-xs px-2 py-1 rounded-lg border transition cursor-pointer
-                    ${
-                      input.demoteAbsent
-                        ? "bg-violet-100 text-violet-800 border-violet-200 whitespace-nowrap dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800"
-                        : "bg-white text-neutral-700 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-200 dark:border-neutral-700"
-                    }`}
-                  aria-pressed={input.demoteAbsent}
-                >
-                  부재후순위: {input.demoteAbsent ? "ON" : "OFF"}
-                </button>
-              )}
-            </div>
-
-            <ul className="space-y-2">
-              {calc.yongshinList.map((it, idx) => (
-                <li
-                  key={it.elNorm ?? it.element}
-                  className="flex items-start justify-between gap-3 rounded-lg border border-neutral-200 dark:border-neutral-800 p-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                      {idx + 1}위
-                    </span>
-                    <span className="text-sm font-semibold">{it.element}</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="mt-1 h-1.5 w-full rounded bg-neutral-300 dark:bg-neutral-800 overflow-hidden">
-                      <div
-                        className="h-1.5 rounded bg-white dark:bg-neutral-100"
-                        style={{
-                          width: `${
-                            calc.maxScore > 0
-                              ? Math.max(2, Math.min(100, Math.round(((it.score ?? 0) / calc.maxScore) * 100)))
-                              : 12
-                          }%`,
-                        }}
-                        title={`점수 ${it.score}`}
-                      />
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {(it.reasons ?? []).map((r, i) => (
-                        <span
-                          key={i}
-                          className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                        >
-                          {r}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
         </div>
+      )}
+
+      {/* 용신추천 */}
+      {input.bigTab === "용신추천" && (
+        <YongshinRecommendCard
+          key={`yongshin-${input.blendTab}-${calc.hourKeyForUi}`}
+          yongshin={calc.yongshinMulti}
+          hasAbsent={calc.hasAbsent}
+          demoteAbsent={input.demoteAbsent}
+          onToggleDemoteAbsent={() => input.setDemoteAbsent((v) => !v)}
+        />
       )}
 
       {/* 신살 */}
