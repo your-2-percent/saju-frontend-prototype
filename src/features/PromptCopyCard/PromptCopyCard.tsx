@@ -43,10 +43,6 @@ export default function PromptCopyCard({
 
   const currentSubList = CATEGORY_SUBS[model.mainCategory];
 
-  if (model.promptAccess === "hidden") {
-    return null;
-  }
-
   if (!ms) {
     return (
       <div className="p-4 border rounded bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-500">
@@ -55,13 +51,28 @@ export default function PromptCopyCard({
     );
   }
 
-  const isPromptLocked = model.promptAccess === "locked";
-  const lockTitle = isPromptLocked ? "프리미엄 기능입니다." : undefined;
-  const canCopyInfo = model.promptAccess === "full" && model.canCopyInfo;
-  const canCopyAll = model.promptAccess === "full" && model.canCopyAll;
+  const isPromptLocked = model.promptAccess !== "full";
+  const lockTitle = isPromptLocked ? "프리 플랜에서는 프롬프트 사용이 불가합니다. 🔒" : undefined;
+
+  const canCopyInfo = !isPromptLocked && model.canCopyInfo;
+  const canCopyAll = !isPromptLocked && model.canCopyAll;
 
   return (
     <div className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-3">
+      {/* ✅ 잠금 오버레이 */}
+      {isPromptLocked ? (
+        <div className="absolute inset-0 z-10 rounded-xl bg-white/70 dark:bg-neutral-900/70 backdrop-blur-[1px] flex items-center justify-center p-4">
+          <div className="max-w-sm text-center border border-neutral-300 dark:border-neutral-700 rounded-xl bg-white dark:bg-neutral-900 px-4 py-3 shadow-sm">
+            <div className="text-lg font-semibold">🔒 프리미엄 기능</div>
+            <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
+              프리 플랜에서는 프롬프트 복사/사용이 막혀 있어요.
+              <br />
+              베이직/프로에서 사용 가능.
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <PromptCopyHeader
         copiedInfo={model.copiedInfo}
         copiedAll={model.copiedAll}

@@ -1,3 +1,4 @@
+// src/shared/lib/hooks/useEntitlementsStore.ts
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { PlanTier } from "@/shared/billing/entitlements";
@@ -5,14 +6,13 @@ import { parsePlanTier } from "@/shared/lib/plan/planTier";
 import { getPlanCapabilities } from "@/shared/lib/plan/planCapabilities";
 
 type EntitlementsRow = {
-  plan: string; // ✅ DB에서 오는 원본 문자열
+  plan: string;
   max_myeongsik: number;
-  can_manage_myeongsik: boolean;
-  can_use_luck_tabs: boolean;
-  can_use_multi_mode: boolean;
-  can_use_all_prompts: boolean;
-  expires_at: string | null;
   starts_at?: string | null;
+  expires_at: string | null;
+
+  // ✅ 새 컬럼 (없으면 기본 true로 취급)
+  can_use_myo_viewer?: boolean | null;
 };
 
 type AddGateResult = { ok: true } | { ok: false; message: string };
@@ -31,6 +31,11 @@ type EntitlementsState = {
   canUseMultiMode: boolean;
   canUseAllPrompts: boolean;
 
+  canUseAdvancedReport: boolean;
+  canRemoveAds: boolean;
+
+  canUseMyoViewer: boolean;
+
   startsAt: Date | null;
   expiresAt: Date | null;
 
@@ -42,11 +47,15 @@ type EntitlementsState = {
   formatRemaining: (ms: number) => string;
 
   canAddMyeongsik: (currentCount: number) => AddGateResult;
-  canManageNow: () => boolean;
 
+  canManageNow: () => boolean;
   canUseLuckTabsNow: () => boolean;
   canUseMultiModeNow: () => boolean;
   canUseAllPromptsNow: () => boolean;
+
+  canUseAdvancedReportNow: () => boolean;
+  shouldShowAdsNow: () => boolean;
+  canUseMyoViewerNow: () => boolean;
 };
 
 const ADMIN_UUIDS: string[] = (import.meta.env.VITE_ADMIN_UUIDS ?? "")
@@ -72,15 +81,24 @@ const DEFAULT: Pick<
   | "canUseLuckTabs"
   | "canUseMultiMode"
   | "canUseAllPrompts"
+  | "canUseAdvancedReport"
+  | "canRemoveAds"
+  | "canUseMyoViewer"
   | "startsAt"
   | "expiresAt"
 > = {
-  plan: "PROMPT_LOCKED",
-  maxMyeongsik: 9999,
+  plan: "FREE",
+  maxMyeongsik: 1,
   canManageMyeongsik: true,
   canUseLuckTabs: true,
   canUseMultiMode: true,
   canUseAllPrompts: false,
+
+  canUseAdvancedReport: false,
+  canRemoveAds: false,
+
+  canUseMyoViewer: true,
+
   startsAt: null,
   expiresAt: null,
 };
@@ -98,6 +116,38 @@ function toDateOrNull(v: unknown): Date | null {
   if (typeof v !== "string" || v.trim() === "") return null;
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? null : d;
+}
+
+async function fetchEntRow(
+  userId: string
+): Promise<{ row: Partial<EntitlementsRow> | null; hasMyoViewerCol: boolean }> {
+  // ✅ can_use_myo_viewer 컬럼 추가 전/후 둘 다 살아남게 2트라이
+  const withCol = await supabase
+    .from("user_entitlements")
+    .select("plan,max_myeongsik,starts_at,expires_at,can_use_myo_viewer")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!withCol.error && withCol.data) {
+    return { row: withCol.data as Partial<EntitlementsRow>, hasMyoViewerCol: true };
+  }
+
+  const withoutCol = await supabase
+    .from("user_entitlements")
+    .select("plan,max_myeongsik,starts_at,expires_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (withoutCol.error || !withoutCol.data) {
+    return { row: null, hasMyoViewerCol: false };
+  }
+
+  return { row: withoutCol.data as Partial<EntitlementsRow>, hasMyoViewerCol: false };
+}
+
+function resolveCanUseMyoViewer(row: Partial<EntitlementsRow> | null): boolean {
+  if (!row) return true; // row 없으면 기본 true
+  return typeof row.can_use_myo_viewer === "boolean" ? row.can_use_myo_viewer : true;
 }
 
 export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
@@ -133,38 +183,64 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         return;
       }
 
-      // ✅ 관리자/매니저는 PROMPT_FULL 강제
+      // ✅ ent row는 관리자든 아니든 한 번은 읽어둠 (묘운 뷰어 토글 존중하려고)
+      const { row } = await fetchEntRow(userId);
+      const canUseMyoViewer = resolveCanUseMyoViewer(row);
+
+      // ✅ 관리자/매니저는 PRO 강제 (단, 묘운 뷰어는 DB 토글 존중)
       if (isPrivilegedUserId(userId)) {
-        const caps = getPlanCapabilities("PROMPT_FULL");
+        const caps = getPlanCapabilities("PRO");
+        const maxFromCaps = caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik;
+
         set({
           loaded: true,
           loading: false,
           userId,
-          plan: "PROMPT_FULL",
-          maxMyeongsik: 9999,
+          plan: "PRO",
+          maxMyeongsik: maxFromCaps,
+
           canManageMyeongsik: caps.canManageMyeongsik,
           canUseLuckTabs: caps.canUseLuckTabs,
           canUseMultiMode: caps.canUseMultiMode,
           canUseAllPrompts: caps.canUseAllPrompts,
+
+          canUseAdvancedReport: caps.canUseAdvancedReport,
+          canRemoveAds: caps.canRemoveAds,
+
+          canUseMyoViewer, // ✅ 여기 중요
+
+          startsAt: toDateOrNull(row?.starts_at ?? null),
+          expiresAt: toDateOrNull(row?.expires_at ?? null),
+        });
+        return;
+      }
+
+      if (!row) {
+        // ent row 없으면 FREE로 취급
+        const caps = getPlanCapabilities("FREE");
+        set({
+          loaded: true,
+          loading: false,
+          userId,
+          plan: "FREE",
+          maxMyeongsik: caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik,
+
+          canManageMyeongsik: caps.canManageMyeongsik,
+          canUseLuckTabs: caps.canUseLuckTabs,
+          canUseMultiMode: caps.canUseMultiMode,
+          canUseAllPrompts: caps.canUseAllPrompts,
+
+          canUseAdvancedReport: caps.canUseAdvancedReport,
+          canRemoveAds: caps.canRemoveAds,
+
+          canUseMyoViewer, // row 없으면 true
+
           startsAt: null,
           expiresAt: null,
         });
         return;
       }
 
-      const { data, error } = await supabase
-        .from("user_entitlements")
-        .select("plan,max_myeongsik,starts_at,expires_at")
-        .eq("user_id", userId)
-        .maybeSingle();
-
-      if (error || !data) {
-        set({ loaded: true, loading: false, userId, ...DEFAULT });
-        return;
-      }
-
-      // ✅ 여기서 row 먼저 만들고(plan 파싱은 그 다음) => row 못찾음 해결
-      const row = data as Partial<EntitlementsRow>;
       const plan = parsePlanTier(row.plan ?? null);
       const caps = getPlanCapabilities(plan);
 
@@ -178,13 +254,23 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         userId,
         plan,
         maxMyeongsik,
+
         canManageMyeongsik: caps.canManageMyeongsik,
         canUseLuckTabs: caps.canUseLuckTabs,
         canUseMultiMode: caps.canUseMultiMode,
         canUseAllPrompts: caps.canUseAllPrompts,
+
+        canUseAdvancedReport: caps.canUseAdvancedReport,
+        canRemoveAds: caps.canRemoveAds,
+
+        canUseMyoViewer,
+
         startsAt: toDateOrNull(row.starts_at ?? null),
         expiresAt: toDateOrNull(row.expires_at ?? null),
       });
+
+      // ✅ 진단용 로그(원인 잡을 때만 잠깐 켜)
+      // console.log("[ent] plan raw:", row.plan, "parsed:", plan, "max:", maxMyeongsik, "myo:", canUseMyoViewer);
     } finally {
       set({ loading: false });
     }
@@ -221,14 +307,11 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
     return parts.join(" ");
   },
 
-  canAddMyeongsik: (currentCount) => {
+  // ✅ 명식추가는 무조건 무한
+  canAddMyeongsik: () => {
     const s = get();
     if (!s.loaded) return { ok: false, message: "권한 확인 중" };
-    if (!s.isActiveNow()) return { ok: false, message: "플랜 만료 🔒" };
-
-    if (currentCount >= s.maxMyeongsik) {
-      return { ok: false, message: `현재 플랜은 명식 ${s.maxMyeongsik}개까지예요. 🔒` };
-    }
+    // 필요하면 로그인 여부까지 체크하고 싶으면 여기서 userId 확인만 추가
     return { ok: true };
   },
 
@@ -250,5 +333,22 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
   canUseAllPromptsNow: () => {
     const s = get();
     return s.loaded && s.isActiveNow() && s.canUseAllPrompts;
+  },
+
+  canUseAdvancedReportNow: () => {
+    const s = get();
+    return s.loaded && s.isActiveNow() && s.canUseAdvancedReport;
+  },
+
+  shouldShowAdsNow: () => {
+    const s = get();
+    if (!s.loaded) return true;
+    if (!s.isActiveNow()) return true;
+    return !s.canRemoveAds;
+  },
+
+  canUseMyoViewerNow: () => {
+    const s = get();
+    return s.loaded && s.isActiveNow() && s.canUseMyoViewer;
   },
 }));

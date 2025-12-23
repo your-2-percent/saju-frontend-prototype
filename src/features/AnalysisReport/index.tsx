@@ -1,4 +1,4 @@
-﻿// features/AnalysisReport/AnalysisReport.tsx
+﻿import { useEffect } from "react";
 import PentagonChart from "./PentagonChart";
 import StrengthBar from "./StrengthBar";
 import HarmonyTagPanel from "./HarmonyTagPanel";
@@ -12,14 +12,14 @@ import { useAnalysisReportCalc } from "./calc/useAnalysisReportCalc";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 import { YongshinRecommendCard } from "@/features/AnalysisReport/YongshinRecommendCard";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
 function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
   const any: Record<string, unknown> = data as unknown as Record<string, unknown>;
   const birthDay = typeof any.birthDay === "string" ? any.birthDay : "";
-  const calType =
-    typeof any.calendarType === "string" ? (any.calendarType as string) : "solar";
+  const calType = typeof any.calendarType === "string" ? any.calendarType : "solar";
   if (birthDay.length < 8) return data;
 
   const y = Number(birthDay.slice(0, 4));
@@ -29,9 +29,9 @@ function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
   if (calType === "lunar") {
     try {
       const solarDate = lunarToSolarStrict(y, m, d);
-      const newBirthDay = `${solarDate.getFullYear()}${pad2(
-        solarDate.getMonth() + 1
-      )}${pad2(solarDate.getDate())}`;
+      const newBirthDay = `${solarDate.getFullYear()}${pad2(solarDate.getMonth() + 1)}${pad2(
+        solarDate.getDate()
+      )}`;
       const out: MyeongSik = {
         ...data,
         birthDay: newBirthDay,
@@ -59,6 +59,9 @@ function parseYYYYMMDD(v: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+type BigTab = "격국 · 물상론" | "일간 · 오행 강약" | "용신추천" | "형충회합" | "신살";
+const BIG_TABS: readonly BigTab[] = ["격국 · 물상론", "일간 · 오행 강약", "용신추천", "형충회합", "신살"];
+
 export default function AnalysisReport({
   data,
   pillars,
@@ -73,16 +76,34 @@ export default function AnalysisReport({
   const settings = useSettingsStore((s) => s.settings);
   const input = useAnalysisReportInput();
   const normalizedData = ensureSolarBirthDay(data);
-  const birthDateParsed =
-  parseYYYYMMDD(normalizedData.birthDay) || undefined;
+  const birthDateParsed = parseYYYYMMDD(normalizedData.birthDay) || undefined;
+
+  // ✅ Free에서 막을 기능(격국/용신)
+  const canUseAdvancedReportNow = useEntitlementsStore((s) => s.canUseAdvancedReportNow);
+  const advancedOk = canUseAdvancedReportNow();
+
   const calc = useAnalysisReportCalc({
-    data: normalizedData,   // ✅ 핵심
+    data: normalizedData,
     pillars,
     lunarPillars,
     daewoonGzProp,
     blendTab: input.blendTab,
     demoteAbsent: input.demoteAbsent,
   });
+
+  const isLockedBigTab = (t: BigTab): boolean => {
+    if (advancedOk) return false;
+    return t === "격국 · 물상론" || t === "용신추천";
+  };
+
+  // ✅ 잠금 탭이 선택돼있으면 강제로 안전 탭으로 이동
+  useEffect(() => {
+    if (advancedOk) return;
+
+    const current = input.bigTab as BigTab;
+    const locked = current === "격국 · 물상론" || current === "용신추천";
+    if (locked) input.setBigTab("일간 · 오행 강약");
+  }, [advancedOk, input.bigTab, input.setBigTab, input]);
 
   if (!calc.isValidActive) {
     return (
@@ -114,20 +135,31 @@ export default function AnalysisReport({
 
       {/* 섹션 탭 */}
       <div className="flex gap-2 mb-4 justify-center flex-wrap">
-        {(["격국 · 물상론", "일간 · 오행 강약", "용신추천", "형충회합", "신살"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => input.setBigTab(t)}
-            className={
-              "px-3 py-1 text-sm rounded border cursor-pointer " +
-              (input.bigTab === t
-                ? "bg-violet-500 text-white border-violet-600"
-                : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
-            }
-          >
-            {t}
-          </button>
-        ))}
+        {BIG_TABS.map((t) => {
+          const locked = isLockedBigTab(t);
+          const title = locked ? "프리 플랜에서는 사용할 수 없어요. 🔒" : undefined;
+
+          return (
+            <button
+              key={t}
+              title={title}
+              onClick={() => {
+                if (locked) return;
+                input.setBigTab(t);
+              }}
+              className={
+                "px-3 py-1 text-sm rounded border cursor-pointer " +
+                (locked ? "opacity-60 " : "") +
+                (input.bigTab === t
+                  ? "bg-violet-500 text-white border-violet-600"
+                  : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
+              }
+            >
+              {t}
+              {locked ? " 🔒" : ""}
+            </button>
+          );
+        })}
       </div>
 
       {/* 형충회합 */}
@@ -160,8 +192,13 @@ export default function AnalysisReport({
         </div>
       )}
 
-      {/* 용신추천 */}
-      {input.bigTab === "용신추천" && (
+      {/* 용신추천 (잠금이면 안내) */}
+      {input.bigTab === "용신추천" && !advancedOk && (
+        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
+          🔒 프리 플랜에서는 <b>용신추천</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.
+        </div>
+      )}
+      {input.bigTab === "용신추천" && advancedOk && (
         <YongshinRecommendCard
           key={`yongshin-${input.blendTab}-${calc.hourKeyForUi}`}
           recommend={calc.yongshinMulti}
@@ -169,6 +206,7 @@ export default function AnalysisReport({
           pillars={calc.activePillars}
           hourKey={calc.hourKeyForUi}
           demoteAbsent={input.demoteAbsent}
+          hiddenStemMode={settings.hiddenStemMode}
         />
       )}
 
@@ -185,7 +223,13 @@ export default function AnalysisReport({
         />
       )}
 
-      {input.bigTab === "격국 · 물상론" && (
+      {/* 격국 · 물상론 (잠금이면 안내) */}
+      {input.bigTab === "격국 · 물상론" && !advancedOk && (
+        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
+          🔒 프리 플랜에서는 <b>격국 · 물상론</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.
+        </div>
+      )}
+      {input.bigTab === "격국 · 물상론" && advancedOk && (
         <GyeokgukTagPanel
           key={`gyeok-${input.blendTab}-${calc.hourKeyForUi}`}
           unified={calc.unified}

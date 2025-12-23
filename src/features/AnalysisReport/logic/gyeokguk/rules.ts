@@ -1,6 +1,8 @@
 ﻿// features/AnalysisReport/logic/gyeokguk/rules.ts
 import type { Element } from "./types";
 import { type StemKo } from "./utils";
+import { HiddenStemMode } from "@/shared/lib/hooks/useSajuSettingsStore.ts";
+import type { KoBranch } from "@/features/AnalysisReport/logic/relations/groups.ts"
 
 /* =========================
  * 기본 오행 매핑
@@ -63,6 +65,54 @@ export const DIST_MAP: Record<
   술: { 초기: { stem: "신", w: 9 }, 중기: { stem: "정", w: 3 }, 정기: { stem: "무", w: 18 } },
   해: { 초기: { stem: "무", w: 7 }, 중기: { stem: "갑", w: 7 }, 정기: { stem: "임", w: 16 } },
 };
+
+export const DIST_MAP_HGC: Record<
+  string,
+  {
+    초기?: { stem: string; w: number };
+    중기?: { stem: string; w: number };
+    정기: { stem: string; w: number };  
+  }
+  > = {
+     자: { 정기: { stem: "계", w: 100 } }, 
+      축: { 초기: { stem: "계", w: 20 }, 중기: { stem: "신", w: 30 }, 정기: { stem: "기", w: 50 } }, 
+      인: { 중기: { stem: "병", w: 30 }, 정기: { stem: "갑", w: 70 } }, 
+      묘: { 정기: { stem: "을", w: 100 } }, 
+      진: { 초기: { stem: "을", w: 20 }, 중기: { stem: "계", w: 30 }, 정기: { stem: "무", w: 50 } }, 
+      사: { 중기: { stem: "경", w: 30 }, 정기: { stem: "병", w: 70 } }, 
+      오: { 정기: { stem: "정", w: 100 } }, 
+      미: { 초기: { stem: "정", w: 20 }, 중기: { stem: "을", w: 30 }, 정기: { stem: "기", w: 50 } }, 
+      신: { 중기: { stem: "임", w: 30 }, 정기: { stem: "경", w: 70 } }, 
+      유: { 정기: { stem: "신", w: 100 } }, 
+      술: { 초기: { stem: "신", w: 20 }, 중기: { stem: "정", w: 30 }, 정기: { stem: "무", w: 50 } }, 
+      해: { 중기: { stem: "갑", w: 30 }, 정기: { stem: "임", w: 70 } }, 
+};
+
+export type StemW = { stem: string; w: number };
+
+export type BranchDist = {
+  초기?: StemW;
+  중기?: StemW;
+  정기: StemW;
+};
+
+export function isBranchKey(v: string): v is KoBranch {
+  return (
+    v === "자" || v === "축" || v === "인" || v === "묘" || v === "진" || v === "사" ||
+    v === "오" || v === "미" || v === "신" || v === "유" || v === "술" || v === "해"
+  );
+}
+
+export function coerceHiddenStemMode(v: unknown): HiddenStemMode {
+  const s = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (s === "hgc") return "hgc";
+  return "classic";
+}
+
+export function getBranchDistMap(mode: HiddenStemMode): Record<KoBranch, BranchDist> {
+  return mode === "hgc" ? DIST_MAP_HGC : DIST_MAP;
+}
+
 
 /* =========================
  * 절입 전후 12일

@@ -43,7 +43,7 @@ export function useAdminUserSave() {
       const [profiles, msRows, entRows] = await Promise.all([
         fetchProfiles(safeIds),
         fetchMyeongsikRows(safeIds),
-        fetchEntitlements(safeIds),
+        fetchEntitlements(safeIds), // ✅ entRows에 can_use_myo_viewer도 포함되게 repo 수정 필요
       ]);
 
       const nextSummaries = buildUserSummaries({
@@ -73,6 +73,7 @@ export function useAdminUserSave() {
 
       try {
         const preset = getPreset(draft.plan);
+
         const starts_at = draft.startDate ? toKstIsoFromDateInput(draft.startDate, false) : null;
         const expires_at = draft.endDate ? toKstIsoFromDateInput(draft.endDate, true) : null;
 
@@ -81,6 +82,9 @@ export function useAdminUserSave() {
           ...preset,
           starts_at,
           expires_at,
+
+          // ✅ 묘운 뷰어 토글(플랜과 별개)
+          can_use_myo_viewer: draft.myoViewer !== "OFF",
         };
 
         await upsertEntitlements(payload);

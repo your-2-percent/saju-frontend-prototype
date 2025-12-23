@@ -6,12 +6,14 @@ import { getYearGanZhi } from "@/shared/domain/간지/공통";
 import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
 import { computeUnifiedPower, type LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
 import computeYongshin from "@/features/AnalysisReport/calc/yongshin";
-
-import type { Element } from "@/features/AnalysisReport/utils/types";
 import {
-  elementPresenceFromPillars,
-  lightElementScoreFromPillars,
-} from "@/features/AnalysisReport/calc/reportCalc";
+  coerceHiddenStemMode,
+  getBranchDistMap,
+  isBranchKey,
+} from "@/features/AnalysisReport/logic/gyeokguk/rules";
+import type { Element } from "@/features/AnalysisReport/utils/types";
+import { HiddenStemMode } from "@/shared/lib/hooks/useSajuSettingsStore.ts";
+import type { KoBranch } from "@/features/AnalysisReport/logic/relations/groups.ts"
 
 import {
   buildMultiYongshin,
@@ -31,17 +33,8 @@ function isValidDaeItem(v: unknown): v is DaeItem {
 }
 
 function safeGzAtYear(year: number): string {
-  // 입춘 경계 흔들림 줄이려고 2/15 정오 고정
   const dt = new Date(year, 1, 15, 12, 0, 0, 0);
   return normalizeGZ(getYearGanZhi(dt) || "");
-}
-
-function mkElemPctFallback(
-  unifiedElemPct: Record<Element, number> | null | undefined,
-  pillars: [string, string, string, string]
-): Record<Element, number> {
-  if (unifiedElemPct) return unifiedElemPct;
-  return lightElementScoreFromPillars(pillars);
 }
 
 type YongshinRaw = { ordered: Array<{ element: string; score?: number; reasons?: string[] }> } | null;
@@ -70,18 +63,106 @@ function buildEokbuListFromRaw(
   });
 }
 
+// --- hidden stem 기반 presence/score (훅 내부 fallback용) ---
+
+const STEM_EL: Record<string, Element> = {
+  갑: "목", 을: "목",
+  병: "화", 정: "화",
+  무: "토", 기: "토",
+  경: "금", 신: "금",
+  임: "수", 계: "수",
+};
+
+function stemToEl(s: string): Element | null {
+  return STEM_EL[s] ?? null;
+}
+
+function calcPresentMapByHiddenStems(
+  pillars: [string, string, string, string],
+  mode: HiddenStemMode
+): Record<Element, boolean> {
+  const map: Record<Element, boolean> = { 목: false, 화: false, 토: false, 금: false, 수: false };
+  const distMap = getBranchDistMap(mode);
+
+  for (const gz of pillars) {
+    const stem = gz?.charAt(0) ?? "";
+    const branch = gz?.charAt(1) ?? "";
+
+    const se = stemToEl(stem);
+    if (se) map[se] = true;
+
+    if (isBranchKey(branch)) {
+      const dist = distMap[branch as KoBranch];
+      const nodes = [dist.초기, dist.중기, dist.정기].filter(Boolean) as Array<{ stem: string; w: number }>;
+      for (const n of nodes) {
+        const el = stemToEl(n.stem);
+        if (el && n.w > 0) map[el] = true;
+      }
+    }
+  }
+
+  return map;
+}
+
+function lightElemPctFallbackByHiddenStems(
+  pillars: [string, string, string, string],
+  mode: HiddenStemMode
+): Record<Element, number> {
+  const distMap = getBranchDistMap(mode);
+  const totals: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+
+  // ✅ pillar당: stem 50 + branch(hidden dist) 50
+  for (const gz of pillars) {
+    const stem = gz?.charAt(0) ?? "";
+    const branch = gz?.charAt(1) ?? "";
+
+    const se = stemToEl(stem);
+    if (se) totals[se] += 50;
+
+    if (isBranchKey(branch)) {
+      const dist = distMap[branch as KoBranch];
+      const nodes = [dist.초기, dist.중기, dist.정기].filter(Boolean) as Array<{ stem: string; w: number }>;
+      const sum = nodes.reduce((a, n) => a + (Number.isFinite(n.w) ? n.w : 0), 0);
+      const denom = sum > 0 ? sum : 1;
+
+      for (const n of nodes) {
+        const el = stemToEl(n.stem);
+        if (!el) continue;
+        totals[el] += (50 * n.w) / denom;
+      }
+    }
+  }
+
+  const sumAll = totals.목 + totals.화 + totals.토 + totals.금 + totals.수;
+  const denomAll = sumAll > 0 ? sumAll : 1;
+
+  return {
+    목: (totals.목 / denomAll) * 100,
+    화: (totals.화 / denomAll) * 100,
+    토: (totals.토 / denomAll) * 100,
+    금: (totals.금 / denomAll) * 100,
+    수: (totals.수 / denomAll) * 100,
+  };
+}
+
+function mkElemPctFallback(
+  unifiedElemPct: Record<Element, number> | null | undefined,
+  pillars: [string, string, string, string],
+  mode: HiddenStemMode
+): Record<Element, number> {
+  if (unifiedElemPct) return unifiedElemPct;
+  return lightElemPctFallbackByHiddenStems(pillars, mode);
+}
+
 export type LuckYongshinState = {
-  // UI 상태
   daeIndex: number;
   setDaeIndex: (i: number) => void;
   seIndex: number | null;
   setSeIndex: (i: number | null) => void;
 
-  // 데이터
   dae10: DaeItem[];
   se10: Array<{ year: number; gz: string }>;
 
-  // 결과
   chain: LuckChain;
   tab: "대운" | "세운";
   label: string;
@@ -96,10 +177,12 @@ export function useLuckYongshin(args: {
   pillars: [string, string, string, string];
   hourKey: string;
   demoteAbsent: boolean;
-  // 필요하면 나중에 격국용신 주입 가능
+  hiddenStemMode?: string; // ✅ 추가
   gyeokgukList?: YongshinItem[] | null;
 }): LuckYongshinState {
-  const { data, pillars, hourKey, demoteAbsent, gyeokgukList } = args;
+  const { data, pillars, hourKey, demoteAbsent, gyeokgukList, hiddenStemMode } = args;
+
+  const mode = useMemo(() => coerceHiddenStemMode(hiddenStemMode), [hiddenStemMode]);
 
   const daeRaw = useDaewoonList(data, data?.mingSikType);
   const dae10 = useMemo(() => {
@@ -122,14 +205,14 @@ export function useLuckYongshin(args: {
     });
   }, [dae]);
 
-  const safeSeIndex =
-    seIndex == null ? null : Math.max(0, Math.min(se10.length - 1, seIndex));
+  const safeSeIndex = seIndex == null ? null : Math.max(0, Math.min(se10.length - 1, seIndex));
   const se = safeSeIndex == null ? null : (se10[safeSeIndex] ?? null);
 
   const presentMap = useMemo(
-    () => elementPresenceFromPillars(pillars, { includeBranches: true }),
-    [pillars]
+    () => calcPresentMapByHiddenStems(pillars, mode),
+    [pillars, mode]
   );
+
   const hasAbsent = useMemo(
     () => (["목", "화", "토", "금", "수"] as Element[]).some((el) => !presentMap[el]),
     [presentMap]
@@ -138,19 +221,10 @@ export function useLuckYongshin(args: {
   const chain = useMemo<LuckChain>(() => {
     const daeGz = dae ? normalizeGZ(dae.gz) : null;
     const seGz = se ? normalizeGZ(se.gz) : null;
-
-    // “대운만”을 원하면 seIndex를 null로 만들면 됨
-    return {
-      dae: daeGz || null,
-      se: seGz || null,
-      wol: null,
-      il: null,
-    };
+    return { dae: daeGz || null, se: seGz || null, wol: null, il: null };
   }, [dae, se]);
 
-  const tab: "대운" | "세운" = useMemo(() => {
-    return chain.se ? "세운" : "대운";
-  }, [chain.se]);
+  const tab: "대운" | "세운" = useMemo(() => (chain.se ? "세운" : "대운"), [chain.se]);
 
   const label = useMemo(() => {
     const daeLabel = dae ? `${dae.at.getFullYear()}~ ${normalizeGZ(dae.gz)}` : "대운 -";
@@ -166,9 +240,11 @@ export function useLuckYongshin(args: {
       tab,
       chain,
       hourKey,
+      // ✅ 여기까지는 훅에서 건드릴 수 없음.
+      // computeUnifiedPower 내부가 classic 고정이면 최종 점수까지 완전 반영은 추가 패치 필요.
     });
 
-    const elemPctFallback = mkElemPctFallback(unified?.elementPercent100, pillars);
+    const elemPctFallback = mkElemPctFallback(unified?.elementPercent100, pillars, mode);
 
     const raw: YongshinRaw =
       typeof computeYongshin === "function"
@@ -185,7 +261,7 @@ export function useLuckYongshin(args: {
       demoteAbsent,
       gyeokgukList: Array.isArray(gyeokgukList) ? gyeokgukList : null,
     });
-  }, [dae, pillars, tab, chain, hourKey, presentMap, demoteAbsent, gyeokgukList]);
+  }, [dae, pillars, tab, chain, hourKey, presentMap, demoteAbsent, gyeokgukList, mode]);
 
   return {
     daeIndex: safeDaeIndex,
