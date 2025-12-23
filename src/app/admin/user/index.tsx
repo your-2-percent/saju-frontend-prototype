@@ -1,3 +1,4 @@
+// src/app/admin/user/AdminUserListPage.tsx
 import { useEffect, useMemo } from "react";
 import { useAdminUserInput } from "./input/useAdminUserInput";
 import { useAdminUserSave } from "./save/useAdminUserSave";
@@ -52,11 +53,16 @@ export default function AdminUserListPage() {
           const email = s.profile?.email || "";
 
           const draft = draftByUser[s.user_id] ?? {
-            plan: "PROMPT_LOCKED",
+            plan: "FREE",
             startDate: "",
             endDate: "",
+            myoViewer: "ON" as const,
             saving: false,
+            lastSavedAt: null as string | null,
           };
+
+          const viewerNow =
+            s.ent?.can_use_myo_viewer === false ? "OFF" : "ON";
 
           return (
             <div
@@ -78,7 +84,7 @@ export default function AdminUserListPage() {
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
-                플랜 {planLabel(s.ent?.plan)} · {periodLabel(s.ent)}
+                플랜 {planLabel(s.ent?.plan)} · {periodLabel(s.ent)} · 묘운 뷰어 {viewerNow}
               </div>
 
               <div className="mt-3 flex flex-col gap-2">
@@ -115,6 +121,19 @@ export default function AdminUserListPage() {
                         {p.label}
                       </option>
                     ))}
+                  </select>
+
+                  {/* ✅ 묘운 뷰어 셀렉트 */}
+                  <select
+                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                    value={draft.myoViewer}
+                    onChange={(e) => {
+                      const v = e.target.value === "OFF" ? "OFF" : "OFF";
+                      setDraft(s.user_id, { myoViewer: v });
+                    }}
+                  >
+                    <option value="ON">묘운 뷰어 ON</option>
+                    <option value="OFF">묘운 뷰어 OFF</option>
                   </select>
 
                   <button

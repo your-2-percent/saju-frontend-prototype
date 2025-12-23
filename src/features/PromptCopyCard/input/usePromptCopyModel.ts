@@ -3,14 +3,15 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
 import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
 import type { LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
-import { getEffectivePlanTier } from "@/shared/lib/plan/access";
 import { getPlanCapabilities } from "@/shared/lib/plan/planCapabilities";
+import { parsePlanTier } from "@/shared/lib/plan/planTier";
 import { useAuthUserId } from "@/features/PromptCopyCard/saveInterface/useAuthUserId";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { usePromptCopyInput } from "@/features/PromptCopyCard/input/usePromptCopyInput";
 import { usePromptCopyCalc } from "@/features/PromptCopyCard/calc/usePromptCopyCalc";
 import { usePromptCopySave } from "@/features/PromptCopyCard/save/usePromptCopySave";
 import type { MainCategoryKey, SubCategoryKey } from "@/features/prompt/buildPrompt";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 
 type Input = {
   ms: MyeongSik;
@@ -20,6 +21,8 @@ type Input = {
   basis?: ShinsalBasis;
   includeTenGod?: boolean;
 };
+
+type PromptAccess = "full" | "locked"; // 지금 멤버십 정책에선 hidden 안 씀
 
 export function usePromptCopyModel({
   ms,
@@ -33,12 +36,29 @@ export function usePromptCopyModel({
   const authUserId = useAuthUserId();
   const effectiveUserId = authUserId ?? rtUserId ?? null;
 
-  const planTier = useMemo(() => getEffectivePlanTier(effectiveUserId), [effectiveUserId]);
+  // ✅ 핵심: entitlements store를 "구독"해서 plan 변경 시 리렌더 되게 만들기
+  const entLoaded = useEntitlementsStore((s) => s.loaded);
+  const entUserId = useEntitlementsStore((s) => s.userId);
+  const entPlan = useEntitlementsStore((s) => s.plan);
+
+  // ✅ 사용자 매칭 + loaded 기반으로 planTier 결정 (reactive)
+  const planTier = useMemo(() => {
+    if (!effectiveUserId) return parsePlanTier("FREE");
+    if (!entLoaded) return parsePlanTier("FREE");
+    if (entUserId !== effectiveUserId) return parsePlanTier("FREE");
+    return parsePlanTier(entPlan ?? null);
+  }, [effectiveUserId, entLoaded, entUserId, entPlan]);
+
   const caps = useMemo(() => getPlanCapabilities(planTier), [planTier]);
+
   const canUseMultiMode = caps.canUseMultiMode;
   const canUseLuckTabs = caps.canUseLuckTabs;
 
+  // ✅ 프롬프트 접근: 이제 caps.promptAccess에 의존하지 말고 canUseAllPrompts로 결정
+  const promptAccess: PromptAccess = caps.canUseAllPrompts ? "full" : "locked";
+
   const input = usePromptCopyInput({ msId: ms.id, canUseMultiMode, canUseLuckTabs });
+
   const calc = usePromptCopyCalc({
     ms,
     natal,
@@ -51,10 +71,8 @@ export function usePromptCopyModel({
     input,
   });
 
-  const { copiedAll, copiedInfo, canCopyAll, canCopyInfo, onCopyAll, onCopyInfoOnly } = usePromptCopySave(
-    calc.finalText,
-    calc.infoOnlyText
-  );
+  const { copiedAll, copiedInfo, canCopyAll, canCopyInfo, onCopyAll, onCopyInfoOnly } =
+    usePromptCopySave(calc.finalText, calc.infoOnlyText);
 
   function handleMainCategoryChange(next: MainCategoryKey, subs: { key: SubCategoryKey }[]) {
     input.setMainCategory(next);
@@ -72,10 +90,13 @@ export function usePromptCopyModel({
     setTeacherMode: input.setTeacherMode,
     date: calc.date,
     setDate: calc.setDate,
+
     planTier,
-    promptAccess: caps.promptAccess,
+    promptAccess,
+
     canUseMultiMode,
     canUseLuckTabs,
+
     partnerId: input.partnerId,
     setPartnerId: input.setPartnerId,
     partnerMs: calc.partnerMs,
@@ -102,8 +123,8 @@ export function usePromptCopyModel({
     infoOnlyText: calc.infoOnlyText,
     copiedAll,
     copiedInfo,
-    canCopyAll,
-    canCopyInfo,
+    canCopyAll: promptAccess === "full" && canCopyAll,
+    canCopyInfo: promptAccess === "full" && canCopyInfo,
     onCopyAll,
     onCopyInfoOnly,
     handleMainCategoryChange,

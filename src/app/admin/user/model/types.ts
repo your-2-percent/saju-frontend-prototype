@@ -13,6 +13,9 @@ export type EntRow = {
   plan: PlanTier | null;
   starts_at: string | null;
   expires_at: string | null;
+
+  // ✅ 묘운 뷰어
+  can_use_myo_viewer?: boolean | null;
 };
 
 export type EntRowRaw = {
@@ -20,6 +23,9 @@ export type EntRowRaw = {
   plan: unknown;
   starts_at: string | null;
   expires_at: string | null;
+
+  // ✅ repo에서 그대로 받아오면 unknown 처리해도 됨
+  can_use_myo_viewer?: unknown;
 };
 
 export type MyeongsikRow = {
@@ -35,10 +41,16 @@ export type UserSummary = {
   ent: EntRow | null;
 };
 
+export type MyoViewerFlag = "ON" | "OFF";
+
 export type Draft = {
   plan: PlanTier;
   startDate: string; // YYYY-MM-DD
   endDate: string; // YYYY-MM-DD
+
+  // ✅ 관리자에서 토글
+  myoViewer: MyoViewerFlag;
+
   saving: boolean;
   lastSavedAt?: number;
 };

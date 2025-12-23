@@ -1,5 +1,5 @@
 // features/UnMyounTabs.tsx
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import UnViewer from "@/features/luck/viewer";
 import MyoUnViewer from "@/features/myoun/MyoUnViewer";
 import AnalysisReport from "@/features/AnalysisReport/";
@@ -12,6 +12,7 @@ import {
   getHourGanZhi,
 } from "@/shared/domain/간지/공통";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 
 /* ────────────────────────────────────────────────────────────
  * 달력 변환/유틸
@@ -22,11 +23,25 @@ const isValidPillars = (arr: unknown): arr is [string, string, string, string] =
   return isGZ(arr[0]) && isGZ(arr[1]) && isGZ(arr[2]) && (arr[3] === "" || isGZ(arr[3]));
 };
 
+type TabKey = "un" | "myoun" | "report";
+
 /* ────────────────────────────────────────────────────────────
  * 컴포넌트
  * ──────────────────────────────────────────────────────────── */
 export default function UnMyounTabs({ data }: { data: MyeongSik }) {
-  const [tab, setTab] = useState<"un" | "myoun" | "report">("un");
+  const [tab, setTab] = useState<TabKey>("un");
+
+  // ✅ 묘운 뷰어는 "보이거나/아예 숨기거나"만 한다.
+  // canUseMyoViewerNow() 자체가 loaded/isActiveNow 체크 포함이라,
+  // 로딩 중에는 false -> 탭이 잠깐 보였다가 사라지는 깜빡임도 방지됨.
+  const showMyoTab = useEntitlementsStore((s) => s.canUseMyoViewerNow());
+
+  // ✅ 탭이 숨김 상태인데 현재 탭이 myoun이면 안전 탭으로 강제 이동
+  useEffect(() => {
+    if (tab === "myoun" && !showMyoTab) {
+      setTab("un");
+    }
+  }, [tab, showMyoTab]);
 
   // 1) 음→양 보장 + 경도/DST 교정
   const correctedSolarRaw = useMemo(() => {
@@ -71,14 +86,19 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
         >
           기본운 뷰어
         </button>
-        <button
-          onClick={() => setTab("myoun")}
-          className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b hover:border-purple-500 hover:text-purple-500 font-bold ${
-            tab === "myoun" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"
-          }`}
-        >
-          묘운 뷰어
-        </button>
+
+        {/* ✅ 묘운 뷰어 탭: 권한 없으면 "아예 안 보이게" */}
+        {showMyoTab ? (
+          <button
+            onClick={() => setTab("myoun")}
+            className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b hover:border-purple-500 hover:text-purple-500 font-bold ${
+              tab === "myoun" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"
+            }`}
+          >
+            묘운 뷰어
+          </button>
+        ) : null}
+
         <button
           onClick={() => setTab("report")}
           className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b hover:border-purple-500 hover:text-purple-500 font-bold ${
@@ -91,7 +111,7 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
 
       {/* 콘텐츠 */}
       {tab === "un" && <UnViewer data={data} />}
-      {tab === "myoun" && <MyoUnViewer data={data} />}
+      {tab === "myoun" && showMyoTab && <MyoUnViewer data={data} />}
       {tab === "report" && (
         <AnalysisReport data={data} pillars={isValidPillars(pillars) ? pillars : []} />
       )}

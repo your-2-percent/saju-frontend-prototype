@@ -1,16 +1,17 @@
+// src/app/admin/user/calc/planUtils.ts
 import type { PlanTier } from "@/shared/billing/entitlements";
 import { getPlanCapabilities } from "@/shared/lib/plan/planCapabilities";
 import { parsePlanTier } from "@/shared/lib/plan/planTier";
 import type { EntRow, PlanOption, PlanPreset } from "../model/types";
 
 export const PLAN_OPTIONS: PlanOption[] = [
-  { value: "PROMPT_HIDDEN", label: "프롬프트 숨김" },
-  { value: "PROMPT_LOCKED", label: "프롬프트 표시(잠금)" },
-  { value: "PROMPT_FULL", label: "프롬프트 사용 가능" },
+  { value: "FREE", label: "FREE (무료)" },
+  { value: "BASIC", label: "BASIC (광고ON)" },
+  { value: "PRO", label: "PRO (광고OFF)" },
 ];
 
 export function isPlanTier(v: unknown): v is PlanTier {
-  return v === "PROMPT_HIDDEN" || v === "PROMPT_LOCKED" || v === "PROMPT_FULL";
+  return v === "FREE" || v === "BASIC" || v === "PRO";
 }
 
 export function coercePlanTier(v: unknown): PlanTier | null {
@@ -41,6 +42,8 @@ export function toKstIsoFromDateInput(dateStr: string, endOfDay: boolean): strin
 export function getPreset(plan: PlanTier): PlanPreset {
   const caps = getPlanCapabilities(plan);
   const max = caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik;
+
+  // ✅ 기존 컬럼 유지(지금 DB에 이미 있던 칼럼들일 확률 높음)
   return {
     plan,
     max_myeongsik: max,
@@ -52,7 +55,7 @@ export function getPreset(plan: PlanTier): PlanPreset {
 }
 
 export function planLabel(p: PlanTier | null | undefined): string {
-  const v = p ?? "PROMPT_LOCKED";
+  const v = p ?? "FREE";
   return PLAN_OPTIONS.find((x) => x.value === v)?.label ?? String(v);
 }
 

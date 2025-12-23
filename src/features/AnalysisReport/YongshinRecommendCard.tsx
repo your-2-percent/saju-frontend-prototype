@@ -13,6 +13,7 @@ type Props = {
   hourKey: string;
 
   demoteAbsent: boolean;
+  hiddenStemMode: string;
 };
 
 function pctWidth(score: number, maxScore: number): string {
@@ -140,7 +141,7 @@ function BestSummary({ best }: { best: YongshinGroup | null }) {
   );
 }
 
-export function YongshinRecommendCard({ recommend, data, pillars, hourKey, demoteAbsent }: Props) {
+export function YongshinRecommendCard({ recommend, data, pillars, hourKey, demoteAbsent, hiddenStemMode }: Props) {
   const natal = recommend;
 
   // ✅ 운용신(대운/세운) 계산은 hook으로 빼서 카드 얇게
@@ -149,6 +150,7 @@ export function YongshinRecommendCard({ recommend, data, pillars, hourKey, demot
     pillars,
     hourKey,
     demoteAbsent,
+    hiddenStemMode,
   });
 
   return (

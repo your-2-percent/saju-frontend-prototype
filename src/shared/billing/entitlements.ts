@@ -1,16 +1,17 @@
 // shared/billing/entitlements.ts
 import { canAddMyeongSik, getPlanCapabilities } from "@/shared/lib/plan/planCapabilities";
 
-export type PlanTier =
-  | "PROMPT_HIDDEN"
-  | "PROMPT_LOCKED"
-  | "PROMPT_FULL";
+export type PlanTier = "FREE" | "BASIC" | "PRO";
 
 export type Entitlements = {
   canAddMyeongsik: boolean;
   canUseMultiMode: boolean;
   canUseLuckTabs: boolean;
   canUseAllPrompts: boolean;
+
+  // ✅ 새 멤버십 정책
+  canUseAdvancedReport: boolean; // 격국/물상론/용신추천 묶음
+  canRemoveAds: boolean; // Pro만 true
 };
 
 export type EntitlementContext = {
@@ -27,5 +28,7 @@ export function getEntitlements(ctx: EntitlementContext): Entitlements {
     canUseMultiMode: caps.canUseMultiMode,
     canUseLuckTabs: caps.canUseLuckTabs,
     canUseAllPrompts: caps.canUseAllPrompts,
+    canUseAdvancedReport: caps.canUseAdvancedReport,
+    canRemoveAds: caps.canRemoveAds,
   };
 }

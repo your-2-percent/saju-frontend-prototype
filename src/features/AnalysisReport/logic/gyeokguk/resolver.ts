@@ -1,14 +1,18 @@
-﻿// features/AnalysisReport/logic/gyeokguk/resolver.ts
+﻿import { KoBranch } from './../relations/groups';
+// features/AnalysisReport/logic/gyeokguk/resolver.ts
 import type { Element, GyeokgukInner, TenGodSubtype } from "./types";
 import { getSolarTermBoundaries } from "@/features/myoun/calc/solarTerms";
 import {
-  DIST_MAP,
   KE,
   STEM_TO_ELEMENT,
   YANGIN_MAP,
   WOLGEOP_MAP,
   GEONLOK_SET,
   BRANCH_TO_TERM,
+  coerceHiddenStemMode,
+  getBranchDistMap,
+  isBranchKey,
+  type BranchDist
 } from "./rules";
 import { detectOuterGyeok } from "./evaluator";
 import {
@@ -24,12 +28,9 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 type SolarTermBoundary = { name: string; date: Date };
 
 function toUtcDayStampByLocalYMD(d: Date): number {
-  // "로컬 날짜 기준"으로만 일수 차이를 보게 강제(시간/타임존 흔들림 방지)
   return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-// getSolarTermBoundaries가 “입춘~다음입춘” 사이만 주기 때문에
-// 생일이 입춘 이전이면 전년도 주기로 다시 구해 커버
 function getBoundariesCovering(date: Date): SolarTermBoundary[] {
   let bounds = getSolarTermBoundaries(date) as SolarTermBoundary[];
   const start = bounds[0]?.date; // 보통 입춘
@@ -43,43 +44,65 @@ function getBoundariesCovering(date: Date): SolarTermBoundary[] {
 
 function getMonthStartTermName(monthBranch: string): string | null {
   const arr = BRANCH_TO_TERM[monthBranch];
-  return Array.isArray(arr) && arr.length > 0 ? arr[0] : null; // 첫 번째를 “절입(시작 절기)”로
+  return Array.isArray(arr) && arr.length > 0 ? arr[0] : null;
 }
 
-// 절입 기준 “몇 일째” (절입 당일=1)
-function getJeolipDayIndex(monthBranch: string, date: Date): number | null {
+/**
+ * 절입 기준 “몇 일째”(당일=1) + 이번 절기 구간 길이(일수)
+ * - HGC처럼 가중치 합계가 100인 케이스를 위해 spanDays를 같이 구함
+ */
+function getJeolipInfo(monthBranch: string, date: Date): { dayIdx: number; spanDays: number } | null {
   const termName = getMonthStartTermName(monthBranch);
   if (!termName) return null;
 
   const bounds = getBoundariesCovering(date);
-  const start = bounds.find((t) => t.name === termName)?.date;
+  const startIdx = bounds.findIndex((t) => t.name === termName);
+  if (startIdx < 0) return null;
+
+  const start = bounds[startIdx]?.date;
+  const end = bounds[startIdx + 1]?.date; // 다음 절기(대부분 존재)
   if (!start) return null;
 
-  const diffDays =
-    Math.floor(
-      (toUtcDayStampByLocalYMD(date) - toUtcDayStampByLocalYMD(start)) / MS_PER_DAY
-    ) + 1;
+  const dayIdx =
+    Math.floor((toUtcDayStampByLocalYMD(date) - toUtcDayStampByLocalYMD(start)) / MS_PER_DAY) + 1;
 
-  return diffDays < 1 ? 1 : diffDays;
+  // end가 없으면(극히 예외) 30일로 폴백
+  const spanDays =
+    end
+      ? Math.max(
+          1,
+          Math.floor((toUtcDayStampByLocalYMD(end) - toUtcDayStampByLocalYMD(start)) / MS_PER_DAY)
+        )
+      : 30;
+
+  return { dayIdx: dayIdx < 1 ? 1 : dayIdx, spanDays };
 }
 
-function pickByBunil(
-  dist: {
-    초기?: { stem: string; w: number };
-    중기?: { stem: string; w: number };
-    정기: { stem: string; w: number };
-  },
-  dayIdx: number
+function sumW(dist: BranchDist): number {
+  return (dist.초기?.w ?? 0) + (dist.중기?.w ?? 0) + dist.정기.w;
+}
+
+/**
+ * ✅ dayIdx(1..spanDays)를 dist의 "가중치 스케일"(1..sumW)로 변환해서 픽
+ * - classic(합계≈30)은 거의 동일하게 동작
+ * - HGC(합계=100)는 일수 기반을 가중치 기반으로 매핑해서 자연스럽게 동작
+ */
+function pickByBunilScaled(
+  dist: BranchDist,
+  dayIdx: number,
+  spanDays: number
 ): { stem: string; from: "초기" | "중기" | "정기" } {
+  const total = Math.max(1, sumW(dist));
+  const clampedDay = Math.max(1, Math.min(spanDays, dayIdx));
+
+  // 1..total 범위로 매핑
+  const pos = Math.max(1, Math.min(total, Math.ceil((clampedDay * total) / spanDays)));
+
   const earlyLen = dist.초기?.w ?? 0;
   const midLen = dist.중기?.w ?? 0;
 
-  if (dist.초기 && dayIdx <= earlyLen) {
-    return { stem: dist.초기.stem, from: "초기" };
-  }
-  if (dist.중기 && dayIdx <= earlyLen + midLen) {
-    return { stem: dist.중기.stem, from: "중기" };
-  }
+  if (dist.초기 && pos <= earlyLen) return { stem: dist.초기.stem, from: "초기" };
+  if (dist.중기 && pos <= earlyLen + midLen) return { stem: dist.중기.stem, from: "중기" };
   return { stem: dist.정기.stem, from: "정기" };
 }
 
@@ -87,12 +110,12 @@ export function computeNaegyeok(params: {
   dayStem: string;
   monthBranch: string;
   date: Date;
-  pillars: [string, string, string, string]; // 원국 전체 (연월일시)
-  emittedStems?: string[]; // 연/월/일/시 천간
-  otherBranches?: string[]; // 월 제외 연/일/시 지지
+  pillars: [string, string, string, string];
+  emittedStems?: string[];
+  otherBranches?: string[];
   isNeutralized?: (stemKo: string) => boolean;
   mapping?: string;
-  jie?: { date: string } | null; // (호환용) 지금 로직에선 미사용
+  jie?: { date: string } | null;
 }): GyeokgukInner {
   const {
     dayStem,
@@ -107,7 +130,25 @@ export function computeNaegyeok(params: {
 
   const tokens: ReasonToken[] = [];
 
-  const dist0 = DIST_MAP[monthBranch];
+  // ✅ 여기서 모드 결정
+  const mode = coerceHiddenStemMode(mapping);
+  const distMap = getBranchDistMap(mode);
+
+  if (!isBranchKey(monthBranch)) {
+    return {
+      월령: "-",
+      사령: "-",
+      당령: "-",
+      진신: "-",
+      가신: "-",
+      내격: "-",
+      외격: [],
+      reason: ["월지 분포표 없음"],
+      reasonTokens: [],
+    };
+  }
+
+  const dist0 = distMap[monthBranch as KoBranch];
   if (!dist0) {
     return {
       월령: "-",
@@ -122,13 +163,10 @@ export function computeNaegyeok(params: {
     };
   }
 
-  const dist = {
-    초기: dist0.초기
-      ? { stem: normStemKo(dist0.초기.stem), w: dist0.초기.w }
-      : undefined,
-    중기: dist0.중기
-      ? { stem: normStemKo(dist0.중기.stem), w: dist0.중기.w }
-      : undefined,
+  // stem normalize
+  const dist: BranchDist = {
+    초기: dist0.초기 ? { stem: normStemKo(dist0.초기.stem), w: dist0.초기.w } : undefined,
+    중기: dist0.중기 ? { stem: normStemKo(dist0.중기.stem), w: dist0.중기.w } : undefined,
     정기: { stem: normStemKo(dist0.정기.stem), w: dist0.정기.w },
   };
 
@@ -137,7 +175,7 @@ export function computeNaegyeok(params: {
 
   // ✅ 사령 = 절입 기준 분일 픽 (고지 삼합이면 중기 우선)
   let saryeong = wolryeong;
-  const dayIdx = getJeolipDayIndex(monthBranch, date);
+  const jeolip = getJeolipInfo(monthBranch, date);
 
   if (
     ["진", "술", "축", "미"].includes(monthBranch) &&
@@ -146,25 +184,22 @@ export function computeNaegyeok(params: {
   ) {
     saryeong = dist.중기.stem;
     tokens.push({ kind: "GOJI_SAMHAP_USE_JUNGI" });
-  } else if (dayIdx != null) {
-    const picked = pickByBunil(dist, dayIdx);
+  } else if (jeolip) {
+    const picked = pickByBunilScaled(dist, jeolip.dayIdx, jeolip.spanDays);
     saryeong = picked.stem;
     tokens.push({ kind: "BUNIL_PICK", from: picked.from });
   } else {
-    // 절입일을 못 구하면(극히 예외) 월령(정기)로 폴백
     saryeong = wolryeong;
     tokens.push({ kind: "BUNIL_FALLBACK_USE_WOLRYEONG" });
   }
 
-  function isEmittedByStemOrElement(targetStem: string, emittedStems: string[]): boolean {
+  function isEmittedByStemOrElement(targetStem: string, emitted: string[]): boolean {
     if (!targetStem) return false;
-    if (emittedStems.includes(targetStem)) return true; // 정확 투출
+    if (emitted.includes(targetStem)) return true;
 
     const el = STEM_TO_ELEMENT[targetStem];
     if (!el) return false;
-
-    // 같은 오행 투출 인정 (갑/을, 병/정, 무/기, 경/신, 임/계)
-    return emittedStems.some((s) => STEM_TO_ELEMENT[s] === el);
+    return emitted.some((s) => STEM_TO_ELEMENT[s] === el);
   }
 
   // ✅ 당령 = “사령이 투출 + 무력화 아님”일 때만 인정
@@ -176,16 +211,14 @@ export function computeNaegyeok(params: {
     tokens.push({ kind: "NEUTRALIZED" });
   }
 
-  // ✅ 진신 = 당령 있으면 당령, 없으면 사령(표시용)
+  // ✅ 진신 = 당령 있으면 당령, 없으면 월령(표시용)
   const jinshin = dangryeong || wolryeong;
 
   // 가신: 진신을 극하면서 음양 동일
   let gasin = "";
   const jinEl = STEM_TO_ELEMENT[jinshin];
   if (jinEl) {
-    // KE[x] = y (x가 y를 극함) → y(=jinEl)를 극하는 x를 찾기
-    const needEl = (Object.entries(KE).find(([, v]) => v === jinEl)?.[0] ??
-      null) as Element | null;
+    const needEl = (Object.entries(KE).find(([, v]) => v === jinEl)?.[0] ?? null) as Element | null;
     if (needEl) {
       const pick = Object.entries(STEM_TO_ELEMENT).find(
         ([s, e]) => e === needEl && isYangStem(s) === isYangStem(jinshin)
@@ -194,7 +227,7 @@ export function computeNaegyeok(params: {
     }
   }
 
-  // 내격: 비견/겁재 제외(단, 예외는 별도 허용)
+  // 내격: 비견/겁재 제외(단, 예외 허용)
   let naegyeok = "-";
   const sub = mapStemToTenGodSub(dayStem, jinshin) as TenGodSubtype;
 
@@ -219,7 +252,7 @@ export function computeNaegyeok(params: {
     naegyeok = formatNaegyeokLabel(sub);
   }
 
-  // 외격(특수격) 수집
+  // 외격(특수격) 수집 (mapping 전달 유지)
   const outer = detectOuterGyeok({ pillars, dayStem, monthBranch, emittedStems, mapping });
 
   return {
