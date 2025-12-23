@@ -11,7 +11,7 @@ import { useAnalysisReportInput } from "./input/useAnalysisReportInput";
 import { useAnalysisReportCalc } from "./calc/useAnalysisReportCalc";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
-import YongshinRecommendCard from "@/features/AnalysisReport/YongshinRecommendCard";
+import { YongshinRecommendCard } from "@/features/AnalysisReport/YongshinRecommendCard";
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
@@ -164,10 +164,11 @@ export default function AnalysisReport({
       {input.bigTab === "용신추천" && (
         <YongshinRecommendCard
           key={`yongshin-${input.blendTab}-${calc.hourKeyForUi}`}
-          yongshin={calc.yongshinMulti}
-          hasAbsent={calc.hasAbsent}
+          recommend={calc.yongshinMulti}
+          data={normalizedData}
+          pillars={calc.activePillars}
+          hourKey={calc.hourKeyForUi}
           demoteAbsent={input.demoteAbsent}
-          onToggleDemoteAbsent={() => input.setDemoteAbsent((v) => !v)}
         />
       )}
 
