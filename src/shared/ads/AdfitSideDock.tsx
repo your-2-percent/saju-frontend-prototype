@@ -47,7 +47,7 @@ export function AdfitSideDock({
   width,
   height,
   showAfterScrollY = 180,
-  hideForHours = 24,
+  hideForHours = 3,
   rightPx = 16,
   topPx = 120,
   breakpointClassName = "hidden desk:block",
