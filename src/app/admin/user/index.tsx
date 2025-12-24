@@ -8,15 +8,9 @@ import { PLAN_OPTIONS, isPlanTier, periodLabel, planLabel } from "./calc/planUti
 export default function AdminUserListPage() {
   const input = useAdminUserInput();
   const { search, setSearch, page, setPage, draftByUser, setDraftByUser, setDraft } = input;
-  const {
-    userIds,
-    summaries,
-    loading,
-    error,
-    fetchUserIdList,
-    fetchSummaries,
-    saveEntitlements,
-  } = useAdminUserSave();
+
+  const { userIds, summaries, loading, error, fetchUserIdList, fetchSummaries, saveEntitlements } =
+    useAdminUserSave();
 
   const pagedUserIds = useMemo(() => getPagedUserIds(userIds, page), [userIds, page]);
   const totalPages = useMemo(() => getTotalPages(userIds), [userIds]);
@@ -61,6 +55,14 @@ export default function AdminUserListPage() {
             lastSavedAt: null as string | null,
           };
 
+          const nowMs = Date.now();
+          const active =
+            (s.ent?.starts_at ? Date.parse(s.ent.starts_at) <= nowMs : true) &&
+            (s.ent?.expires_at ? Date.parse(s.ent.expires_at) > nowMs : true);
+
+          const effectivePlan = active ? s.ent?.plan : "FREE";
+
+          // ✅ 묘운: 기간 영향 X
           const viewerNow = s.ent?.can_use_myo_viewer === true ? "ON" : "OFF";
 
           return (
@@ -71,7 +73,9 @@ export default function AdminUserListPage() {
               <div className="font-semibold text-lg flex items-center justify-between gap-3">
                 <div className="min-w-0 flex items-center gap-2">
                   <span className="text-nowrap mr-1">{displayName}</span>
-                  {email ? <span className="text-sm text-neutral-400 truncate">({email})</span> : null}
+                  {email ? (
+                    <span className="text-sm text-neutral-400 truncate">({email})</span>
+                  ) : null}
                 </div>
 
                 <span className="text-neutral-500 text-sm shrink-0">{s.user_id}</span>
@@ -83,8 +87,10 @@ export default function AdminUserListPage() {
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
-                플랜 {planLabel(s.ent?.plan)} · {periodLabel(s.ent)} · 묘운 뷰어 {viewerNow}
+                플랜 {planLabel(effectivePlan)} · {periodLabel(s.ent)} · 묘운 뷰어 {viewerNow}
+                {!active && s.ent?.plan && s.ent.plan !== "FREE" ? " (만료됨)" : ""}
               </div>
+
 
               <div className="mt-3 flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -122,7 +128,6 @@ export default function AdminUserListPage() {
                     ))}
                   </select>
 
-                  {/* ✅ 묘운 뷰어 셀렉트 */}
                   <select
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
                     value={draft.myoViewer}

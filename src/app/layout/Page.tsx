@@ -53,6 +53,7 @@ export default function Page() {
   usePageSave(input);
   const calc = usePageCalc();
 
+  // 1) 로그인 체크가 끝나기 전
   if (!input.authChecked) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -61,6 +62,13 @@ export default function Page() {
     );
   }
 
+  // ✅ 2) 로그인 안 했으면 권한/설정 로딩을 기다릴 필요 없음 (여기가 핵심)
+  if (!input.isLoggedIn) return <LoginPage />;
+
+  // 3) 관리자 모드
+  if (input.adminMode) return <AdminPage />;
+
+  // 4) 로그인 상태일 때만 권한 조회
   if (!calc.entLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -69,9 +77,7 @@ export default function Page() {
     );
   }
 
-  if (!input.isLoggedIn) return <LoginPage />;
-  if (input.adminMode) return <AdminPage />;
-
+  // 5) 설정 로딩
   if (!calc.settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -80,6 +86,7 @@ export default function Page() {
     );
   }
 
+  // 6) 명식 로딩
   if (calc.loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">

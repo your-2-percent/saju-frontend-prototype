@@ -12,8 +12,12 @@ export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: 
   const handleLogout = async () => {
     if (loggingOut) return;
     setLoggingOut(true);
+
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+
+      // reload 대신 라우팅이 더 깔끔하지만, 지금 구조 유지하려면 reload OK
       window.location.reload();
     } catch (e) {
       console.error(e);

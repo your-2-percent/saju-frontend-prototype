@@ -156,7 +156,16 @@ export const useSettingsStore = create<SettingsState>()(
             .from("user_settings")
             .select("payload")
             .eq("user_id", user.id)
-            .single();
+            .maybeSingle();
+
+          //const payload = data?.payload ?? {};
+
+          if (!data) {
+            await supabase.from("user_settings").upsert({
+              user_id: user.id,
+              payload: {},
+            });
+          }
 
           if (error && error.code !== "PGRST116") {
             console.error("loadFromServer(settings) error:", error);

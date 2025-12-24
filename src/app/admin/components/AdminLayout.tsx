@@ -76,7 +76,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           <button
             className="text-sm text-neutral-400 hover:text-white cursor-pointer"
-            onClick={() => (window.location.href = "/#/")}
+            onClick={() => (window.location.href = "/")}
           >
             사용자 화면으로
           </button>
