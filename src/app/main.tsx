@@ -1,3 +1,4 @@
+// src/app/main.tsx
 import "@/shared/lib/themeBoot"; // 가장 먼저
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
