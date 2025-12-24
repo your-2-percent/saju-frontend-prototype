@@ -10,8 +10,8 @@ export function AdfitScriptManager({ enabled }: Props) {
   useEffect(() => {
     if (!enabled) return;
 
-    // ✅ 1회 로드만. hashchange 리로드 금지.
-    void loadAdfitScript();
+    // ✅ boot: 1회 로드(중복 방지 + onload 최대한 보장)
+    void loadAdfitScript({ mode: "boot" });
   }, [enabled]);
 
   return null;
