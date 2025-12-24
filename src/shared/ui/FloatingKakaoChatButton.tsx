@@ -1,5 +1,5 @@
 // src/shared/ui/FloatingKakaoChatButton.tsx
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
   enabled?: boolean;
@@ -16,6 +16,9 @@ type Props = {
 
   /** 모바일 바에서 좌/우 패딩 */
   mobilePaddingX?: number;
+
+  /** ✅ BottomNav/푸터가 피해갈 하단 도킹(px)을 이 CSS 변수로 공유 */
+  bottomDockCssVarName?: string; // default: "--bottom-dock"
 };
 
 function readHideUntil(key: string): number {
@@ -57,10 +60,24 @@ export default function FloatingKakaoChatButton({
   hideHintHours = 3,
   cycleMs = 4200,
   mobilePaddingX = 0,
+  bottomDockCssVarName = "--bottom-dock",
 }: Props) {
   const storageKey = useMemo(() => "kakao_chat_hint_hide_until", []);
   const [showHint, setShowHint] = useState(false);
   const [idx, setIdx] = useState(() => pickStartIndex(hintTexts.length));
+
+  // ✅ 모바일 바 높이 측정용
+  const mobileBarWrapRef = useRef<HTMLDivElement | null>(null);
+
+  // ✅ eslint deps 문제 없게 useCallback
+  const setBottomDockPx = useCallback(
+    (px: number) => {
+      if (typeof document === "undefined") return;
+      const v = `${Math.max(0, Math.floor(px))}px`;
+      document.documentElement.style.setProperty(bottomDockCssVarName, v);
+    },
+    [bottomDockCssVarName]
+  );
 
   // 문구 배열 길이 바뀌면 idx 안전 보정
   useEffect(() => {
@@ -73,7 +90,10 @@ export default function FloatingKakaoChatButton({
 
   // 표시 여부
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled) {
+      setShowHint(false);
+      return;
+    }
 
     const hideUntil = readHideUntil(storageKey);
     const now = Date.now();
@@ -99,11 +119,52 @@ export default function FloatingKakaoChatButton({
     return () => window.clearInterval(id);
   }, [enabled, showHint, hintTexts.length, cycleMs]);
 
+  // ✅ 핵심: 모바일 바가 떠있으면 그 높이를 --bottom-dock 으로 공유
+  useEffect(() => {
+    // 꺼졌거나 안보이면 도킹 0
+    if (!enabled || !showHint) {
+      setBottomDockPx(0);
+      return;
+    }
+
+    const el = mobileBarWrapRef.current;
+    if (!el) {
+      setBottomDockPx(0);
+      return;
+    }
+
+    const update = () => {
+      // desk에서는 display:none이라 height 0 -> 자동으로 bottom-0 됨
+      const h = Math.ceil(el.getBoundingClientRect().height);
+      setBottomDockPx(h);
+    };
+
+    update();
+
+    // ResizeObserver 지원하면 변화 추적(문구 길이/폰트 로딩/회전 등)
+    if (typeof ResizeObserver !== "undefined") {
+      const ro = new ResizeObserver(update);
+      ro.observe(el);
+      return () => {
+        ro.disconnect();
+        setBottomDockPx(0);
+      };
+    }
+
+    // fallback: 리사이즈만 감지
+    window.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      setBottomDockPx(0);
+    };
+  }, [enabled, showHint, setBottomDockPx]);
+
   if (!enabled) return null;
 
   const closeHint = () => {
     writeHideUntil(storageKey, Date.now() + hideHintHours * 60 * 60 * 1000);
     setShowHint(false);
+    setBottomDockPx(0);
   };
 
   const text = hintTexts[idx] ?? "";
@@ -124,6 +185,7 @@ export default function FloatingKakaoChatButton({
           ======================= */}
       {showHint && hintTexts.length > 0 ? (
         <div
+          ref={mobileBarWrapRef}
           className="desk:hidden fixed left-0 right-0 bottom-0 z-[999] pointer-events-none"
           style={{ paddingLeft: mobilePaddingX, paddingRight: mobilePaddingX, paddingBottom: 0 }}
         >
@@ -151,7 +213,7 @@ export default function FloatingKakaoChatButton({
               {text}
             </div>
 
-            {/* 우측 버튼 영역: (닫기) + (채팅 링크 버튼) */}
+            {/* 우측 버튼 영역 */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
                 type="button"

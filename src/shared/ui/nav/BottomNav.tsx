@@ -1,10 +1,16 @@
 // components/BottomNav.tsx
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Home, HeartHandshake, Settings, LogOut } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SettingsDrawer from "@/app/pages/SettingsDrawer";
 
-export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: () => void; onShowCouple: () => void }) {
+export default function BottomNav({
+  onShowToday,
+  onShowCouple,
+}: {
+  onShowToday: () => void;
+  onShowCouple: () => void;
+}) {
   const [openSettings, setOpenSettings] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
@@ -16,8 +22,6 @@ export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: 
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-
-      // reload 대신 라우팅이 더 깔끔하지만, 지금 구조 유지하려면 reload OK
       window.location.reload();
     } catch (e) {
       console.error(e);
@@ -26,15 +30,28 @@ export default function BottomNav({ onShowToday, onShowCouple }: { onShowToday: 
     }
   };
 
+  // ✅ 채팅바/기타 하단 도킹 높이 + iOS safe area까지 고려해서 bottom 자동 계산
+  const bottomStyle = {
+    bottom: "calc(env(safe-area-inset-bottom, 0px) + var(--bottom-dock, 0px))",
+  } as const;
+
   return (
     <>
       {/* 네비게이션 바 */}
-      <div className="fixed min-w-[320px] h-[64px] bottom-[34px] desk:bottom-0 left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800">
+      <div
+        className="fixed min-w-[320px] h-[64px] left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800"
+        style={bottomStyle}
+      >
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
           <NavItem icon={<Home size={22} />} label="오늘의 사주" onClick={onShowToday} />
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />
           <NavItem icon={<Settings size={22} />} label="기타설정" onClick={() => setOpenSettings(true)} />
-          <NavItem icon={<LogOut size={22} />} label="로그아웃" onClick={() => setConfirmLogout(true)} disabled={loggingOut} />
+          <NavItem
+            icon={<LogOut size={22} />}
+            label="로그아웃"
+            onClick={() => setConfirmLogout(true)}
+            disabled={loggingOut}
+          />
         </nav>
       </div>
 
@@ -84,7 +101,7 @@ function NavItem({
   onClick,
   disabled,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;

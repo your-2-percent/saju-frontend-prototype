@@ -45,7 +45,7 @@ export default function Footer() {
 
   return (
     <>
-      <footer className="py-8 pb-16 desk:pb-8 px-4 border-t border-neutral-200 dark:border-neutral-700">
+      <footer className="py-8 pb-[calc(64px+env(safe-area-inset-bottom,0px)+var(--bottom-dock,0px))] px-4 border-t border-neutral-200 dark:border-neutral-700">
         <div className="text-center text-[12px] text-orange-600 dark:text-orange-300">
           Copyright &copy; 2025 Hwarim96. All rights reserved.
         </div>
