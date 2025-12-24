@@ -171,7 +171,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       {/* ✅ PC 우측 사이드(160x600) 1개 / 모바일은 X */}
       <div className="hidden desk:block">
         <AdfitSideDock
-          enabled={isFree && showResult}
+          enabled={isFree}
           adUnit={AD_SIDE}
           width={160}
           height={600}
@@ -207,6 +207,17 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       />
 
       {input.showToday && <TodaySaju />}
+
+      {isFree && !showResult &&  (
+        <div className="max-w-[760px] mx-auto px-3 mt-1 mb-2">
+          <div className="hidden md:block">
+            <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
+          </div>
+          <div className="md:hidden">
+            <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
+          </div>
+        </div>
+      )}
 
       {input.wizardOpen && (
         <>

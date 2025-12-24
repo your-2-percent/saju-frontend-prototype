@@ -1,5 +1,14 @@
-import type { Draft, EntRow, EntRowRaw, MyeongsikRow, ProfileRow, UserSummary } from "../model/types";
+// src/app/admin/user/calc/adminUserCalc.ts
+import type {
+  Draft,
+  EntRow,
+  EntRowRaw,
+  MyeongsikRow,
+  ProfileRow,
+  UserSummary,
+} from "../model/types";
 import { coercePlanTier, toYMDInput } from "./planUtils";
+import type { UserActivityRow } from "../save/repo/fetchUserActivity";
 
 export const PAGE_SIZE = 20;
 
@@ -16,13 +25,19 @@ function coerceBoolOrNull(v: unknown): boolean | null {
   return typeof v === "boolean" ? v : null;
 }
 
-export function buildUserSummaries(args: {
+type BuildArgs = {
   userIds: string[];
   profiles: ProfileRow[];
   myeongsikRows: MyeongsikRow[];
-  entRows: EntRowRaw[];
-}): UserSummary[] {
-  const { userIds, profiles, myeongsikRows, entRows } = args;
+  entRows: EntRowRaw[]; // ✅ Raw로 받는다 (plan: unknown 문제 해결)
+  activityRows: UserActivityRow[];
+};
+
+export function buildUserSummaries(args: BuildArgs): UserSummary[] {
+  const { userIds, profiles, myeongsikRows, entRows, activityRows } = args;
+
+  const actByUserId = new Map<string, UserActivityRow>();
+  for (const a of activityRows) actByUserId.set(a.user_id, a);
 
   const profileMap: Record<string, ProfileRow | null> = {};
   for (const p of profiles) {
@@ -30,9 +45,10 @@ export function buildUserSummaries(args: {
     if (key) profileMap[key] = p;
   }
 
-  const entMap: Record<string, EntRow> = {};
+  // ✅ 단일 엔트(배열 아님) + Raw → EntRow로 정규화
+  const entMap: Record<string, EntRow | null> = {};
   for (const r of entRows) {
-    const plan = coercePlanTier(r.plan);
+    const plan = coercePlanTier(r.plan); // unknown → PlanTier|null
     entMap[r.user_id] = {
       user_id: r.user_id,
       plan,
@@ -44,22 +60,25 @@ export function buildUserSummaries(args: {
 
   const summaryMap: Record<string, UserSummary> = {};
   for (const uid of userIds) {
+    const act = actByUserId.get(uid) ?? null;
+
     summaryMap[uid] = {
       user_id: uid,
       profile: profileMap[uid] || null,
       myeongsikCount: 0,
       lastCreatedAt: null,
       ent: entMap[uid] || null,
+      lastSeenAt: act?.last_seen_at ?? null,
+      lastSeenPath: act?.last_path ?? null,
     };
   }
 
   for (const row of myeongsikRows) {
     const s = summaryMap[row.user_id];
-    if (!s) continue; // 안전: userIds에 없는 row가 섞여도 터지지 않게
+    if (!s) continue;
 
     s.myeongsikCount += 1;
 
-    // ✅ 최신 created_at 추적(ISO라면 Date 비교가 안전)
     const cur = s.lastCreatedAt;
     const next = row.created_at ?? null;
 
@@ -76,10 +95,13 @@ export function buildUserSummaries(args: {
     }
   }
 
-  return Object.values(summaryMap);
+  return userIds.map((uid) => summaryMap[uid]);
 }
 
-export function initDrafts(prev: Record<string, Draft>, summaries: UserSummary[]): Record<string, Draft> {
+export function initDrafts(
+  prev: Record<string, Draft>,
+  summaries: UserSummary[]
+): Record<string, Draft> {
   const next: Record<string, Draft> = { ...prev };
 
   for (const s of summaries) {
@@ -89,7 +111,6 @@ export function initDrafts(prev: Record<string, Draft>, summaries: UserSummary[]
     const startDate = toYMDInput(ent?.starts_at ?? null);
     const endDate = toYMDInput(ent?.expires_at ?? null);
 
-    // ✅ null/true는 ON 기본, false만 OFF
     const myoViewer: Draft["myoViewer"] = ent?.can_use_myo_viewer === true ? "ON" : "OFF";
 
     const cur = next[s.user_id];
@@ -101,6 +122,8 @@ export function initDrafts(prev: Record<string, Draft>, summaries: UserSummary[]
         endDate,
         saving: false,
         myoViewer,
+        // ✅ lastSavedAt는 Draft가 number|undefined라서 null 넣지마
+        // lastSavedAt: undefined (생략)
       };
       continue;
     }
