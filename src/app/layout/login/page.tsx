@@ -67,7 +67,7 @@ export default function LoginPage() {
 
   return (
     <main
-      className={`relative flex min-h-screen items-center justify-center bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
+      className={`relative flex min-h-[900px] items-center justify-center bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
         showBg ? "opacity-100" : "opacity-0"
       }`}
     >
@@ -179,7 +179,7 @@ export default function LoginPage() {
           </ul>
 
           <p className="mt-3 text-[11px] text-neutral-500">
-            문의: unique950318@gmail.com
+            문의: unique950318@gmail.com 및 카카오톡 오픈채팅
           </p>
         </div>
       </section>

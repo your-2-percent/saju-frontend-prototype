@@ -165,7 +165,7 @@ function ShinsalTooltipChip({
         type="button"
         onClick={() => setOpenTagKey(open ? null : id)}
         className={[
-          "px-1 desk:px-2 py-1 text-[10px] text-center desk:text-[11px] rounded border desk:break-keep w-full cursor-pointer ",
+          "px-1 desk:px-2 py-1 text-[12px] desk:text-[11px] text-center  rounded border desk:break-keep w-full cursor-pointer ",
           open
             ? "bg-purple-500/20 text-purple-200 border-purple-500"
             : "bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700",
