@@ -93,8 +93,8 @@ export function useAdminUserDetailSave({
     (myeongsikId?: string) => {
       const base = typeof window !== "undefined" ? window.location.origin : "";
       const url = myeongsikId
-        ? `${base}/#/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
-        : `${base}/#/impersonate?userId=${userId}`;
+        ? `${base}/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
+        : `${base}/impersonate?userId=${userId}`;
       window.open(url, "_blank");
     },
     [userId]

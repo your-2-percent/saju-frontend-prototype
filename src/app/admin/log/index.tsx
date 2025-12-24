@@ -189,7 +189,7 @@ export default function AdminAuditPage() {
       {/* --------------------- Pagination --------------------- */}
       <div className="flex items-center justify-center gap-3 mt-6">
         <button
-          className="px-3 py-1 bg-neutral-800 border border-neutral-600 rounded disabled:opacity-40"
+          className="px-3 py-1 bg-neutral-800 border border-neutral-600 rounded disabled:opacity-40 cursor-pointer"
           disabled={page === 1}
           onClick={() => setPage((p) => p - 1)}
         >
@@ -199,7 +199,7 @@ export default function AdminAuditPage() {
         <span className="text-neutral-400">Page {page}</span>
 
         <button
-          className="px-3 py-1 bg-neutral-800 border border-neutral-600 rounded"
+          className="px-3 py-1 bg-neutral-800 border border-neutral-600 rounded cursor-pointer"
           onClick={() => setPage((p) => p + 1)}
         >
           다음으로 →

@@ -33,10 +33,24 @@ export function toYMDInput(iso: string | null): string {
   return `${y}-${m}-${da}`;
 }
 
-export function toKstIsoFromDateInput(dateStr: string, endOfDay: boolean): string | null {
-  const raw = (dateStr ?? "").trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return null;
-  return endOfDay ? `${raw}T23:59:59+09:00` : `${raw}T00:00:00+09:00`;
+const pad22 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+const pad3 = (n: number) => String(n).padStart(3, "0");
+
+export function toKstIsoFromDateInput(dateYmd: string, endOfDay: boolean): string {
+  // dateYmd: "YYYY-MM-DD"
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateYmd);
+  if (!m) throw new Error("Invalid date input");
+
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+
+  const hh = endOfDay ? 23 : 0;
+  const mm = endOfDay ? 59 : 0;
+  const ss = endOfDay ? 59 : 0;
+  const ms = endOfDay ? 999 : 0;
+
+  return `${y}-${pad22(mo)}-${pad22(d)}T${pad22(hh)}:${pad22(mm)}:${pad22(ss)}.${pad3(ms)}+09:00`;
 }
 
 export function getPreset(plan: PlanTier): PlanPreset {

@@ -93,10 +93,6 @@ export function useAdminUserSave() {
         await refresh();
 
         await upsertEntitlements(payload);
-        console.log("saved payload", payload);
-
-        const verify = await fetchEntitlements([uid]);
-        console.log("verify entRows", verify);
       } catch (e) {
         setDraft(uid, { saving: false });
         setError(e instanceof Error ? e.message : "저장 실패");
