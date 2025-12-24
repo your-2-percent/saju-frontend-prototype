@@ -208,17 +208,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
       {input.showToday && <TodaySaju />}
 
-      {isFree && !showResult &&  (
-        <div className="max-w-[760px] mx-auto px-3 mt-1 mb-2">
-          <div className="hidden md:block">
-            <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
-          </div>
-          <div className="md:hidden">
-            <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
-          </div>
-        </div>
-      )}
-
       {input.wizardOpen && (
         <>
           <div id="wizard-dim" className="bg-black opacity-80 fixed inset-0 w-full min-h-full z-99" />
@@ -287,6 +276,17 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       {input.showCouple && (
         <div className="pt-18 pb-4">
           <CoupleViewer people={list} />
+        </div>
+      )}
+
+      {isFree && !showResult && (
+        <div className="max-w-[760px] mx-auto px-3 mt-1 mb-2">
+          <div className="hidden md:block">
+            <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
+          </div>
+          <div className="md:hidden">
+            <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
+          </div>
         </div>
       )}
 
