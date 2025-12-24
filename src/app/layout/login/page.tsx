@@ -67,7 +67,7 @@ export default function LoginPage() {
 
   return (
     <main
-      className={`relative py-14 max-h-[90vh] overflow-auto bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
+      className={`relative py-6 max-h-[70vh] overflow-auto bg-neutral-950 text-white transition-opacity duration-500 ${
         showBg ? "opacity-100" : "opacity-0"
       }`}
     >
@@ -89,7 +89,7 @@ export default function LoginPage() {
 
       {/* 로그인 카드 */}
       <section
-        className={`w-full max-w-sm mx-auto rounded-2xl bg-neutral-900 p-8 shadow-xl border border-neutral-800 transition-all duration-500 ${
+        className={`w-full max-w-sm mx-auto rounded-2xl bg-neutral-900 p-4 shadow-xl border border-neutral-800 transition-all duration-500 ${
           showCard ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
         aria-label="로그인"

@@ -13,6 +13,7 @@ import { DROPPABLE_UNASSIGNED, listDroppableId } from "@/features/sidebar/calc/d
 import { useSidebarCalc } from "@/features/sidebar/calc/useSidebarCalc";
 import { useSidebarInput } from "@/features/sidebar/input/useSidebarInput";
 import { useSidebarSave } from "@/features/sidebar/save/useSidebarSave";
+import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
 
 type SidebarProps = {
   open: boolean;
@@ -86,6 +87,10 @@ export default function Sidebar({
     stashScrollTop: input.stashScrollTop,
   });
 
+  const openLoginModal = () => {
+      useLoginNudgeStore.getState().openWith("HEADER");
+    };
+
   return (
     <>
       {/* Overlay */}
@@ -112,8 +117,11 @@ export default function Sidebar({
           onAddNew={() => {
             onAddNew();
             onClose();
-          }}
-        />
+          } }
+          onLogin={() => {
+            // 여기서 “로그인 화면/로그인 모달” 여는 함수 연결
+            openLoginModal();
+          } } isLoggedIn={false}        />
 
         <DragDropContext onDragEnd={save.handleDrop}>
           <div

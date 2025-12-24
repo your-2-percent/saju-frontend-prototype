@@ -1,4 +1,4 @@
-import { Menu, UserPlus, UserSquare, SquareUserRound } from "lucide-react";
+import { Menu, UserPlus, UserSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
@@ -71,7 +71,7 @@ export default function TopNav({
     "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors";
   const enabledPurple = "bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 cursor-pointer";
   const enabledOrange = "bg-orange-600 hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500 cursor-pointer";
-  const enabledNeutral = "bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 cursor-pointer";
+  //const enabledNeutral = "bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 cursor-pointer";
   const disabledCls = "bg-neutral-300 dark:bg-neutral-800 text-neutral-100 cursor-not-allowed opacity-80";
 
   return (
@@ -122,9 +122,10 @@ export default function TopNav({
               onClick={openLoginModal}
               aria-label="로그인"
               title="로그인"
-              className={`${baseBtn} ${enabledNeutral}`}
+              className="text-xs"
             >
-              <SquareUserRound size={18} />
+              {/* <SquareUserRound size={18} /> */}
+              <ins>로그인</ins>
             </button>
           )}
         </div>

@@ -70,7 +70,7 @@ export default function LoginNudgeModal() {
         onClick={(e) => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center justify-between px-4 py-2 border-b border-neutral-200 dark:border-neutral-800">
           <div className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
             {title}
           </div>
