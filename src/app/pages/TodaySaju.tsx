@@ -1,4 +1,3 @@
-// app/TodaySaju.tsx
 import { useState, useEffect } from "react";
 import {
   getYearGanZhi,
@@ -12,7 +11,7 @@ import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import type { Settings as CardSettings } from "@/shared/lib/hooks/useSettings";
 import { STEMS_KO, 간지_한자_MAP, STEM_H2K } from "@/shared/domain/간지/const";
-
+import { supabase } from "@/lib/supabase";
 
 const STEMS_HANJA_SET = new Set<string>(간지_한자_MAP.천간);
 
@@ -20,6 +19,20 @@ function toKoStemKeyStrict(ch: string): Stem10sin {
   if (STEMS_KO.has(ch)) return ch as Stem10sin;
   if (STEMS_HANJA_SET.has(ch)) return STEM_H2K[ch] as Stem10sin;
   return "갑";
+}
+
+function formatTotalActiveMs(ms?: number | null): string {
+  if (!ms || ms <= 0) return "0분";
+
+  const totalSec = Math.floor(ms / 1000);
+  const day = Math.floor(totalSec / 86400);
+  const hour = Math.floor((totalSec % 86400) / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
+
+  // ✅ 24시간 이후부터는 1일로 쳐서 표기
+  if (day >= 1) return `${day}일 ${hour}시간`;
+  if (hour >= 1) return `${hour}시간 ${min}분`;
+  return `${min}분`;
 }
 
 /* ===== 시주 비우기용 카드 ===== */
@@ -32,7 +45,6 @@ function BlankCard({
   settings: CardSettings;
   hideBranchSipSin?: boolean;
 }) {
-
   const showSipSinTop = settings.showSipSin;
   const showHidden = !!settings.hiddenStem;
   const hiddenMode: "all" | "main" = settings.hiddenStem === "regular" ? "main" : "all";
@@ -47,24 +59,23 @@ function BlankCard({
 
       <div className="p-3 flex flex-col items-center gap-1">
         {showSipSinTop && (
-          <div className="text-[10px] desk:text-xs text-neutral-500 dark:text-neutral-400 text-nowrap">-</div>
+          <div className="text-[10px] desk:text-xs text-neutral-500 dark:text-neutral-400 text-nowrap">
+            -
+          </div>
         )}
 
-        {/* 천간 박스 — 흰 박스 유지 */}
         <div
           className={`w-10 h-10 sm:w-12 sm:h-12 rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
         >
           <span className="text-2xl md:text-3xl font-bold text-neutral-900">-</span>
         </div>
 
-        {/* 지지 박스 — 흰 박스 유지 */}
         <div
           className={`w-10 h-10 sm:w-12 sm:h-12 rounded-sm desk:rounded-lg flex items-center justify-center border border-neutral-200 dark:border-neutral-800 bg-white`}
         >
           <span className="text-2xl md:text-3xl font-bold text-neutral-900">-</span>
         </div>
 
-        {/* 지장간 */}
         {showHidden && (
           <div className="flex flex-col gap-1 mt-1 w-full">
             {Array.from({ length: hiddenRows }).map((_, idx) => (
@@ -98,26 +109,81 @@ export default function TodaySaju() {
 
   const [blankHour, setBlankHour] = useState(false);
 
+  // ✅ 내 누적시간
+  const [myTotalMs, setMyTotalMs] = useState<number | null>(null);
+
   useEffect(() => {
     if (!isLive) return;
     const timer = setInterval(() => setPick(new Date()), 1000);
     return () => clearInterval(timer);
   }, [isLive]);
 
-  const year  = getYearGanZhi(pick);
+  // ✅ 누적시간 주기적으로 읽기(1분)
+  useEffect(() => {
+    let mounted = true;
+
+    const load = async () => {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const uid = sessionRes.session?.user?.id;
+      if (!uid) {
+        if (mounted) setMyTotalMs(null);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("user_activity")
+        .select("total_active_ms")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      if (error) {
+        if (mounted) setMyTotalMs(null);
+        return;
+      }
+
+      const v = data?.total_active_ms;
+      if (mounted) setMyTotalMs(typeof v === "number" ? v : null);
+    };
+
+    void load();
+
+    const id = window.setInterval(() => void load(), 60_000);
+
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void load();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      mounted = false;
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  const year = getYearGanZhi(pick);
   const month = getMonthGanZhi(pick);
-  const day   = getDayGanZhi(pick, dayBoundaryRule);
-  const hour  = getHourGanZhi(pick, "조자시/야자시"); // 필요시 dayBoundaryRule로 교체 가능
+  const day = getDayGanZhi(pick, dayBoundaryRule);
+  const hour = getHourGanZhi(pick, "조자시/야자시");
 
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
   return (
     <div className="flex justify-center items-center pt-16 desk:mt-12 w-full h-[calc(100dvh_-_126px)] desk:h-[calc(100dvh_-_212px)] ">
-      <div className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
+      <div
+        className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
                       bg-white dark:bg-neutral-950
                       text-neutral-900 dark:text-neutral-100
-                      rounded-xl shadow border border-neutral-200 dark:border-neutral-800 transition-colors">
-        {/* 헤더 */}
+                      rounded-xl shadow border border-neutral-200 dark:border-neutral-800 transition-colors"
+      >
+        {/* ✅ 여기다가 넣어줘 누적시간 */}
+        <div className="mb-3 text-xs desk:text-sm text-neutral-600 dark:text-neutral-300">
+          내 누적 이용시간:{" "}
+          <span className="font-semibold text-neutral-900 dark:text-neutral-100">
+            {formatTotalActiveMs(myTotalMs)}
+          </span>
+        </div>
+
         <header className="flex flex-col desk:flex-row items-center justify-center desk:justify-between mb-4 gap-2">
           <div className="font-semibold text-sm desk:text-base">
             오늘의 사주{" "}
@@ -126,7 +192,6 @@ export default function TodaySaju() {
             </span>
           </div>
           <div className="flex gap-2 items-center">
-            {/* 일주 경계 */}
             <select
               value={dayBoundaryRule}
               onChange={(e) => setDayBoundaryRule(e.target.value as DayBoundaryRule)}
@@ -154,7 +219,6 @@ export default function TodaySaju() {
           </div>
         </header>
 
-        {/* 4기둥 */}
         <div className="grid grid-cols-4 gap-3 mb-6">
           {blankHour ? (
             <BlankCard label="시주" settings={settings} hideBranchSipSin />
@@ -168,30 +232,11 @@ export default function TodaySaju() {
             />
           )}
 
-          <PillarCardShared
-            label="일주"
-            gz={day}
-            dayStem={dayStem}
-            settings={settings}
-            hideBranchSipSin={true}
-          />
-          <PillarCardShared
-            label="월주"
-            gz={month}
-            dayStem={dayStem}
-            settings={settings}
-            hideBranchSipSin={true}
-          />
-          <PillarCardShared
-            label="연주"
-            gz={year}
-            dayStem={dayStem}
-            settings={settings}
-            hideBranchSipSin={true}
-          />
+          <PillarCardShared label="일주" gz={day} dayStem={dayStem} settings={settings} hideBranchSipSin={true} />
+          <PillarCardShared label="월주" gz={month} dayStem={dayStem} settings={settings} hideBranchSipSin={true} />
+          <PillarCardShared label="연주" gz={year} dayStem={dayStem} settings={settings} hideBranchSipSin={true} />
         </div>
 
-        {/* 피커 + 시주 비우기 토글 */}
         <div className="flex flex-col desk:flex-row gap-2 desk:gap-3 items-center">
           <label className="text-sm text-neutral-600 dark:text-neutral-300">날짜/시간 선택</label>
           <input
@@ -215,9 +260,11 @@ export default function TodaySaju() {
           <button
             onClick={() => setBlankHour((v) => !v)}
             className={`text-xs px-3 py-1 rounded border transition-colors cursor-pointer
-                        ${blankHour
-                          ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
-                          : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"}`}
+                        ${
+                          blankHour
+                            ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
+                            : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"
+                        }`}
             title="시주 글자를 비우고 박스를 흰색으로 표시합니다"
           >
             {blankHour ? "시주 표시" : "시주 비우기"}
@@ -231,7 +278,9 @@ export default function TodaySaju() {
 /* ===== util ===== */
 function toLocalInput(d: Date) {
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(
+    d.getMinutes()
+  )}`;
 }
 function fromLocalInput(s?: string): Date | null {
   if (!s) return null;

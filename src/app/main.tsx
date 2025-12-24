@@ -10,9 +10,13 @@ import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/app/pages/AuthCallback";
 import "./main.css";
 
+import HeartbeatGate from "@/app/HeartbeatGate";
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HashRouter>
+      <HeartbeatGate />
+
       <Routes>
         {/* OAuth 콜백 */}
         <Route path="/auth/callback" element={<AuthCallback />} />

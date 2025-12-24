@@ -70,6 +70,7 @@ export function buildUserSummaries(args: BuildArgs): UserSummary[] {
       ent: entMap[uid] || null,
       lastSeenAt: act?.last_seen_at ?? null,
       lastSeenPath: act?.last_path ?? null,
+      totalActiveMs: act?.total_active_ms ?? null,
     };
   }
 
