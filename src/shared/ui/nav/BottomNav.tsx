@@ -30,9 +30,15 @@ export default function BottomNav({
     }
   };
 
-  // ✅ 채팅바/기타 하단 도킹 높이 + iOS safe area까지 고려해서 bottom 자동 계산
+  // ✅ dock은 위치 이동(채팅바 있을 때만 위로)
+  // ✅ safe-area는 패딩/높이로 흡수(바닥까지 붙어 보이게)
+  const bottomDock = "var(--bottom-dock, 0px)";
+  const safeBottom = "env(safe-area-inset-bottom, 0px)";
+
   const bottomStyle = {
-    bottom: "calc(env(safe-area-inset-bottom, 0px) + var(--bottom-dock, 0px))",
+    bottom: bottomDock,
+    height: `calc(64px + ${safeBottom})`,
+    paddingBottom: safeBottom,
   } as const;
 
   return (
