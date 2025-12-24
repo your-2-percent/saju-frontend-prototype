@@ -163,6 +163,8 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   const showLoginNudge = !isLoggedIn && calc.hasCurrent && showResult;
 
+  const showLoginNot = !isLoggedIn && !showResult;
+
   const [loginOpen, setLoginOpen] = useState(false);
 
   return (
@@ -217,6 +219,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         onDeleteView={save.handleSidebarDeleteView}
       />
 
+      {showLoginNot && (
+        <div className="absolute w-full l-0 mt-14 desk:mt-16 text-xs desk:text-base text-amber-500 dark:text-amber-400 text-center">
+          로그아웃 중입니다. 로그인 후 사용을 권장합니다.
+        </div>
+      )}
+
       {input.showToday && <TodaySaju />}
 
       {input.wizardOpen && (
@@ -238,6 +246,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
               <LoginInlineNudge />
             </div>
           )}
+          
           <div className="pb-4">
             <SajuChart
               data={calc.current as MyeongSik}

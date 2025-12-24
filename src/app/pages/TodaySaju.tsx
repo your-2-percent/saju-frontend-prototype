@@ -247,7 +247,7 @@ export default function TodaySaju() {
               const d = fromLocalInput(e.target.value);
               if (d) setPick(d);
             }}
-            className={`rounded px-3 py-1 text-sm transition-colors
+            className={`h-30 rounded px-3 py-1 text-sm transition-colors
                         bg-white dark:bg-neutral-900
                         border border-neutral-300 dark:border-neutral-700
                         text-neutral-900 dark:text-neutral-100
