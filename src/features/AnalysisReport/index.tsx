@@ -94,7 +94,7 @@ export default function AnalysisReport({
   });
 
   const lockTitle = useMemo(() => {
-    return "🔒 프리 플랜에서는 사용할 수 없어요. 베이직/프로에서 열립니다.";
+    return `🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다!`;
   }, []);
 
   if (!calc.isValidActive) {
@@ -183,8 +183,8 @@ export default function AnalysisReport({
 
       {/* 용신추천: 잠금 안내 or 실제 컨텐츠 */}
       {input.bigTab === "용신추천" && !advancedOk && (
-        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
-          🔒 프리 플랜에서는 <b>용신추천</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.
+        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300 text-center">
+          🔒 프리 플랜에서는 <b>용신추천</b>을 사용할 수 없어요. 웹 누적시간 100시간을 달성하면 열립니다!
         </div>
       )}
       {input.bigTab === "용신추천" && advancedOk && (
@@ -214,8 +214,8 @@ export default function AnalysisReport({
 
       {/* 격국 · 물상론: 잠금 안내 or 실제 컨텐츠 */}
       {input.bigTab === "격국 · 물상론" && !advancedOk && (
-        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
-          🔒 프리 플랜에서는 <b>격국 · 물상론</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.
+        <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300 text-center">
+          🔒 프리 플랜에서는 <b>격국 · 물상론</b>을 사용할 수 없어요. 웹 누적시간 100시간을 달성하면 열립니다!
         </div>
       )}
       {input.bigTab === "격국 · 물상론" && advancedOk && (

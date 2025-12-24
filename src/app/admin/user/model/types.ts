@@ -41,6 +41,7 @@ export type UserSummary = {
   ent: EntRow | null;
   lastSeenAt: string | null;
   lastSeenPath: string | null;
+  totalActiveMs: number | null;
 };
 
 export type MyoViewerFlag = "ON" | "OFF";

@@ -1,4 +1,3 @@
-// src/app/admin/user/AdminUserListPage.tsx
 import { useEffect, useMemo } from "react";
 import { useAdminUserInput } from "./input/useAdminUserInput";
 import { useAdminUserSave } from "./save/useAdminUserSave";
@@ -20,6 +19,20 @@ function formatLastSeen(lastSeenAt?: string | null): string {
   if (hr < 24) return `${hr}시간 전`;
   const day = Math.floor(hr / 24);
   return `${day}일 전`;
+}
+
+function formatTotalActiveMs(ms?: number | null): string {
+  if (!ms || ms <= 0) return "0분";
+
+  const totalSec = Math.floor(ms / 1000);
+  const day = Math.floor(totalSec / 86400);
+  const hour = Math.floor((totalSec % 86400) / 3600);
+  const min = Math.floor((totalSec % 3600) / 60);
+
+  // ✅ 24시간 이후부터는 1일로 쳐서 표기
+  if (day >= 1) return `${day}일 ${hour}시간`;
+  if (hour >= 1) return `${hour}시간 ${min}분`;
+  return `${min}분`;
 }
 
 export default function AdminUserListPage() {
@@ -78,21 +91,13 @@ export default function AdminUserListPage() {
             (s.ent?.expires_at ? Date.parse(s.ent.expires_at) > nowMs : true);
 
           const effectivePlan = active ? s.ent?.plan : "FREE";
-
-          // ✅ 묘운: 기간 영향 X
           const viewerNow = s.ent?.can_use_myo_viewer === true ? "ON" : "OFF";
 
-          // ✅ 마지막 접속/온라인 판정(최근 2분 이내면 온라인으로 간주)
-          // fetchSummaries에서 아래 중 하나 형태로 내려오게 맞춰줘
-          // - s.activity_last_seen_at: string | null
-          // - s.activity?.last_seen_at: string | null
-          const lastSeenAt: string | null =
-            (s as unknown as { activity_last_seen_at?: string | null }).activity_last_seen_at ??
-            ((s as unknown as { activity?: { last_seen_at?: string | null } }).activity?.last_seen_at ??
-              null);
-
+          const lastSeenAt = s.lastSeenAt ?? null;
           const lastSeenMs = lastSeenAt ? Date.parse(lastSeenAt) : NaN;
           const online = Number.isFinite(lastSeenMs) && nowMs - lastSeenMs < 2 * 60 * 1000;
+
+          const totalActiveMs = s.totalActiveMs ?? null;
 
           return (
             <div
@@ -114,6 +119,13 @@ export default function AdminUserListPage() {
                   >
                     {online ? "온라인" : "오프라인"} · {formatLastSeen(lastSeenAt)}
                   </span>
+
+                  <span
+                    className="text-[11px] px-2 py-0.5 rounded-full border bg-neutral-800 border-neutral-700 text-neutral-300"
+                    title="누적 접속시간"
+                  >
+                    누적 {formatTotalActiveMs(totalActiveMs)}
+                  </span>
                 </div>
 
                 <span className="text-neutral-500 text-sm shrink-0">{s.user_id}</span>
@@ -121,7 +133,12 @@ export default function AdminUserListPage() {
 
               <div className="text-sm text-neutral-400 mt-1">
                 명식 {s.myeongsikCount}개
-                {s.lastSeenAt ? <> · 마지막 접속 {new Date(s.lastSeenAt).toLocaleString()}</> : <> · 마지막 접속 기록 없음</>}
+                {lastSeenAt ? (
+                  <> · 마지막 접속 {new Date(lastSeenAt).toLocaleString()}</>
+                ) : (
+                  <> · 마지막 접속 기록 없음</>
+                )}
+                <> · 누적 {formatTotalActiveMs(totalActiveMs)}</>
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">

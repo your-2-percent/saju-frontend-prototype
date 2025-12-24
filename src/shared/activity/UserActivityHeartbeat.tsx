@@ -1,72 +1,92 @@
-// src/shared/activity/UserActivityHeartbeat.tsx
 import { useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 
+type PingResult = {
+  ok?: boolean;
+  total_active_ms?: number;
+  upgraded_to_basic?: boolean;
+};
+
 type Props = {
   enabled?: boolean;
-  intervalMs?: number; // 기본 60초
+  intervalMs?: number;
+  path?: string;
+  onBasicUnlocked?: () => void; // ✅ 추가
 };
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function parsePingResult(v: unknown): PingResult | null {
+  if (!isRecord(v)) return null;
+
+  const ok = typeof v.ok === "boolean" ? v.ok : undefined;
+  const total_active_ms = typeof v.total_active_ms === "number" ? v.total_active_ms : undefined;
+  const upgraded_to_basic = typeof v.upgraded_to_basic === "boolean" ? v.upgraded_to_basic : undefined;
+
+  return { ok, total_active_ms, upgraded_to_basic };
+}
 
 export default function UserActivityHeartbeat({
   enabled = true,
   intervalMs = 60_000,
+  path,
+  onBasicUnlocked,
 }: Props) {
   const timerRef = useRef<number | null>(null);
   const runningRef = useRef(false);
+  const lastPathRef = useRef<string>("");
+  const firedRewardRef = useRef(false); // ✅ 중복 모달 방지(클라 측)
+
+  useEffect(() => {
+    lastPathRef.current = path ?? "";
+  }, [path]);
 
   useEffect(() => {
     if (!enabled) return;
-
-    //let cancelled = false;
 
     const tick = async () => {
       if (runningRef.current) return;
       runningRef.current = true;
 
       try {
-        const { data } = await supabase.auth.getUser();
-        const user = data.user;
-        if (!user) return;
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const session = sessionRes.session;
+        if (!session?.user?.id) return;
 
-        const lastPath =
-          typeof window !== "undefined" ? window.location.pathname + window.location.search : null;
+        const lastPath = lastPathRef.current || null;
 
-        await supabase
-          .from("user_activity")
-          .upsert(
-            {
-              user_id: user.id,
-              last_seen_at: new Date().toISOString(),
-              last_path: lastPath,
-            },
-            { onConflict: "user_id" }
-          );
-      } catch {
-        // ignore (adblock/csp 같은 게 아니라 그냥 네트워크/권한 문제일 수 있음)
+        const { data, error } = await supabase.rpc("ping_activity", { p_last_path: lastPath });
+
+        if (error) return;
+
+        const parsed = parsePingResult(data);
+        if (!parsed) return;
+
+        if (parsed.upgraded_to_basic === true && !firedRewardRef.current) {
+          firedRewardRef.current = true;
+          onBasicUnlocked?.();
+        }
       } finally {
         runningRef.current = false;
       }
     };
 
-    // 처음 1번 바로 찍고
     void tick();
-
-    // 주기적으로 찍기
     timerRef.current = window.setInterval(() => void tick(), intervalMs);
 
-    // 탭 다시 활성화될 때도 한번 더
     const onVisibility = () => {
       if (document.visibilityState === "visible") void tick();
     };
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
-      //cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
       if (timerRef.current) window.clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [enabled, intervalMs]);
+  }, [enabled, intervalMs, onBasicUnlocked]);
 
   return null;
 }
