@@ -9,18 +9,13 @@ type Props = {
   width: number;
   height: number;
 
-  /** 스크롤 이만큼 내리면 노출 */
   showAfterScrollY?: number;
-
-  /** 닫기 누르면 몇 시간 숨김 */
   hideForHours?: number;
 
-  /** 우측/상단 위치 */
   rightPx?: number;
   topPx?: number;
 
-  /** 너무 작은 화면에서 겹침 방지 */
-  breakpointClassName?: string; // default: "hidden xl:block"
+  breakpointClassName?: string;
 };
 
 function nowMs(): number {
@@ -60,7 +55,7 @@ export function AdfitSideDock({
   const storageKey = useMemo(() => `adfit_side_hide_until:${adUnit}`, [adUnit]);
 
   const [open, setOpen] = useState(false);
-  const [activated, setActivated] = useState(false); // ✅ 한번 열리면 슬롯 “한 번만” 활성화
+  const [activated, setActivated] = useState(false);
   const [hiddenByUser, setHiddenByUser] = useState(false);
 
   useEffect(() => {
@@ -81,20 +76,25 @@ export function AdfitSideDock({
 
     setHiddenByUser(false);
 
+    // ✅ 핵심: 스크립트 워밍업(boot)은 미리 시작
+    setActivated(true);
+
+    let raf = 0;
+
     const check = () => {
-      const y = window.scrollY || 0;
-      const isOpen = y >= showAfterScrollY;
-
-      setOpen(isOpen);
-
-      // ✅ 최초로 열리는 순간에만 AdfitSlot을 활성화해서 ins 생성/스캔 1번만 유도
-      if (isOpen) setActivated(true);
+      if (raf) return;
+      raf = window.requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY || 0;
+        setOpen(y >= showAfterScrollY);
+      });
     };
 
     check();
     window.addEventListener("scroll", check, { passive: true });
 
     return () => {
+      if (raf) window.cancelAnimationFrame(raf);
       window.removeEventListener("scroll", check);
     };
   }, [enabled, showAfterScrollY, storageKey]);
@@ -119,11 +119,14 @@ export function AdfitSideDock({
         zIndex: 60,
         pointerEvents: "none",
 
-        // ✅ 언마운트하지 말고 표시만 토글
-        display: open ? "block" : "none",
+        // ✅ display:none은 렌더링 자체를 막아서 “보일 때부터 시작”이 됨
+        // 대신 visibility/opacity로 숨겨두면 DOM은 살아있어서 전환이 빠름
+        visibility: open ? "visible" : "hidden",
+        opacity: open ? 1 : 0,
+        transition: "opacity 150ms ease",
       }}
     >
-      <div style={{ pointerEvents: "auto" }}>
+      <div style={{ pointerEvents: open ? "auto" : "none" }}>
         <div
           style={{
             borderRadius: 12,
@@ -151,6 +154,7 @@ export function AdfitSideDock({
 
           <AdfitSlot
             enabled={activated}
+            isVisible={open} // ✅ 보일 때만 scan
             adUnit={adUnit}
             width={width}
             height={height}

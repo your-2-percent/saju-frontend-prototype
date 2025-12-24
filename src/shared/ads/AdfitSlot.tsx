@@ -1,3 +1,4 @@
+// src/shared/ads/AdfitSlot.tsx
 import React, { useEffect, useMemo, useRef } from "react";
 import { loadAdfitScript } from "./adfitScript";
 
@@ -7,10 +8,9 @@ export type AdfitSlotProps = {
   height: number;
 
   enabled?: boolean;
+  isVisible?: boolean; // ✅ 추가
   className?: string;
   wrapperStyle?: React.CSSProperties;
-
-  /** 영역 미리 확보 */
   reserveSpace?: boolean;
 };
 
@@ -19,14 +19,19 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function destroyAdfitUnit(adUnit: string) {
-  const w = window as unknown as Record<string, unknown>;
+  const w: unknown = window;
+  if (!isRecord(w)) return;
+
   const adfit = w["adfit"];
   if (!isRecord(adfit)) return;
 
   const destroy = adfit["destroy"];
   if (typeof destroy === "function") {
-    // destroy(unit)
-    destroy.call(adfit, adUnit);
+    try {
+      destroy.call(adfit, adUnit);
+    } catch {
+      // ignore
+    }
   }
 }
 
@@ -35,11 +40,13 @@ export function AdfitSlot({
   width,
   height,
   enabled = true,
+  isVisible = true,
   className,
   wrapperStyle,
   reserveSpace = true,
 }: AdfitSlotProps) {
-  const mountedOnceRef = useRef(false);
+  const bootedRef = useRef(false);
+  const scannedRef = useRef(false);
 
   const outerStyle = useMemo<React.CSSProperties>(() => {
     const base: React.CSSProperties = reserveSpace
@@ -55,24 +62,58 @@ export function AdfitSlot({
     return { ...base, ...wrapperStyle };
   }, [height, reserveSpace, wrapperStyle]);
 
+  // ✅ 1) boot: enabled 되는 순간 미리 로드
   useEffect(() => {
     if (!enabled) return;
+    if (bootedRef.current) return;
+    bootedRef.current = true;
 
-    // ✅ 같은 슬롯이 리렌더링될 때마다 스캔 난사 방지
-    if (mountedOnceRef.current) return;
-    mountedOnceRef.current = true;
+    let cancelled = false;
 
     void (async () => {
-      await loadAdfitScript();
+      try {
+        await loadAdfitScript({ mode: "boot" });
+        if (cancelled) return;
+      } catch {
+        // ignore
+      }
     })();
 
     return () => {
-      // SPA 이동/언마운트 시 정리 (재노출 안 되는 케이스 방지)
-      destroyAdfitUnit(adUnit);
-      mountedOnceRef.current = false;
+      cancelled = true;
     };
-    // adUnit 바뀌는 케이스가 있으면 의도적으로 새로 실행되게 deps에 포함
-  }, [enabled, adUnit]);
+  }, [enabled]);
+
+  // ✅ 2) scan: 실제로 보이는 순간 1번만
+  useEffect(() => {
+    if (!enabled) return;
+    if (!isVisible) return;
+    if (scannedRef.current) return;
+    scannedRef.current = true;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        await loadAdfitScript({ mode: "scan" });
+        if (cancelled) return;
+      } catch {
+        // ignore
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled, isVisible]);
+
+  useEffect(() => {
+    return () => {
+      destroyAdfitUnit(adUnit);
+      bootedRef.current = false;
+      scannedRef.current = false;
+    };
+  }, [adUnit]);
 
   if (!enabled) return null;
 
