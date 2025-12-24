@@ -25,6 +25,31 @@ import { useMainAppInput } from "@/app/layout/page/input/useMainAppInput";
 import { useMainAppCalc } from "@/app/layout/page/calc/useMainAppCalc";
 import { useMainAppSave } from "@/app/layout/page/save/useMainAppSave";
 
+// ✅ AdFit
+import { AdfitScriptManager } from "@/shared/ads/AdfitScriptManager";
+import { AdfitSlot } from "@/shared/ads/AdfitSlot";
+import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
+
+// ✅ Entitlements
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+
+// =========================
+// ✅ 광고 유닛 (요청 반영)
+// =========================
+
+// (1) 중간 광고: "처음에 준거(대체 광고)" -> 프롬프트 위로 이동
+const AD_MID_MOBILE = "DAN-GW4jrUdfiXklZ12U"; // 320x50
+const AD_MID_DESKTOP = "DAN-CeRuC0yKzSAs5Gju"; // 728x90
+
+// (2) 맨 아래 광고: 새로 준 유닛
+const AD_BOTTOM_MOBILE = "DAN-G16gewnPhZou1D9y"; // 320x50
+const AD_BOTTOM_DESKTOP = "DAN-rdKe9ZODmrZR4hho"; // 728x90
+
+// (3) PC 우측 사이드(모바일 X)
+const AD_SIDE = "DAN-INfSKh1pW2cEtWNu"; // 160x600
+
+// =========================
+
 const EMPTY_MS: MyeongSik = {
   id: "empty",
   name: "",
@@ -48,12 +73,22 @@ const EMPTY_MS: MyeongSik = {
   dir: "forward",
 };
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
+function extractPlan(state: unknown): string | null {
+  if (!isRecord(state)) return null;
+  if (typeof state.plan === "string") return state.plan;
+  if (isRecord(state.ent) && typeof state.ent.plan === "string") return state.ent.plan;
+  return null;
+}
+
 export default function Page() {
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
 
-  // 1) 로그인 체크가 끝나기 전
   if (!input.authChecked) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -62,13 +97,9 @@ export default function Page() {
     );
   }
 
-  // ✅ 2) 로그인 안 했으면 권한/설정 로딩을 기다릴 필요 없음 (여기가 핵심)
   if (!input.isLoggedIn) return <LoginPage />;
-
-  // 3) 관리자 모드
   if (input.adminMode) return <AdminPage />;
 
-  // 4) 로그인 상태일 때만 권한 조회
   if (!calc.entLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -77,7 +108,6 @@ export default function Page() {
     );
   }
 
-  // 5) 설정 로딩
   if (!calc.settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -86,7 +116,6 @@ export default function Page() {
     );
   }
 
-  // 6) 명식 로딩
   if (calc.loading) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -109,6 +138,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     settings,
     emptyMs: EMPTY_MS,
   });
+
   const save = useMainAppSave({
     canAdd: calc.canAdd,
     hasCurrent: calc.hasCurrent,
@@ -123,8 +153,36 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
+  const entState = useEntitlementsStore((s) => s as unknown);
+  const plan = extractPlan(entState);
+
+  // plan 못 찾으면 FREE로 취급(안전)
+  const isFree = plan !== "PRO";
+
+  // 결과 화면에서만 광고 노출 (Today/커플/위자드/편집 중엔 X)
+  const showResult =
+    calc.hasCurrent && !input.showToday && !input.showCouple && !input.wizardOpen && !input.editing;
+
   return (
     <div className="min-h-screen pb-16">
+      {/* ✅ AdFit 스크립트 매니저: 앱 전체 1번 */}
+      <AdfitScriptManager enabled={isFree} />
+
+      {/* ✅ PC 우측 사이드(160x600) 1개 / 모바일은 X */}
+      <div className="hidden desk:block">
+        <AdfitSideDock
+          enabled={isFree && showResult}
+          adUnit={AD_SIDE}
+          width={160}
+          height={600}
+          showAfterScrollY={0}
+          hideForHours={24}
+          rightPx={16}
+          topPx={120}
+          breakpointClassName="hidden xl:block"
+        />
+      </div>
+
       <TopNav
         onOpenSidebar={() => input.setShowSidebar(true)}
         onAddNew={save.openAdd}
@@ -176,6 +234,18 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           <LuckGlobalPicker ms={calc.current as MyeongSik} />
 
+          {/* ✅ 중간 광고: "대체 광고"였던 거 -> 프롬프트 바로 위 */}
+          {isFree && showResult && settings.showPromptBox && (
+            <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
+              <div className="hidden md:block">
+                <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
+              </div>
+              <div className="md:hidden">
+                <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
+              </div>
+            </div>
+          )}
+
           {settings.showPromptBox && (
             <div className="max-w-[640px] mx-auto mb-8">
               <PromptCopyCard
@@ -186,6 +256,18 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
                 includeTenGod
                 lunarPillars={[]}
               />
+            </div>
+          )}
+
+          {/* ✅ 맨 아래 광고: 새로 준 유닛(모바일/PC) */}
+          {isFree && showResult && (
+            <div className="max-w-[760px] mx-auto px-3 pb-6">
+              <div className="hidden md:block">
+                <AdfitSlot enabled adUnit={AD_BOTTOM_DESKTOP} width={728} height={90} />
+              </div>
+              <div className="md:hidden">
+                <AdfitSlot enabled adUnit={AD_BOTTOM_MOBILE} width={320} height={50} />
+              </div>
             </div>
           )}
         </>
