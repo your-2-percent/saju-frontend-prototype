@@ -14,9 +14,17 @@ export default function LoginPage() {
   const [agree, setAgree] = useState(false);
 
   useEffect(() => {
-    setTimeout(() => setShowBg(true), 50);
-    setTimeout(() => setShowTitle(true), 250);
-    setTimeout(() => setShowCard(true), 450);
+    // ✅ 브라우저 탭 제목(검색엔 index.html이 더 중요하지만, UX/공유엔 도움이 됨)
+    document.title = "화림만세력 - 사주/만세력/궁합";
+
+    const t1 = window.setTimeout(() => setShowBg(true), 50);
+    const t2 = window.setTimeout(() => setShowTitle(true), 250);
+    const t3 = window.setTimeout(() => setShowCard(true), 450);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
+    };
   }, []);
 
   const requireAgreeOrToast = (): boolean => {
@@ -31,7 +39,6 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        // 기존 로직 그대로
         redirectTo: `${window.location.origin}/`,
       },
     });
@@ -48,7 +55,6 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
-        // 구글이랑 동일하게 맞춤
         redirectTo: `${window.location.origin}/`,
       },
     });
@@ -61,32 +67,44 @@ export default function LoginPage() {
 
   return (
     <main
-      className={`flex min-h-screen items-center justify-center bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
+      className={`relative flex min-h-screen items-center justify-center bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
         showBg ? "opacity-100" : "opacity-0"
       }`}
     >
-      {/* 상단 타이틀 */}
-      <div
+      {/* ✅ 상단 타이틀 (H1은 여기 하나만) */}
+      <header
         className={`transform transition-all duration-500 ${
           showTitle ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        } absolute top-16 text-center`}
+        } absolute top-14 text-center max-w-[680px] px-4`}
       >
-        <h1 className="text-3xl font-bold tracking-tight mb-1">화림만세력</h1>
-        <p className="text-sm text-neutral-400">오늘도 편안한 하루 되세요 🌿</p>
-      </div>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">화림만세력</h1>
+
+        {/* ✅ 검색 키워드가 실제 텍스트로 들어가게 */}
+        <p className="text-sm text-neutral-300 leading-relaxed">
+          사주 · 만세력 · 궁합 · 대운/세운 흐름을 한 화면에서 보는 개인용 분석 도구.
+          <br />
+          로그인 후 명식 저장/관리 기능을 사용할 수 있어요 🌿
+        </p>
+
+        <p className="mt-2 text-xs text-neutral-500">
+          (검색 노출/심사용 안내) 로그인 없이 확인 가능한 데모 페이지가 필요하면 별도 URL을 제공할 수 있어요.
+        </p>
+      </header>
 
       {/* 로그인 카드 */}
-      <div
+      <section
         className={`w-full max-w-sm rounded-2xl bg-neutral-900 p-8 shadow-xl border border-neutral-800 transition-all duration-500 ${
           showCard ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
+        aria-label="로그인"
       >
-        <h1 className="mb-2 text-2xl font-bold tracking-tight text-center">로그인</h1>
+        {/* ✅ H1 중복 방지: 카드 제목은 H2 */}
+        <h2 className="mb-2 text-2xl font-bold tracking-tight text-center">로그인</h2>
 
-        <p className="mb-6 text-sm text-neutral-400 text-center leading-relaxed">
+        <p className="mb-5 text-sm text-neutral-400 text-center leading-relaxed">
           화림만세력에 방문해주셔서 감사합니다.
           <br />
-          로그인을 위해 아래 내용을 확인해주세요 🌿
+          시작하려면 아래 약관 동의 후 로그인해 주세요 🌿
         </p>
 
         {/* 개인정보 처리방침 동의 */}
@@ -146,16 +164,25 @@ export default function LoginPage() {
                   : "bg-neutral-700 text-neutral-400 cursor-not-allowed"
               }`}
           >
-            {/* 카카오 아이콘(간단 버전) */}
-            <img
-              src="/icons/KakaoTalk_logo.png"
-              alt="KakaoTalk"
-              className="h-5"
-            />
+            <img src="/icons/KakaoTalk_logo.png" alt="KakaoTalk" className="h-5" />
             <span>카카오로 로그인</span>
           </button>
         </div>
-      </div>
+
+        {/* ✅ 로그인 아래에 “텍스트 콘텐츠” 조금 더(검색/심사에 도움) */}
+        <div className="mt-6 border-t border-neutral-800 pt-4 text-xs text-neutral-400 leading-relaxed">
+          <p className="font-semibold text-neutral-300 mb-2">화림만세력에서 할 수 있는 것</p>
+          <ul className="list-disc pl-5 space-y-1">
+            <li>사주 원국/대운·세운·월운 흐름 보기</li>
+            <li>명식 저장 및 폴더 정리</li>
+            <li>궁합/비교 보기(기능 제공 시)</li>
+          </ul>
+
+          <p className="mt-3 text-[11px] text-neutral-500">
+            문의: unique950318@gmail.com
+          </p>
+        </div>
+      </section>
 
       <Toaster position="top-center" toastOptions={{ duration: 2000 }} />
 
@@ -169,7 +196,7 @@ export default function LoginPage() {
             className="w-full max-w-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-200 p-6 rounded-xl shadow-xl relative animate-fadeInUp"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-lg font-bold mb-4">개인정보 처리방침</h2>
+            <h3 className="text-lg font-bold mb-4">개인정보 처리방침</h3>
 
             <div className="text-sm leading-relaxed max-h-[60vh] overflow-y-auto pr-2">
               <p className="mb-2">
@@ -200,9 +227,7 @@ export default function LoginPage() {
               <p className="mb-2">· 본 서비스는 사용자의 동의 없이는 어떠한 개인정보도 외부에 제공하지 않습니다.</p>
 
               <p className="font-semibold mt-4 mb-1">5. 보안</p>
-              <p className="mb-2">
-                · Supabase 인증 및 데이터베이스 암호화 기준을 준수하여 정보를 보호합니다.
-              </p>
+              <p className="mb-2">· Supabase 인증 및 데이터베이스 암호화 기준을 준수하여 정보를 보호합니다.</p>
 
               <p className="font-semibold mt-4 mb-1">6. 문의</p>
               <p>· 개인정보 관련 문의: unique950318@gmail.com</p>
