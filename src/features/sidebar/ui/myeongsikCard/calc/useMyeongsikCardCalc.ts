@@ -9,13 +9,11 @@ type UseMyeongsikCardCalcArgs = {
   m: MyeongSik;
   memoOpen: boolean;
   isDragDisabled: boolean;
-  canManage: boolean;
+  canManage: boolean; // ✅ 호출부 호환용(여기서는 안 씀)
 };
 
 type MyeongsikCardCalc = {
   keyId: string;
-  locked: boolean;
-  lockMsg: string;
   dragDisabled: boolean;
   dragHandleLabel: string;
   ganji: string;
@@ -148,11 +146,9 @@ export function useMyeongsikCardCalc({
   m,
   memoOpen,
   isDragDisabled,
-  canManage,
 }: UseMyeongsikCardCalcArgs): MyeongsikCardCalc {
-  const lockMsg = "이건 PRO 버전에서만 가능해요.";
-  const locked = !canManage;
-  const dragDisabled = isDragDisabled || locked;
+  // ✅ 잠금 로직 제거: 드래그 비활성은 “외부에서 준 값”만 따른다
+  const dragDisabled = isDragDisabled;
   const keyId = `item:${m.id}`;
 
   const ganji = getSidebarGanjiWithDST(m);
@@ -174,16 +170,14 @@ export function useMyeongsikCardCalc({
   const memoToggleLabel = memoOpen ? "메모 닫기" : "메모 열기";
 
   const mingSikTypeValue = (m.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
-  const dragHandleLabel = locked ? "잠금" : dragDisabled ? "이동 불가" : "::";
+  const dragHandleLabel = dragDisabled ? "이동 불가" : "::";
 
   const favoriteLabel = m.favorite ? "즐겨찾기 해제" : "즐겨찾기";
-  const editLabel = locked ? "수정 불가" : "수정";
-  const deleteLabel = locked ? "삭제 불가" : "삭제";
+  const editLabel = "수정";
+  const deleteLabel = "삭제";
 
   return {
     keyId,
-    locked,
-    lockMsg,
     dragDisabled,
     dragHandleLabel,
     ganji,

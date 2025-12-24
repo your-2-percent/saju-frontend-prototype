@@ -56,13 +56,12 @@ export default function AdminUserListPage() {
             plan: "FREE",
             startDate: "",
             endDate: "",
-            myoViewer: "ON" as const,
+            myoViewer: "OFF" as const,
             saving: false,
             lastSavedAt: null as string | null,
           };
 
-          const viewerNow =
-            s.ent?.can_use_myo_viewer === false ? "OFF" : "ON";
+          const viewerNow = s.ent?.can_use_myo_viewer === true ? "ON" : "OFF";
 
           return (
             <div
@@ -128,7 +127,7 @@ export default function AdminUserListPage() {
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
                     value={draft.myoViewer}
                     onChange={(e) => {
-                      const v = e.target.value === "OFF" ? "OFF" : "OFF";
+                      const v = e.target.value === "OFF" ? "OFF" : "ON";
                       setDraft(s.user_id, { myoViewer: v });
                     }}
                   >

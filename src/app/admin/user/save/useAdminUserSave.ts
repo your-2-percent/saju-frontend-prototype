@@ -77,23 +77,32 @@ export function useAdminUserSave() {
         const starts_at = draft.startDate ? toKstIsoFromDateInput(draft.startDate, false) : null;
         const expires_at = draft.endDate ? toKstIsoFromDateInput(draft.endDate, true) : null;
 
+        // saveEntitlements 안에서 payload 만들 때
+        const can_use_myo_viewer = draft.myoViewer === "ON";
+
         const payload = {
           user_id: uid,
           ...preset,
           starts_at,
           expires_at,
-
-          // ✅ 묘운 뷰어 토글(플랜과 별개)
-          can_use_myo_viewer: draft.myoViewer !== "OFF",
+          can_use_myo_viewer, // ✅ 추가
         };
 
         await upsertEntitlements(payload);
         setDraft(uid, { saving: false, lastSavedAt: Date.now() });
         await refresh();
+
+        await upsertEntitlements(payload);
+        console.log("saved payload", payload);
+
+        const verify = await fetchEntitlements([uid]);
+        console.log("verify entRows", verify);
       } catch (e) {
         setDraft(uid, { saving: false });
         setError(e instanceof Error ? e.message : "저장 실패");
       }
+
+      
     },
     []
   );

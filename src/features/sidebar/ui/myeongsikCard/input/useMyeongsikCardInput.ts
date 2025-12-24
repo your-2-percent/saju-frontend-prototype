@@ -1,3 +1,4 @@
+// features/sidebar/ui/myeongsikCard/input/useMyeongsikCardInput.ts
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 
 type MyeongsikCardInput = {
@@ -5,11 +6,8 @@ type MyeongsikCardInput = {
 };
 
 export const useMyeongsikCardInput = (): MyeongsikCardInput => {
-  const canManage = useEntitlementsStore((s) => {
-    if (!s.loaded) return false;
-    if (!s.isActiveNow()) return false;
-    return s.canManageMyeongsik;
-  });
-
+  // ✅ zustand hook은 유지(훅 순서/개수 깨짐 방지)
+  // ✅ 반환은 무조건 true로 고정 (플랜/만료 무시)
+  const canManage = useEntitlementsStore(() => true);
   return { canManage };
 };

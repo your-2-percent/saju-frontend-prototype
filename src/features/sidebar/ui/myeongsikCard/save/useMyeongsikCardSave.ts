@@ -1,5 +1,4 @@
 import { useCallback, type MouseEvent } from "react";
-import { toast } from "react-hot-toast";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
 
@@ -7,8 +6,6 @@ type MemoToggleFn = (id: string) => void;
 
 type UseMyeongsikCardSaveArgs = {
   m: MyeongSik;
-  locked: boolean;
-  lockMsg: string;
   unassignedLabel: string;
   onToggleMemo: MemoToggleFn;
   onChangeFolder: (id: string, folder: string | undefined) => void;
@@ -20,7 +17,6 @@ type UseMyeongsikCardSaveArgs = {
 };
 
 type MyeongsikCardSave = {
-  handleLockClick: (e?: MouseEvent<HTMLElement>) => void;
   handleToggleMemo: (e?: MouseEvent<HTMLElement>) => void;
   handleView: (e?: MouseEvent<HTMLElement>) => void;
   handleEdit: (e?: MouseEvent<HTMLElement>) => void;
@@ -32,8 +28,6 @@ type MyeongsikCardSave = {
 
 export const useMyeongsikCardSave = ({
   m,
-  locked,
-  lockMsg,
   unassignedLabel,
   onToggleMemo,
   onChangeFolder,
@@ -43,20 +37,6 @@ export const useMyeongsikCardSave = ({
   onDelete,
   onToggleFavorite,
 }: UseMyeongsikCardSaveArgs): MyeongsikCardSave => {
-  const guardLocked = useCallback(() => {
-    if (!locked) return false;
-    toast.error(lockMsg);
-    return true;
-  }, [locked, lockMsg]);
-
-  const handleLockClick = useCallback(
-    (e?: MouseEvent<HTMLElement>) => {
-      e?.stopPropagation();
-      if (locked) toast.error(lockMsg);
-    },
-    [locked, lockMsg]
-  );
-
   const handleToggleMemo = useCallback(
     (e?: MouseEvent<HTMLElement>) => {
       e?.stopPropagation();
@@ -76,50 +56,44 @@ export const useMyeongsikCardSave = ({
   const handleEdit = useCallback(
     (e?: MouseEvent<HTMLElement>) => {
       e?.stopPropagation();
-      if (guardLocked()) return;
       onEdit(m);
     },
-    [guardLocked, onEdit, m]
+    [onEdit, m]
   );
 
   const handleDelete = useCallback(
     (e?: MouseEvent<HTMLElement>) => {
       e?.stopPropagation();
-      if (guardLocked()) return;
       onDelete(m);
     },
-    [guardLocked, onDelete, m]
+    [onDelete, m]
   );
 
   const handleToggleFavorite = useCallback(
     (e?: MouseEvent<HTMLElement>) => {
       e?.stopPropagation();
-      if (guardLocked()) return;
       onToggleFavorite(m.id);
     },
-    [guardLocked, onToggleFavorite, m.id]
+    [onToggleFavorite, m.id]
   );
 
   const handleFolderChange = useCallback(
     (raw: string) => {
-      if (guardLocked()) return;
       const normalized = raw === unassignedLabel ? undefined : raw;
       onChangeFolder(m.id, normalized);
     },
-    [guardLocked, onChangeFolder, m.id, unassignedLabel]
+    [onChangeFolder, m.id, unassignedLabel]
   );
 
   const handleMingSikTypeChange = useCallback(
     (raw: string) => {
-      if (guardLocked()) return;
       const nextRule = raw as DayBoundaryRule;
       onChangeMingSikType(m, nextRule);
     },
-    [guardLocked, onChangeMingSikType, m]
+    [onChangeMingSikType, m]
   );
 
   return {
-    handleLockClick,
     handleToggleMemo,
     handleView,
     handleEdit,
