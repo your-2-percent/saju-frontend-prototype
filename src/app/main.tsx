@@ -10,27 +10,20 @@ import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/app/pages/AuthCallback";
 import "./main.css";
 
-import HeartbeatGate from "@/app/HeartbeatGate";
+import UserActivityHeartbeat from "@/shared/activity/UserActivityHeartbeat";
+import AppBootstrap from "@/app/AppBootstrap";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HashRouter>
-      <HeartbeatGate />
+      <AppBootstrap />
+      <UserActivityHeartbeat />
 
       <Routes>
-        {/* OAuth 콜백 */}
         <Route path="/auth/callback" element={<AuthCallback />} />
-
-        {/* 메인 */}
         <Route path="/" element={<Page />} />
-
-        {/* 관리자 */}
         <Route path="/admin" element={<AdminPage />} />
-
-        {/* 임퍼소네이션 */}
         <Route path="/impersonate" element={<ImpersonateView />} />
-
-        {/* ✅ 이상한 해시/라우트 들어오면 홈으로 */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </HashRouter>

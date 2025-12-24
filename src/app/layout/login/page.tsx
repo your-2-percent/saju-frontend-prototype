@@ -67,15 +67,15 @@ export default function LoginPage() {
 
   return (
     <main
-      className={`relative flex min-h-[900px] items-center justify-center bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
+      className={`relative py-14 max-h-[90vh] overflow-auto bg-neutral-950 text-white px-4 transition-opacity duration-500 ${
         showBg ? "opacity-100" : "opacity-0"
       }`}
     >
       {/* ✅ 상단 타이틀 (H1은 여기 하나만) */}
       <header
-        className={`transform transition-all duration-500 ${
+        className={`transform transition-all duration-500 mb-8 ${
           showTitle ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-        } absolute top-14 text-center max-w-[680px] px-4`}
+        } text-center max-w-[680px]`}
       >
         <h1 className="text-3xl font-bold tracking-tight mb-2">화림만세력</h1>
 
@@ -85,15 +85,11 @@ export default function LoginPage() {
           <br />
           로그인 후 명식 저장/관리 기능을 사용할 수 있어요 🌿
         </p>
-
-        <p className="mt-2 text-xs text-neutral-500">
-          (검색 노출/심사용 안내) 로그인 없이 확인 가능한 데모 페이지가 필요하면 별도 URL을 제공할 수 있어요.
-        </p>
       </header>
 
       {/* 로그인 카드 */}
       <section
-        className={`w-full max-w-sm rounded-2xl bg-neutral-900 p-8 shadow-xl border border-neutral-800 transition-all duration-500 ${
+        className={`w-full max-w-sm mx-auto rounded-2xl bg-neutral-900 p-8 shadow-xl border border-neutral-800 transition-all duration-500 ${
           showCard ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
         }`}
         aria-label="로그인"
@@ -104,7 +100,7 @@ export default function LoginPage() {
         <p className="mb-5 text-sm text-neutral-400 text-center leading-relaxed">
           화림만세력에 방문해주셔서 감사합니다.
           <br />
-          시작하려면 아래 약관 동의 후 로그인해 주세요 🌿
+          아래 약관 동의 후 로그인해 주세요 🌿
         </p>
 
         {/* 개인정보 처리방침 동의 */}

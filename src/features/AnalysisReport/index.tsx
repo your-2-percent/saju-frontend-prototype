@@ -94,7 +94,7 @@ export default function AnalysisReport({
   });
 
   const lockTitle = useMemo(() => {
-    return `🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다!`;
+    return `🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다! (로그인 시에만 카운트)`;
   }, []);
 
   if (!calc.isValidActive) {
