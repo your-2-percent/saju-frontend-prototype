@@ -39,6 +39,8 @@ export type UserSummary = {
   myeongsikCount: number;
   lastCreatedAt: string | null;
   ent: EntRow | null;
+  lastSeenAt: string | null;
+  lastSeenPath: string | null;
 };
 
 export type MyoViewerFlag = "ON" | "OFF";

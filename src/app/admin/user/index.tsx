@@ -5,6 +5,23 @@ import { useAdminUserSave } from "./save/useAdminUserSave";
 import { getPagedUserIds, getTotalPages, initDrafts } from "./calc/adminUserCalc";
 import { PLAN_OPTIONS, isPlanTier, periodLabel, planLabel } from "./calc/planUtils";
 
+function formatLastSeen(lastSeenAt?: string | null): string {
+  if (!lastSeenAt) return "기록 없음";
+  const t = Date.parse(lastSeenAt);
+  if (!Number.isFinite(t)) return "기록 없음";
+
+  const diff = Date.now() - t;
+  const sec = Math.floor(diff / 1000);
+  if (sec < 15) return "방금";
+  if (sec < 60) return `${sec}초 전`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}분 전`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}시간 전`;
+  const day = Math.floor(hr / 24);
+  return `${day}일 전`;
+}
+
 export default function AdminUserListPage() {
   const input = useAdminUserInput();
   const { search, setSearch, page, setPage, draftByUser, setDraftByUser, setDraft } = input;
@@ -52,7 +69,7 @@ export default function AdminUserListPage() {
             endDate: "",
             myoViewer: "OFF" as const,
             saving: false,
-            lastSavedAt: null as string | null,
+            lastSavedAt: undefined,
           };
 
           const nowMs = Date.now();
@@ -65,6 +82,18 @@ export default function AdminUserListPage() {
           // ✅ 묘운: 기간 영향 X
           const viewerNow = s.ent?.can_use_myo_viewer === true ? "ON" : "OFF";
 
+          // ✅ 마지막 접속/온라인 판정(최근 2분 이내면 온라인으로 간주)
+          // fetchSummaries에서 아래 중 하나 형태로 내려오게 맞춰줘
+          // - s.activity_last_seen_at: string | null
+          // - s.activity?.last_seen_at: string | null
+          const lastSeenAt: string | null =
+            (s as unknown as { activity_last_seen_at?: string | null }).activity_last_seen_at ??
+            ((s as unknown as { activity?: { last_seen_at?: string | null } }).activity?.last_seen_at ??
+              null);
+
+          const lastSeenMs = lastSeenAt ? Date.parse(lastSeenAt) : NaN;
+          const online = Number.isFinite(lastSeenMs) && nowMs - lastSeenMs < 2 * 60 * 1000;
+
           return (
             <div
               key={s.user_id}
@@ -73,9 +102,18 @@ export default function AdminUserListPage() {
               <div className="font-semibold text-lg flex items-center justify-between gap-3">
                 <div className="min-w-0 flex items-center gap-2">
                   <span className="text-nowrap mr-1">{displayName}</span>
-                  {email ? (
-                    <span className="text-sm text-neutral-400 truncate">({email})</span>
-                  ) : null}
+                  {email ? <span className="text-sm text-neutral-400 truncate">({email})</span> : null}
+
+                  <span
+                    className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                      online
+                        ? "bg-emerald-900/40 border-emerald-700 text-emerald-300"
+                        : "bg-neutral-800 border-neutral-700 text-neutral-300"
+                    }`}
+                    title={lastSeenAt ? new Date(lastSeenAt).toLocaleString() : "기록 없음"}
+                  >
+                    {online ? "온라인" : "오프라인"} · {formatLastSeen(lastSeenAt)}
+                  </span>
                 </div>
 
                 <span className="text-neutral-500 text-sm shrink-0">{s.user_id}</span>
@@ -83,14 +121,13 @@ export default function AdminUserListPage() {
 
               <div className="text-sm text-neutral-400 mt-1">
                 명식 {s.myeongsikCount}개
-                {s.lastCreatedAt && <> · 최근 생성 {new Date(s.lastCreatedAt).toLocaleString()}</>}
+                {s.lastSeenAt ? <> · 마지막 접속 {new Date(s.lastSeenAt).toLocaleString()}</> : <> · 마지막 접속 기록 없음</>}
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
                 플랜 {planLabel(effectivePlan)} · {periodLabel(s.ent)} · 묘운 뷰어 {viewerNow}
                 {!active && s.ent?.plan && s.ent.plan !== "FREE" ? " (만료됨)" : ""}
               </div>
-
 
               <div className="mt-3 flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -162,7 +199,7 @@ export default function AdminUserListPage() {
                   </button>
                 </div>
 
-                {draft.lastSavedAt ? (
+                {draft.lastSavedAt != null ? (
                   <div className="text-xs text-emerald-400">
                     저장됨 · {new Date(draft.lastSavedAt).toLocaleString()}
                   </div>

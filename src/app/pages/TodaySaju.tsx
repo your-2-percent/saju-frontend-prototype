@@ -112,7 +112,7 @@ export default function TodaySaju() {
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
   return (
-    <div className="flex justify-center items-center mt-12 w-full h-[calc(100dvh_-_112px)] ">
+    <div className="flex justify-center items-center mt-12 w-full h-[calc(100dvh_-_162px)] desk:h-[calc(100dvh_-_212px)] ">
       <div className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
                       bg-white dark:bg-neutral-950
                       text-neutral-900 dark:text-neutral-100
