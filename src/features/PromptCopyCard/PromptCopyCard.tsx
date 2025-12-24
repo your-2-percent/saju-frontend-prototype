@@ -67,7 +67,7 @@ export default function PromptCopyCard({
             <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
               프리 플랜에서는 프롬프트 복사/사용이 막혀 있어요.
               <br />
-              🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다!
+              🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다! (로그인 시에만 카운트)
             </div>
           </div>
         </div>

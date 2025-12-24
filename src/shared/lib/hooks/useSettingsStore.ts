@@ -1,3 +1,4 @@
+// src/shared/lib/hooks/useSettingsStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/lib/supabase";
@@ -15,22 +16,22 @@ const purgeLocalSettings = () => {
 };
 
 export type Settings = {
-  hiddenStem: "all" | "regular";        // 지장간: 전체 / 정기만
-  hiddenStemMode: "classic" | "hgc";    // 지장간 유형: 고전 / 하건충
+  hiddenStem: "all" | "regular";
+  hiddenStemMode: "classic" | "hgc";
   ilunRule: "자시" | "조자시/야자시" | "인시";
   sinsalMode: "classic" | "modern";
   sinsalBase: "일지" | "연지";
   sinsalBloom: boolean;
   exposure: "원국" | "대운" | "세운" | "월운";
   charType: "한자" | "한글";
-  thinEum: boolean;                     // 음간/음지 얇게
-  showSipSin: boolean;                  // 십신
-  showSibiSinsal: boolean;              // 십이신살
-  showSibiUnseong: boolean;             // 십이운성
-  showNabeum: boolean;                  // ✅ 납음 표시 (스토어에 정식 편입)
-  showEtcShinsal: boolean;              // 기타신살 BOX 표시
-  showRelationBox: boolean;             // 형충회합 BOX 표시
-  showPromptBox: boolean;               // 프롬프트 BOX 표시
+  thinEum: boolean;
+  showSipSin: boolean;
+  showSibiSinsal: boolean;
+  showSibiUnseong: boolean;
+  showNabeum: boolean;
+  showEtcShinsal: boolean;
+  showRelationBox: boolean;
+  showPromptBox: boolean;
   theme: "dark" | "light";
   sectionOrder?: string[];
   difficultyMode?: boolean;
@@ -49,15 +50,24 @@ export const defaultSettings: Settings = {
   showSipSin: true,
   showSibiSinsal: true,
   showSibiUnseong: true,
-  showNabeum: true, // ✅ 기본 ON
+  showNabeum: true,
   showEtcShinsal: true,
   showRelationBox: true,
   showPromptBox: true,
   theme: "dark",
   difficultyMode: false,
   sectionOrder: [
-    "hiddenStem","hiddenStemMode","ilunRule","sinsalMode","sinsalBase",
-    "sinsalBloom","exposure","charType","thinEum","visibility","difficultyMode",
+    "hiddenStem",
+    "hiddenStemMode",
+    "ilunRule",
+    "sinsalMode",
+    "sinsalBase",
+    "sinsalBloom",
+    "exposure",
+    "charType",
+    "thinEum",
+    "visibility",
+    "difficultyMode",
   ],
 };
 
@@ -78,7 +88,10 @@ const SECTION_KEYS = [
 
 const normalizeSectionOrder = (saved?: unknown): string[] => {
   const base = Array.isArray(saved)
-    ? (saved as unknown[]).filter((v): v is typeof SECTION_KEYS[number] => typeof v === "string" && (SECTION_KEYS as readonly string[]).includes(v))
+    ? (saved as unknown[]).filter(
+        (v): v is typeof SECTION_KEYS[number] =>
+          typeof v === "string" && (SECTION_KEYS as readonly string[]).includes(v)
+      )
     : [];
   const missing = SECTION_KEYS.filter((k) => !base.includes(k));
   return [...base, ...missing];
@@ -109,7 +122,6 @@ const coerceSettings = (raw: unknown): Settings => {
 const needsMigration = (raw: unknown): boolean => {
   if (!raw || typeof raw !== "object") return false;
   const obj = raw as Record<string, unknown>;
-  // 예전 persist 포맷: { state: { settings: {...} } } 또는 { settings: {...} }
   if (obj.state || obj.settings) return true;
   return false;
 };
@@ -133,34 +145,39 @@ export const useSettingsStore = create<SettingsState>()(
       settings: defaultSettings,
       syncing: false,
       loaded: false,
+
       setSettings: (next) => set({ settings: withDefaults(next) }),
-      setKey: (key, value) =>
-        set({ settings: withDefaults({ ...get().settings, [key]: value }) }),
-      reset: () => set({ settings: defaultSettings }),
+      setKey: (key, value) => set({ settings: withDefaults({ ...get().settings, [key]: value }) }),
+
+      // ✅ reset은 “기본값 세팅 완료”니까 loaded=true로 두는 게 안전
+      reset: () => set({ settings: defaultSettings, loaded: true }),
+
       loadFromServer: async () => {
         try {
           set({ syncing: true });
           purgeLocalSettings();
 
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+          const { data, error: userError } = await supabase.auth.getUser();
+          const user = data?.user ?? null;
 
+          // ✅ 핵심: 로그인 X면 “기본값으로 로드 완료 처리”
           if (userError || !user) {
-            set({ syncing: false, loaded: false });
+            set({
+              settings: defaultSettings,
+              syncing: false,
+              loaded: true,
+            });
             return;
           }
 
-          const { data, error } = await supabase
+          const { data: row, error } = await supabase
             .from("user_settings")
             .select("payload")
             .eq("user_id", user.id)
             .maybeSingle();
 
-          //const payload = data?.payload ?? {};
-
-          if (!data) {
+          // row가 없으면 만들어두기
+          if (!row) {
             await supabase.from("user_settings").upsert({
               user_id: user.id,
               payload: {},
@@ -173,23 +190,20 @@ export const useSettingsStore = create<SettingsState>()(
             return;
           }
 
-          if (data?.payload) {
-            const normalized = coerceSettings(data.payload);
+          if (row?.payload) {
+            const normalized = coerceSettings(row.payload);
             set({
               settings: normalized,
               syncing: false,
               loaded: true,
             });
 
-            // 예전 포맷이면 정규화된 값으로 즉시 갱신
-            if (needsMigration(data.payload)) {
-              await supabase
-                .from("user_settings")
-                .upsert({
-                  user_id: user.id,
-                  payload: normalized,
-                  updated_at: new Date().toISOString(),
-                });
+            if (needsMigration(row.payload)) {
+              await supabase.from("user_settings").upsert({
+                user_id: user.id,
+                payload: normalized,
+                updated_at: new Date().toISOString(),
+              });
             }
             return;
           }
@@ -201,31 +215,30 @@ export const useSettingsStore = create<SettingsState>()(
           set({ syncing: false, loaded: true });
         }
       },
+
       saveToServer: async (force = false) => {
         try {
           if (!get().loaded && !force) return;
           set({ syncing: true });
           purgeLocalSettings();
 
-          const {
-            data: { user },
-            error: userError,
-          } = await supabase.auth.getUser();
+          const { data, error: userError } = await supabase.auth.getUser();
+          const user = data?.user ?? null;
 
+          // ✅ 게스트면 서버 저장 스킵, 대신 syncing만 종료
           if (userError || !user) {
-            set({ syncing: false });
+            // ✅ 게스트도 기본 설정으로 "로드 완료" 처리해야 화면이 안 멈춤
+            set({ syncing: false, loaded: true, settings: defaultSettings });
             return;
           }
 
           const normalized = withDefaults(get().settings);
 
-          const { error } = await supabase
-            .from("user_settings")
-            .upsert({
-              user_id: user.id,
-              payload: normalized,
-              updated_at: new Date().toISOString(),
-            });
+          const { error } = await supabase.from("user_settings").upsert({
+            user_id: user.id,
+            payload: normalized,
+            updated_at: new Date().toISOString(),
+          });
 
           if (error) {
             console.error("saveToServer(settings) error:", error);
@@ -234,13 +247,12 @@ export const useSettingsStore = create<SettingsState>()(
           set({ syncing: false, loaded: true });
         } catch (e) {
           console.error("saveToServer(settings) exception:", e);
-          set({ syncing: false });
+          set({ syncing: false, loaded: true });
         }
       },
     }),
     {
       name: LS_KEY,
-      // 로컬스토리지 사용 차단 및 기존 잔여 데이터 무시
       storage: {
         getItem: () => null,
         setItem: () => null,

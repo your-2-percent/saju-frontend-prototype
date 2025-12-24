@@ -1,19 +1,47 @@
-import { Menu, UserPlus, UserSquare } from "lucide-react";
+import { Menu, UserPlus, UserSquare, SquareUserRound } from "lucide-react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import { supabase } from "@/lib/supabase";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
 
 export default function TopNav({
   onOpenSidebar,
   onAddNew,
   onOpenCustom,
+  isLoggedIn,
 }: {
   onOpenSidebar: () => void;
   onAddNew: () => void;
   onOpenCustom: () => void;
+  isLoggedIn: boolean;
 }) {
   const listLen = useMyeongSikStore((s) => s.list.length);
   const canAddMyeongsik = useEntitlementsStore((s) => s.canAddMyeongsik);
+
+  // ✅ auth 상태가 페이지 쪽에서 갱신 안 되는 케이스 대비(로그인 버튼 계속 뜨는 문제 방지)
+  const [sessionLoggedIn, setSessionLoggedIn] = useState<boolean>(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSessionLoggedIn(!!data.session?.user);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_evt, session) => {
+      setSessionLoggedIn(!!session?.user);
+    });
+
+    return () => {
+      alive = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const loggedInNow = isLoggedIn || sessionLoggedIn;
 
   const addGate = canAddMyeongsik(listLen);
   const addLocked = !addGate.ok;
@@ -35,10 +63,15 @@ export default function TopNav({
     onOpenCustom();
   };
 
+  const openLoginModal = () => {
+    useLoginNudgeStore.getState().openWith("HEADER");
+  };
+
   const baseBtn =
     "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors";
   const enabledPurple = "bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 cursor-pointer";
   const enabledOrange = "bg-orange-600 hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500 cursor-pointer";
+  const enabledNeutral = "bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 cursor-pointer";
   const disabledCls = "bg-neutral-300 dark:bg-neutral-800 text-neutral-100 cursor-not-allowed opacity-80";
 
   return (
@@ -63,7 +96,7 @@ export default function TopNav({
             onClick={tryAdd}
             aria-label="명식 추가"
             disabled={addLocked}
-            title={lockTitle}
+            title="명식 추가"
             className={`${baseBtn} ${addLocked ? disabledCls : enabledPurple}`}
           >
             <UserPlus size={18} />
@@ -73,14 +106,27 @@ export default function TopNav({
           <button
             type="button"
             onClick={tryCustom}
-            aria-label="명식 커스텀"
+            aria-label="명식 커스텀 추가"
             disabled={addLocked}
-            title={lockTitle}
+            title="명식 커스텀 추가"
             className={`${baseBtn} ${addLocked ? disabledCls : enabledOrange}`}
           >
             <UserSquare size={18} />
             {addLocked ? <span className="ml-1 text-[12px]">🔒</span> : null}
           </button>
+
+          {/* ✅ 게스트일 때만 로그인 버튼 노출 */}
+          {!loggedInNow && (
+            <button
+              type="button"
+              onClick={openLoginModal}
+              aria-label="로그인"
+              title="로그인"
+              className={`${baseBtn} ${enabledNeutral}`}
+            >
+              <SquareUserRound size={18} />
+            </button>
+          )}
         </div>
       </div>
     </header>

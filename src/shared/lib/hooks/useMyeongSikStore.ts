@@ -23,6 +23,8 @@ import {
 } from "@/shared/domain/myeongsikList/ops";
 
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { loadGuestList, saveGuestList, clearGuestList } from "@/shared/lib/myeongsikStore/guestListStorage";
+import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
 
 const repo = makeSupabaseMyeongSikRepo();
 const reorderQueue = createReorderWriteQueue(repo);
@@ -41,37 +43,45 @@ function canAddNowOrWarn(currentCount: number): boolean {
   return res.ok;
 }
 
+async function migrateGuestListToServerIfAny(userId: string): Promise<void> {
+  const guest = loadGuestList();
+  if (!guest.length) return;
+
+  try {
+    for (const item of guest) {
+      await repo.upsertOne(userId, item);
+    }
+    clearGuestList();
+  } catch (e) {
+    console.warn("[myeongsik] migrateGuestListToServerIfAny failed:", e);
+  }
+}
+
 export type MyeongSikStore = {
   loading: boolean;
   realtimeReady: boolean;
   list: MyeongSikWithOrder[];
   currentId: string | null;
 
-  // getters
   getCurrent: () => MyeongSikWithOrder | null;
 
-  // realtime
   startRealtime: () => Promise<void>;
   stopRealtime: () => Promise<void>;
 
-  // load/migrate
   loadFromServer: () => Promise<void>;
   migrateLocalToServer: () => Promise<void>;
 
-  // CRUD
   setCurrentId: (id: string | null) => void;
   add: (m: MyeongSik) => Promise<void>;
   update: (id: string, patch: Partial<MyeongSikWithOrder>) => Promise<void>;
   remove: (id: string) => Promise<void>;
 
-  // list ops
   moveItemByDnD: (args: MoveItemArgs) => Promise<void>;
   toggleFavoriteWithReorder: (id: string, orderedFolders: string[]) => Promise<void>;
   unsetFolderForFolder: (folderName: string) => Promise<void>;
   reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
   clear: () => void;
 
-  // internal
   _rtSub: RealtimeSubscription | null;
   _rtUserId: string | null;
 };
@@ -123,7 +133,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       },
       (status) => {
         if (status === "SUBSCRIBED") set({ realtimeReady: true });
-      },
+      }
     );
 
     set({ _rtSub: sub, _rtUserId: user.id });
@@ -147,11 +157,18 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     try {
       const user = await repo.getUser();
+
+      // ✅ 게스트: 로컬에서 불러오기
       if (!user) {
-        set({ list: [], currentId: null });
+        const guest = loadGuestList();
+        const firstId = guest[0]?.id ?? null;
+        set({ list: guest, currentId: firstId });
         await get().stopRealtime();
         return;
       }
+
+      // ✅ 로그인: 게스트가 있으면 서버로 자동 이관
+      await migrateGuestListToServerIfAny(user.id);
 
       const rows = await repo.fetchRows(user.id);
       const list = sortByOrder(rows.map(fromRow));
@@ -174,6 +191,9 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   migrateLocalToServer: async () => {
     try {
       await migrateLegacyLocalListToServer(repo);
+
+      const user = await repo.getUser();
+      if (user) await migrateGuestListToServerIfAny(user.id);
     } catch (e) {
       console.error("useMyeongSikStore.migrateLocalToServer exception:", e);
     }
@@ -181,64 +201,82 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
   add: async (m) => {
     const user = await repo.getUser();
-    if (!user) return;
-
     const currentCount = get().list.length;
 
-    // ✅ 플랜 기반 “추가 가능” 체크 (FREE=1, BASIC=3/5/10, PRO=9999)
-    if (!canAddNowOrWarn(currentCount)) return;
+    if (!canAddNowOrWarn(currentCount)) {
+      if (!user) useLoginNudgeStore.getState().openWith("ADD_LIMIT");
+      return;
+    }
 
     const nextOrder = (currentCount || 0) + 1;
-    const base: MyeongSikWithOrder = { ...m, sortOrder: m.sortOrder ?? nextOrder };
+    const base: MyeongSikWithOrder = { ...m, sortOrder: m.sortOrder ?? nextOrder } as MyeongSikWithOrder;
     const withOrder: MyeongSikWithOrder = reviveAndRecalc(base);
 
-    set((state) => ({
-      list: sortByOrder([...state.list, withOrder]),
-      currentId: state.currentId ?? withOrder.id,
-    }));
+    // ✅ 여기서 nextList를 확정(게스트/로그인 공통)
+    const prev = get().list;
+    const nextList = sortByOrder([...prev, withOrder]);
+    const nextCurrentId = get().currentId ?? withOrder.id;
+
+    set({ list: nextList, currentId: nextCurrentId });
+
+    // ✅ 게스트: 로컬 저장 + 첫 저장이면 로그인 유도
+    if (!user) {
+      saveGuestList(nextList);
+
+      if (nextList.length === 1) {
+        useLoginNudgeStore.getState().openWith("PERSIST_SAVE");
+      }
+      return;
+    }
 
     await repo.upsertOne(user.id, withOrder);
   },
 
   update: async (id, patch) => {
-    if (!canManageNowOrWarn()) return;
-
-    const prev = get().list.find((x) => x.id === id);
-    if (!prev) return;
-
-    const merged: MyeongSikWithOrder = reviveAndRecalc({ ...prev, ...patch });
-
-    set((state) => ({
-      list: sortByOrder(state.list.map((x) => (x.id === id ? merged : x))),
-    }));
-
     const user = await repo.getUser();
-    if (!user) return;
+    if (user && !canManageNowOrWarn()) return;
+
+    const prevItem = get().list.find((x) => x.id === id);
+    if (!prevItem) return;
+
+    const merged: MyeongSikWithOrder = reviveAndRecalc({ ...prevItem, ...patch });
+
+    const nextList = sortByOrder(get().list.map((x) => (x.id === id ? merged : x)));
+    set({ list: nextList });
+
+    if (!user) {
+      saveGuestList(nextList);
+      return;
+    }
 
     await repo.updateOne(user.id, id, merged);
   },
 
   remove: async (id) => {
-    if (!canManageNowOrWarn()) return;
+    const user = await repo.getUser();
+    if (user && !canManageNowOrWarn()) return;
 
-    set((state) => {
-      const filtered = state.list.filter((x) => x.id !== id);
-      const newCurrentId =
-        state.currentId === id ? filtered[0]?.id ?? null : state.currentId;
-      return { list: filtered, currentId: newCurrentId };
-    });
+    const prev = get().list;
+    const filtered = prev.filter((x) => x.id !== id);
+    const newCurrentId = get().currentId === id ? filtered[0]?.id ?? null : get().currentId;
+
+    set({ list: filtered, currentId: newCurrentId });
+
+    if (!user) {
+      saveGuestList(filtered);
+      return;
+    }
 
     await repo.softDelete(id);
   },
 
   moveItemByDnD: async (args) => {
-    if (!canManageNowOrWarn()) return;
+    const user = await repo.getUser();
+    if (user && !canManageNowOrWarn()) return;
 
-    const { list } = get();
     const v2 = toDnDArgs(args);
-
     const result = moveByDnD({
-      list,
+      list: get().list,
       orderedFolders: v2.orderedFolders,
       source: v2.source,
       destination: v2.destination,
@@ -246,27 +284,39 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     const nextList = result.nextList;
     set({ list: nextList });
+
+    if (!user) {
+      saveGuestList(nextList);
+      return;
+    }
+
     await get().reorder(nextList);
   },
 
   toggleFavoriteWithReorder: async (id, orderedFolders) => {
-    if (!canManageNowOrWarn()) return;
-
-    const { list } = get();
+    const user = await repo.getUser();
+    if (user && !canManageNowOrWarn()) return;
 
     const result = toggleFavoriteAndReorder({
-      list,
+      list: get().list,
       targetId: id,
       orderedFolders,
     });
 
     const nextList = result.nextList;
     set({ list: nextList });
+
+    if (!user) {
+      saveGuestList(nextList);
+      return;
+    }
+
     await get().reorder(nextList);
   },
 
   unsetFolderForFolder: async (folderName) => {
-    if (!canManageNowOrWarn()) return;
+    const user = await repo.getUser();
+    if (user && !canManageNowOrWarn()) return;
 
     const name = (folderName ?? "").trim();
     if (!name) return;
@@ -284,15 +334,18 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
     set({ list: nextList });
 
-    const user = await repo.getUser();
-    if (!user) return;
+    if (!user) {
+      saveGuestList(nextList);
+      return;
+    }
 
     const changed = nextList.filter((m) => changedIds.has(m.id));
     await repo.upsertOrderPatch(user.id, changed);
   },
 
   reorder: async (newList) => {
-    if (!canManageNowOrWarn()) return;
+    const user = await repo.getUser();
+    if (user && !canManageNowOrWarn()) return;
 
     const withOrder: MyeongSikWithOrder[] = newList.map((item, idx) => ({
       ...item,
@@ -302,10 +355,16 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     const next = sortByOrder(withOrder);
     set({ list: next });
 
+    if (!user) {
+      saveGuestList(next);
+      return;
+    }
+
     await reorderQueue.queue(next);
   },
 
   clear: () => {
     set({ currentId: null, list: [] });
+    clearGuestList();
   },
 }));

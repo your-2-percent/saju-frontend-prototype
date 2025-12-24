@@ -1,4 +1,5 @@
 ﻿// page/Page.tsx
+import { useState } from "react";
 import { Toaster } from "react-hot-toast";
 import TodaySaju from "@/app/pages/TodaySaju";
 import InputWizard from "@/app/pages/InputApp";
@@ -15,7 +16,6 @@ import CoupleViewer from "@/app/pages/CoupleViewer";
 import Footer from "@/app/pages/Footer";
 import LuckGlobalPicker from "@/features/luck/ui/LuckGlobalPicker";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
-import LoginPage from "@/app/layout/login/page";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
 import { usePageInput } from "@/app/layout/page/input/usePageInput";
@@ -32,22 +32,20 @@ import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
 
 // ✅ Entitlements
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import LoginNudgeModal from "@/shared/auth/LoginNudgeModal";
+import LoginPage from "@/app/layout/login/page";
+import LoginInlineNudge from "@/shared/auth/LoginInlineNudge";
 
 // =========================
-// ✅ 광고 유닛 (요청 반영)
+// ✅ 광고 유닛
 // =========================
-
-// (1) 중간 광고: "처음에 준거(대체 광고)" -> 프롬프트 위로 이동
 const AD_MID_MOBILE = "DAN-GW4jrUdfiXklZ12U"; // 320x50
 const AD_MID_DESKTOP = "DAN-CeRuC0yKzSAs5Gju"; // 728x90
 
-// (2) 맨 아래 광고: 새로 준 유닛
 const AD_BOTTOM_MOBILE = "DAN-G16gewnPhZou1D9y"; // 320x50
 const AD_BOTTOM_DESKTOP = "DAN-rdKe9ZODmrZR4hho"; // 728x90
 
-// (3) PC 우측 사이드(모바일 X)
 const AD_SIDE = "DAN-INfSKh1pW2cEtWNu"; // 160x600
-
 // =========================
 
 const EMPTY_MS: MyeongSik = {
@@ -97,10 +95,11 @@ export default function Page() {
     );
   }
 
-  if (!input.isLoggedIn) return <LoginPage />;
-  if (input.adminMode) return <AdminPage />;
+  // ✅ 관리자 모드: "로그인 된 상태"에서만 진입
+  if (input.isLoggedIn && input.adminMode) return <AdminPage />;
 
-  if (!calc.entLoaded) {
+  // ✅ 권한/설정 로드는 로그인 유저만 대기
+  if (input.isLoggedIn && !calc.entLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-neutral-500">권한 조회 중...</p>
@@ -108,7 +107,7 @@ export default function Page() {
     );
   }
 
-  if (!calc.settingsLoaded) {
+  if (input.isLoggedIn && !calc.settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-neutral-500">설정 조회 중...</p>
@@ -116,10 +115,10 @@ export default function Page() {
     );
   }
 
-  if (calc.loading) {
+  if (input.isLoggedIn && !calc.settingsLoaded) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">명식 불러오는 중...</p>
+        <p className="text-sm text-neutral-500">설정 조회 중...</p>
       </main>
     );
   }
@@ -156,19 +155,20 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const entState = useEntitlementsStore((s) => s as unknown);
   const plan = extractPlan(entState);
 
-  // plan 못 찾으면 FREE로 취급(안전)
+  // plan 못 찾으면 FREE로 취급
   const isFree = plan !== "PRO";
 
-  // 결과 화면에서만 광고 노출 (Today/커플/위자드/편집 중엔 X)
   const showResult =
     calc.hasCurrent && !input.showToday && !input.showCouple && !input.wizardOpen && !input.editing;
 
+  const showLoginNudge = !isLoggedIn && calc.hasCurrent && showResult;
+
+  const [loginOpen, setLoginOpen] = useState(false);
+
   return (
     <div className="min-h-screen pb-16">
-      {/* ✅ AdFit 스크립트 매니저: 앱 전체 1번 */}
       <AdfitScriptManager enabled={isFree} />
 
-      {/* ✅ PC 우측 사이드(160x600) 1개 / 모바일은 X */}
       <div className="hidden desk:block">
         <AdfitSideDock
           enabled={isFree}
@@ -184,10 +184,21 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       </div>
 
       <TopNav
+        isLoggedIn={isLoggedIn}
         onOpenSidebar={() => input.setShowSidebar(true)}
         onAddNew={save.openAdd}
         onOpenCustom={save.openCustomModal}
       />
+
+      <LoginNudgeModal />
+      {loginOpen && (
+        <div className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center">
+          <div className="w-full max-w-[420px] max-h-[90dvh] overflow-auto rounded-2xl">
+            <LoginPage />
+          </div>
+          <button className="fixed top-4 right-4 text-white text-2xl" onClick={() => setLoginOpen(false)}>×</button>
+        </div>
+      )}
 
       <CustomSajuModal
         open={input.openCustom}
@@ -220,8 +231,14 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       )}
 
       {calc.hasCurrent && !input.showToday && !input.showCouple && (
-        <>
-          <div className="pt-18 pb-4">
+        <div className="pt-16">
+          {/* ✅ 게스트 + 첫 명식 생성 이후 계속 노출 */}
+          {showLoginNudge && (
+            <div>
+              <LoginInlineNudge />
+            </div>
+          )}
+          <div className="pb-4">
             <SajuChart
               data={calc.current as MyeongSik}
               hourTable={calc.current?.mingSikType ?? "조자시/야자시"}
@@ -234,7 +251,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           <LuckGlobalPicker ms={calc.current as MyeongSik} />
 
-          {/* ✅ 중간 광고: "대체 광고"였던 거 -> 프롬프트 바로 위 */}
           {isFree && showResult && settings.showPromptBox && (
             <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
               <div className="hidden md:block">
@@ -259,7 +275,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          {/* ✅ 맨 아래 광고: 새로 준 유닛(모바일/PC) */}
           {isFree && showResult && (
             <div className="max-w-[760px] mx-auto px-3 pb-6">
               <div className="hidden md:block">
@@ -270,7 +285,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
               </div>
             </div>
           )}
-        </>
+        </div>
       )}
 
       {input.showCouple && (
