@@ -39,12 +39,12 @@ export function MyeongsikCard({
   onDelete,
   onToggleFavorite,
 }: MyeongsikCardProps) {
+  // ✅ 이제 관리/락 개념 자체를 카드에서 제거
   const { canManage } = useMyeongsikCardInput();
   const calc = useMyeongsikCardCalc({ m, memoOpen, isDragDisabled, canManage });
+
   const save = useMyeongsikCardSave({
     m,
-    locked: calc.locked,
-    lockMsg: calc.lockMsg,
     unassignedLabel,
     onToggleMemo,
     onChangeFolder,
@@ -60,16 +60,16 @@ export function MyeongsikCard({
       draggableId={calc.keyId}
       index={index}
       key={calc.keyId}
-      isDragDisabled={calc.dragDisabled}
+      isDragDisabled={isDragDisabled} // ✅ prop 기준만
     >
       {(prov) => (
         <li
           ref={prov.innerRef}
           {...prov.draggableProps}
           {...prov.dragHandleProps}
-          style={calc.getDragStyle(prov.draggableProps.style)}
+          style={prov.draggableProps.style}
           className={`list-none select-none rounded-xl border bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-900 dark:text-neutral-100 ${
-            calc.dragDisabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"
+            isDragDisabled ? "cursor-default" : "cursor-grab active:cursor-grabbing"
           }`}
         >
           <div className="p-3">
@@ -82,13 +82,8 @@ export function MyeongsikCard({
                 {calc.relationshipLabel}
               </div>
 
-              <span
-                title={calc.locked ? calc.lockMsg : ""}
-                onClick={save.handleLockClick}
-                className="ml-auto opacity-50 select-none"
-              >
-                {calc.dragHandleLabel}
-              </span>
+              {/* ✅ 잠금표시/클릭 제거 */}
+              <span className="ml-auto opacity-50 select-none">{calc.dragHandleLabel}</span>
             </div>
 
             <div className="text-sm text-neutral-600 dark:text-neutral-300 mt-1">
@@ -133,12 +128,8 @@ export function MyeongsikCard({
 
             <div className="flex flex-wrap gap-2 mt-3">
               <select
-                className={`h-30 text-xs rounded px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${
-                  calc.locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                }`}
+                className="h-30 text-xs rounded px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 cursor-pointer"
                 value={m.folder ?? unassignedLabel}
-                disabled={calc.locked}
-                title={calc.locked ? calc.lockMsg : ""}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   e.stopPropagation();
@@ -153,12 +144,8 @@ export function MyeongsikCard({
               </select>
 
               <select
-                className={`h-30 text-xs rounded px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${
-                  calc.locked ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-                }`}
+                className="h-30 text-xs rounded px-2 py-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40 cursor-pointer"
                 value={calc.mingSikTypeValue}
-                disabled={calc.locked}
-                title={calc.locked ? calc.lockMsg : ""}
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => {
                   e.stopPropagation();
@@ -182,45 +169,32 @@ export function MyeongsikCard({
 
               <button
                 type="button"
-                aria-disabled={calc.locked}
-                title={calc.locked ? calc.lockMsg : "수정"}
+                title="수정"
                 onClick={save.handleEdit}
-                className={`px-3 py-1 rounded text-white text-sm ${
-                  calc.locked
-                    ? "bg-amber-600/40 cursor-not-allowed"
-                    : "bg-amber-600 hover:bg-amber-500 cursor-pointer"
-                }`}
+                className="px-3 py-1 rounded text-white text-sm bg-amber-600 hover:bg-amber-500 cursor-pointer"
               >
                 {calc.editLabel}
               </button>
 
               <button
                 type="button"
-                aria-disabled={calc.locked}
-                title={calc.locked ? calc.lockMsg : "삭제"}
+                title="삭제"
                 onClick={save.handleDelete}
-                className={`px-3 py-1 rounded text-white text-sm ${
-                  calc.locked
-                    ? "bg-red-600/40 cursor-not-allowed"
-                    : "bg-red-600 hover:bg-red-500 cursor-pointer"
-                }`}
+                className="px-3 py-1 rounded text-white text-sm bg-red-600 hover:bg-red-500 cursor-pointer"
               >
                 {calc.deleteLabel}
               </button>
 
               <button
                 type="button"
-                aria-disabled={calc.locked}
-                title={calc.locked ? calc.lockMsg : calc.favoriteLabel}
+                title={calc.favoriteLabel}
                 onClick={save.handleToggleFavorite}
-                className={`ml-auto p-1 rounded ${
-                  calc.locked ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-                } ${m.favorite ? "text-yellow-400" : "text-neutral-400"} ${
-                  calc.locked ? "" : "hover:text-yellow-400"
-                }`}
+                className={`ml-auto p-1 rounded cursor-pointer ${
+                  m.favorite ? "text-yellow-400" : "text-neutral-400"
+                } hover:text-yellow-400`}
                 aria-label={calc.favoriteLabel}
               >
-                {calc.locked ? "잠금" : <Star size={16} fill={m.favorite ? "currentColor" : "none"} />}
+                <Star size={16} fill={m.favorite ? "currentColor" : "none"} />
               </button>
             </div>
           </div>

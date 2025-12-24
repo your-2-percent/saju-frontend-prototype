@@ -8,7 +8,7 @@ export function useAdminUserInput() {
 
   const setDraft = (uid: string, patch: Partial<Draft>) => {
     setDraftByUser((prev) => {
-      const cur = prev[uid] ?? { plan: "PROMPT_LOCKED", startDate: "", endDate: "", saving: false };
+      const cur = prev[uid] ?? { plan: "FREE", startDate: "", endDate: "", saving: false };
       return { ...prev, [uid]: { ...cur, ...patch } };
     });
   };

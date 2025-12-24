@@ -11,7 +11,7 @@ type EntitlementsRow = {
   starts_at?: string | null;
   expires_at: string | null;
 
-  // ✅ 새 컬럼 (없으면 기본 true로 취급)
+  // ✅ 정책: 기본 OFF, true일 때만 ON
   can_use_myo_viewer?: boolean | null;
 };
 
@@ -34,6 +34,7 @@ type EntitlementsState = {
   canUseAdvancedReport: boolean;
   canRemoveAds: boolean;
 
+  // ✅ 묘운 뷰어(플랜과 분리 토글)
   canUseMyoViewer: boolean;
 
   startsAt: Date | null;
@@ -46,15 +47,20 @@ type EntitlementsState = {
   getRemainingMs: (t: Date | null) => number | null;
   formatRemaining: (ms: number) => string;
 
+  // ✅ 명식추가 무제한
   canAddMyeongsik: (currentCount: number) => AddGateResult;
 
+  // ✅ 관리 락 해제
   canManageNow: () => boolean;
+
   canUseLuckTabsNow: () => boolean;
   canUseMultiModeNow: () => boolean;
   canUseAllPromptsNow: () => boolean;
 
   canUseAdvancedReportNow: () => boolean;
   shouldShowAdsNow: () => boolean;
+
+  // ✅ 묘운 뷰어는 isActiveNow와 분리
   canUseMyoViewerNow: () => boolean;
 };
 
@@ -73,6 +79,8 @@ function isPrivilegedUserId(userId: string | null): boolean {
   return ADMIN_UUIDS.includes(userId) || MANAGER_UUIDS.includes(userId);
 }
 
+const UNLIMITED = 9999;
+
 const DEFAULT: Pick<
   EntitlementsState,
   | "plan"
@@ -88,8 +96,11 @@ const DEFAULT: Pick<
   | "expiresAt"
 > = {
   plan: "FREE",
-  maxMyeongsik: 1,
+  maxMyeongsik: UNLIMITED,
+
+  // ✅ 락 해제: 기본 true
   canManageMyeongsik: true,
+
   canUseLuckTabs: true,
   canUseMultiMode: true,
   canUseAllPrompts: false,
@@ -97,20 +108,12 @@ const DEFAULT: Pick<
   canUseAdvancedReport: false,
   canRemoveAds: false,
 
-  canUseMyoViewer: true,
+  // ✅ 기본 OFF
+  canUseMyoViewer: false,
 
   startsAt: null,
   expiresAt: null,
 };
-
-function toInt(v: unknown, fallback: number): number {
-  if (typeof v === "number" && Number.isFinite(v)) return Math.floor(v);
-  if (typeof v === "string" && v.trim() !== "") {
-    const n = Number(v);
-    return Number.isFinite(n) ? Math.floor(n) : fallback;
-  }
-  return fallback;
-}
 
 function toDateOrNull(v: unknown): Date | null {
   if (typeof v !== "string" || v.trim() === "") return null;
@@ -118,9 +121,7 @@ function toDateOrNull(v: unknown): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-async function fetchEntRow(
-  userId: string
-): Promise<{ row: Partial<EntitlementsRow> | null; hasMyoViewerCol: boolean }> {
+async function fetchEntRow(userId: string): Promise<Partial<EntitlementsRow> | null> {
   // ✅ can_use_myo_viewer 컬럼 추가 전/후 둘 다 살아남게 2트라이
   const withCol = await supabase
     .from("user_entitlements")
@@ -129,7 +130,7 @@ async function fetchEntRow(
     .maybeSingle();
 
   if (!withCol.error && withCol.data) {
-    return { row: withCol.data as Partial<EntitlementsRow>, hasMyoViewerCol: true };
+    return withCol.data as Partial<EntitlementsRow>;
   }
 
   const withoutCol = await supabase
@@ -138,16 +139,13 @@ async function fetchEntRow(
     .eq("user_id", userId)
     .maybeSingle();
 
-  if (withoutCol.error || !withoutCol.data) {
-    return { row: null, hasMyoViewerCol: false };
-  }
-
-  return { row: withoutCol.data as Partial<EntitlementsRow>, hasMyoViewerCol: false };
+  if (withoutCol.error || !withoutCol.data) return null;
+  return withoutCol.data as Partial<EntitlementsRow>;
 }
 
+// ✅ 정책: true일 때만 ON, 나머지는 전부 OFF
 function resolveCanUseMyoViewer(row: Partial<EntitlementsRow> | null): boolean {
-  if (!row) return true; // row 없으면 기본 true
-  return typeof row.can_use_myo_viewer === "boolean" ? row.can_use_myo_viewer : true;
+  return row?.can_use_myo_viewer === true;
 }
 
 export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
@@ -183,23 +181,26 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         return;
       }
 
-      // ✅ ent row는 관리자든 아니든 한 번은 읽어둠 (묘운 뷰어 토글 존중하려고)
-      const { row } = await fetchEntRow(userId);
+      // ✅ 묘운 토글 때문에 ent row는 한번 읽어둠
+      const row = await fetchEntRow(userId);
       const canUseMyoViewer = resolveCanUseMyoViewer(row);
 
-      // ✅ 관리자/매니저는 PRO 강제 (단, 묘운 뷰어는 DB 토글 존중)
+      // ✅ 관리자/매니저는 PRO 강제 (단 묘운은 DB 토글 존중)
       if (isPrivilegedUserId(userId)) {
         const caps = getPlanCapabilities("PRO");
-        const maxFromCaps = caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik;
 
         set({
           loaded: true,
           loading: false,
           userId,
           plan: "PRO",
-          maxMyeongsik: maxFromCaps,
 
-          canManageMyeongsik: caps.canManageMyeongsik,
+          // ✅ 무제한
+          maxMyeongsik: UNLIMITED,
+
+          // ✅ 락 해제
+          canManageMyeongsik: true,
+
           canUseLuckTabs: caps.canUseLuckTabs,
           canUseMultiMode: caps.canUseMultiMode,
           canUseAllPrompts: caps.canUseAllPrompts,
@@ -207,7 +208,7 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
           canUseAdvancedReport: caps.canUseAdvancedReport,
           canRemoveAds: caps.canRemoveAds,
 
-          canUseMyoViewer, // ✅ 여기 중요
+          canUseMyoViewer,
 
           startsAt: toDateOrNull(row?.starts_at ?? null),
           expiresAt: toDateOrNull(row?.expires_at ?? null),
@@ -223,9 +224,13 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
           loading: false,
           userId,
           plan: "FREE",
-          maxMyeongsik: caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik,
 
-          canManageMyeongsik: caps.canManageMyeongsik,
+          // ✅ 무제한
+          maxMyeongsik: UNLIMITED,
+
+          // ✅ 락 해제
+          canManageMyeongsik: true,
+
           canUseLuckTabs: caps.canUseLuckTabs,
           canUseMultiMode: caps.canUseMultiMode,
           canUseAllPrompts: caps.canUseAllPrompts,
@@ -233,7 +238,8 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
           canUseAdvancedReport: caps.canUseAdvancedReport,
           canRemoveAds: caps.canRemoveAds,
 
-          canUseMyoViewer, // row 없으면 true
+          // ✅ 기본 OFF
+          canUseMyoViewer: false,
 
           startsAt: null,
           expiresAt: null,
@@ -244,18 +250,18 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
       const plan = parsePlanTier(row.plan ?? null);
       const caps = getPlanCapabilities(plan);
 
-      const maxFromCaps = caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik;
-      const rawMax = toInt(row.max_myeongsik, maxFromCaps);
-      const maxMyeongsik = Math.max(1, Math.max(rawMax, maxFromCaps));
-
       set({
         loaded: true,
         loading: false,
         userId,
         plan,
-        maxMyeongsik,
 
-        canManageMyeongsik: caps.canManageMyeongsik,
+        // ✅ 무제한(정책)
+        maxMyeongsik: UNLIMITED,
+
+        // ✅ 락 해제(정책)
+        canManageMyeongsik: true,
+
         canUseLuckTabs: caps.canUseLuckTabs,
         canUseMultiMode: caps.canUseMultiMode,
         canUseAllPrompts: caps.canUseAllPrompts,
@@ -269,14 +275,17 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         expiresAt: toDateOrNull(row.expires_at ?? null),
       });
 
-      // ✅ 진단용 로그(원인 잡을 때만 잠깐 켜)
-      // console.log("[ent] plan raw:", row.plan, "parsed:", plan, "max:", maxMyeongsik, "myo:", canUseMyoViewer);
+      // 진단용
+      // console.log("[ent]", { planRaw: row.plan, plan, rawMax, canUseMyoViewer });
     } finally {
       set({ loading: false });
     }
   },
 
   isActiveNow: () => {
+    const uid = get().userId;
+    if (isPrivilegedUserId(uid)) return true; // ✅ 관리자/매니저는 항상 활성
+
     const { startsAt, expiresAt } = get();
     const now = Date.now();
     if (startsAt && startsAt.getTime() > now) return false;
@@ -308,16 +317,12 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
   },
 
   // ✅ 명식추가는 무조건 무한
-  canAddMyeongsik: () => {
-    const s = get();
-    if (!s.loaded) return { ok: false, message: "권한 확인 중" };
-    // 필요하면 로그인 여부까지 체크하고 싶으면 여기서 userId 확인만 추가
-    return { ok: true };
-  },
+  canAddMyeongsik: () => ({ ok: true }),
 
+  // ✅ 수정/삭제/이동 락 풀기(로그인만 되면 OK로 가자)
   canManageNow: () => {
     const s = get();
-    return s.loaded && s.isActiveNow() && s.canManageMyeongsik;
+    return s.loaded && Boolean(s.userId);
   },
 
   canUseLuckTabsNow: () => {
@@ -347,8 +352,9 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
     return !s.canRemoveAds;
   },
 
+  // ✅ 묘운 뷰어: 플랜기간과 분리(토글만)
   canUseMyoViewerNow: () => {
     const s = get();
-    return s.loaded && s.isActiveNow() && s.canUseMyoViewer;
+    return s.loaded && Boolean(s.userId) && s.canUseMyoViewer;
   },
 }));

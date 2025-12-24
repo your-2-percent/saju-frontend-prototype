@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+﻿import { useMemo } from "react";
 import PentagonChart from "./PentagonChart";
 import StrengthBar from "./StrengthBar";
 import HarmonyTagPanel from "./HarmonyTagPanel";
@@ -32,12 +32,11 @@ function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
       const newBirthDay = `${solarDate.getFullYear()}${pad2(solarDate.getMonth() + 1)}${pad2(
         solarDate.getDate()
       )}`;
-      const out: MyeongSik = {
+      return {
         ...data,
         birthDay: newBirthDay,
         calendarType: "solar",
       } as MyeongSik;
-      return out;
     } catch {
       return data;
     }
@@ -47,7 +46,6 @@ function ensureSolarBirthDay(data: MyeongSik): MyeongSik {
 
 function parseYYYYMMDD(v: unknown): Date | null {
   if (typeof v !== "number" && typeof v !== "string") return null;
-
   const s = String(v);
   if (!/^\d{8}$/.test(s)) return null;
 
@@ -62,6 +60,10 @@ function parseYYYYMMDD(v: unknown): Date | null {
 type BigTab = "격국 · 물상론" | "일간 · 오행 강약" | "용신추천" | "형충회합" | "신살";
 const BIG_TABS: readonly BigTab[] = ["격국 · 물상론", "일간 · 오행 강약", "용신추천", "형충회합", "신살"];
 
+function isAdvancedLockedTab(t: BigTab): boolean {
+  return t === "격국 · 물상론" || t === "용신추천";
+}
+
 export default function AnalysisReport({
   data,
   pillars,
@@ -75,12 +77,12 @@ export default function AnalysisReport({
 }) {
   const settings = useSettingsStore((s) => s.settings);
   const input = useAnalysisReportInput();
+
   const normalizedData = ensureSolarBirthDay(data);
   const birthDateParsed = parseYYYYMMDD(normalizedData.birthDay) || undefined;
 
-  // ✅ Free에서 막을 기능(격국/용신)
-  const canUseAdvancedReportNow = useEntitlementsStore((s) => s.canUseAdvancedReportNow);
-  const advancedOk = canUseAdvancedReportNow();
+  // ✅ 핵심: "함수"가 아니라 "결과 boolean"을 구독
+  const advancedOk = useEntitlementsStore((s) => s.canUseAdvancedReportNow());
 
   const calc = useAnalysisReportCalc({
     data: normalizedData,
@@ -91,19 +93,9 @@ export default function AnalysisReport({
     demoteAbsent: input.demoteAbsent,
   });
 
-  const isLockedBigTab = (t: BigTab): boolean => {
-    if (advancedOk) return false;
-    return t === "격국 · 물상론" || t === "용신추천";
-  };
-
-  // ✅ 잠금 탭이 선택돼있으면 강제로 안전 탭으로 이동
-  useEffect(() => {
-    if (advancedOk) return;
-
-    const current = input.bigTab as BigTab;
-    const locked = current === "격국 · 물상론" || current === "용신추천";
-    if (locked) input.setBigTab("일간 · 오행 강약");
-  }, [advancedOk, input.bigTab, input.setBigTab, input]);
+  const lockTitle = useMemo(() => {
+    return "🔒 프리 플랜에서는 사용할 수 없어요. 베이직/프로에서 열립니다.";
+  }, []);
 
   if (!calc.isValidActive) {
     return (
@@ -133,24 +125,21 @@ export default function AnalysisReport({
         ))}
       </div>
 
-      {/* 섹션 탭 */}
+      {/* 섹션 탭: ✅ 항상 보이되, 프리면 특정 탭만 잠금 */}
       <div className="flex gap-2 mb-4 justify-center flex-wrap">
         {BIG_TABS.map((t) => {
-          const locked = isLockedBigTab(t);
-          const title = locked ? "프리 플랜에서는 사용할 수 없어요. 🔒" : undefined;
+          const locked = !advancedOk && isAdvancedLockedTab(t);
+          const isActive = input.bigTab === t;
 
           return (
             <button
               key={t}
-              title={title}
-              onClick={() => {
-                if (locked) return;
-                input.setBigTab(t);
-              }}
+              title={locked ? lockTitle : undefined}
+              onClick={() => input.setBigTab(t)} // ✅ 잠금이어도 눌러지게(잠금 안내 화면 보여주려고)
               className={
                 "px-3 py-1 text-sm rounded border cursor-pointer " +
                 (locked ? "opacity-60 " : "") +
-                (input.bigTab === t
+                (isActive
                   ? "bg-violet-500 text-white border-violet-600"
                   : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
               }
@@ -192,7 +181,7 @@ export default function AnalysisReport({
         </div>
       )}
 
-      {/* 용신추천 (잠금이면 안내) */}
+      {/* 용신추천: 잠금 안내 or 실제 컨텐츠 */}
       {input.bigTab === "용신추천" && !advancedOk && (
         <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
           🔒 프리 플랜에서는 <b>용신추천</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.
@@ -223,7 +212,7 @@ export default function AnalysisReport({
         />
       )}
 
-      {/* 격국 · 물상론 (잠금이면 안내) */}
+      {/* 격국 · 물상론: 잠금 안내 or 실제 컨텐츠 */}
       {input.bigTab === "격국 · 물상론" && !advancedOk && (
         <div className="p-4 rounded-xl border border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900 text-sm text-neutral-600 dark:text-neutral-300">
           🔒 프리 플랜에서는 <b>격국 · 물상론</b>을 사용할 수 없어요. 베이직/프로에서 열립니다.

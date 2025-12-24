@@ -51,7 +51,7 @@ export async function fetchMyeongsikRows(userIds: string[]): Promise<MyeongsikRo
 export async function fetchEntitlements(userIds: string[]): Promise<EntRowRaw[]> {
   const { data, error } = (await supabase
     .from("user_entitlements")
-    .select("user_id,plan,starts_at,expires_at")
+    .select("user_id,plan,starts_at,expires_at,can_use_myo_viewer")
     .in("user_id", userIds)) as unknown as {
       data: EntRowRaw[] | null;
       error: { message: string } | null;
@@ -61,7 +61,17 @@ export async function fetchEntitlements(userIds: string[]): Promise<EntRowRaw[]>
   return data || [];
 }
 
-export async function upsertEntitlements(payload: Record<string, unknown>) {
-  const { error } = await supabase.from("user_entitlements").upsert(payload);
-  if (error) throw new Error(error.message);
+export async function upsertEntitlements(payload: {
+  user_id: string;
+  plan: string;
+  max_myeongsik: number;
+  starts_at: string | null;
+  expires_at: string | null;
+  can_use_myo_viewer: boolean;
+}) {
+  const { error } = await supabase
+    .from("user_entitlements")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (error) throw error;
 }

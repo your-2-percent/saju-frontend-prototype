@@ -192,7 +192,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
       {input.editing && (
         <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/60">
-          <div className="bg-white dark:bg-neutral-950 p-4 rounded-xl w-full max-h-[90dvh] max-w-xl shadow-lg">
+          <div className="overflow-auto bg-white dark:bg-neutral-950 p-4 rounded-xl w-full max-h-[90dvh] max-w-xl shadow-lg">
             <MyeongSikEditor item={input.editing} onClose={() => input.setEditing(null)} />
           </div>
         </div>
