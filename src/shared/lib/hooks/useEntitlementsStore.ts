@@ -148,25 +148,21 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
 
   loadFromServer: async (opts?: { force?: boolean }) => {
     const st = get();
-    if (st.loading) return; // ✅ 중복 호출 방지(StrictMode, 연타 방지)
-    if (!opts?.force && st.loaded) return; // ✅ 이미 로드 완료면 재호출 막기(필요시 force로 뚫기)
+    if (st.loading) return; // 중복 호출 방지
 
     set({ loading: true });
 
     try {
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
-      if (userErr) {
-        set({ loaded: true, userId: null, ...DEFAULT });
-        return;
-      }
-
       const userId = userRes.user?.id ?? null;
-      if (!userId) {
-        set({ loaded: true, userId: null, ...DEFAULT });
+
+      // ✅ 로그인 유저 아니면: DEFAULT + loaded=true 로 마감 (순서 중요)
+      if (userErr || !userId) {
+        set({ ...DEFAULT, loaded: true, userId: null });
         return;
       }
 
-      // ✅ 같은 유저로 이미 로드 끝났으면 스킵 (세션 변동 없을 때 2번 로드 방지)
+      // ✅ 같은 유저로 이미 로드 끝났으면 스킵
       const st2 = get();
       if (!opts?.force && st2.loaded && st2.userId === userId) return;
 
@@ -228,6 +224,10 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         startsAt,
         expiresAt,
       });
+    } catch (e) {
+      console.error("loadFromServer(entitlements) exception:", e);
+      // ✅ 예외여도 booting 무한루프 방지: loaded=true로 마감 (순서 중요)
+      set({ ...DEFAULT, loaded: true, userId: null });
     } finally {
       set({ loading: false });
     }
