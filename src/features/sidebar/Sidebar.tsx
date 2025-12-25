@@ -22,6 +22,7 @@ type SidebarProps = {
   onAddNew: () => void;
   onEdit: (m: MyeongSik) => void;
   onDeleteView: () => void;
+  isLoggedIn: boolean;
 };
 
 export default function Sidebar({
@@ -31,6 +32,7 @@ export default function Sidebar({
   onAddNew,
   onEdit,
   onDeleteView,
+  isLoggedIn
 }: SidebarProps) {
   const {
     list,
@@ -121,7 +123,9 @@ export default function Sidebar({
           onLogin={() => {
             // 여기서 “로그인 화면/로그인 모달” 여는 함수 연결
             openLoginModal();
-          } } isLoggedIn={false}        />
+          } } 
+          isLoggedIn={isLoggedIn}        
+        />
 
         <DragDropContext onDragEnd={save.handleDrop}>
           <div

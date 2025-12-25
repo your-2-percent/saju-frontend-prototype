@@ -1,8 +1,10 @@
+// src/app/admin/user/list/AdminUserListPage.tsx
 import { useEffect, useMemo } from "react";
 import { useAdminUserInput } from "./input/useAdminUserInput";
-import { useAdminUserSave } from "./save/useAdminUserSave";
-import { getPagedUserIds, getTotalPages, initDrafts } from "./calc/adminUserCalc";
-import { PLAN_OPTIONS, isPlanTier, periodLabel, planLabel } from "./calc/planUtils";
+import { PAGE_SIZE, useAdminUserSave } from "./save/useAdminUserSave";
+import { PLAN_OPTIONS, isPlanTier, planLabel } from "./calc/planUtils";
+import type { Draft } from "./model/types";
+import type { PlanTier } from "@/shared/billing/entitlements";
 
 function formatLastSeen(lastSeenAt?: string | null): string {
   if (!lastSeenAt) return "기록 없음";
@@ -29,54 +31,161 @@ function formatTotalActiveMs(ms?: number | null): string {
   const hour = Math.floor((totalSec % 86400) / 3600);
   const min = Math.floor((totalSec % 3600) / 60);
 
-  // ✅ 24시간 이후부터는 1일로 쳐서 표기
   if (day >= 1) return `${day}일 ${hour}시간`;
   if (hour >= 1) return `${hour}시간 ${min}분`;
   return `${min}분`;
 }
 
+function toYMDInput(iso?: string | null): string {
+  if (!iso) return "";
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return "";
+  return new Date(t).toISOString().slice(0, 10);
+}
+
+function periodLabelFromRow(startsAt?: string | null, expiresAt?: string | null): string {
+  const s = toYMDInput(startsAt);
+  const e = toYMDInput(expiresAt);
+  if (!s && !e) return "기간 없음";
+  if (s && !e) return `${s} ~`;
+  if (!s && e) return `~ ${e}`;
+  return `${s} ~ ${e}`;
+}
+
+function initDraftsFromRows(
+  prev: Record<string, Draft>,
+  rows: Array<{
+    user_id: string;
+    plan: PlanTier | null;
+    starts_at: string | null;
+    expires_at: string | null;
+    can_use_myo_viewer: boolean | null;
+  }>
+): Record<string, Draft> {
+  const next: Record<string, Draft> = { ...prev };
+
+  for (const r of rows) {
+    const plan: PlanTier = r.plan ?? "FREE";
+    const startDate = toYMDInput(r.starts_at);
+    const endDate = toYMDInput(r.expires_at);
+    const myoViewer: Draft["myoViewer"] = r.can_use_myo_viewer === true ? "ON" : "OFF";
+
+    const cur = next[r.user_id];
+
+    if (!cur) {
+      next[r.user_id] = {
+        plan,
+        startDate,
+        endDate,
+        myoViewer,
+        saving: false,
+      };
+      continue;
+    }
+
+    if (cur.saving) continue;
+
+    if (cur.plan !== plan || cur.startDate !== startDate || cur.endDate !== endDate || cur.myoViewer !== myoViewer) {
+      next[r.user_id] = { ...cur, plan, startDate, endDate, myoViewer };
+    }
+  }
+
+  return next;
+}
+
 export default function AdminUserListPage() {
   const input = useAdminUserInput();
-  const { search, setSearch, page, setPage, draftByUser, setDraftByUser, setDraft } = input;
+  const { search, setSearch, tab, setTab, sort, setSort, page, setPage, draftByUser, setDraftByUser, setDraft } =
+    input;
 
-  const { userIds, summaries, loading, error, fetchUserIdList, fetchSummaries, saveEntitlements } =
-    useAdminUserSave();
+  const { rows, totalCount, loading, error, fetchList, saveEntitlements } = useAdminUserSave();
 
-  const pagedUserIds = useMemo(() => getPagedUserIds(userIds, page), [userIds, page]);
-  const totalPages = useMemo(() => getTotalPages(userIds), [userIds]);
-
-  useEffect(() => {
-    fetchUserIdList(search, () => setPage(1));
-  }, [fetchUserIdList, search, setPage]);
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalCount / PAGE_SIZE)), [totalCount]);
 
   useEffect(() => {
-    fetchSummaries(pagedUserIds);
-  }, [fetchSummaries, pagedUserIds]);
+    setPage(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, sort]);
 
   useEffect(() => {
-    setDraftByUser((prev) => initDrafts(prev, summaries));
-  }, [summaries, setDraftByUser]);
+    void fetchList({ search, tab, sort, page });
+  }, [fetchList, search, tab, sort, page]);
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages, setPage]);
+
+  useEffect(() => {
+    setDraftByUser((prev) => initDraftsFromRows(prev, rows));
+  }, [rows, setDraftByUser]);
 
   return (
     <div className="p-6 text-white">
       <h1 className="text-2xl font-bold mb-4">Users</h1>
 
-      <input
-        className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded w-full max-w-sm mb-4"
-        placeholder="Search user (name, email, birth, userId...)"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="flex flex-col md:flex-row gap-2 md:items-center mb-4">
+        <input
+          className="px-3 py-2 bg-neutral-800 border border-neutral-700 rounded w-full max-w-sm"
+          placeholder="Search (name, email, userId...)"
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1);
+          }}
+        />
+
+        <div className="flex gap-2">
+          <select
+            className="px-2 py-2 bg-neutral-800 border border-neutral-700 rounded text-sm"
+            value={tab}
+            onChange={(e) => {
+              const v = e.target.value;
+              setTab(v === "DISABLED" ? "DISABLED" : v === "ALL" ? "ALL" : "ACTIVE");
+            }}
+          >
+            <option value="ACTIVE">활성</option>
+            <option value="DISABLED">비활성</option>
+            <option value="ALL">전체</option>
+          </select>
+
+          <select
+            className="px-2 py-2 bg-neutral-800 border border-neutral-700 rounded text-sm"
+            value={sort}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (
+                v === "LAST_SEEN_DESC" ||
+                v === "LAST_SEEN_ASC" ||
+                v === "CREATED_DESC" ||
+                v === "CREATED_ASC" ||
+                v === "PLAN_DESC" ||
+                v === "ONLINE_ACTIVE_MS_DESC" ||
+                v === "TOTAL_ACTIVE_MS_DESC"
+              ) {
+                setSort(v);
+              }
+            }}
+          >
+            <option value="LAST_SEEN_DESC">최근 접속순</option>
+            <option value="CREATED_DESC">가입 최신순</option>
+            <option value="PLAN_DESC">등급순</option>
+            <option value="ONLINE_ACTIVE_MS_DESC">접속중+누적시간순</option>
+            <option value="TOTAL_ACTIVE_MS_DESC">누적시간순</option>
+            <option value="LAST_SEEN_ASC">오래전 접속순</option>
+            <option value="CREATED_ASC">가입 오래된순</option>
+          </select>
+        </div>
+      </div>
 
       {error && <div className="text-red-400 mb-2">{error}</div>}
       {loading && <div>Loading...</div>}
 
       <div className="space-y-3">
-        {summaries.map((s) => {
-          const displayName = s.profile?.name || s.profile?.nickname || "(no profile)";
-          const email = s.profile?.email || "";
+        {rows.map((r) => {
+          const displayName = r.name || r.nickname || "(no profile)";
+          const email = r.email || "";
 
-          const draft = draftByUser[s.user_id] ?? {
+          const draft = draftByUser[r.user_id] ?? {
             plan: "FREE",
             startDate: "",
             endDate: "",
@@ -87,23 +196,20 @@ export default function AdminUserListPage() {
 
           const nowMs = Date.now();
           const active =
-            (s.ent?.starts_at ? Date.parse(s.ent.starts_at) <= nowMs : true) &&
-            (s.ent?.expires_at ? Date.parse(s.ent.expires_at) > nowMs : true);
+            (r.starts_at ? Date.parse(r.starts_at) <= nowMs : true) &&
+            (r.expires_at ? Date.parse(r.expires_at) > nowMs : true);
 
-          const effectivePlan = active ? s.ent?.plan : "FREE";
-          const viewerNow = s.ent?.can_use_myo_viewer === true ? "ON" : "OFF";
+          // ✅ 여기 핵심: string 금지. PlanTier로 확정
+          const rawPlan: PlanTier = r.plan ?? "FREE";
+          const effectivePlan: PlanTier = active ? rawPlan : "FREE";
 
-          const lastSeenAt = s.lastSeenAt ?? null;
-          const lastSeenMs = lastSeenAt ? Date.parse(lastSeenAt) : NaN;
-          const online = Number.isFinite(lastSeenMs) && nowMs - lastSeenMs < 2 * 60 * 1000;
-
-          const totalActiveMs = s.totalActiveMs ?? null;
+          const viewerNow = r.can_use_myo_viewer === true ? "ON" : "OFF";
+          const lastSeenAt = r.last_seen_at ?? null;
+          const online = r.online === true;
+          const totalActiveMs = r.total_active_ms ?? null;
 
           return (
-            <div
-              key={s.user_id}
-              className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg hover:bg-neutral-800"
-            >
+            <div key={r.user_id} className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg hover:bg-neutral-800">
               <div className="font-semibold text-lg flex items-center justify-between gap-3">
                 <div className="min-w-0 flex items-center gap-2">
                   <span className="text-nowrap mr-1">{displayName}</span>
@@ -128,22 +234,18 @@ export default function AdminUserListPage() {
                   </span>
                 </div>
 
-                <span className="text-neutral-500 text-sm shrink-0">{s.user_id}</span>
+                <span className="text-neutral-500 text-sm shrink-0">{r.user_id}</span>
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
-                명식 {s.myeongsikCount}개
-                {lastSeenAt ? (
-                  <> · 마지막 접속 {new Date(lastSeenAt).toLocaleString()}</>
-                ) : (
-                  <> · 마지막 접속 기록 없음</>
-                )}
+                명식 {r.myeongsik_count ?? 0}개
+                {lastSeenAt ? <> · 마지막 접속 {new Date(lastSeenAt).toLocaleString()}</> : <> · 마지막 접속 기록 없음</>}
                 <> · 누적 {formatTotalActiveMs(totalActiveMs)}</>
               </div>
 
               <div className="text-sm text-neutral-400 mt-1">
-                플랜 {planLabel(effectivePlan)} · {periodLabel(s.ent)} · 묘운 뷰어 {viewerNow}
-                {!active && s.ent?.plan && s.ent.plan !== "FREE" ? " (만료됨)" : ""}
+                플랜 {planLabel(effectivePlan)} · {periodLabelFromRow(r.starts_at, r.expires_at)} · 묘운 뷰어 {viewerNow}
+                {!active && r.plan && r.plan !== "FREE" ? " (만료됨)" : ""}
               </div>
 
               <div className="mt-3 flex flex-col gap-2">
@@ -153,7 +255,7 @@ export default function AdminUserListPage() {
                     type="date"
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
                     value={draft.startDate}
-                    onChange={(e) => setDraft(s.user_id, { startDate: e.target.value })}
+                    onChange={(e) => setDraft(r.user_id, { startDate: e.target.value })}
                   />
 
                   <span className="text-neutral-500">~</span>
@@ -163,7 +265,7 @@ export default function AdminUserListPage() {
                     type="date"
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
                     value={draft.endDate}
-                    onChange={(e) => setDraft(s.user_id, { endDate: e.target.value })}
+                    onChange={(e) => setDraft(r.user_id, { endDate: e.target.value })}
                   />
 
                   <select
@@ -172,7 +274,7 @@ export default function AdminUserListPage() {
                     onChange={(e) => {
                       const v = e.target.value;
                       if (!isPlanTier(v)) return;
-                      setDraft(s.user_id, { plan: v });
+                      setDraft(r.user_id, { plan: v });
                     }}
                   >
                     {PLAN_OPTIONS.map((p) => (
@@ -185,10 +287,7 @@ export default function AdminUserListPage() {
                   <select
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
                     value={draft.myoViewer}
-                    onChange={(e) => {
-                      const v = e.target.value === "OFF" ? "OFF" : "ON";
-                      setDraft(s.user_id, { myoViewer: v });
-                    }}
+                    onChange={(e) => setDraft(r.user_id, { myoViewer: e.target.value === "ON" ? "ON" : "OFF" })}
                   >
                     <option value="ON">묘운 뷰어 ON</option>
                     <option value="OFF">묘운 뷰어 OFF</option>
@@ -197,11 +296,7 @@ export default function AdminUserListPage() {
                   <button
                     type="button"
                     disabled={draft.saving}
-                    onClick={() =>
-                      void saveEntitlements(s.user_id, draft, input.setDraft, () =>
-                        fetchSummaries(pagedUserIds)
-                      )
-                    }
+                    onClick={() => void saveEntitlements(r.user_id, draft, input.setDraft, () => fetchList({ search, tab, sort, page }))}
                     className="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 disabled:opacity-50 cursor-pointer"
                   >
                     {draft.saving ? "저장 중..." : "저장"}
@@ -209,7 +304,7 @@ export default function AdminUserListPage() {
 
                   <button
                     type="button"
-                    onClick={() => (location.href = `/admin/user/${s.user_id}`)}
+                    onClick={() => (location.href = `/admin/user/${r.user_id}`)}
                     className="px-3 py-1 rounded bg-neutral-700 hover:bg-neutral-600 cursor-pointer"
                   >
                     상세
@@ -217,9 +312,7 @@ export default function AdminUserListPage() {
                 </div>
 
                 {draft.lastSavedAt != null ? (
-                  <div className="text-xs text-emerald-400">
-                    저장됨 · {new Date(draft.lastSavedAt).toLocaleString()}
-                  </div>
+                  <div className="text-xs text-emerald-400">저장됨 · {new Date(draft.lastSavedAt).toLocaleString()}</div>
                 ) : null}
               </div>
             </div>
@@ -237,7 +330,7 @@ export default function AdminUserListPage() {
         </button>
 
         <span>
-          {page} / {totalPages}
+          {page} / {totalPages} (총 {totalCount}명)
         </span>
 
         <button

@@ -1,8 +1,9 @@
 // components/BottomNav.tsx
-import { useState, type ReactNode } from "react";
-import { Home, HeartHandshake, Settings, LogOut } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Home, HeartHandshake, Settings, LogOut, LogIn } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SettingsDrawer from "@/app/pages/SettingsDrawer";
+import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
 
 export default function BottomNav({
   onShowToday,
@@ -14,6 +15,38 @@ export default function BottomNav({
   const [openSettings, setOpenSettings] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  // ✅ BottomNav 자체에서 세션 기반 로그인 상태 추적
+  const [sessionLoggedIn, setSessionLoggedIn] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      setSessionLoggedIn(!!data.session?.user);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_evt, session) => {
+      setSessionLoggedIn(!!session?.user);
+    });
+
+    return () => {
+      alive = false;
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
+  const loggedInNow = sessionLoggedIn;
+
+  // 로그아웃 상태로 바뀌면 확인 모달 닫기(꼬임 방지)
+  useEffect(() => {
+    if (!loggedInNow && confirmLogout) setConfirmLogout(false);
+  }, [loggedInNow, confirmLogout]);
+
+  const openLoginModal = () => {
+    useLoginNudgeStore.getState().openWith("BOTTOM_NAV");
+  };
 
   const handleLogout = async () => {
     if (loggingOut) return;
@@ -52,20 +85,26 @@ export default function BottomNav({
           <NavItem icon={<Home size={22} />} label="오늘의 사주" onClick={onShowToday} />
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />
           <NavItem icon={<Settings size={22} />} label="기타설정" onClick={() => setOpenSettings(true)} />
-          <NavItem
-            icon={<LogOut size={22} />}
-            label="로그아웃"
-            onClick={() => setConfirmLogout(true)}
-            disabled={loggingOut}
-          />
+
+          {/* ✅ 로그인/로그아웃 토글 */}
+          {loggedInNow ? (
+            <NavItem
+              icon={<LogOut size={22} />}
+              label="로그아웃"
+              onClick={() => setConfirmLogout(true)}
+              disabled={loggingOut}
+            />
+          ) : (
+            <NavItem icon={<LogIn size={22} />} label="로그인" onClick={openLoginModal} />
+          )}
         </nav>
       </div>
 
       {/* 설정 Drawer */}
       <SettingsDrawer open={openSettings} onClose={() => setOpenSettings(false)} />
 
-      {/* 로그아웃 확인 모달 */}
-      {confirmLogout && (
+      {/* 로그아웃 확인 모달 (로그인 상태에서만) */}
+      {loggedInNow && confirmLogout && (
         <div
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50"
           onClick={() => setConfirmLogout(false)}

@@ -1,4 +1,4 @@
-import { Menu, UserPlus, UserSquare } from "lucide-react";
+import { Menu, UserPlus, UserSquare, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
@@ -67,11 +67,20 @@ export default function TopNav({
     useLoginNudgeStore.getState().openWith("HEADER");
   };
 
+  const tryLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error(error);
+      toast("로그아웃 실패 ㅠㅠ");
+      return;
+    }
+    toast("로그아웃 완료");
+  };
+
   const baseBtn =
     "w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-md text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors";
   const enabledPurple = "bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 cursor-pointer";
   const enabledOrange = "bg-orange-600 hover:bg-orange-700 dark:bg-orange-600 dark:hover:bg-orange-500 cursor-pointer";
-  //const enabledNeutral = "bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 cursor-pointer";
   const disabledCls = "bg-neutral-300 dark:bg-neutral-800 text-neutral-100 cursor-not-allowed opacity-80";
 
   return (
@@ -90,7 +99,7 @@ export default function TopNav({
           화림만세력
         </h1>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
           <button
             type="button"
             onClick={tryAdd}
@@ -115,8 +124,19 @@ export default function TopNav({
             {addLocked ? <span className="ml-1 text-[12px]">🔒</span> : null}
           </button>
 
-          {/* ✅ 게스트일 때만 로그인 버튼 노출 */}
-          {!loggedInNow && (
+          {/* ✅ 조건 반대로: 로그인 상태면 로그아웃 / 게스트면 로그인 */}
+          {loggedInNow ? (
+            <button
+              type="button"
+              onClick={tryLogout}
+              aria-label="로그아웃"
+              title="로그아웃"
+              className="inline-flex items-center gap-1 text-xs cursor-pointer text-neutral-700 dark:text-neutral-200 hover:text-purple-600 dark:hover:text-purple-400"
+            >
+              <LogOut size={16} />
+              <ins>로그아웃</ins>
+            </button>
+          ) : (
             <button
               type="button"
               onClick={openLoginModal}
@@ -124,7 +144,6 @@ export default function TopNav({
               title="로그인"
               className="text-xs cursor-pointer"
             >
-              {/* <SquareUserRound size={18} /> */}
               <ins>로그인</ins>
             </button>
           )}

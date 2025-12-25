@@ -6,19 +6,26 @@ import AdminPage from "@/app/admin/AdminPage";
 import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/app/pages/AuthCallback";
 
-import UserActivityHeartbeat from "@/shared/activity/UserActivityHeartbeat";
+import UserActivityHeartbeatGate from "@/shared/activity/UserActivityHeartbeat";
 import AppBootstrap from "@/app/AppBootstrap";
 import HeartbeatGate from "@/app/HeartbeatGate";
+import AccountDisabledGate from "@/app/AccountDisabledGate";
+import AccountDisabledPage from "@/app/pages/AccountDisabled";
 
 export default function AppShell() {
   return (
     <>
       <AppBootstrap />
       <HeartbeatGate />
-      <UserActivityHeartbeat />
+
+      {/* ✅ 비활성화 강제 튕김 */}
+      <AccountDisabledGate />
+
+      <UserActivityHeartbeatGate />
 
       <Routes>
         <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/disabled" element={<AccountDisabledPage />} />
         <Route path="/" element={<Page />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/impersonate" element={<ImpersonateView />} />
