@@ -73,7 +73,7 @@ export default function CustomSajuModal({
           <X size={20} />
         </button>
 
-        <h2 className="text-lg font-semibold mb-4">커스텀 명식 만들기</h2>
+        <h2 className="text-lg font-semibold mb-4">간지로 명식 만들기</h2>
 
         <OptionsPanel
           useWoldu={input.useWoldu}

@@ -106,9 +106,9 @@ export default function TopNav({
           <button
             type="button"
             onClick={tryCustom}
-            aria-label="명식 커스텀 추가"
+            aria-label="명식 간지로 추가"
             disabled={addLocked}
-            title="명식 커스텀 추가"
+            title="명식 간지로 추가"
             className={`${baseBtn} ${addLocked ? disabledCls : enabledOrange}`}
           >
             <UserSquare size={18} />

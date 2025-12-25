@@ -146,30 +146,36 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
     });
   },
 
-  loadFromServer: async () => {
+  loadFromServer: async (opts?: { force?: boolean }) => {
+    const st = get();
+    if (st.loading) return; // ✅ 중복 호출 방지(StrictMode, 연타 방지)
+    if (!opts?.force && st.loaded) return; // ✅ 이미 로드 완료면 재호출 막기(필요시 force로 뚫기)
+
     set({ loading: true });
 
     try {
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr) {
-        set({ loaded: true, loading: false, userId: null, ...DEFAULT });
+        set({ loaded: true, userId: null, ...DEFAULT });
         return;
       }
 
       const userId = userRes.user?.id ?? null;
       if (!userId) {
-        set({ loaded: true, loading: false, userId: null, ...DEFAULT });
+        set({ loaded: true, userId: null, ...DEFAULT });
         return;
       }
 
+      // ✅ 같은 유저로 이미 로드 끝났으면 스킵 (세션 변동 없을 때 2번 로드 방지)
+      const st2 = get();
+      if (!opts?.force && st2.loaded && st2.userId === userId) return;
+
       const row = await fetchEntRow(userId);
 
-      // ✅ row 없으면 FREE(기간 개념 없음)
       if (!row) {
         const caps = getPlanCapabilities("FREE");
         set({
           loaded: true,
-          loading: false,
           userId,
           plan: "FREE",
           maxMyeongsik: caps.maxMyeongsik === null ? 9999 : caps.maxMyeongsik,
@@ -196,7 +202,6 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
       const active = isActiveWithin(startsAt, expiresAt);
       const rawPlan = parsePlanTier(row.plan ?? null);
 
-      // ✅ 핵심: 만료면 plan을 FREE로 “실제 권한” 처리
       const effectivePlan: PlanTier = active ? rawPlan : "FREE";
       const caps = getPlanCapabilities(effectivePlan);
 
@@ -206,7 +211,6 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
 
       set({
         loaded: true,
-        loading: false,
         userId,
         plan: effectivePlan,
         maxMyeongsik,
@@ -219,19 +223,16 @@ export const useEntitlementsStore = create<EntitlementsState>((set, get) => ({
         canUseAdvancedReport: caps.canUseAdvancedReport,
         canRemoveAds: caps.canRemoveAds,
 
-        // ✅ 묘운은 기간 영향 X라고 했으니: active랑 무관하게 DB 토글만 존중
         canUseMyoViewer: resolveCanUseMyoViewer(row),
 
         startsAt,
         expiresAt,
       });
-
-      // 디버그 필요하면 이거 잠깐 켜봐
-      // console.log("[ent] rawPlan=", rawPlan, "effective=", effectivePlan, "starts=", startsAt, "expires=", expiresAt, "active=", active);
     } finally {
       set({ loading: false });
     }
   },
+
 
   isActiveNow: () => {
     const { startsAt, expiresAt } = get();
