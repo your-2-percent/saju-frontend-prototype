@@ -8,6 +8,7 @@ import CoupleHarmonyPanel from "@/app/pages/CoupleHarmonyPanel";
 import { PeoplePickerModal } from "./couple/PeoplePickerModal";
 import { PersonSlot } from "./couple/PersonSlot";
 import { baseSolarDate, ensureGZ, fromLocalInput, toLocalInput } from "./couple/coupleUtils";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 
 export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) {
   const [dataA, setDataA] = useState<MyeongSik | undefined>();
@@ -45,6 +46,8 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
     }
   }
 
+  const showMyoTab = useEntitlementsStore((s) => s.canUseMyoViewerNow());
+
   return (
     <>
       <div className="w-[96%] max-w-[640px] mx-auto bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 rounded-xl shadow border border-neutral-200 dark:border-neutral-800 px-2 py-4 desk:p-4">
@@ -53,6 +56,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
             궁합 보기
           </div>
           <div className="flex items-center gap-4 text-xs text-neutral-600 dark:text-neutral-400">
+            {showMyoTab ? (
             <label className="flex items-center gap-1 cursor-pointer">
               <input
                 type="checkbox"
@@ -62,6 +66,7 @@ export default function CoupleViewer({ people = [] }: { people?: MyeongSik[] }) 
               />
               묘운 보기
             </label>
+            ) : null}
             <button
               onClick={() => setShowLive((v) => !v)}
               className="px-2 py-1 rounded border border-neutral-300 dark:border-neutral-700 hover:border-indigo-500 text-neutral-700 dark:text-neutral-300 bg-white dark:bg-neutral-900 cursor-pointer"
