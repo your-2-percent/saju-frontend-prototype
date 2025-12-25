@@ -1,3 +1,4 @@
+// BasicUnlockedCelebration.tsx
 import { useEffect, useMemo } from "react";
 
 type Props = {
@@ -13,6 +14,11 @@ type ConfettiPiece = {
   rotate: number;
   driftPx: number;
   color: string;
+};
+
+type ConfettiStyle = React.CSSProperties & {
+  ["--dx"]?: string;
+  ["--rot"]?: string;
 };
 
 function makePieces(count: number): ConfettiPiece[] {
@@ -43,7 +49,6 @@ export default function BasicUnlockedCelebration({ open, onClose }: Props) {
     };
     window.addEventListener("keydown", onKey);
 
-    // 6초 후 자동 닫기(원하면 제거)
     const t = window.setTimeout(() => onClose(), 6000);
 
     return () => {
@@ -73,24 +78,23 @@ export default function BasicUnlockedCelebration({ open, onClose }: Props) {
 
       {/* confetti */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {pieces.map((p, idx) => (
-          <span
-            key={idx}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: `${p.leftPct}%`,
-              width: p.size,
-              height: Math.max(8, p.size + 6),
-              background: p.color,
-              borderRadius: 2,
-              transform: `rotate(${p.rotate}deg)`,
-              animation: `confettiFall ${p.durationMs}ms ease-out ${p.delayMs}ms forwards`,
-              ["--dx" as unknown as string]: `${p.driftPx}px`,
-              ["--rot" as unknown as string]: `${p.rotate}deg`,
-            }}
-          />
-        ))}
+        {pieces.map((p, idx) => {
+          const style: ConfettiStyle = {
+            position: "absolute",
+            top: 0,
+            left: `${p.leftPct}%`,
+            width: p.size,
+            height: Math.max(8, p.size + 6),
+            background: p.color,
+            borderRadius: 2,
+            transform: `rotate(${p.rotate}deg)`,
+            animation: `confettiFall ${p.durationMs}ms ease-out ${p.delayMs}ms forwards`,
+            ["--dx"]: `${p.driftPx}px`,
+            ["--rot"]: `${p.rotate}deg`,
+          };
+
+          return <span key={idx} style={style} />;
+        })}
       </div>
 
       {/* modal */}
@@ -105,7 +109,7 @@ export default function BasicUnlockedCelebration({ open, onClose }: Props) {
             BASIC 영구 해금!
           </div>
           <div className="mt-2 text-sm text-neutral-600 dark:text-neutral-300">
-            누적 100시간 달성으로 <b>BASIC</b>이 자동 적용됐어요 축하축하 🎉
+            축하해요 🎉 앞으로도 많이 이용해주세요 ! 🙇‍♀️
           </div>
         </div>
 
@@ -113,7 +117,7 @@ export default function BasicUnlockedCelebration({ open, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800"
+            className="px-4 py-2 rounded-lg bg-neutral-900 text-white hover:bg-neutral-800 cursor-pointer"
           >
             확인
           </button>

@@ -122,7 +122,7 @@ export default function TopNav({
               onClick={openLoginModal}
               aria-label="로그인"
               title="로그인"
-              className="text-xs"
+              className="text-xs cursor-pointer"
             >
               {/* <SquareUserRound size={18} /> */}
               <ins>로그인</ins>

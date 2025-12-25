@@ -71,17 +71,6 @@ const EMPTY_MS: MyeongSik = {
   dir: "forward",
 };
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-function extractPlan(state: unknown): string | null {
-  if (!isRecord(state)) return null;
-  if (typeof state.plan === "string") return state.plan;
-  if (isRecord(state.ent) && typeof state.ent.plan === "string") return state.ent.plan;
-  return null;
-}
-
 export default function Page() {
   const input = usePageInput();
   usePageSave(input);
@@ -103,14 +92,6 @@ export default function Page() {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-neutral-500">권한 조회 중...</p>
-      </main>
-    );
-  }
-
-  if (input.isLoggedIn && !calc.settingsLoaded) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">설정 조회 중...</p>
       </main>
     );
   }
@@ -152,11 +133,9 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
-  const entState = useEntitlementsStore((s) => s as unknown);
-  const plan = extractPlan(entState);
-
-  // plan 못 찾으면 FREE로 취급
-  const isFree = plan !== "PRO";
+  // ✅ 광고 노출 여부는 "플랜 문자열"이 아니라 "권한"으로 판단
+  // - shouldShowAdsNow(): !loaded면 true, 만료면 true, canRemoveAds면 false
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   const showResult =
     calc.hasCurrent && !input.showToday && !input.showCouple && !input.wizardOpen && !input.editing;
@@ -169,11 +148,11 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <div className="min-h-screen pb-16">
-      <AdfitScriptManager enabled={isFree} />
+      <AdfitScriptManager enabled={showAds} />
 
       <div className="hidden desk:block">
         <AdfitSideDock
-          enabled={isFree}
+          enabled={showAds}
           adUnit={AD_SIDE}
           width={160}
           height={600}
@@ -198,7 +177,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           <div className="w-full max-w-[420px] max-h-[90dvh] overflow-auto rounded-2xl">
             <LoginPage />
           </div>
-          <button className="fixed top-4 right-4 text-white text-2xl" onClick={() => setLoginOpen(false)}>×</button>
+          <button
+            className="fixed top-4 right-4 text-white text-2xl"
+            onClick={() => setLoginOpen(false)}
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -246,7 +230,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
               <LoginInlineNudge />
             </div>
           )}
-          
+
           <div className="pb-4">
             <SajuChart
               data={calc.current as MyeongSik}
@@ -260,7 +244,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           <LuckGlobalPicker ms={calc.current as MyeongSik} />
 
-          {isFree && showResult && settings.showPromptBox && (
+          {showAds && showResult && settings.showPromptBox && (
             <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
               <div className="hidden md:block">
                 <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
@@ -284,7 +268,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          {isFree && showResult && (
+          {showAds && showResult && (
             <div className="max-w-[760px] mx-auto px-3 pb-6">
               <div className="hidden md:block">
                 <AdfitSlot enabled adUnit={AD_BOTTOM_DESKTOP} width={728} height={90} />
@@ -303,7 +287,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      {isFree && !showResult && (
+      {showAds && !showResult && (
         <div className="max-w-[760px] mx-auto px-3 mt-1 mb-2">
           <div className="hidden md:block">
             <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
