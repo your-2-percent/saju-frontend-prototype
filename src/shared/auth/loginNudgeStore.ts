@@ -5,7 +5,9 @@ export type LoginNudgeReason =
   | "SIDEBAR"
   | "ADD_MYEONGSIK"
   | "CUSTOM_ADD"
-  | "BOTTOM_NAV";
+  | "BOTTOM_NAV"
+  | "PERSIST_SAVE"
+  | "ADD_LIMIT";
 
 type LoginNudgeState = {
   open: boolean;
