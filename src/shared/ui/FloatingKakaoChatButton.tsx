@@ -185,7 +185,7 @@ export default function FloatingKakaoChatButton({
       {showHint && hintTexts.length > 0 ? (
         <div
           ref={mobileBarWrapRef}
-          className="desk:hidden fixed left-0 right-0 bottom-0 z-[999] pointer-events-none"
+          className="desk:hidden fixed left-0 right-0 bottom-0 z-[99] pointer-events-none"
           style={{ paddingLeft: mobilePaddingX, paddingRight: mobilePaddingX, paddingBottom: 0 }}
         >
           <div

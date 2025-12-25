@@ -95,7 +95,7 @@ export default function Sidebar({
     <>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/70 transition-opacity duration-300 z-90 ${
+        className={`fixed inset-0 bg-black/70 transition-opacity duration-300 z-100 ${
           open
             ? "opacity-100 pointer-events-auto"
             : "opacity-0 pointer-events-none"
@@ -108,7 +108,7 @@ export default function Sidebar({
         className={`fixed top-0 left-0 h-[100dvh] min-w-[320px] w-full desk:w-1/3
                     bg-white dark:bg-neutral-950
                     text-neutral-900 dark:text-white
-                    shadow-lg z-99 transition-[left] duration-300
+                    shadow-lg z-101 transition-[left] duration-300
                     overflow-hidden
                     ${open ? "left-0" : "left-[-100%]"}`}
       >
