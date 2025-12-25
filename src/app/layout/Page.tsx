@@ -88,18 +88,12 @@ export default function Page() {
   if (input.isLoggedIn && input.adminMode) return <AdminPage />;
 
   // ✅ 권한/설정 로드는 로그인 유저만 대기
-  if (input.isLoggedIn && !calc.entLoaded) {
-    return (
-      <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">권한 조회 중...</p>
-      </main>
-    );
-  }
+  const booting = input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded);
 
-  if (input.isLoggedIn && !calc.settingsLoaded) {
+  if (booting) {
     return (
       <main className="flex min-h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">설정 조회 중...</p>
+        <p className="text-sm text-neutral-500">데이터 불러오는 중...</p>
       </main>
     );
   }

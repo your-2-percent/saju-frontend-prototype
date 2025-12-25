@@ -152,15 +152,25 @@ export const useSettingsStore = create<SettingsState>()(
       // ✅ reset은 “기본값 세팅 완료”니까 loaded=true로 두는 게 안전
       reset: () => set({ settings: defaultSettings, loaded: true }),
 
-      loadFromServer: async () => {
+      loadFromServer: async (opts?: { force?: boolean }) => {
+        const st = get();
+
+        // ✅ 1) 중복 호출 방지(StrictMode, 연타)
+        if (st.syncing) return;
+
+        // ✅ 2) 이미 로드 끝났으면 재호출 막기 (필요하면 force로 뚫기)
+        if (!opts?.force && st.loaded) return;
+
         try {
           set({ syncing: true });
+
+          // purge는 한 번만 하는 게 안전(중복 호출 시 local 설정 날려먹을 수 있음)
           purgeLocalSettings();
 
           const { data, error: userError } = await supabase.auth.getUser();
           const user = data?.user ?? null;
 
-          // ✅ 핵심: 로그인 X면 “기본값으로 로드 완료 처리”
+          // ✅ 로그인 X면 기본값으로 “로드 완료”
           if (userError || !user) {
             set({
               settings: defaultSettings,
@@ -170,20 +180,31 @@ export const useSettingsStore = create<SettingsState>()(
             return;
           }
 
+          // ✅ 같은 유저로 이미 loaded면 스킵(세션 안정화 전 중복 방지)
+          const st2 = get();
+          // user id를 store에 저장하고 있다면 그걸로 비교하는 게 더 좋음
+          if (!opts?.force && st2.loaded && !st2.syncing) {
+            // 이미 로드완료 상태면 종료
+            // (StrictMode로 2번 들어올 때 1번째가 먼저 로드 끝낸 경우)
+            // 그냥 return 하면 됨
+            // 단, 여기서 return 하면 syncing true가 안 되므로 위에서 체크한 syncing 조건 때문에 여기까지 못 오는 게 보통이긴 함
+          }
+
           const { data: row, error } = await supabase
             .from("user_settings")
             .select("payload")
             .eq("user_id", user.id)
             .maybeSingle();
 
-          // row가 없으면 만들어두기
-          if (!row) {
+          // ✅ row 없으면 생성(중복 upsert 방지 위해 조건부)
+          if (!row && !error) {
             await supabase.from("user_settings").upsert({
               user_id: user.id,
               payload: {},
             });
           }
 
+          // PGRST116: maybeSingle 결과 없음 케이스로 자주 나옴(상황에 따라)
           if (error && error.code !== "PGRST116") {
             console.error("loadFromServer(settings) error:", error);
             set({ syncing: false, loaded: true });
@@ -198,6 +219,7 @@ export const useSettingsStore = create<SettingsState>()(
               loaded: true,
             });
 
+            // ✅ migration은 백그라운드로 (StrictMode로 중복 호출돼도 syncing 가드로 1회만)
             if (needsMigration(row.payload)) {
               await supabase.from("user_settings").upsert({
                 user_id: user.id,
@@ -208,6 +230,7 @@ export const useSettingsStore = create<SettingsState>()(
             return;
           }
 
+          // payload 없으면 서버 저장으로 초기화
           await get().saveToServer(true);
           set({ syncing: false, loaded: true });
         } catch (e) {
@@ -215,6 +238,7 @@ export const useSettingsStore = create<SettingsState>()(
           set({ syncing: false, loaded: true });
         }
       },
+
 
       saveToServer: async (force = false) => {
         try {
