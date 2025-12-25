@@ -29,9 +29,10 @@ export function usePageSave(input: PageInput) {
     if (!input.isLoggedIn) return;
 
     (async () => {
+      await loadEnt();
       await migrateLocalToServer();
       await loadFromServer();
       await loadSettings();
     })();
-  }, [input.isLoggedIn, migrateLocalToServer, loadFromServer, loadSettings]);
+  }, [input.isLoggedIn, loadEnt, migrateLocalToServer, loadFromServer, loadSettings]);
 }

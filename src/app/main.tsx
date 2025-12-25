@@ -12,11 +12,13 @@ import "./main.css";
 
 import UserActivityHeartbeat from "@/shared/activity/UserActivityHeartbeat";
 import AppBootstrap from "@/app/AppBootstrap";
+import HeartbeatGate from "@/app/HeartbeatGate"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <HashRouter>
       <AppBootstrap />
+      <HeartbeatGate />
       <UserActivityHeartbeat />
 
       <Routes>

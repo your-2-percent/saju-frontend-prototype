@@ -1,4 +1,5 @@
 // src/shared/ui/FloatingKakaoChatButton.tsx
+import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type Props = {
@@ -49,15 +50,13 @@ export default function FloatingKakaoChatButton({
   enabled = true,
   href = "https://open.kakao.com/o/sjBRz57h",
   hintTexts = [
-    "관리자랑 놀사람 ~_~",
     "관리자는 사주 상담도 합니다 !",
-    "커피 사주세요 ❤",
     "이용해주시는 모든 분들 사랑합니다 !",
     "관리자는 사주처돌이에오.",
     "사주, 타로는 사랑입니다.",
-    "모든 문의, 뻘소리, 피드백 환영!",
+    "모든 문의, 사주상담 · 이야기, 피드백 환영!",
   ],
-  hideHintHours = 3,
+  hideHintHours = 24,
   cycleMs = 4200,
   mobilePaddingX = 0,
   bottomDockCssVarName = "--bottom-dock",
@@ -220,9 +219,9 @@ export default function FloatingKakaoChatButton({
                 onClick={closeHint}
                 aria-label="안내 닫기"
                 title="닫기"
-                className="w-6 h-6 rounded-full bg-neutral-800 border border-neutral-700 text-[14px] flex items-center justify-center hover:bg-neutral-700"
+                className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 text-[14px] flex items-center justify-center hover:bg-neutral-700"
               >
-                ×
+                <X />
               </button>
 
               <a
@@ -231,10 +230,10 @@ export default function FloatingKakaoChatButton({
                 rel="noopener noreferrer"
                 aria-label="카카오 오픈채팅 문의"
                 title="문의하기(카카오 오픈채팅)"
-                className="w-6 h-6 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700
+                className="w-8 h-8 rounded-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700
                            flex items-center justify-center transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 24 20" fill="none" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M4 5.5C4 4.12 5.12 3 6.5 3h11C18.88 3 20 4.12 20 5.5v7C20 13.88 18.88 15 17.5 15H10l-4.5 4V15H6.5C5.12 15 4 13.88 4 12.5v-7Z"
                     stroke="currentColor"
@@ -274,11 +273,11 @@ export default function FloatingKakaoChatButton({
               <button
                 type="button"
                 onClick={closeHint}
-                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-neutral-800 border border-neutral-700 text-[12px] flex items-center justify-center hover:bg-neutral-700"
+                className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-neutral-800 border border-neutral-700 text-[12px] flex items-center justify-center hover:bg-neutral-700 cursor-pointer"
                 aria-label="말풍선 닫기"
                 title="닫기"
               >
-                ×
+                <X size={12} />
               </button>
 
               <div className="absolute -bottom-2 right-4 w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-neutral-900" />
