@@ -2,9 +2,10 @@ import { create } from "zustand";
 
 export type LoginNudgeReason =
   | "HEADER"
-  | "PERSIST_SAVE"
-  | "ADD_LIMIT"
-  | "UNKNOWN";
+  | "SIDEBAR"
+  | "ADD_MYEONGSIK"
+  | "CUSTOM_ADD"
+  | "BOTTOM_NAV";
 
 type LoginNudgeState = {
   open: boolean;
@@ -15,7 +16,7 @@ type LoginNudgeState = {
 
 export const useLoginNudgeStore = create<LoginNudgeState>((set) => ({
   open: false,
-  reason: "UNKNOWN",
+  reason: "HEADER",
   openWith: (reason) => set({ open: true, reason }),
-  close: () => set({ open: false, reason: "UNKNOWN" }),
+  close: () => set({ open: false }),
 }));

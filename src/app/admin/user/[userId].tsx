@@ -102,7 +102,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
                   className="px-3 py-2 bg-blue-600 rounded cursor-pointer text-xs"
                   disabled={input.saving}
                 >
-                  계정 복구
+                  활성화 + 계정복구
                 </button>
               )}
 
@@ -142,7 +142,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
               </div>
 
               <div className="flex gap-2">
-                <button
+                {/* <button
                   className="text-nowrap px-2 py-1 border border-blue-500 text-blue-100 rounded cursor-pointer text-xs"
                   onClick={() => save.handleViewAsUser(m.id)}
                 >
@@ -157,13 +157,14 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
                 </button>
 
                 <button
-                  className={`px-2 py-1 rounded cursor-pointer text-xs text-nowrap ${
-                    m.deleted_at ? "bg-green-600" : "bg-red-600"
+                  onClick={save.toggleDisable}
+                  disabled={input.saving}
+                  className={`px-3 py-2 rounded cursor-pointer text-xs ${
+                    calc.isDisabled ? "bg-yellow-600" : "bg-gray-600"
                   }`}
-                  onClick={() => save.toggleDeleteMyeongsik(m.id, m.deleted_at)}
                 >
-                  {m.deleted_at ? "복구" : "삭제"}
-                </button>
+                  {calc.isDisabled ? "계정 활성화" : "계정 비활성화"}
+                </button> */}
               </div>
             </div>
           </div>

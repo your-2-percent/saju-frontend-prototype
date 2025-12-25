@@ -1,4 +1,5 @@
 ﻿import { useCallback, useEffect } from "react";
+import { supabase } from "@/lib/supabase"; // ✅ 추가
 import type { MyeongsikRow, ProfileRow } from "@/app/admin/user/detail/model/types";
 import {
   createProfile,
@@ -7,7 +8,7 @@ import {
   restoreAccount,
   restoreAllMyeongsik,
   setMyeongsikDeleted,
-  setProfileDisabled,
+  // setProfileDisabled, // ✅ 이제 RPC로 처리하니까 안 써도 됨(남겨도 됨)
   updateProfile,
 } from "@/app/admin/user/detail/saveInterface/adminUserDetailRepo";
 
@@ -54,38 +55,77 @@ export function useAdminUserDetailSave({
 
   const handleCreateProfile = useCallback(async () => {
     setSaving(true);
-    await createProfile(userId);
-    setSaving(false);
+    try {
+      await createProfile(userId);
+    } finally {
+      setSaving(false);
+    }
     await refreshProfile();
   }, [userId, setSaving, refreshProfile]);
 
   const handleSaveProfile = useCallback(async () => {
     if (!profile) return;
     setSaving(true);
-    await updateProfile(userId, profile);
-    setSaving(false);
+    try {
+      await updateProfile(userId, profile);
+    } finally {
+      setSaving(false);
+    }
     await refreshProfile();
   }, [profile, userId, setSaving, refreshProfile]);
 
+  // ✅ 여기만 운영형 RPC로 교체
   const toggleDisable = useCallback(async () => {
+    if (!userId) return;
     if (!profile) return;
-    const nextDisabled = profile.disabled_at ? null : new Date().toISOString();
-    await setProfileDisabled(userId, nextDisabled);
-    await refreshProfile();
-  }, [profile, userId, refreshProfile]);
+
+    setSaving(true);
+    try {
+      const nextDisabled = profile.disabled_at == null;
+
+      const { data, error } = await supabase.rpc("admin_set_profile_disabled", {
+        p_target_user_id: userId,
+        p_disabled: nextDisabled,
+      });
+
+      if (error) {
+        console.error("admin_set_profile_disabled error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code,
+        });
+        return;
+      }
+
+      setProfile({
+        ...profile,
+        disabled_at: typeof data === "string" ? data : null,
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [userId, profile, setProfile, setSaving]);
+
 
   const handleRestoreAccount = useCallback(async () => {
     setSaving(true);
-    await restoreAccount(userId);
-    setSaving(false);
+    try {
+      await restoreAccount(userId);
+    } finally {
+      setSaving(false);
+    }
     await refreshProfile();
     await refreshMyeongsik();
   }, [userId, setSaving, refreshProfile, refreshMyeongsik]);
 
   const handleRestoreAllMyeongsik = useCallback(async () => {
     setSaving(true);
-    await restoreAllMyeongsik(userId);
-    setSaving(false);
+    try {
+      await restoreAllMyeongsik(userId);
+    } finally {
+      setSaving(false);
+    }
     await refreshMyeongsik();
   }, [userId, setSaving, refreshMyeongsik]);
 

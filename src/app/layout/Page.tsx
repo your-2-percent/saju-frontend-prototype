@@ -195,6 +195,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         onAddNew={save.openAdd}
         onEdit={save.handleSidebarEdit}
         onDeleteView={save.handleSidebarDeleteView}
+        isLoggedIn={isLoggedIn}
       />
 
       {showLoginNot && (
