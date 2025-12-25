@@ -151,7 +151,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           width={160}
           height={600}
           showAfterScrollY={0}
-          hideForHours={24}
           rightPx={16}
           topPx={120}
           breakpointClassName="hidden xl:block"

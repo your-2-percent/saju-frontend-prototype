@@ -33,21 +33,12 @@ function readHideUntil(key: string): number {
   }
 }
 
-function writeHideUntil(key: string, untilMs: number): void {
-  try {
-    localStorage.setItem(key, String(untilMs));
-  } catch {
-    // ignore
-  }
-}
-
 export function AdfitSideDock({
   enabled,
   adUnit,
   width,
   height,
   showAfterScrollY = 180,
-  hideForHours = 3,
   rightPx = 16,
   topPx = 120,
   breakpointClassName = "hidden desk:block",
@@ -102,13 +93,6 @@ export function AdfitSideDock({
   if (!enabled) return null;
   if (hiddenByUser) return null;
 
-  const onClose = () => {
-    writeHideUntil(storageKey, nowMs() + hideForHours * 60 * 60 * 1000);
-    setHiddenByUser(true);
-    setOpen(false);
-    setActivated(false);
-  };
-
   return (
     <div
       className={breakpointClassName}
@@ -135,22 +119,6 @@ export function AdfitSideDock({
             padding: 8,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="광고 닫기"
-              style={{
-                border: 0,
-                background: "transparent",
-                cursor: "pointer",
-                fontSize: 14,
-                padding: "6px 8px",
-              }}
-            >
-              닫기
-            </button>
-          </div>
 
           <AdfitSlot
             enabled={activated}
