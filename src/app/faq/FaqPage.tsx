@@ -45,7 +45,7 @@ export default function FaqPage() {
                 나옵니다.
               </p>
               <p className="mt-2">
-                화림만세력에는 <b>묘운</b>이라는 (대운을 확장하여 8자로 보는 기법 - 출처 명리학자 현묘) 에서
+                화림만세력에는 <b>묘운</b>이라는 (대운을 확장하여 8자로 보는 기법 - 출처 현묘) 에서
                 정밀하게 계산되었습니다.
               </p>
               <p className="mt-2">
@@ -71,7 +71,7 @@ export default function FaqPage() {
                 따라서 참고만 하시는 게 좋고, 용신에 대한 것은 정밀한 상담을 추천합니다.
               </p>
               <p className="mt-2">
-                (현묘님의 제자분들께서 상담해주시는 <b>파이브 시즌스</b>를 추천드립니다 ^^)<br />
+                (현묘의 제자분들께서 상담해주시는 <b>파이브 시즌스</b>를 추천드립니다 ^^)<br />
                 <a href="https://5seasons.co.kr/" target="_blank"><ins className="text-amber-500">▶ 파이브시즌스 상담받으러가기 !</ins></a>
               </p>
             </div>
