@@ -12,6 +12,7 @@ import { PillarCardShared } from "@/shared/ui/PillarCardShared";
 import type { Settings as CardSettings } from "@/shared/lib/hooks/useSettings";
 import { STEMS_KO, 간지_한자_MAP, STEM_H2K } from "@/shared/domain/간지/const";
 import { supabase } from "@/lib/supabase";
+import InfoAttributionDock from "@/shared/ui/InfoAttributionDock";
 
 const STEMS_HANJA_SET = new Set<string>(간지_한자_MAP.천간);
 
@@ -169,7 +170,7 @@ export default function TodaySaju() {
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
   return (
-    <div className="flex justify-center items-center pt-16 desk:mt-12 w-full h-[calc(100dvh_-_86px)] desk:h-[calc(100dvh_-_212px)] ">
+    <div className="flex justify-center items-center pt-16 desk:mt-12 w-full h-auto desk:h-[calc(100dvh_-_212px)] ">
       <div
         className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
                       bg-white dark:bg-neutral-950
@@ -270,6 +271,8 @@ export default function TodaySaju() {
             {blankHour ? "시주 표시" : "시주 비우기"}
           </button>
         </div>
+
+        <InfoAttributionDock />
       </div>
     </div>
   );

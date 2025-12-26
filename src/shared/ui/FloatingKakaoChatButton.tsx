@@ -50,11 +50,11 @@ export default function FloatingKakaoChatButton({
   enabled = true,
   href = "https://open.kakao.com/o/sjBRz57h",
   hintTexts = [
-    "관리자는 사주 상담도 합니다 !",
     "이용해주시는 모든 분들 사랑합니다 !",
     "관리자는 사주처돌이에오.",
     "사주, 타로는 사랑입니다.",
     "모든 문의, 사주상담 · 이야기, 피드백 환영!",
+    "★ 신년운세 ! 파이브시즌스에서 받아보세요! ★"
   ],
   hideHintHours = 24,
   cycleMs = 4200,

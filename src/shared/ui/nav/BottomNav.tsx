@@ -1,6 +1,6 @@
-// components/BottomNav.tsx
+// src/shared/ui/nav/BottomNav.tsx
 import { useEffect, useState, type ReactNode } from "react";
-import { Home, HeartHandshake, Settings, LogOut, LogIn } from "lucide-react";
+import { Home, HeartHandshake, Settings, LogOut, LogIn, HelpCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import SettingsDrawer from "@/app/pages/SettingsDrawer";
 import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
@@ -8,9 +8,11 @@ import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
 export default function BottomNav({
   onShowToday,
   onShowCouple,
+  onShowFaq, // ✅ 추가
 }: {
   onShowToday: () => void;
   onShowCouple: () => void;
+  onShowFaq: () => void;
 }) {
   const [openSettings, setOpenSettings] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -84,6 +86,10 @@ export default function BottomNav({
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
           <NavItem icon={<Home size={22} />} label="오늘의 사주" onClick={onShowToday} />
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />
+
+          {/* ✅ FAQ */}
+          <NavItem icon={<HelpCircle size={22} />} label="FAQ" onClick={onShowFaq} />
+
           <NavItem icon={<Settings size={22} />} label="기타설정" onClick={() => setOpenSettings(true)} />
 
           {/* ✅ 로그인/로그아웃 토글 */}
