@@ -76,7 +76,23 @@ export const setMyeongsikDeleted = async (
   id: string,
   deletedAt: string | null
 ) => {
-  await supabase.from("myeongsik").update({ deleted_at: deletedAt }).eq("id", id);
+  const { error } = await supabase.rpc("admin_set_myeongsik_deleted", {
+    p_target_user_id: userId,
+    p_myeongsik_id: id,
+    p_deleted_at: deletedAt, // null도 OK (default null)
+  });
+
+  if (error) {
+    console.error("admin_set_myeongsik_deleted error:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+    throw error;
+  }
+
+  // ✅ 성공한 뒤에만 audit 찍기 (지금처럼 실패해도 audit 남으면 운영지옥임)
   await logAudit({
     action: deletedAt ? "delete_myeongsik" : "restore_myeongsik",
     targetUserId: userId,
