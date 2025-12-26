@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect } from "react";
-import { supabase } from "@/lib/supabase"; // ✅ 추가
+import { supabase } from "@/lib/supabase";
 import type { MyeongsikRow, ProfileRow } from "@/app/admin/user/detail/model/types";
 import {
   createProfile,
@@ -8,7 +8,6 @@ import {
   restoreAccount,
   restoreAllMyeongsik,
   setMyeongsikDeleted,
-  // setProfileDisabled, // ✅ 이제 RPC로 처리하니까 안 써도 됨(남겨도 됨)
   updateProfile,
 } from "@/app/admin/user/detail/saveInterface/adminUserDetailRepo";
 
@@ -26,6 +25,10 @@ type AdminUserDetailSave = {
   toggleDisable: () => Promise<void>;
   handleRestoreAccount: () => Promise<void>;
   handleRestoreAllMyeongsik: () => Promise<void>;
+
+  // ✅ 추가: 명식 1개 복구
+  handleRestoreMyeongsik: (id: string) => Promise<void>;
+
   handleViewAsUser: (myeongsikId?: string) => void;
   toggleDeleteMyeongsik: (id: string, deleted: string | null | undefined) => Promise<void>;
   goTo: (url: string) => void;
@@ -107,7 +110,6 @@ export function useAdminUserDetailSave({
     }
   }, [userId, profile, setProfile, setSaving]);
 
-
   const handleRestoreAccount = useCallback(async () => {
     setSaving(true);
     try {
@@ -128,6 +130,23 @@ export function useAdminUserDetailSave({
     }
     await refreshMyeongsik();
   }, [userId, setSaving, refreshMyeongsik]);
+
+  // ✅ 추가: 명식 1개 복구(= deleted_at null)
+  const handleRestoreMyeongsik = useCallback(
+    async (id: string) => {
+      if (!userId) return;
+      if (!id) return;
+
+      setSaving(true);
+      try {
+        await setMyeongsikDeleted(userId, id, null);
+      } finally {
+        setSaving(false);
+      }
+      await refreshMyeongsik();
+    },
+    [userId, setSaving, refreshMyeongsik]
+  );
 
   const handleViewAsUser = useCallback(
     (myeongsikId?: string) => {
@@ -159,6 +178,10 @@ export function useAdminUserDetailSave({
     toggleDisable,
     handleRestoreAccount,
     handleRestoreAllMyeongsik,
+
+    // ✅ 리턴에 꼭 포함
+    handleRestoreMyeongsik,
+
     handleViewAsUser,
     toggleDeleteMyeongsik,
     goTo,

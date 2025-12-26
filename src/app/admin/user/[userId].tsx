@@ -87,6 +87,7 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
                 onChange={(e) => input.setProfile({ ...input.profile, mgr_memo: e.target.value })}
               />
             </div>
+
             <div className="flex gap-2">
               <button
                 onClick={save.handleSaveProfile}
@@ -137,42 +138,26 @@ export default function AdminUserDetailPage({ params }: { params: { userId: stri
               <div>
                 <div className="font-semibold">{m.name || "(no name)"}</div>
                 <div className="text-sm text-neutral-400">
-                  Birth: {m.birth_json?.birthDay ?? "-"} · {m.created_at ? new Date(m.created_at).toLocaleString() : "-"}
+                  Birth: {m.birth_json?.birthDay ?? "-"} ·{" "}
+                  {m.created_at ? new Date(m.created_at).toLocaleString() : "-"}
                 </div>
               </div>
 
+              {/* ✅ 여기가 원래 버튼 영역인데, 주석만 있으면 아무것도 안 뜸 */}
               <div className="flex gap-2">
-                {/* <button
-                  className="text-nowrap px-2 py-1 border border-blue-500 text-blue-100 rounded cursor-pointer text-xs"
-                  onClick={() => save.handleViewAsUser(m.id)}
-                >
-                  이 명식 보기(읽기 전용)
-                </button>
-
                 <button
-                  className="text-nowrap px-2 py-1 border border-neutral-500 rounded cursor-pointer text-xs"
-                  onClick={() => save.goTo(`/admin/myeongsik/${m.id}`)}
-                >
-                  수정
-                </button>
-
-                <button
-                  onClick={save.toggleDisable}
+                  className="text-nowrap px-2 py-1 border border-emerald-500 text-emerald-100 rounded cursor-pointer text-xs"
+                  onClick={() => save.handleRestoreMyeongsik(m.id)}
                   disabled={input.saving}
-                  className={`px-3 py-2 rounded cursor-pointer text-xs ${
-                    calc.isDisabled ? "bg-yellow-600" : "bg-gray-600"
-                  }`}
                 >
-                  {calc.isDisabled ? "계정 활성화" : "계정 비활성화"}
-                </button> */}
+                  이 명식 복구
+                </button>
               </div>
             </div>
           </div>
         ))}
 
-        {input.myeongsikList.length === 0 && (
-          <div className="text-neutral-400">명식이 없습니다.</div>
-        )}
+        {input.myeongsikList.length === 0 && <div className="text-neutral-400">명식이 없습니다.</div>}
       </div>
     </div>
   );
