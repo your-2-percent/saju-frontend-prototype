@@ -216,7 +216,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       )}
 
       {/* ✅ FAQ */}
-      {showFaq && <FaqPage onClose={() => setShowFaq(false)} />}
+      {showFaq && <FaqPage />}
 
       {input.showToday && <TodaySaju />}
 

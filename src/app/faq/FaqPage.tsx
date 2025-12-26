@@ -1,7 +1,7 @@
 // src/app/pages/FaqPage.tsx
 import { HelpCircle } from "lucide-react";
 
-export default function FaqPage({ onClose }: { onClose: () => void }) {
+export default function FaqPage() {
   return (
     <div className="pt-16 pb-24">
       <div className="max-w-[640px] mx-auto px-4">
@@ -13,14 +13,6 @@ export default function FaqPage({ onClose }: { onClose: () => void }) {
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-3 py-1 rounded-lg bg-neutral-200 text-neutral-900 hover:bg-neutral-300 cursor-pointer
-                       dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700"
-          >
-            닫기
-          </button>
         </div>
 
         <div className="space-y-3">
