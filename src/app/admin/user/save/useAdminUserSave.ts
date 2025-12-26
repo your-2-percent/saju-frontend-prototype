@@ -16,7 +16,6 @@ export type AdminListUserRow = {
   disabled_at: string | null;
   created_at: string | null;
 
-  // ✅ 핵심: Draft.plan이 쓰는 PlanTier로 통일
   plan: PlanTier | null;
   starts_at: string | null;
   expires_at: string | null;
@@ -50,11 +49,10 @@ function toNum(v: unknown): number | null {
   return null;
 }
 
-// ✅ PlanTier 타입가드: 다른 파일 타입 섞이는 거 방지용으로 여기서 “직접” 정의
+// ✅ PlanTier 타입가드(파일 로컬)
 function isPlanTierValue(v: unknown): v is PlanTier {
   return v === "FREE" || v === "BASIC" || v === "PRO";
 }
-
 function parsePlan(v: unknown): PlanTier | null {
   return isPlanTierValue(v) ? v : null;
 }
@@ -74,7 +72,6 @@ function parseRow(v: unknown): AdminListUserRow | null {
     disabled_at: toStr(v.disabled_at),
     created_at: toStr(v.created_at),
 
-    // ✅ 여기에서 string → PlanTier로 확정 변환
     plan: parsePlan(v.plan),
     starts_at: toStr(v.starts_at),
     expires_at: toStr(v.expires_at),
@@ -89,6 +86,96 @@ function parseRow(v: unknown): AdminListUserRow | null {
     online: toBool(v.online),
     total_count: toNum(v.total_count),
   };
+}
+
+/** 빈 문자열이면 null */
+function nonEmptyOrNull(v: string | null | undefined): string | null {
+  const s = (v ?? "").trim();
+  return s.length ? s : null;
+}
+
+/** YYYY-MM-DD 검증 */
+function isValidYmd(ymd: string): boolean {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) return false;
+
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return false;
+  if (mo < 1 || mo > 12) return false;
+
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  return dt.getUTCFullYear() === y && dt.getUTCMonth() === mo - 1 && dt.getUTCDate() === d;
+}
+
+/** YYYY-MM-DD + days => YYYY-MM-DD (UTC 기준) */
+function addDaysYmd(ymd: string, days: number): string {
+  if (!isValidYmd(ymd)) throw new Error(`날짜 형식이 올바르지 않음: ${ymd}`);
+
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+  if (!m) throw new Error(`날짜 형식이 올바르지 않음: ${ymd}`);
+
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+
+  const yy = String(dt.getUTCFullYear()).padStart(4, "0");
+  const mm = String(dt.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(dt.getUTCDate()).padStart(2, "0");
+  return `${yy}-${mm}-${dd}`;
+}
+
+/** YYYY-MM-DD -> ISO(UTC 00:00:00Z) */
+function ymdToIsoUtcStart(ymd: string): string {
+  if (!isValidYmd(ymd)) throw new Error(`날짜 형식이 올바르지 않음: ${ymd}`);
+  return `${ymd}T00:00:00.000Z`;
+}
+
+type RpcErrShape = {
+  message?: string;
+  details?: string;
+  hint?: string;
+  code?: string;
+};
+
+function isRpcErrShape(v: unknown): v is RpcErrShape {
+  return typeof v === "object" && v !== null;
+}
+
+function dumpRpcError(tag: string, err: unknown): void {
+  // ✅ 1) raw
+  console.error(tag, err);
+
+  // ✅ 2) fields
+  if (isRpcErrShape(err)) {
+    console.error(`${tag} fields`, {
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint,
+    });
+  }
+
+  // ✅ 3) non-enumerable까지 포함해서
+  if (typeof err === "object" && err !== null) {
+    try {
+      console.error(`${tag} ownKeys`, Object.getOwnPropertyNames(err));
+    } catch {
+      // ignore
+    }
+  }
+
+  // ✅ 4) stringify 시도
+  try {
+    console.error(`${tag} json`, JSON.stringify(err));
+  } catch {
+    // ignore
+  }
 }
 
 export function useAdminUserSave() {
@@ -134,7 +221,11 @@ export function useAdminUserSave() {
     []
   );
 
-  // ✅ 네가 원래 쓰던 saveEntitlements 그대로 유지해 (여기 내용은 생략)
+  /**
+   * ✅ 실제 저장: 운영형 RPC로 entitlements 업데이트
+   * - 시작일: YYYY-MM-DD => starts_at = 그날 00:00Z
+   * - 종료일: YYYY-MM-DD(포함) => expires_at = (endDate+1일) 00:00Z (배타/Exclusive)
+   */
   const saveEntitlements = useCallback(
     async (
       uid: string,
@@ -144,14 +235,50 @@ export function useAdminUserSave() {
     ) => {
       if (!draft) return;
 
+      setError(null);
       setDraft(uid, { saving: true });
+
       try {
-        // ✅ 너 기존 로직 그대로 넣어
+        if (!isPlanTierValue(draft.plan)) {
+          throw new Error(`잘못된 플랜 값: ${String(draft.plan)}`);
+        }
+
+        const startYmd = nonEmptyOrNull(draft.startDate);
+        const endYmdInclusive = nonEmptyOrNull(draft.endDate);
+
+        const startsAt = startYmd ? ymdToIsoUtcStart(startYmd) : null;
+        const expiresAt = endYmdInclusive ? ymdToIsoUtcStart(addDaysYmd(endYmdInclusive, 1)) : null;
+
+        // 기간 역전 방지(둘 다 있을 때만)
+        if (startsAt && expiresAt) {
+          const s = Date.parse(startsAt);
+          const e = Date.parse(expiresAt);
+          if (!Number.isFinite(s) || !Number.isFinite(e)) throw new Error("날짜 파싱 실패");
+          if (e <= s) throw new Error("종료일이 시작일보다 빠릅니다.");
+        }
+
+        // ✅ 호출 파라미터 (스샷 시그니처랑 동일)
+        const payload = {
+          p_target_user_id: uid,
+          p_plan: draft.plan, // <- DB 제약이 소문자면 여기서 터짐(에러 메시지로 확인)
+          p_can_use_myo_viewer: draft.myoViewer === "ON",
+          p_starts_at: startsAt,
+          p_expires_at: expiresAt,
+        };
+
+        const { error: rpcErr } = await supabase.rpc("admin_set_user_entitlements", payload);
+
+        if (rpcErr) {
+          dumpRpcError("admin_set_user_entitlements error", rpcErr);
+          throw rpcErr;
+        }
+
         setDraft(uid, { saving: false, lastSavedAt: Date.now() });
         await refresh();
       } catch (e) {
         setDraft(uid, { saving: false });
         setError(e instanceof Error ? e.message : "저장 실패");
+        throw e;
       }
     },
     []

@@ -19,20 +19,34 @@ type UseAdminUserDetailSaveArgs = {
   setSaving: (next: boolean) => void;
 };
 
-type AdminUserDetailSave = {
+export type AdminUserDetailSave = {
   handleCreateProfile: () => Promise<void>;
   handleSaveProfile: () => Promise<void>;
   toggleDisable: () => Promise<void>;
   handleRestoreAccount: () => Promise<void>;
   handleRestoreAllMyeongsik: () => Promise<void>;
 
-  // ✅ 추가: 명식 1개 복구
   handleRestoreMyeongsik: (id: string) => Promise<void>;
 
   handleViewAsUser: (myeongsikId?: string) => void;
   toggleDeleteMyeongsik: (id: string, deleted: string | null | undefined) => Promise<void>;
   goTo: (url: string) => void;
 };
+
+function logRpcError(tag: string, error: unknown) {
+  // supabase-js error shape 대응(대충이라도 로그는 남김)
+  if (error && typeof error === "object") {
+    const e = error as { message?: string; details?: string; hint?: string; code?: string };
+    console.error(tag, {
+      message: e.message,
+      details: e.details,
+      hint: e.hint,
+      code: e.code,
+    });
+    return;
+  }
+  console.error(tag, error);
+}
 
 export function useAdminUserDetailSave({
   userId,
@@ -57,27 +71,37 @@ export function useAdminUserDetailSave({
   }, [refreshProfile, refreshMyeongsik]);
 
   const handleCreateProfile = useCallback(async () => {
+    if (!userId) return;
+
     setSaving(true);
     try {
       await createProfile(userId);
+      await refreshProfile();
+    } catch (e) {
+      console.error("handleCreateProfile failed:", e);
+      throw e;
     } finally {
       setSaving(false);
     }
-    await refreshProfile();
   }, [userId, setSaving, refreshProfile]);
 
   const handleSaveProfile = useCallback(async () => {
+    if (!userId) return;
     if (!profile) return;
+
     setSaving(true);
     try {
       await updateProfile(userId, profile);
+      await refreshProfile();
+    } catch (e) {
+      console.error("handleSaveProfile failed:", e);
+      throw e;
     } finally {
       setSaving(false);
     }
-    await refreshProfile();
-  }, [profile, userId, setSaving, refreshProfile]);
+  }, [userId, profile, setSaving, refreshProfile]);
 
-  // ✅ 여기만 운영형 RPC로 교체
+  // ✅ 운영형 RPC
   const toggleDisable = useCallback(async () => {
     if (!userId) return;
     if (!profile) return;
@@ -92,13 +116,8 @@ export function useAdminUserDetailSave({
       });
 
       if (error) {
-        console.error("admin_set_profile_disabled error:", {
-          message: error.message,
-          details: error.details,
-          hint: error.hint,
-          code: error.code,
-        });
-        return;
+        logRpcError("admin_set_profile_disabled error:", error);
+        throw error;
       }
 
       setProfile({
@@ -111,27 +130,37 @@ export function useAdminUserDetailSave({
   }, [userId, profile, setProfile, setSaving]);
 
   const handleRestoreAccount = useCallback(async () => {
+    if (!userId) return;
+
     setSaving(true);
     try {
       await restoreAccount(userId);
+      await refreshProfile();
+      await refreshMyeongsik();
+    } catch (e) {
+      console.error("handleRestoreAccount failed:", e);
+      throw e;
     } finally {
       setSaving(false);
     }
-    await refreshProfile();
-    await refreshMyeongsik();
   }, [userId, setSaving, refreshProfile, refreshMyeongsik]);
 
   const handleRestoreAllMyeongsik = useCallback(async () => {
+    if (!userId) return;
+
     setSaving(true);
     try {
       await restoreAllMyeongsik(userId);
+      await refreshMyeongsik();
+    } catch (e) {
+      console.error("handleRestoreAllMyeongsik failed:", e);
+      throw e;
     } finally {
       setSaving(false);
     }
-    await refreshMyeongsik();
   }, [userId, setSaving, refreshMyeongsik]);
 
-  // ✅ 추가: 명식 1개 복구(= deleted_at null)
+  // ✅ 명식 1개 복구 (= deleted_at null)
   const handleRestoreMyeongsik = useCallback(
     async (id: string) => {
       if (!userId) return;
@@ -140,10 +169,13 @@ export function useAdminUserDetailSave({
       setSaving(true);
       try {
         await setMyeongsikDeleted(userId, id, null);
+        await refreshMyeongsik();
+      } catch (e) {
+        console.error("handleRestoreMyeongsik failed:", e);
+        throw e;
       } finally {
         setSaving(false);
       }
-      await refreshMyeongsik();
     },
     [userId, setSaving, refreshMyeongsik]
   );
@@ -154,6 +186,7 @@ export function useAdminUserDetailSave({
       const url = myeongsikId
         ? `${base}/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
         : `${base}/impersonate?userId=${userId}`;
+
       window.open(url, "_blank");
     },
     [userId]
@@ -161,11 +194,23 @@ export function useAdminUserDetailSave({
 
   const toggleDeleteMyeongsik = useCallback(
     async (id: string, deleted: string | null | undefined) => {
+      if (!userId) return;
+      if (!id) return;
+
       const next = deleted ? null : new Date().toISOString();
-      await setMyeongsikDeleted(userId, id, next);
-      await refreshMyeongsik();
+
+      setSaving(true);
+      try {
+        await setMyeongsikDeleted(userId, id, next);
+        await refreshMyeongsik();
+      } catch (e) {
+        console.error("toggleDeleteMyeongsik failed:", e);
+        throw e;
+      } finally {
+        setSaving(false);
+      }
     },
-    [userId, refreshMyeongsik]
+    [userId, setSaving, refreshMyeongsik]
   );
 
   const goTo = useCallback((url: string) => {
@@ -178,10 +223,7 @@ export function useAdminUserDetailSave({
     toggleDisable,
     handleRestoreAccount,
     handleRestoreAllMyeongsik,
-
-    // ✅ 리턴에 꼭 포함
     handleRestoreMyeongsik,
-
     handleViewAsUser,
     toggleDeleteMyeongsik,
     goTo,
