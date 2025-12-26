@@ -244,11 +244,11 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             <SajuChart data={calc.current as MyeongSik} hourTable={calc.current?.mingSikType ?? "조자시/야자시"} />
           </div>
 
+          <LuckGlobalPicker ms={calc.current as MyeongSik} />
+
           <div>
             <UnMyounTabs data={calc.current as MyeongSik} />
           </div>
-
-          <LuckGlobalPicker ms={calc.current as MyeongSik} />
 
           {showAds && showResult && settings.showPromptBox && (
             <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">

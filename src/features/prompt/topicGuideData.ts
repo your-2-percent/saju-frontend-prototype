@@ -12,6 +12,7 @@ export const BASE_GUIDE_BEGINNER: string[] = [
   "- 출생정보는 초반 문단 안에 자연스럽게 녹여서 설명한다.",
   "- 전문 용어 대신 실제 생활 장면 중심으로 풀어서 설명한다.",
   "- 글머리표 사용 금지, 자연스러운 상담 대화처럼 작성한다.",
+  "- 초등학생도 알아들을 수 있을 정도로 친근하고, 이해하기 쉬운 말투로 쓴다.",
 ];
 
 export const BASE_GUIDE_TEACHER_EVENT: string[] = [
