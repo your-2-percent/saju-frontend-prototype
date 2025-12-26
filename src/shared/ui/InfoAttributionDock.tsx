@@ -17,7 +17,7 @@ export default function InfoAttributionDock() {
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 text-neutral-600 dark:text-neutral-300 hidden desk:block" />
                 <span className="text-xs text-neutral-700 dark:text-neutral-200">
-                  본 서비스의 일부인, <b>인시일수론 및 묘운</b>은 <b>명리학자 현묘 선생님 기법</b> 기반으로 제작되었습니다.
+                  본 서비스의 일부인 인시일수론 및 묘운은 현묘의 관법을 기반으로 제작되었습니다. 
                 </span>
               </div>
             </div>
@@ -30,10 +30,6 @@ export default function InfoAttributionDock() {
           {open && (
             <div className="px-3 pb-3">
               <div className="text-[12px] leading-relaxed text-neutral-700 dark:text-neutral-200">
-                <p>
-                  본 서비스의 일부 계산/표현(예: <b>인시일수론</b>, <b>묘운</b>)은
-                  <b> 현묘 선생님</b>의 기법을 참고하여 구현되었습니다.
-                </p>
                 <p className="mt-1 text-neutral-500 dark:text-neutral-400">
                   ※ 해석은 학파/기준에 따라 차이가 있을 수 있습니다.
                 </p>
