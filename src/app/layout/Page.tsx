@@ -1,5 +1,5 @@
 ﻿// page/Page.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
 import TodaySaju from "@/app/pages/TodaySaju";
 import InputWizard from "@/app/pages/InputApp";
@@ -24,6 +24,9 @@ import { usePageSave } from "@/app/layout/page/save/usePageSave";
 import { useMainAppInput } from "@/app/layout/page/input/useMainAppInput";
 import { useMainAppCalc } from "@/app/layout/page/calc/useMainAppCalc";
 import { useMainAppSave } from "@/app/layout/page/save/useMainAppSave";
+
+// ✅ FAQ
+import FaqPage from "@/app/faq/FaqPage";
 
 // ✅ AdFit
 import { AdfitScriptManager } from "@/shared/ads/AdfitScriptManager";
@@ -127,12 +130,24 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
+  // ✅ FAQ: 라우트 없이 Page에 붙이기
+  const [showFaq, setShowFaq] = useState(false);
+
+  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
+  useEffect(() => {
+    if (input.wizardOpen || input.editing) setShowFaq(false);
+  }, [input.wizardOpen, input.editing]);
+
   // ✅ 광고 노출 여부는 "플랜 문자열"이 아니라 "권한"으로 판단
-  // - shouldShowAdsNow(): !loaded면 true, 만료면 true, canRemoveAds면 false
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   const showResult =
-    calc.hasCurrent && !input.showToday && !input.showCouple && !input.wizardOpen && !input.editing;
+    calc.hasCurrent &&
+    !input.showToday &&
+    !input.showCouple &&
+    !showFaq &&
+    !input.wizardOpen &&
+    !input.editing;
 
   const showLoginNudge = !isLoggedIn && calc.hasCurrent && showResult;
 
@@ -170,10 +185,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           <div className="w-full max-w-[420px] max-h-[90dvh] overflow-auto rounded-2xl">
             <LoginPage />
           </div>
-          <button
-            className="fixed top-4 right-4 text-white text-2xl"
-            onClick={() => setLoginOpen(false)}
-          >
+          <button className="fixed top-4 right-4 text-white text-2xl" onClick={() => setLoginOpen(false)}>
             ×
           </button>
         </div>
@@ -203,6 +215,9 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
+      {/* ✅ FAQ */}
+      {showFaq && <FaqPage onClose={() => setShowFaq(false)} />}
+
       {input.showToday && <TodaySaju />}
 
       {input.wizardOpen && (
@@ -216,7 +231,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </>
       )}
 
-      {calc.hasCurrent && !input.showToday && !input.showCouple && (
+      {calc.hasCurrent && !input.showToday && !input.showCouple && !showFaq && (
         <div className="pt-16">
           {/* ✅ 게스트 + 첫 명식 생성 이후 계속 노출 */}
           {showLoginNudge && (
@@ -226,10 +241,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           )}
 
           <div className="pb-4">
-            <SajuChart
-              data={calc.current as MyeongSik}
-              hourTable={calc.current?.mingSikType ?? "조자시/야자시"}
-            />
+            <SajuChart data={calc.current as MyeongSik} hourTable={calc.current?.mingSikType ?? "조자시/야자시"} />
           </div>
 
           <div>
@@ -299,15 +311,23 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           </div>
         </div>
       )}
-
+      
       <BottomNav
         onShowToday={() => {
+          setShowFaq(false);
           input.setShowToday(true);
           input.setShowCouple(false);
         }}
         onShowCouple={() => {
+          setShowFaq(false);
           input.setShowCouple(true);
           input.setShowToday(false);
+        }}
+        onShowFaq={() => {
+          // ✅ FAQ 켜면 나머지 탭은 꺼버림
+          input.setShowToday(false);
+          input.setShowCouple(false);
+          setShowFaq(true);
         }}
       />
 
