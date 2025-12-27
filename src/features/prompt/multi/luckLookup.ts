@@ -2,6 +2,7 @@
 import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
 import { getYearGanZhi } from "@/shared/domain/간지/공통";
 import type { DaewoonInfo } from "./types";
+import { findSolarTermUTC } from "@/shared/domain/solar-terms";
 
 function getDaeStartDate(d: DaewoonInfo): Date {
   return new Date(d.startYear, (d.startMonth ?? 1) - 1, d.startDay ?? 1);
@@ -12,9 +13,7 @@ function getDaeEndDate(list: DaewoonInfo[], idx: number): Date {
   const next = list[idx + 1];
 
   // 다음 대운 시작 시점까지 현재 대운 유효
-  if (next) {
-    return getDaeStartDate(next);
-  }
+  if (next) return getDaeStartDate(next);
 
   // 마지막 대운: endYear 끝까지라고 보고 +1년 지점까지
   return new Date(cur.endYear + 1, 0, 1);
@@ -84,90 +83,62 @@ export function findDaeForMonthMulti(
   return results;
 }
 
-/**
- * 입춘 날짜 (간단 절기 계산)
- * 정확한 절기 함수가 있으면 그걸로 대체 가능
- */
-function getIpchunDate(year: number): Date {
-  const solarYearMs = 31556925974.7; // 평균 태양년 ms
-  const base = Date.UTC(1900, 1, 4, 7, 15, 0); // 1900-02-04 07:15(UTC) 기준
-  const termIndex = 3; // 입춘
+// ------------------------------
+// ✅ 세운(연도+간지) 페어
+// ------------------------------
+export type SePair = { useYear: number; gz: string };
 
-  const ms = base + (year - 1900) * solarYearMs + (termIndex * solarYearMs) / 24;
-  const utc = new Date(ms);
-  return new Date(utc.getTime() + 9 * 60 * 60 * 1000); // KST(+9)
+/**
+ * 월운용 세운 찾기 (입춘 기준): 이 달이 입춘을 걸치면 2개(전년도/당해년도) 반환
+ * 반환을 "연도+간지"로 묶어서 매칭 사고 방지
+ */
+export function findSeForMonthPairs(year: number, month: number): SePair[] {
+  if (!Number.isInteger(month) || month < 1 || month > 12) {
+    throw new RangeError(`findSeForMonthPairs: month must be 1..12, got ${month}`);
+  }
+
+  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month, 1, 0, 0, 0, 0);
+
+  const ipchun = findSolarTermUTC(year, 315);
+
+  const out: SePair[] = [];
+
+  const pushYear = (useYear: number) => {
+    // 입춘 경계/일자 경계 흔들림 피하려고 6/15 정오 기준 고정
+    const gz = getYearGanZhi(new Date(useYear, 5, 15, 12, 0, 0, 0));
+    const norm = normalizeGZ(gz || "");
+    if (!norm) return;
+
+    if (!out.some((x) => x.useYear === useYear && x.gz === norm)) {
+      out.push({ useYear, gz: norm });
+    }
+  };
+
+  const hasIpchunInThisMonth = start < ipchun && ipchun < end;
+
+  if (!hasIpchunInThisMonth) {
+    if (end <= ipchun) pushYear(year - 1);
+    else pushYear(year);
+  } else {
+    pushYear(year - 1);
+    pushYear(year);
+  }
+
+  return out;
 }
 
 /**
- * 월운용 세운 찾기 - 입춘/12월 교운기까지 포함
+ * 월운용 세운 찾기 - (기존 시그니처 유지) 간지만 반환
+ * ⚠️ 연도 라벨도 같이 써야 하면 findSeForMonthPairs를 써라.
  */
 export function findSeForMonthMulti(year: number, month: number): string[] {
-  const results: string[] = [];
-
-  const monthStart = new Date(year, month - 1, 15, 0, 0, 0);
-  const monthEnd = new Date(year, month, 1, 15, 0, 0);
-
-  const ipchun = getIpchunDate(year);
-
-  const prevGZ = getYearGanZhi(new Date(year - 1, 5, 15));
-  const curGZ = getYearGanZhi(new Date(year, 5, 15));
-  const nextGZ = getYearGanZhi(new Date(year + 1, 5, 15));
-
-  // 1) 입춘 기준 세운
-  if (monthEnd <= ipchun) {
-    // 월 전체가 입춘 이전 (보통 1월)
-    if (prevGZ) {
-      results.push(normalizeGZ(prevGZ));
-    }
-  } else if (monthStart >= ipchun) {
-    // 월 전체가 입춘 이후 (3~11월, 입춘 지난 2월 일부 포함)
-    if (curGZ) {
-      results.push(normalizeGZ(curGZ));
-    }
-  } else {
-    // 이 월 안에 입춘이 끼어 있음 (보통 2월)
-    if (prevGZ) {
-      results.push(normalizeGZ(prevGZ));
-    }
-    if (curGZ) {
-      const norm = normalizeGZ(curGZ);
-      if (!results.includes(norm)) {
-        results.push(norm);
-      }
-    }
-  }
-
-  // 2) 12월 → 다음 해 세운까지 미리 포함
-  if (month === 12 && nextGZ) {
-    const norm = normalizeGZ(nextGZ);
-    if (!results.includes(norm)) {
-      results.push(norm);
-    }
-  }
-
-  return results;
+  return findSeForMonthPairs(year, month).map((x) => x.gz);
 }
 
+/**
+ * (기존) 월운에서 세운 "연도 인덱스"만 필요할 때
+ */
 export function resolveSeYear(year: number, month: number): number[] {
-  const ipchun = getIpchunDate(year);
-  const monthStart = new Date(year, month - 1, 1);
-
-  const years: number[] = [];
-
-  // 1) 입춘 이전 → 전년도 세운
-  if (monthStart < ipchun) {
-    years.push(year - 1);
-  }
-
-  // 2) 입춘 이후 → 당해년도 세운
-  if (monthStart >= ipchun) {
-    years.push(year);
-  }
-
-  // 3) 12월은 다음년도 세운 포함
-  if (month === 12) {
-    years.push(year + 1);
-  }
-
-  return years;
+  return findSeForMonthPairs(year, month).map((x) => x.useYear);
 }
