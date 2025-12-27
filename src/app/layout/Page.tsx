@@ -38,6 +38,8 @@ import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 import LoginNudgeModal from "@/shared/auth/LoginNudgeModal";
 import LoginPage from "@/app/layout/login/page";
 import LoginInlineNudge from "@/shared/auth/LoginInlineNudge";
+import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
+import { AdsenseBanner } from "@/shared/ads/AdsenseBanner";
 
 // =========================
 // ✅ 광고 유닛
@@ -159,6 +161,22 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     <div className="min-h-screen pb-16">
       <AdfitScriptManager enabled={showAds} />
 
+      {showResult && (
+      <AdsenseSideDock
+        enabled
+        clientId="ca-pub-4729618898154189"
+        slotId="1598573921"
+        width={160}
+        height={600}
+        showAfterScrollY={0}
+        side="left"
+        sidePx={16}
+        topPx={120}
+        breakpointClassName="block"
+        testMode={true}
+      />
+      )}
+
       <div className="hidden desk:block">
         <AdfitSideDock
           enabled={showAds}
@@ -168,7 +186,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           showAfterScrollY={0}
           rightPx={16}
           topPx={120}
-          breakpointClassName="hidden xl:block"
+          breakpointClassName="hidden desk:block"
         />
       </div>
 
@@ -252,12 +270,16 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           {showAds && showResult && settings.showPromptBox && (
             <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
-              <div className="hidden md:block">
-                <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
-              </div>
-              <div className="md:hidden">
-                <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
-              </div>
+              <AdsenseBanner
+                enabled={true}
+                clientId="ca-pub-4729618898154189"
+                slotId="3868873416"
+                heightPx={100}
+                maxWidthPx={750}
+                marginTopPx={10}
+                fullWidthResponsive={true}
+                testMode={false}  // 배포에서는 false
+              />
             </div>
           )}
 

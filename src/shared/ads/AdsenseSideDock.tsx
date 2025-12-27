@@ -1,31 +1,45 @@
-// src/shared/ads/AdfitSideDock.tsx
+// src/shared/ads/AdsenseSideDock.tsx
 import { useEffect, useState } from "react";
-import { AdfitSlot } from "./AdfitSlot";
+import { AdsenseFixedSlot } from "./AdsenseFixedSlot";
 
 type Props = {
   enabled: boolean;
 
-  adUnit: string;
+  clientId: string;
+  slotId: string;
+
   width: number;
   height: number;
 
   showAfterScrollY?: number;
 
-  rightPx?: number;
+  /** left/right 어디에 붙일지 */
+  side?: "left" | "right";
+  sidePx?: number;
   topPx?: number;
 
   breakpointClassName?: string;
+
+  testMode?: boolean;
 };
 
-export function AdfitSideDock({
+export function AdsenseSideDock({
   enabled,
-  adUnit,
+  clientId,
+  slotId,
+
   width,
   height,
+
   showAfterScrollY = 180,
-  rightPx = 16,
+
+  side = "left",
+  sidePx = 16,
   topPx = 120,
+
   breakpointClassName = "hidden desk:block",
+
+  testMode = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activated, setActivated] = useState(false);
@@ -37,7 +51,7 @@ export function AdfitSideDock({
       return;
     }
 
-    // ✅ 스크립트 워밍업(boot)은 미리 시작
+    // ✅ 스크립트 워밍업은 미리
     setActivated(true);
 
     let raf = 0;
@@ -51,9 +65,7 @@ export function AdfitSideDock({
       });
     };
 
-    // 최초 1회 체크
     check();
-
     window.addEventListener("scroll", check, { passive: true });
 
     return () => {
@@ -69,12 +81,12 @@ export function AdfitSideDock({
       className={breakpointClassName}
       style={{
         position: "fixed",
-        right: rightPx,
+        ...(side === "left" ? { left: sidePx } : { right: sidePx }),
         top: topPx,
         zIndex: 60,
         pointerEvents: "none",
 
-        // ✅ display:none 금지: DOM 살아있게 유지(전환 빠름)
+        // ✅ display:none 금지
         visibility: open ? "visible" : "hidden",
         opacity: open ? 1 : 0,
         transition: "opacity 150ms ease",
@@ -89,14 +101,17 @@ export function AdfitSideDock({
             padding: 8,
           }}
         >
-          <AdfitSlot
-            enabled={activated}
-            isVisible={open} // ✅ 보일 때만 scan
-            adUnit={adUnit}
-            width={width}
-            height={height}
-            wrapperStyle={{ display: "flex", justifyContent: "center" }}
-          />
+          <div style={{ display: "flex", justifyContent: "center" }}>
+            <AdsenseFixedSlot
+              enabled={activated}
+              isVisible={open}
+              clientId={clientId}
+              slotId={slotId}
+              width={width}
+              height={height}
+              testMode={testMode}
+            />
+          </div>
         </div>
       </div>
     </div>
