@@ -171,7 +171,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         showAfterScrollY={0}
         side="left"
         sidePx={16}
-        topPx={120}
+        topPx={60}
         breakpointClassName="hidden desk:block"
       />
       )}
@@ -184,7 +184,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           height={600}
           showAfterScrollY={0}
           rightPx={16}
-          topPx={120}
+          topPx={60}
           breakpointClassName="hidden desk:block"
         />
       </div>
