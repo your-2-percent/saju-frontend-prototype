@@ -22,6 +22,7 @@ export function buildSeYearSections(params: {
   show: LuckShowToggles;
   shinsalSettings: ShinsalSettings;
 }): string[] {
+  
   const {
     seYears,
     daeList,
@@ -36,17 +37,22 @@ export function buildSeYearSections(params: {
 
   if (seYears.length === 0) return [];
 
+  // ✅ 혹시 seYears에 중복이 섞여 들어오면 바로 정리
+  const years = Array.from(new Set(seYears)).sort((a, b) => a - b);
+
   const out: string[] = [];
 
-  const rangeStartYear = seYears[0];
-  const rangeEndYear = seYears[seYears.length - 1];
+  const rangeStartYear = years[0];
+  const rangeEndYear = years[years.length - 1];
 
   const daesForRange = findDaeForYearRangeMulti(daeList, rangeStartYear, rangeEndYear);
 
   // (3-1) 세운 탭 상단: 대운 요약
   if (daesForRange.length > 0) {
     const refYear = rangeStartYear;
-    const seGZRef = getYearGanZhi(new Date(refYear, 5, 15));
+
+    // ✅ 입춘 이슈 피하려고 6월 기준으로 고정(정상)
+    const seGZRef = getYearGanZhi(new Date(refYear, 5, 15, 12, 0, 0));
     const seNormRef = normalizeGZ(seGZRef || "");
 
     const daeSectionData = {
@@ -86,13 +92,18 @@ export function buildSeYearSections(params: {
   }
 
   // (3-2) 세운 연도별 리스트
-  for (const year of seYears) {
-    const seGZ = getYearGanZhi(new Date(year, 5, 15));
+  for (const year of years) {
+    // ✅ 입춘 경계 피하는 기준일(6/15 정오)
+    const seDate = new Date(year, 5, 15, 12, 0, 0);
+    const seGZ = getYearGanZhi(seDate);
+
     const daesAtYear = findDaeForYearMulti(daeList, year);
     const mainDaeForYear = daesAtYear.length > 0 ? daesAtYear[0] : null;
 
     const seNorm = normalizeGZ(seGZ || "");
 
+    // ✅ 여기서 resolveYearIndex 쓰지 마: 이미 year 자체가 “세운 연도 인덱스”임
+    const displayYear = year;
     const chain: LuckChain = {
       dae: mainDaeForYear ? mainDaeForYear.gz : null,
       se: seNorm || null,
@@ -102,7 +113,7 @@ export function buildSeYearSections(params: {
 
     const seBlock = buildLuckBlock({
       scope: "세운",
-      infoText: `${year}년 ${seNorm}`,
+      infoText: `${displayYear}년 ${seNorm}`,
       gz: seNorm,
       chain,
       natal,
@@ -122,7 +133,7 @@ export function buildSeYearSections(params: {
       includeBasicInfo: true,
     });
 
-    out.push(sectionPlain(`세운 ${year}`, { 세운: seBlock }));
+    out.push(sectionPlain(`세운 ${displayYear}`, { 세운: seBlock }));
   }
 
   return out.filter((s) => s.trim().length > 0);

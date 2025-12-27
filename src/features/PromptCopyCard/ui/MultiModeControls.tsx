@@ -177,7 +177,7 @@ export default function MultiModeControls({
       {multiTab === "일운" && (
         <div>
           <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
-            일운 범위 (최대 30일)
+            일운 범위 (최대 7일)
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
