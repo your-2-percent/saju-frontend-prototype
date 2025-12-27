@@ -172,8 +172,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         side="left"
         sidePx={16}
         topPx={120}
-        breakpointClassName="block"
-        testMode={true}
+        breakpointClassName="hidden desk:block"
       />
       )}
 

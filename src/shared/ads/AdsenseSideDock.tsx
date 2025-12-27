@@ -20,7 +20,6 @@ type Props = {
 
   breakpointClassName?: string;
 
-  testMode?: boolean;
 };
 
 export function AdsenseSideDock({
@@ -39,7 +38,6 @@ export function AdsenseSideDock({
 
   breakpointClassName = "hidden desk:block",
 
-  testMode = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activated, setActivated] = useState(false);
@@ -109,7 +107,6 @@ export function AdsenseSideDock({
               slotId={slotId}
               width={width}
               height={height}
-              testMode={testMode}
             />
           </div>
         </div>
