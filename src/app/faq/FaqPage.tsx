@@ -17,10 +17,10 @@ export default function FaqPage() {
 
         <div className="space-y-3">
           <details className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
-            <summary className="cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
+            <summary className="text-sm desk:text-base cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
               Q. 십이신살이 다르게 나와요.
             </summary>
-            <div className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
+            <div className="mt-3 text-xs desk:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
               <p>
                 A. 십이신살은 <b>‘일지’</b>와 <b>‘연지’</b> 두개의 기준이 존재합니다. 이는 학파마다 다르며,
                 두개를 다보시는 학파들도 있습니다.
@@ -36,10 +36,10 @@ export default function FaqPage() {
           </details>
 
           <details className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
-            <summary className="cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
+            <summary className="text-sm desk:text-base cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
               Q. 대운수가 다른 앱과 다르게 나와요.
             </summary>
-            <div className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
+            <div className="mt-3 text-xs desk:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
               <p>
                 A. 대운수 계산법은 앱마다 다릅니다. <b>천*귀인</b>, <b>8*어때</b> 두개만 비교해도 다르게
                 나옵니다.
@@ -59,12 +59,12 @@ export default function FaqPage() {
           </details>
 
           <details className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
-            <summary className="cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
+            <summary className="text-sm desk:text-base cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
               Q. 용신 추천이 제 생각과 달라요.
             </summary>
-            <div className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
+            <div className="mt-3 text-xs desk:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
               <p>
-                A. 그런 상황이 있을 수밖에 없습니다. 용신추천은 만세력을 기반으로 간지들의 유기적 흐름에 따라
+                A. 그런 상황이 있을 수밖에 없습니다. 용신추천은 만세력을 기반으로 간지들의 유기적 흐름에 따른
                 로직으로 계산되었습니다만, 이것은 자동화 시스템이지 사람이 간명한 것이 아닙니다.
               </p>
               <p className="mt-2">
@@ -78,10 +78,10 @@ export default function FaqPage() {
           </details>
 
           <details className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
-            <summary className="cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
+            <summary className="text-sm desk:text-base cursor-pointer select-none font-semibold text-neutral-900 dark:text-neutral-100">
               Q. 설정에 '개화론'이 있던데 그게 뭔가요?
             </summary>
-            <div className="mt-3 text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
+            <div className="mt-3 text-xs desk:text-sm leading-relaxed text-neutral-700 dark:text-neutral-200">
               <p>
                 A. 십이신살의 현대적인 관법이라고 볼 수 있습니다.
               </p>
