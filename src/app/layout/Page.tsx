@@ -151,6 +151,11 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     !input.wizardOpen &&
     !input.editing;
 
+  // ✅ 핵심: 명식이 하나도 없으면(=hasCurrent=false) Today를 기본 화면으로 보여주기
+  const effectiveShowToday =
+    input.showToday ||
+    (!calc.hasCurrent && !input.showCouple && !showFaq && !input.wizardOpen && !input.editing);
+
   const showLoginNudge = !isLoggedIn && calc.hasCurrent && showResult;
 
   const showLoginNot = !isLoggedIn && !showResult;
@@ -162,18 +167,18 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       <AdfitScriptManager enabled={showAds} />
 
       {showAds && showResult && (
-      <AdsenseSideDock
-        enabled
-        clientId="ca-pub-4729618898154189"
-        slotId="1598573921"
-        width={160}
-        height={600}
-        showAfterScrollY={0}
-        side="left"
-        sidePx={16}
-        topPx={60}
-        breakpointClassName="hidden desk:block"
-      />
+        <AdsenseSideDock
+          enabled
+          clientId="ca-pub-4729618898154189"
+          slotId="1598573921"
+          width={160}
+          height={600}
+          showAfterScrollY={0}
+          side="left"
+          sidePx={16}
+          topPx={60}
+          breakpointClassName="hidden desk:block"
+        />
       )}
 
       <div className="hidden desk:block">
@@ -227,7 +232,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       />
 
       {showLoginNot && (
-        <div className="absolute w-full l-0 mt-14 desk:mt-16 text-xs desk:text-base text-amber-500 dark:text-amber-400 text-center">
+        <div className="absolute w-full left-0 mt-14 desk:mt-16 text-xs desk:text-base text-amber-500 dark:text-amber-400 text-center">
           로그아웃 중입니다. 로그인 후 사용을 권장합니다.
         </div>
       )}
@@ -235,7 +240,8 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       {/* ✅ FAQ */}
       {showFaq && <FaqPage />}
 
-      {input.showToday && <TodaySaju />}
+      {/* ✅ Today: 명식 없으면 기본으로 띄우기 */}
+      {effectiveShowToday && <TodaySaju />}
 
       {input.wizardOpen && (
         <>
@@ -277,7 +283,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
                 maxWidthPx={750}
                 marginTopPx={10}
                 fullWidthResponsive={true}
-                testMode={false}  // 배포에서는 false
+                testMode={false} // 배포에서는 false
               />
             </div>
           )}
@@ -332,7 +338,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           </div>
         </div>
       )}
-      
+
       <BottomNav
         onShowToday={() => {
           setShowFaq(false);
