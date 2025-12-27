@@ -210,28 +210,30 @@ export default function AdminUserListPage() {
 
           return (
             <div key={r.user_id} className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg hover:bg-neutral-800">
-              <div className="font-semibold text-lg flex items-center justify-between gap-3">
-                <div className="min-w-0 flex items-center gap-2">
+              <div className="font-semibold text-lg flex flex-col desk:flex-row item-start desk:items-center justify-between gap-3">
+                <div className="min-w-0 flex flex-col desk:flex-row item-start desk:items-center gap-2">
                   <span className="text-nowrap mr-1">{displayName}</span>
-                  {email ? <span className="text-sm text-neutral-400 truncate">({email})</span> : null}
+                  {email ? <span className="text-sm text-neutral-400">({email})</span> : null}
 
-                  <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                      online
-                        ? "bg-emerald-900/40 border-emerald-700 text-emerald-300"
-                        : "bg-neutral-800 border-neutral-700 text-neutral-300"
-                    }`}
-                    title={lastSeenAt ? new Date(lastSeenAt).toLocaleString() : "기록 없음"}
-                  >
-                    {online ? "온라인" : "오프라인"} · {formatLastSeen(lastSeenAt)}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`text-[11px] px-2 py-0.5 rounded-full border ${
+                        online
+                          ? "bg-emerald-900/40 border-emerald-700 text-emerald-300"
+                          : "bg-neutral-800 border-neutral-700 text-neutral-300"
+                      }`}
+                      title={lastSeenAt ? new Date(lastSeenAt).toLocaleString() : "기록 없음"}
+                    >
+                      {online ? "온라인" : "오프라인"} · {formatLastSeen(lastSeenAt)}
+                    </span>
 
-                  <span
-                    className="text-[11px] px-2 py-0.5 rounded-full border bg-neutral-800 border-neutral-700 text-neutral-300"
-                    title="누적 접속시간"
-                  >
-                    누적 {formatTotalActiveMs(totalActiveMs)}
-                  </span>
+                    <span
+                      className="text-[11px] px-2 py-0.5 rounded-full border bg-neutral-800 border-neutral-700 text-neutral-300"
+                      title="누적 접속시간"
+                    >
+                      누적 {formatTotalActiveMs(totalActiveMs)}
+                    </span>
+                  </div>
                 </div>
 
                 <span className="text-neutral-500 text-sm shrink-0">{r.user_id}</span>
@@ -250,23 +252,24 @@ export default function AdminUserListPage() {
 
               <div className="mt-3 flex flex-col gap-2">
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-xs text-neutral-400">시작</label>
-                  <input
-                    type="date"
-                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
-                    value={draft.startDate}
-                    onChange={(e) => setDraft(r.user_id, { startDate: e.target.value })}
-                  />
+                  <div className="mb-1">
+                    
+                    <input
+                      type="date"
+                      className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                      value={draft.startDate}
+                      onChange={(e) => setDraft(r.user_id, { startDate: e.target.value })}
+                    />
 
-                  <span className="text-neutral-500">~</span>
+                    <span className="text-neutral-500 mx-1">~</span>
 
-                  <label className="text-xs text-neutral-400">종료</label>
-                  <input
-                    type="date"
-                    className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
-                    value={draft.endDate}
-                    onChange={(e) => setDraft(r.user_id, { endDate: e.target.value })}
-                  />
+                    <input
+                      type="date"
+                      className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
+                      value={draft.endDate}
+                      onChange={(e) => setDraft(r.user_id, { endDate: e.target.value })}
+                    />
+                  </div>
 
                   <select
                     className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
