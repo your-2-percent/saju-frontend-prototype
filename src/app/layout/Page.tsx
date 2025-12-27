@@ -161,7 +161,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     <div className="min-h-screen pb-16">
       <AdfitScriptManager enabled={showAds} />
 
-      {showResult && (
+      {showAds && showResult && (
       <AdsenseSideDock
         enabled
         clientId="ca-pub-4729618898154189"
