@@ -65,19 +65,6 @@ function formatPlaceDisplay(name?: string): string {
   return name;
 }
 
-function formatCorrectedDisplay(
-  correctedLocal: string | null | undefined,
-  corrected: Date,
-  isUnknownTime: boolean
-): string {
-  if (isUnknownTime) return UNKNOWN_TIME;
-  const local = (correctedLocal ?? "").trim();
-  if (local) return local;
-  const dt = corrected instanceof Date ? corrected : new Date(corrected);
-  if (Number.isNaN(dt.getTime())) return "";
-  return formatLocalHM(dt);
-}
-
 function getGanjiString(m: MyeongSik): string {
   return (m.ganji ?? "").replace(/\r\n/g, "\n").replace(/\s*null\s*/gi, "").trim();
 }
@@ -142,6 +129,55 @@ function formatGenderLabel(gender?: string | null): string {
   return gender ?? "";
 }
 
+function shiftHHMMMinus1(v: string): string | null {
+  const s = v.trim();
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s);
+  if (!m) return null;
+
+  const hh = Number(m[1]);
+  const mm = Number(m[2]);
+  if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null;
+  if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null;
+
+  const nextH = hh - 1 < 0 ? 23 : hh - 1;
+  return `${String(nextH).padStart(2, "0")}:${String(mm).padStart(2, "0")}`;
+}
+
+function getCorrectedLabelWithDST(m: MyeongSik, isUnknownTime: boolean): string {
+  if (isUnknownTime) return UNKNOWN_TIME;
+
+  const rawDay = String(m.birthDay ?? "").trim();
+  const local = String(m.correctedLocal ?? "").trim();
+
+  const baseCorrected =
+    m.corrected instanceof Date ? m.corrected : new Date(String(m.corrected ?? ""));
+
+  const baseValid = !Number.isNaN(baseCorrected.getTime());
+
+  // 기존 표시 규칙(= correctedLocal 우선) 그대로 fallback으로 잡아두고
+  const fallback = local ? local : baseValid ? formatLocalHM(baseCorrected) : "";
+
+  // DST 적용 조건이 안 맞으면 그대로
+  if (!/^\d{8}$/.test(rawDay)) return fallback;
+
+  const y = Number(rawDay.slice(0, 4));
+  const mo = Number(rawDay.slice(4, 6));
+  const da = Number(rawDay.slice(6, 8));
+
+  if (!isDST(y, mo, da)) return fallback;
+  if (!m.birthTime || m.birthTime === UNKNOWN_TIME) return fallback;
+
+  // ✅ DST 날짜면 보정시각도 -1시간 해서 보여주기
+  if (baseValid) {
+    const shifted = new Date(baseCorrected.getTime() - 60 * 60 * 1000);
+    return formatLocalHM(shifted);
+  }
+
+  // Date가 깨져있을 때만 로컬 문자열에서 -1h 시도
+  const shiftedLocal = shiftHHMMMinus1(local);
+  return shiftedLocal ?? fallback;
+}
+
 export function useMyeongsikCardCalc({
   m,
   memoOpen,
@@ -157,7 +193,7 @@ export function useMyeongsikCardCalc({
   const genderLabel = formatGenderLabel(m.gender);
 
   const isUnknownTime = !m.birthTime || m.birthTime === UNKNOWN_TIME;
-  const correctedLabel = formatCorrectedDisplay(m.correctedLocal, m.corrected, isUnknownTime);
+  const correctedLabel = getCorrectedLabelWithDST(m, isUnknownTime);
   const showMetaLine = Boolean(placeDisplay || correctedLabel);
 
   const birthDisplay = formatBirthDisplay(m.birthDay, m.birthTime);

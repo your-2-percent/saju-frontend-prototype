@@ -109,12 +109,6 @@ export default function SajuChart({ data, hourTable }: Props) {
     setParsed(parseMyeongSik(data, useDST));
   }, [data, useDST]);
 
-  const correctedLabel = formatCorrectedDisplay(
-    data.correctedLocal,
-    parsed.corrected,
-    unknownTime
-  );
-
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
   const dayStem = parsed.day.stem as Stem10sin;
 
@@ -177,6 +171,24 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   const showDSTButton = isDST(solarY, solarM, solarD);
   const handleDSTToggle = () => setUseDST((prev: boolean) => !prev);
+
+  const correctedBase = useMemo(() => {
+    const dt =
+      data.corrected instanceof Date ? data.corrected : new Date(String(data.corrected ?? ""));
+    if (!Number.isNaN(dt.getTime())) return dt;
+    return parsed.corrected;
+  }, [data.corrected, parsed.corrected]);
+
+  const correctedForDisplay = useMemo(() => {
+    if (!correctedBase) return correctedBase;
+    if (showDSTButton && useDST) return new Date(correctedBase.getTime() - 60 * 60 * 1000);
+    return correctedBase;
+  }, [correctedBase, showDSTButton, useDST]);
+
+  const correctedLabel = useMemo(() => {
+    const local = showDSTButton && useDST ? "" : data.correctedLocal; // ✅ DST ON이면 correctedLocal 무시
+    return formatCorrectedDisplay(local, correctedForDisplay ?? new Date(), unknownTime);
+  }, [data.correctedLocal, correctedForDisplay, unknownTime, showDSTButton, useDST]);
 
   const luck = useGlobalLuck(data, hourTable, date);
   const daeGz = luck.dae.gz;
