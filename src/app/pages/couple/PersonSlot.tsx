@@ -145,7 +145,7 @@ export function PersonSlot({
           <span className="ml-1 text-neutral-500 dark:text-neutral-400">· {titleGender}</span>
         )}
         {titleBirth && (
-          <span className="block desk:inline-block mt-1 text-neutral-500 dark:text-neutral-400 text-[10px]">
+          <span className="block mt-1 text-neutral-500 dark:text-neutral-400 text-[10px]">
             {titleBirth}
           </span>
         )}

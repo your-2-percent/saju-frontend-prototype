@@ -1,5 +1,7 @@
 ﻿// features/sidebar/components/Sidebar.tsx
-import { DragDropContext, Droppable } from "@hello-pangea/dnd";
+import { useState } from "react";
+import { flushSync } from "react-dom";
+import { DragDropContext, Droppable, type DropResult } from "@hello-pangea/dnd";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useSidebarLogic } from "@/features/sidebar/lib/sidebarLogic";
@@ -32,8 +34,10 @@ export default function Sidebar({
   onAddNew,
   onEdit,
   onDeleteView,
-  isLoggedIn
+  isLoggedIn,
 }: SidebarProps) {
+  const [isDragging, setIsDragging] = useState(false);
+
   const {
     list,
     remove,
@@ -41,6 +45,7 @@ export default function Sidebar({
     moveItemByDnD,
     toggleFavoriteWithReorder,
     unsetFolderForFolder,
+    applyNextList,
   } = useMyeongSikStore();
 
   const {
@@ -53,7 +58,7 @@ export default function Sidebar({
     orderedFolders,
     grouped,
     unassignedItems,
-    handleDragEnd,
+    handleDragEnd: handleFolderDragEnd,
     createFolder,
     deleteFolder,
     UNASSIGNED_LABEL,
@@ -70,9 +75,11 @@ export default function Sidebar({
   });
 
   const save = useSidebarSave({
+    list,                 // ✅ 추가
+    applyNextList,        // ✅ 추가
     orderedFolders,
     isFiltering,
-    handleFolderDragEnd: handleDragEnd,
+    handleFolderDragEnd: handleFolderDragEnd,
     moveItemByDnD,
     update,
     remove,
@@ -89,18 +96,34 @@ export default function Sidebar({
     stashScrollTop: input.stashScrollTop,
   });
 
+  const handleBeforeDragStart = () => {
+    setIsDragging(true);
+  };
+
+  const handleDndDragEnd = (result: DropResult) => {
+    // ✅ 핵심: drop 애니메이션이 "원위치 복귀"로 잡히기 전에
+    // reorder(=save.handleDrop 내 상태변경)를 같은 tick에 커밋해야 flicker가 사라짐.
+    flushSync(() => {
+      setIsDragging(false);
+
+      // IMPORTANT:
+      // onDragEnd에서는 절대 await 걸지 말고(=한 프레임 미루지 말고)
+      // 즉시 상태 반영을 먼저 하고, 저장/토스트 같은 부수효과는 내부에서 비동기로 처리해.
+      void save.handleDrop(result);
+    });
+  };
+
   const openLoginModal = () => {
-      useLoginNudgeStore.getState().openWith("HEADER");
-    };
+    useLoginNudgeStore.getState().openWith("HEADER");
+  };
 
   return (
     <>
+      <style>{`[data-rbd-drag-handle-context-id]{touch-action:none!important}`}</style>
       {/* Overlay */}
       <div
         className={`fixed inset-0 bg-black/70 transition-opacity duration-300 z-100 ${
-          open
-            ? "opacity-100 pointer-events-auto"
-            : "opacity-0 pointer-events-none"
+          open ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
         onClick={onClose}
       />
@@ -119,19 +142,18 @@ export default function Sidebar({
           onAddNew={() => {
             onAddNew();
             onClose();
-          } }
+          }}
           onLogin={() => {
-            // 여기서 “로그인 화면/로그인 모달” 여는 함수 연결
             openLoginModal();
-          } } 
-          isLoggedIn={isLoggedIn}        
+          }}
+          isLoggedIn={isLoggedIn}
         />
 
-        <DragDropContext onDragEnd={save.handleDrop}>
+        <DragDropContext onBeforeDragStart={handleBeforeDragStart} onDragEnd={handleDndDragEnd}>
           <div
             ref={input.scrollRef}
             className="p-4 h-[calc(100%-56px)] overflow-y-auto overscroll-contain"
-            style={{ touchAction: "pan-y" }}
+            style={{ touchAction: isDragging ? "none" : "pan-y" }}
           >
             <SidebarSearchBar
               search={input.search}
@@ -168,14 +190,12 @@ export default function Sidebar({
                   onView={save.viewAndClose}
                   onEdit={(x) => onEdit(x)}
                   onDelete={save.requestDelete}
-                  onToggleFavorite={(id) =>
-                    void toggleFavoriteWithReorder(id, orderedFolders)
-                  }
+                  onToggleFavorite={(id) => void toggleFavoriteWithReorder(id, orderedFolders)}
                 />
               ))}
             />
 
-            {/* ?´ë” ?¹ì…˜??*/}
+            {/* Folders */}
             <Droppable
               droppableId="folders:root"
               type="FOLDER"
@@ -243,5 +263,3 @@ export default function Sidebar({
     </>
   );
 }
-
-
