@@ -162,6 +162,14 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   const [loginOpen, setLoginOpen] = useState(false);
 
+  const handleSidebarView: typeof save.handleSidebarView = (...args) => {
+    setShowFaq(false);
+    input.setShowToday(false);
+    input.setShowCouple(false);
+    save.handleSidebarView(...args);
+  };
+
+
   return (
     <div className="min-h-screen pb-16">
       <AdfitScriptManager enabled={showAds} />
@@ -224,7 +232,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       <Sidebar
         open={input.showSidebar}
         onClose={() => input.setShowSidebar(false)}
-        onView={save.handleSidebarView}
+        onView={handleSidebarView}
         onAddNew={save.openAdd}
         onEdit={save.handleSidebarEdit}
         onDeleteView={save.handleSidebarDeleteView}
