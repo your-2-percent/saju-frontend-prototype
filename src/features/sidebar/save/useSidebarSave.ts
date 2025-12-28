@@ -1,10 +1,12 @@
-﻿import { useCallback, type Dispatch, type SetStateAction } from "react";
+﻿// features/sidebar/save/useSidebarSave.ts
+import { useCallback, type Dispatch, type SetStateAction } from "react";
 import type { DropResult } from "@hello-pangea/dnd";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
 import { decodeListIdToFolder } from "@/features/sidebar/calc/dndIds";
 import { emitFolderEvent } from "@/features/sidebar/saveInterface/folderEvents";
+import { moveByFolderSelect } from "@/shared/domain/myeongsikList/calc/folders";
 
 type BoolMap = Record<string, boolean>;
 
@@ -17,10 +19,17 @@ type MoveItemByDnDArgs = {
 };
 
 type UseSidebarSaveArgs = {
+  // ✅ 추가: 현재 list 필요
+  list: MyeongSik[];
+
   orderedFolders: string[];
   isFiltering: boolean;
   handleFolderDragEnd: (r: DropResult) => void;
   moveItemByDnD: (args: MoveItemByDnDArgs) => Promise<void> | void;
+
+  // ✅ 추가: list를 통째로 교체 + 저장까지 해주는 store 함수
+  applyNextList: (nextList: MyeongSik[]) => Promise<void> | void;
+
   update: (id: string, patch: Partial<MyeongSik>) => void;
   remove: (id: string) => void;
   onView: (m: MyeongSik) => void;
@@ -49,10 +58,12 @@ type SidebarSave = {
 };
 
 export const useSidebarSave = ({
+  list,
   orderedFolders,
   isFiltering,
   handleFolderDragEnd,
   moveItemByDnD,
+  applyNextList,
   update,
   remove,
   onView,
@@ -67,11 +78,19 @@ export const useSidebarSave = ({
   setNewFolderName,
   stashScrollTop,
 }: UseSidebarSaveArgs): SidebarSave => {
+  // ✅ 핵심 수정: 셀렉트 폴더 변경은 update() 금지
   const changeFolder = useCallback(
     (id: string, folder: string | undefined) => {
-      update(id, { folder });
+      const { nextList } = moveByFolderSelect({
+        list,
+        orderedFolders,
+        targetId: id,
+        nextFolder: folder ?? "",
+      });
+
+      void applyNextList(nextList);
     },
-    [update]
+    [list, orderedFolders, applyNextList]
   );
 
   const changeMingSikType = useCallback(
@@ -113,16 +132,10 @@ export const useSidebarSave = ({
   const requestDeleteFolder = useCallback(
     (folderName: string) => {
       if (folderFavMap[folderName]) {
-        alert(
-          `'${folderName}' 폴더는 즐겨찾기 중입니다.\n즐겨찾기 해제 후 삭제해주세요.`
-        );
+        alert(`'${folderName}' 폴더는 즐겨찾기 중입니다.\n즐겨찾기 해제 후 삭제해주세요.`);
         return;
       }
-      if (
-        !confirm(
-          `'${folderName}' 폴더를 삭제할까요?\n(소속 명식은 미분류로 이동합니다)`
-        )
-      ) {
+      if (!confirm(`'${folderName}' 폴더를 삭제할까요?\n(소속 명식은 미분류로 이동합니다)`)) {
         return;
       }
       deleteFolder(folderName);
@@ -174,13 +187,7 @@ export const useSidebarSave = ({
         });
       }
     },
-    [
-      isFiltering,
-      stashScrollTop,
-      handleFolderDragEnd,
-      moveItemByDnD,
-      orderedFolders,
-    ]
+    [isFiltering, stashScrollTop, handleFolderDragEnd, moveItemByDnD, orderedFolders]
   );
 
   return {

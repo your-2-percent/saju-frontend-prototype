@@ -77,6 +77,7 @@ export type MyeongSikStore = {
   remove: (id: string) => Promise<void>;
 
   moveItemByDnD: (args: MoveItemArgs) => Promise<void>;
+  applyNextList: (nextList: MyeongSikWithOrder[]) => Promise<void>;
   toggleFavoriteWithReorder: (id: string, orderedFolders: string[]) => Promise<void>;
   unsetFolderForFolder: (folderName: string) => Promise<void>;
   reorder: (newList: MyeongSikWithOrder[]) => Promise<void>;
@@ -271,19 +272,51 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   },
 
   moveItemByDnD: async (args) => {
-    const user = await repo.getUser();
-    if (user && !canManageNowOrWarn()) return;
+    const prevList = get().list;
 
     const v2 = toDnDArgs(args);
     const result = moveByDnD({
-      list: get().list,
+      list: prevList,
       orderedFolders: v2.orderedFolders,
       source: v2.source,
       destination: v2.destination,
     });
 
     const nextList = result.nextList;
+
+    // ✅ 1) UI 반영은 무조건 즉시(동기)
     set({ list: nextList });
+
+    // ✅ 2) 그 다음부터 느린 작업(권한/저장)
+    const user = await repo.getUser();
+
+    // 로그인 유저인데 권한 없으면 원복
+    if (user && !canManageNowOrWarn()) {
+      set({ list: prevList });
+      return;
+    }
+
+    if (!user) {
+      saveGuestList(nextList);
+      return;
+    }
+
+    await get().reorder(nextList);
+  },
+
+  applyNextList: async (nextList: MyeongSik[]) => {
+    const prevList = get().list;
+
+    // ✅ UI는 즉시
+    set({ list: nextList });
+
+    const user = await repo.getUser();
+
+    // ✅ 로그인인데 권한 없으면 원복
+    if (user && !canManageNowOrWarn()) {
+      set({ list: prevList });
+      return;
+    }
 
     if (!user) {
       saveGuestList(nextList);
