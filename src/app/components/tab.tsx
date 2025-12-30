@@ -75,7 +75,7 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   }, [correctedSolar, data?.mingSikType, data?.birthPlace?.lon, isUnknownTime]);
 
   return (
-    <div className="w-[96%] max-w-[640px] mx-auto">
+    <div className="w-[calc(100%_-_16px)] max-w-[625px] desk:max-w-[640px] mx-auto">
       {/* 탭 버튼 */}
       <div className="flex border-b border-neutral-700 mb-4">
         <button

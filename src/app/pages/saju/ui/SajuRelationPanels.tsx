@@ -363,7 +363,7 @@ type PillarChipColumnProps = {
 
 function PillarChipColumn({ title, tags, activeTag, onToggle }: PillarChipColumnProps) {
   return (
-    <div className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-800 p-1 desk:p-2">
+    <div className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-800 p-2">
       <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">{title}</div>
       {tags.length === 0 ? (
         <div className="text-[11px] text-neutral-400 text-center">없음</div>

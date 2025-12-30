@@ -180,7 +180,7 @@ export default function ShinsalTagPanel({
       <div className="text-base font-bold mb-1">신살(길신/흉살)</div>
 
       {/* 기준 선택 UI */}
-      <div className="flex flex-wrap items-center gap-3 text-xs">
+      <div className="flex flex-wrap justify-center items-center gap-3 text-xs">
         <div className="flex items-center gap-2">
           <label className="text-neutral-600 dark:text-neutral-300">공망 기준</label>
           <select

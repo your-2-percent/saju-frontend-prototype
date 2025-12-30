@@ -50,7 +50,7 @@ export default function LuckGlobalPicker({
   };
 
   return (
-    <div className="max-w-[640px] mx-auto mb-4 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-3 space-y-3">
+    <div className="w-[calc(100%_-_16px)] max-w-[625px] desk:max-w-[640px] mx-auto mb-4 px-2 rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-3 space-y-3">
       {/* 상단: 원국 + 운 */}
       {titleLine && (
         <div className="text-center text-sm font-medium text-neutral-800 dark:text-neutral-200">
