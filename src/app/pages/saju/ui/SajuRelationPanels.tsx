@@ -368,7 +368,7 @@ function PillarChipColumn({ title, tags, activeTag, onToggle }: PillarChipColumn
       {tags.length === 0 ? (
         <div className="text-[11px] text-neutral-400 text-center">없음</div>
       ) : (
-        <div className="flex flex-row desk:flex-col gap-1">
+        <div className="flex flex-row flex-wrap desk:flex-col gap-1">
           {tags.map((tag) => {
             const isActive = activeTag === tag;
             return (
