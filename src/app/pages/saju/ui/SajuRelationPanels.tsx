@@ -50,7 +50,10 @@ export function SajuRelationPanels({
             <button
               type="button"
               onClick={() => setIsRelationOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
+              className={[
+                "w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 cursor-pointer",
+                isRelationOpen ? "mb-1" : "mb-0",
+              ].join(" ")}
             >
               <span>형충회합</span>
               <span className="text-[10px]">{isRelationOpen ? "접기" : "펼치기"}</span>
@@ -80,7 +83,7 @@ export function SajuRelationPanels({
                     }}
                   >
                     <div
-                      className="order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
+                      className="border-t border-neutral-200 dark:border-neutral-800 pt-2 desk:pt-0 order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
                       style={{
                         gridTemplateColumns: isDesktop
                           ? `repeat(${exposureLevel >= 3 ? 3 : exposureLevel >= 2 ? 2 : exposureLevel >= 1 ? 1 : 0}, minmax(60px, 1fr))`
@@ -149,7 +152,7 @@ export function SajuRelationPanels({
                       ).filter(Boolean)}
                     </div>
 
-                    <div className="order-1 desk:order-2 flex flex-col desk:flex-row flex-5 gap-1 desk:gap-2">
+                    <div className="order-1 desk:order-2 flex flex-col desk:flex-row flex-5 gap-1 desk:gap-2 desk:pl-0 desk:border-t-0 desk:border-l-0">
                       <PillarChipColumn
                         title="시주"
                         tags={relationByPillar.natal.hour}
@@ -189,7 +192,10 @@ export function SajuRelationPanels({
             <button
               type="button"
               onClick={() => setIsEtcShinsalOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
+              className={[
+                "w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 cursor-pointer",
+                isEtcShinsalOpen ? "mb-1" : "mb-0",
+              ].join(" ")}
             >
               <span>기타신살</span>
               <span className="text-[10px]">{isEtcShinsalOpen ? "접기" : "펼치기"}</span>
