@@ -29,7 +29,7 @@ export default function PromptOutput({ value, lockSelection = false }: Props) {
           className={[
             "w-full text-xs font-mono rounded-md border bg-neutral-50 dark:bg-neutral-800 p-2 resize-none transition-[height] duration-200",
             "desk:h-[270px] desk:overflow-y-auto",
-            expanded ? "h-[270px] overflow-y-auto pointer-events-auto" : "h-[150px] overflow-hidden pointer-events-none",
+            expanded ? "h-[270px] overflow-y-auto pointer-events-auto" : "h-[150px] overflow-hidden pointer-events-none desk:pointer-events-auto",
           ].join(" ")}
         />
 
