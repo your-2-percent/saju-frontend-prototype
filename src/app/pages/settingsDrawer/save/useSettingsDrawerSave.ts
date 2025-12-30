@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { startTransition, useCallback } from "react";
 import type { Settings } from "@/shared/lib/hooks/useSettingsStore";
 import type { ThemeMode } from "@/shared/lib/theme";
 import { clearLegacySettingsCache, persistTheme } from "../saveInterface/settingsPersistence";
@@ -18,10 +18,12 @@ export function useSettingsDrawerSave({ setSettings, saveToServer }: Args) {
       };
 
       clearLegacySettingsCache();
-      setSettings(nextSettings);
+      startTransition(() => {
+        setSettings(nextSettings);
+      });
       if (nextSettings.theme) persistTheme(nextSettings.theme as ThemeMode);
-      await saveToServer(true);
       onApplied();
+      void saveToServer(true);
     },
     [setSettings, saveToServer]
   );

@@ -33,7 +33,7 @@ export function GoodBadColumn({
   }
 
   return (
-    <div className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-800 p-1 desk:p-2">
+    <div className="flex-1 rounded-md border border-neutral-200 dark:border-neutral-800 p-2">
       <div className="text-[11px] text-neutral-500 dark:text-neutral-400 mb-1">{title}</div>
       <div className="space-y-2">
         <div>

@@ -58,7 +58,7 @@ export default function PromptCopyCard({
   const canCopyAll = !isPromptLocked && model.canCopyAll;
 
   return (
-    <div className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-3">
+    <div className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-2 desk:space-y-3">
       {/* ✅ 잠금 오버레이 */}
       {isPromptLocked ? (
         <div className="absolute inset-0 z-10 rounded-xl bg-white/70 dark:bg-neutral-900/70 backdrop-blur-[1px] flex items-center justify-center p-4">
@@ -73,15 +73,7 @@ export default function PromptCopyCard({
         </div>
       ) : null}
 
-      <PromptCopyHeader
-        copiedInfo={model.copiedInfo}
-        copiedAll={model.copiedAll}
-        canCopyInfo={canCopyInfo}
-        canCopyAll={canCopyAll}
-        lockTitle={lockTitle}
-        onCopyInfoOnly={model.onCopyInfoOnly}
-        onCopyAll={model.onCopyAll}
-      />
+      <PromptCopyHeader />
 
       <PromptSectionsToggle sections={model.sections} toggleSection={model.toggleSection} />
 
@@ -182,6 +174,44 @@ export default function PromptCopyCard({
       />
 
       <PromptOutput value={model.finalText} lockSelection={isPromptLocked} />
+
+      <div className="flex justify-end">
+        <div className="flex gap-2 w-full desk:w-auto">
+          <button
+            type="button"
+            onClick={model.onCopyInfoOnly}
+            disabled={!canCopyInfo}
+            title={!canCopyInfo ? lockTitle : undefined}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap border",
+              canCopyInfo ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+              model.copiedInfo
+                ? "bg-green-600 text-white border-green-600"
+                : canCopyInfo
+                ? "bg-orange-600 text-white dark:bg-orange-600"
+                : "bg-orange-600/70 text-white border-orange-600/50",
+            ].join(" ")}
+          >
+            {model.copiedInfo ? "복사됨" : `명식 정보만 복사${!canCopyInfo ? " 🔒" : ""}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={model.onCopyAll}
+            disabled={!canCopyAll}
+            title={!canCopyAll ? lockTitle : undefined}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              canCopyAll ? "cursor-pointer" : "cursor-not-allowed opacity-50",
+              model.copiedAll
+                ? "bg-green-600 text-white"
+                : "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black",
+            ].join(" ")}
+          >
+            {model.copiedAll ? "복사됨" : `전체 프롬프트 복사${!canCopyAll ? " 🔒" : ""}`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

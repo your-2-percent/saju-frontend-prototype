@@ -250,15 +250,15 @@ export default function SettingsDrawer({ open, onClose }: Props) {
       >
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b border-neutral-200 dark:border-neutral-800">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold">설정</h2>
-            <button
-              onClick={handleApply}
-              className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm cursor-pointer"
-            >
-              적용하기
-            </button>
-          </div>
+
+          <h2 className="text-lg font-bold">설정</h2>
+          <button
+            onClick={handleApply}
+            className="px-3 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-sm cursor-pointer"
+          >
+            적용하기
+          </button>
+
         </div>
 
         {/* Content (드래그 가능) */}

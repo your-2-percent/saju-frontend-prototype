@@ -1,4 +1,4 @@
-﻿import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAppDbSync } from "@/shared/lib/db/useAppDbSync";
 import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
 import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
@@ -15,18 +15,21 @@ export function usePageSave(input: PageInput) {
 
   useAppDbSync(input.userId);
 
+  const bootedUserRef = useRef<string | null>(null);
+
   const migrateLocalToServer = useMyeongSikStore((s) => s.migrateLocalToServer);
   const loadFromServer = useMyeongSikStore((s) => s.loadFromServer);
   const loadSettings = useSettingsStore((s) => s.loadFromServer);
   const loadEnt = useEntitlementsStore((s) => s.loadFromServer);
 
   useEffect(() => {
-    if (!input.isLoggedIn) return;
-    void loadEnt();
-  }, [input.isLoggedIn, loadEnt]);
+    if (!input.isLoggedIn || !input.userId) {
+      bootedUserRef.current = null;
+      return;
+    }
 
-  useEffect(() => {
-    if (!input.isLoggedIn) return;
+    if (bootedUserRef.current === input.userId) return;
+    bootedUserRef.current = input.userId;
 
     (async () => {
       await loadEnt();
@@ -34,5 +37,5 @@ export function usePageSave(input: PageInput) {
       await loadFromServer();
       await loadSettings();
     })();
-  }, [input.isLoggedIn, loadEnt, migrateLocalToServer, loadFromServer, loadSettings]);
+  }, [input.isLoggedIn, input.userId, loadEnt, migrateLocalToServer, loadFromServer, loadSettings]);
 }
