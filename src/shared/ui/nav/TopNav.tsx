@@ -1,4 +1,4 @@
-import { Menu, UserPlus, UserSquare, LogOut } from "lucide-react";
+import { Menu, UserPlus, UserSquare, /*LogOut*/ } from "lucide-react";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
@@ -133,7 +133,7 @@ export default function TopNav({
               title="로그아웃"
               className="inline-flex items-center gap-1 text-xs cursor-pointer text-neutral-700 dark:text-neutral-200 hover:text-purple-600 dark:hover:text-purple-400"
             >
-              <LogOut size={16} />
+              {/* <LogOut size={16} /> */}
               <ins>로그아웃</ins>
             </button>
           ) : (
