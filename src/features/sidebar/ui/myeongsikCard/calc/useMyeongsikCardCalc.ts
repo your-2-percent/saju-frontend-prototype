@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { isDST } from "@/shared/lib/core/timeCorrection";
+import { parseBirthDayLoose, parseBirthTimeLoose } from "@/shared/lib/core/birthFields";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
 import { recalcGanjiSnapshot } from "@/shared/domain/간지/recalcGanjiSnapshot";
@@ -69,6 +70,34 @@ function getGanjiString(m: MyeongSik): string {
   return (m.ganji ?? "").replace(/\r\n/g, "\n").replace(/\s*null\s*/gi, "").trim();
 }
 
+function shiftBirthMinus1Hour(
+  birthDay: string,
+  birthTime: string
+): { birthDay: string; birthTime: string } | null {
+  const parsedDay = parseBirthDayLoose(birthDay);
+  const parsedTime = parseBirthTimeLoose(birthTime);
+  if (!parsedDay || !parsedTime) return null;
+
+  const base = new Date(
+    parsedDay.y,
+    parsedDay.m - 1,
+    parsedDay.d,
+    parsedTime.hh,
+    parsedTime.mm,
+    0,
+    0
+  );
+  const shifted = new Date(base.getTime() - 60 * 60 * 1000);
+
+  const yyyy = String(shifted.getFullYear()).padStart(4, "0");
+  const mm = String(shifted.getMonth() + 1).padStart(2, "0");
+  const dd = String(shifted.getDate()).padStart(2, "0");
+  const hh = String(shifted.getHours()).padStart(2, "0");
+  const min = String(shifted.getMinutes()).padStart(2, "0");
+
+  return { birthDay: `${yyyy}${mm}${dd}`, birthTime: `${hh}${min}` };
+}
+
 function getSidebarGanjiWithDST(m: MyeongSik): string {
   const fallback = getGanjiString(m);
   const raw = String(m.birthDay ?? "").trim();
@@ -81,10 +110,8 @@ function getSidebarGanjiWithDST(m: MyeongSik): string {
   if (!isDST(y, mo, da)) return fallback;
   if (!m.birthTime || m.birthTime === UNKNOWN_TIME) return fallback;
 
-  const hh = Number(m.birthTime.slice(0, 2));
-  const mm = m.birthTime.slice(2, 4);
-  const newH = hh - 1 < 0 ? 23 : hh - 1;
-  const nextBirthTime = String(newH).padStart(2, "0") + mm;
+  const shifted = shiftBirthMinus1Hour(raw, m.birthTime);
+  if (!shifted) return fallback;
 
   const baseCorrected = m.corrected instanceof Date ? m.corrected : new Date(m.corrected);
   if (Number.isNaN(baseCorrected.getTime())) return fallback;
@@ -93,7 +120,8 @@ function getSidebarGanjiWithDST(m: MyeongSik): string {
 
   const snapshot = recalcGanjiSnapshot({
     ...m,
-    birthTime: nextBirthTime,
+    birthDay: shifted.birthDay,
+    birthTime: shifted.birthTime,
     corrected: correctedForGanji,
   });
 
