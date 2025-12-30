@@ -242,27 +242,26 @@ export default function TodaySaju() {
 
         <div className="flex flex-col desk:flex-row gap-2 desk:gap-3 items-center">
           <label className="text-sm text-neutral-600 dark:text-neutral-300">날짜/시간 선택</label>
-          <input
-            type="datetime-local"
-            value={toLocalInput(pick)}
-            disabled={isLive}
-            onChange={(e) => {
-              const d = fromLocalInput(e.target.value);
-              if (d) setPick(d);
-            }}
-            className={`h-30 rounded px-3 py-1 text-sm transition-colors
-                        bg-white dark:bg-neutral-900
-                        border border-neutral-300 dark:border-neutral-700
-                        text-neutral-900 dark:text-neutral-100
-                        focus:outline-none focus:ring-2 focus:ring-amber-500/40
-                        ${isLive ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-            min="1900-01-01T00:00"
-            max="2100-12-31T23:59"
-          />
-
-          
+          <div className="flex items-center gap-2">
             
-          <button
+            <input
+              type="datetime-local"
+              value={toLocalInput(pick)}
+              disabled={isLive}
+              onChange={(e) => {
+                const d = fromLocalInput(e.target.value);
+                if (d) setPick(d);
+              }}
+              className={`h-30 rounded px-3 py-1 text-sm transition-colors
+                          bg-white dark:bg-neutral-900
+                          border border-neutral-300 dark:border-neutral-700
+                          text-neutral-900 dark:text-neutral-100
+                          focus:outline-none focus:ring-2 focus:ring-amber-500/40
+                          ${isLive ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              min="1900-01-01T00:00"
+              max="2100-12-31T23:59"
+            />
+            <button
               onClick={() => setIsLive(!isLive)}
               className="text-xs px-3 py-1 rounded transition-colors cursor-pointer
                         bg-neutral-100 hover:bg-neutral-200
@@ -272,6 +271,9 @@ export default function TodaySaju() {
             >
               {isLive ? "피커 사용" : "타이머 사용"}
             </button>
+          </div>
+            
+          
         </div>
 
         <InfoAttributionDock />
