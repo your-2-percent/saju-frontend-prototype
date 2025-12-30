@@ -377,7 +377,7 @@ function PillarChipColumn({ title, tags, activeTag, onToggle }: PillarChipColumn
                 type="button"
                 onClick={() => onToggle(isActive ? null : tag)}
                 className={[
-                  "px-1 desk:px-2 py-1 text-[12px] desk:text-[11px] rounded border transition desk:break-keep cursor-pointer",
+                  "px-2 py-1 text-[12px] desk:text-[11px] rounded border transition desk:break-keep cursor-pointer",
                   isActive
                     ? "bg-purple-500 text-white border-purple-500"
                     : "bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700",
