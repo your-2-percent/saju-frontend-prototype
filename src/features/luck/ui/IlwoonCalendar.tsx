@@ -74,7 +74,7 @@ export default function IlwoonCalendar({
       <div className="grid grid-cols-7 gap-px bg-neutral-200 dark:bg-neutral-800">
         {calc.weeks.map((week, wi) =>
           week.map((d, di) => {
-            if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900" />;
+            if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800" />;
 
             const dayLocal = toNoon(d);
 
