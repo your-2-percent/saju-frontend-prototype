@@ -71,7 +71,8 @@ export default function BottomNav({
   const safeBottom = "env(safe-area-inset-bottom, 0px)";
 
   const bottomStyle = {
-    bottom: `calc(${bottomDock} + ${safeBottom})`,
+    bottom: bottomDock,
+    paddingBottom: safeBottom,
   } as const;
 
   return (
