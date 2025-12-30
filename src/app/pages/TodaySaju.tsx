@@ -208,15 +208,17 @@ export default function TodaySaju() {
             </select>
 
             <button
-              onClick={() => setIsLive(!isLive)}
-              className="text-xs px-3 py-1 rounded transition-colors cursor-pointer
-                        bg-neutral-100 hover:bg-neutral-200
-                        dark:bg-neutral-800 dark:hover:bg-neutral-700
-                        text-neutral-900 dark:text-neutral-100
-                        border border-neutral-200 dark:border-neutral-700"
+              onClick={() => setBlankHour((v) => !v)}
+              className={`text-xs px-3 py-1 rounded border transition-colors cursor-pointer
+                          ${
+                            blankHour
+                              ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
+                              : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"
+                          }`}
+              title="시주 글자를 비우고 박스를 흰색으로 표시합니다"
             >
-              {isLive ? "피커 사용" : "타이머 사용"}
-            </button>
+              {blankHour ? "시주 표시" : "시주 비우기"}
+          </button>
           </div>
         </header>
 
@@ -258,18 +260,18 @@ export default function TodaySaju() {
             max="2100-12-31T23:59"
           />
 
+          
+            
           <button
-            onClick={() => setBlankHour((v) => !v)}
-            className={`text-xs px-3 py-1 rounded border transition-colors cursor-pointer
-                        ${
-                          blankHour
-                            ? "bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100"
-                            : "bg-neutral-100 text-neutral-900 border-neutral-200 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-100 dark:border-neutral-700 dark:hover:bg-neutral-700"
-                        }`}
-            title="시주 글자를 비우고 박스를 흰색으로 표시합니다"
-          >
-            {blankHour ? "시주 표시" : "시주 비우기"}
-          </button>
+              onClick={() => setIsLive(!isLive)}
+              className="text-xs px-3 py-1 rounded transition-colors cursor-pointer
+                        bg-neutral-100 hover:bg-neutral-200
+                        dark:bg-neutral-800 dark:hover:bg-neutral-700
+                        text-neutral-900 dark:text-neutral-100
+                        border border-neutral-200 dark:border-neutral-700"
+            >
+              {isLive ? "피커 사용" : "타이머 사용"}
+            </button>
         </div>
 
         <InfoAttributionDock />
