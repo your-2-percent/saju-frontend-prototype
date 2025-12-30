@@ -46,11 +46,11 @@ export function SajuRelationPanels({
     <>
       {showRelationBox && (
         <div className="px-2 desk:px-0 py-2">
-          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2">
+          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
             <button
               type="button"
               onClick={() => setIsRelationOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
+              className="w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
             >
               <span>형충회합</span>
               <span className="text-[10px]">{isRelationOpen ? "접기" : "펼치기"}</span>
@@ -58,7 +58,7 @@ export function SajuRelationPanels({
 
             {isRelationOpen && (
               <>
-                <div className="text-[11px] text-amber-600 dark:text-amber-300 mb-2">
+                <div className="text-[11px] text-amber-600 dark:text-amber-300 pl-1 mb-2">
                   버튼을 누르면 해당 글자가 활성화 됩니다.
                 </div>
 
@@ -185,11 +185,11 @@ export function SajuRelationPanels({
 
       {showEtcShinsalBox && (
         <div className="px-2 desk:px-0 py-2">
-          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-2">
+          <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3">
             <button
               type="button"
               onClick={() => setIsEtcShinsalOpen((prev) => !prev)}
-              className="w-full flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
+              className="w-full flex items-center justify-between pl-1 text-xs text-neutral-600 dark:text-neutral-300 mb-1 cursor-pointer"
             >
               <span>기타신살</span>
               <span className="text-[10px]">{isEtcShinsalOpen ? "접기" : "펼치기"}</span>
@@ -197,7 +197,7 @@ export function SajuRelationPanels({
 
             {isEtcShinsalOpen && (
               <>
-                <div className="text-[11px] text-amber-600 dark:text-amber-300 mb-2">
+                <div className="pl-1 text-[11px] text-amber-600 dark:text-amber-300 mb-2">
                   버튼을 누르면 해당 해당신살의 설명을 볼 수 있습니다.
                 </div>
                 {hasEtcShinsal(etcShinsalGood) || hasEtcShinsal(etcShinsalBad) ? (

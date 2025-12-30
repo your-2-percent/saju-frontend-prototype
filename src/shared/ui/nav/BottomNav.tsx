@@ -71,16 +71,14 @@ export default function BottomNav({
   const safeBottom = "env(safe-area-inset-bottom, 0px)";
 
   const bottomStyle = {
-    bottom: bottomDock,
-    height: `calc(64px + ${safeBottom})`,
-    paddingBottom: safeBottom,
+    bottom: `calc(${bottomDock} + ${safeBottom})`,
   } as const;
 
   return (
     <>
       {/* 네비게이션 바 */}
       <div
-        className="fixed min-w-[320px] h-[64px] left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800"
+        className="fixed min-w-[320px] h-[64px] box-border left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800"
         style={bottomStyle}
       >
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
