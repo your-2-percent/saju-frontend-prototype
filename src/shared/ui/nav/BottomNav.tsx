@@ -79,7 +79,7 @@ export default function BottomNav({
     <>
       {/* 네비게이션 바 */}
       <div
-        className="fixed min-w-[320px] h-[64px] box-border left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800"
+        className="fixed min-w-[320px] h-[64px] px-2 box-border left-0 right-0 bg-white border-t border-neutral-200 py-2 text-xs sm:text-sm z-50 dark:bg-neutral-950 dark:border-neutral-800"
         style={bottomStyle}
       >
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
@@ -160,7 +160,7 @@ function NavItem({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex flex-col items-center justify-center text-neutral-600 hover:text-purple-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed dark:text-neutral-300 dark:hover:text-purple-400"
+      className="flex flex-1 flex-col items-center justify-center text-neutral-600 hover:text-purple-600 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed dark:text-neutral-300 dark:hover:text-purple-400"
     >
       {icon}
       <span className="mt-1">{label}</span>
