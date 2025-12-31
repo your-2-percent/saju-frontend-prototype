@@ -13,6 +13,7 @@ import {
 } from "@/shared/domain/간지/공통";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 /* ────────────────────────────────────────────────────────────
  * 달력 변환/유틸
@@ -30,6 +31,7 @@ type TabKey = "un" | "myoun" | "report";
  * ──────────────────────────────────────────────────────────── */
 export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   const [tab, setTab] = useState<TabKey>("un");
+  const dstOffsetMinutes = useDstOffsetMinutes();
 
   // ✅ 묘운 뷰어는 "보이거나/아예 숨기거나"만 한다.
   // canUseMyoViewerNow() 자체가 loaded/isActiveNow 체크 포함이라,
@@ -47,11 +49,11 @@ export default function UnMyounTabs({ data }: { data: MyeongSik }) {
   const correctedSolarRaw = useMemo(() => {
     try {
       const solarized = ensureSolarBirthDay(data);
-      return toCorrected(solarized); // Date
+      return toCorrected(solarized, dstOffsetMinutes); // Date
     } catch {
       return new Date();
     }
-  }, [data]);
+  }, [data, dstOffsetMinutes]);
 
   // 2) 시간 미상 시 정오 고정(야자시 경계 이슈 제거)
   const correctedSolar = useMemo(

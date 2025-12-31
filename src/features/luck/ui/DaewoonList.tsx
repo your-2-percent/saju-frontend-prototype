@@ -7,6 +7,7 @@ import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { toCorrected } from "@/shared/domain/meongsik";
 import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
 import type { DayBoundaryRule } from "@/shared/type";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 //import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 // 십이운성/십이신살
@@ -25,12 +26,13 @@ export default function DaewoonList({
 }: {
   data: MyeongSik;
 }) {
-  const list = useDaewoonList(data);
+  const dstOffsetMinutes = useDstOffsetMinutes();
+  const list = useDaewoonList(data, data.mingSikType as DayBoundaryRule, 100, dstOffsetMinutes);
 
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
-    return toCorrected(ensured);
-  }, [data]);
+    return toCorrected(ensured, dstOffsetMinutes);
+  }, [data, dstOffsetMinutes]);
 
   // 4) 일간(대운 십신 기준) 재산출 — 반드시 양력(solarBirth) + 규칙(rule)
   const dayStem = useMemo<Stem10sin>(() => {

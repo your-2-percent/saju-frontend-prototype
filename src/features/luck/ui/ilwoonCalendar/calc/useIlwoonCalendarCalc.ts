@@ -14,6 +14,7 @@ type UseIlwoonCalendarCalcArgs = {
   year: number;
   month: number;
   selectedMonth: Date | null;
+  dstOffsetMinutes?: number;
   settings: {
     ilunRule?: string;
     sinsalBase: string;
@@ -37,6 +38,7 @@ export function useIlwoonCalendarCalc({
   year,
   month,
   selectedMonth,
+  dstOffsetMinutes = 0,
   settings,
   pickedDate,
 }: UseIlwoonCalendarCalcArgs): IlwoonCalendarCalc {
@@ -44,8 +46,8 @@ export function useIlwoonCalendarCalc({
 
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
-    return toCorrected(ensured);
-  }, [data]);
+    return toCorrected(ensured, dstOffsetMinutes);
+  }, [data, dstOffsetMinutes]);
 
   const dayStem: Stem10sin | undefined = useMemo(() => {
     if (!solarBirth) return undefined;
@@ -53,7 +55,10 @@ export function useIlwoonCalendarCalc({
     return gz.charAt(0) as Stem10sin;
   }, [solarBirth, rule]);
 
-  const birthRaw = useMemo(() => (data ? toCorrected(data) : null), [data]);
+  const birthRaw = useMemo(
+    () => (data ? toCorrected(data, dstOffsetMinutes) : null),
+    [data, dstOffsetMinutes]
+  );
   const birthSafe = useMemo(
     () => (data && birthRaw ? withSafeClockForUnknownTime(data, birthRaw) : null),
     [data, birthRaw]

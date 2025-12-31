@@ -10,6 +10,7 @@ import { useIlwoonCalendarCalc } from "@/features/luck/ui/ilwoonCalendar/calc/us
 import { useIlwoonCalendarSave } from "@/features/luck/ui/ilwoonCalendar/save/useIlwoonCalendarSave";
 import { toNoon } from "@/features/luck/ui/ilwoonCalendar/calc/dateUtils";
 import { formatStartKST } from "@/features/luck/ui/ilwoonCalendar/calc/termUtils";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 export default function IlwoonCalendar({
   data,
@@ -22,12 +23,14 @@ export default function IlwoonCalendar({
   month: number;
   selectedMonth: Date | null;
 }) {
+  const dstOffsetMinutes = useDstOffsetMinutes();
   const input = useIlwoonCalendarInput();
   const calc = useIlwoonCalendarCalc({
     data,
     year,
     month,
     selectedMonth,
+    dstOffsetMinutes,
     settings: input.settings,
     pickedDate: input.pickedDate,
   });
@@ -77,6 +80,7 @@ export default function IlwoonCalendar({
             if (!d) return <div key={`${wi}-${di}`} className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800" />;
 
             const dayLocal = toNoon(d);
+            const dayBase = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
 
             const now = new Date();
             const isToday =
@@ -92,7 +96,11 @@ export default function IlwoonCalendar({
 
             const isActive = isSelected || (!calc.pickerNoon && isToday);
 
-            const gz = getDayGanZhiilun(dayLocal, calc.rule);
+            const gzDate =
+              dstOffsetMinutes !== 0
+                ? new Date(dayBase.getTime() + dstOffsetMinutes * 60 * 1000)
+                : dayBase;
+            const gz = getDayGanZhiilun(gzDate, calc.rule);
             const stem = gz.charAt(0) as Stem10sin;
             const branch = gz.charAt(1) as Branch10sin;
 
@@ -129,7 +137,7 @@ export default function IlwoonCalendar({
             return (
               <div
                 key={d.toISOString()}
-                onClick={() => save.handleDayClick(dayLocal)}
+                onClick={() => save.handleDayClick(dayBase)}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}

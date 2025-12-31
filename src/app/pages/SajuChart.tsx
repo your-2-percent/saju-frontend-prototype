@@ -11,6 +11,7 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useCurrentUnCards } from "@/features/luck/luck-make";
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
+import { useDstStore } from "@/shared/lib/hooks/useDstStore";
 import { buildAllRelationTags } from "@/features/AnalysisReport/logic/relations";
 import { buildShinsalTags } from "@/features/AnalysisReport/logic/shinsal";
 import { mapEra } from "@/shared/domain/간지/era";
@@ -70,7 +71,7 @@ function formatBirthDisplayWithLunar(
 }
 
 export default function SajuChart({ data, hourTable }: Props) {
-  const { date } = useLuckPickerStore();
+  const { date, setDstOffsetMinutes } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
   const showNabeum = settings.showNabeum ?? true;
   const showRelationBox = settings.showRelationBox ?? true;
@@ -95,12 +96,17 @@ export default function SajuChart({ data, hourTable }: Props) {
     return { solarY: y, solarM: m, solarD: d };
   }, [data.birthDay, data.calendarType]);
 
-  const [useDST, setUseDST] = useState<boolean>(false);
+  const useDST = useDstStore((s) => s.useDST);
+  const setUseDST = useDstStore((s) => s.setUseDST);
   useEffect(() => {
     if (solarY && solarM && solarD) {
       setUseDST(isDST(solarY, solarM, solarD));
     }
   }, [solarY, solarM, solarD]);
+
+  useEffect(() => {
+    setDstOffsetMinutes(useDST ? -60 : 0);
+  }, [useDST, setDstOffsetMinutes]);
 
   const unknownTime = isUnknownTime(data.birthTime);
   const [parsed, setParsed] = useState<Parsed>(() => parseMyeongSik(data, useDST));
@@ -156,7 +162,8 @@ export default function SajuChart({ data, hourTable }: Props) {
         })
       : null;
 
-  const unCards = useCurrentUnCards(data, rule);
+  const dstOffsetMinutes = useDST ? -60 : 0;
+  const unCards = useCurrentUnCards(data, rule, dstOffsetMinutes);
   const isDesktop = useMediaQuery({ query: "(min-width: 992px)" });
 
   const hiddenMode: "all" | "main" = settings.hiddenStem === "regular" ? "main" : "all";
@@ -170,7 +177,7 @@ export default function SajuChart({ data, hourTable }: Props) {
         });
 
   const showDSTButton = isDST(solarY, solarM, solarD);
-  const handleDSTToggle = () => setUseDST((prev: boolean) => !prev);
+  const handleDSTToggle = () => setUseDST(!useDST);
 
   const correctedBase = useMemo(() => {
     const dt =
@@ -190,7 +197,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     return formatCorrectedDisplay(local, correctedForDisplay ?? new Date(), unknownTime);
   }, [data.correctedLocal, correctedForDisplay, unknownTime, showDSTButton, useDST]);
 
-  const luck = useGlobalLuck(data, hourTable, date);
+  const luck = useGlobalLuck(data, hourTable, date, { dstOffsetMinutes });
   const daeGz = luck.dae.gz;
   const seGz = luck.se.gz;
   const wolGz = luck.wol.gz;

@@ -10,6 +10,7 @@ export interface LuckPickerState {
   scope: LuckScope;
   rule: DayBoundaryRule;
   lon: number | null;
+  dstOffsetMinutes: number;
 
   yearGZ: string;
   monthGZ: string;
@@ -19,6 +20,7 @@ export interface LuckPickerState {
   setScope: (next: LuckScope) => void;
   setRule: (next: DayBoundaryRule) => void;
   setLon: (next: number | null) => void;
+  setDstOffsetMinutes: (next: number) => void;
   setFromEvent: (ev: { at: Date; gz?: string }, scope: LuckScope) => void;
   resetDate: () => void;
   resetMonth: () => void;
@@ -31,88 +33,112 @@ export const useLuckPickerStore = create<LuckPickerState>()(
       const initialDate = new Date();
       const initialRule: DayBoundaryRule = "조자시/야자시";
       const initialLon: number | null = 127.5;
+      const initialDstOffsetMinutes = 0;
+
+      const applyDst = (d: Date, offsetMinutes: number) =>
+        offsetMinutes ? new Date(d.getTime() + offsetMinutes * 60 * 1000) : d;
 
       const lng = typeof initialLon === "number" ? initialLon : undefined;
-      const initYear = getYearGanZhi(initialDate, lng);
-      const initMonth = getMonthGanZhi(initialDate, lng);
-      const initDay = getDayGanZhi(initialDate, initialRule);
+      const initDate = applyDst(initialDate, initialDstOffsetMinutes);
+      const initYear = getYearGanZhi(initDate, lng);
+      const initMonth = getMonthGanZhi(initDate, lng);
+      const initDay = getDayGanZhi(initDate, initialRule);
 
       return {
         date: initialDate,
         scope: "원국만",
         rule: initialRule,
         lon: initialLon,
+        dstOffsetMinutes: initialDstOffsetMinutes,
 
         yearGZ: initYear,
         monthGZ: initMonth,
         dayGZ: initDay,
 
         setDate: (next) => {
-          const { rule, lon } = get();
+          const { rule, lon, dstOffsetMinutes } = get();
           const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(next, dstOffsetMinutes);
           set({
             date: next,
-            yearGZ: getYearGanZhi(next, lng),
-            monthGZ: getMonthGanZhi(next, lng),
-            dayGZ: getDayGanZhi(next, rule),
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, rule),
           });
         },
 
         resetDate: () => {
-          const { rule, lon } = get();
+          const { rule, lon, dstOffsetMinutes } = get();
           const today = new Date();
           const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(today, dstOffsetMinutes);
           set({
             date: today,
-            yearGZ: getYearGanZhi(today, lng),
-            monthGZ: getMonthGanZhi(today, lng),
-            dayGZ: getDayGanZhi(today, rule),
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, rule),
           });
         },
 
         resetMonth: () => {
-          const { lon } = get();
+          const { lon, dstOffsetMinutes } = get();
           const today = new Date();
           const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(today, dstOffsetMinutes);
           set({
             date: today,
-            monthGZ: getMonthGanZhi(today, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
           });
         },
 
         setScope: (next) => set({ scope: next }),
 
         setRule: (next) => {
-          const { date, lon } = get();
+          const { date, lon, dstOffsetMinutes } = get();
           const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(date, dstOffsetMinutes);
           set({
             rule: next,
-            yearGZ: getYearGanZhi(date, lng),
-            monthGZ: getMonthGanZhi(date, lng),
-            dayGZ: getDayGanZhi(date, next),
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, next),
           });
         },
 
         setLon: (next) => {
-          const { date, rule } = get();
+          const { date, rule, dstOffsetMinutes } = get();
           const lng = typeof next === "number" ? next : undefined;
+          const calcDate = applyDst(date, dstOffsetMinutes);
           set({
             lon: next,
-            yearGZ: getYearGanZhi(date, lng),
-            monthGZ: getMonthGanZhi(date, lng),
-            dayGZ: getDayGanZhi(date, rule),
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, rule),
+          });
+        },
+
+        setDstOffsetMinutes: (next) => {
+          const { date, rule, lon } = get();
+          const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(date, next);
+          set({
+            dstOffsetMinutes: next,
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, rule),
           });
         },
 
         setFromEvent: (ev, scope) => {
-          const { rule, lon } = get();
+          const { rule, lon, dstOffsetMinutes } = get();
           const lng = typeof lon === "number" ? lon : undefined;
+          const calcDate = applyDst(ev.at, dstOffsetMinutes);
           set({
             date: ev.at,
             scope,
-            yearGZ: getYearGanZhi(ev.at, lng),
-            monthGZ: getMonthGanZhi(ev.at, lng),
-            dayGZ: getDayGanZhi(ev.at, rule),
+            yearGZ: getYearGanZhi(calcDate, lng),
+            monthGZ: getMonthGanZhi(calcDate, lng),
+            dayGZ: getDayGanZhi(calcDate, rule),
           });
         },
         forceKey: new Date(),

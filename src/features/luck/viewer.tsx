@@ -8,9 +8,12 @@ import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getSewoonListInDaewoon } from "@/features/luck/useSewoonList";
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
+import type { DayBoundaryRule } from "@/shared/type";
 
 export default function UnViewer({ data }: { data: MyeongSik }) {
-  const daeList = useDaewoonList(data);
+  const dstOffsetMinutes = useDstOffsetMinutes();
+  const daeList = useDaewoonList(data, data.mingSikType as DayBoundaryRule, 100, dstOffsetMinutes);
 
   const [activeDaeIndex, setActiveDaeIndex] = useState<number | null>(null);
   const [ilwoonTarget, setIlwoonTarget] = useState<{ year: number; month: number } | null>(null);
@@ -49,7 +52,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
     }
   }, [activeDaeIndex, daeList]);
 
-  const luck = useGlobalLuck(data);
+  const luck = useGlobalLuck(data, undefined, undefined, { dstOffsetMinutes });
   const { date } = useLuckPickerStore();
   const activeYear = date.getMonth() + 1 === 1
     ? date.getFullYear() - 1
