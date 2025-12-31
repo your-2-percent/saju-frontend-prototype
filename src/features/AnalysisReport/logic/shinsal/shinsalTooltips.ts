@@ -27,12 +27,12 @@ export function normalizeShinsalKey(raw: string): string {
   return s4;
 }
 
-const TOOLTIP: Record<string, ShinsalTooltip> = {
+export const TOOLTIP: Record<string, ShinsalTooltip> = {
   태백: {
     title: "태백(太白)",
     kind: "흉",
-    oneLine: "고독·기복·손재로 해석되는 흉살 계열.",
-    bullets: ["기세가 강하면 ‘밀어붙임’, 약하면 외로움/손실로 풀이."],
+    oneLine: "손재·변동·기복이 큰 흐름으로 보는 흉살 계열.",
+    bullets: ["기세가 강하면 ‘밀어붙임’, 약하면 손실·기복으로 풀이."],
   },
   오귀: {
     title: "오귀(五鬼)",
@@ -42,12 +42,12 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   고신: {
     title: "고신(孤神)",
     kind: "흉",
-    oneLine: "고독·단절·정서적 외로움으로 읽는 신살.",
+    oneLine: "고독·단절·별거·이별 쪽으로 강하게 작동하는 흉살.",
   },
   과숙: {
     title: "과숙(寡宿)",
     kind: "흉",
-    oneLine: "관계 거리감·독신성향으로 읽는 신살.",
+    oneLine: "배우자·동거 운이 약해지는 쪽: 늦은 결혼·별거·독신 이미지.",
   },
   수옥: {
     title: "수옥(囚獄) / 재살",
@@ -117,17 +117,17 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   사부: {
     title: "사부(死符)",
     kind: "흉",
-    oneLine: "관재·구설·손재 같은 불운 신호로 봄.",
+    oneLine: "관재+구설 쪽 불길한 신호로 보는 살.",
   },
   관부: {
     title: "관부(官符)",
     kind: "흉",
-    oneLine: "관재·법/규정·시비로 읽는 흉살.",
+    oneLine: "법/공문/행정/관청 이슈로 읽는 흉살.",
   },
   태음: {
     title: "태음(太陰)",
     kind: "흉",
-    oneLine: "우울·지연·은밀한 방해로 상징화.",
+    oneLine: "내면·은밀함·우울·지연으로 작동하는 그림자형 흉살.",
   },
   세파: {
     title: "세파(歲破)",
@@ -207,7 +207,7 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   사주관살: {
     title: "사주관살",
     kind: "흉",
-    oneLine: "관살류 묶음: 규정/분쟁/걸림 이슈 상징.",
+    oneLine: "관재·시비·규제 같은 관살류 패턴을 묶어 보는 개념.",
   },
   천의성: {
     title: "천의성(天醫星)",
@@ -332,7 +332,7 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   유하: {
     title: "유하(流霞)",
     kind: "흉",
-    oneLine: "손상·구설 이미지로 읽는 살.",
+    oneLine: "관계·정서 쪽 상처, 스캔들·구설 이미지가 있는 흉살.",
   },
   낙정관살: {
     title: "낙정관살",
@@ -357,7 +357,7 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   고란살: {
     title: "고란살(孤鸞)",
     kind: "흉",
-    oneLine: "관계 고독/독립성 이미지가 강한 살.",
+    oneLine: "배우자 인연이 끊기거나 늦어지는 ‘외로운 난새’ 이미지: 독립성·관계 고독이 강한 살.",
   },
   비인살: {
     title: "비인살",
@@ -367,17 +367,17 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   양인살: {
     title: "양인살(羊刃)",
     kind: "중립",
-    oneLine: "강한 추진력/결단. 과하면 충돌로도 풀이.",
+    oneLine: "직선적 추진력·승부욕. 강하면 다툼·충돌까지 동반할 수 있는 중립 살.",
   },
   괴강살: {
     title: "괴강살(魁罡)",
     kind: "중립",
-    oneLine: "강한 기개·독한 결단. 과하면 충돌로 풀이.",
+    oneLine: "기개·카리스마·강한 결단. 과하면 권위충돌·관재로도 번질 수 있음.",
   },
   백호대살: {
     title: "백호대살(白虎大殺)",
     kind: "흉",
-    oneLine: "큰 손상/사고 이미지로 강하게 쓰는 흉살.",
+    oneLine: "칼·수술·사고·큰 손상 이미지. 강하게 들어오면 건강·사고 이슈를 경고하는 흉살.",
   },
   천라지망: {
     title: "천라지망(天羅地網)",
@@ -397,17 +397,17 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   편야도화: {
     title: "편야도화(偏野桃花)",
     kind: "중립",
-    oneLine: "비정형 도화: 튀는 매력/이슈.",
+    oneLine: "비정형 도화: 튀는 매력/이슈, 특이한 이성운·관계 패턴.",
   },
   곤랑도화: {
     title: "곤랑도화",
     kind: "흉",
-    oneLine: "도화가 비틀려 문제를 만들기 쉬운 형태.",
+    oneLine: "관계 문제·스캔들·복잡한 삼각관계로 번지기 쉬운 비틀린 도화.",
   },
   도삽도화: {
     title: "도삽도화(倒揷桃花)",
     kind: "중립",
-    oneLine: "도화가 강/특이하게 나타나는 패턴.",
+    oneLine: "극단적/특이하게 드러나는 도화: 매력도 강하지만 파장도 큼.",
   },
   녹마동향: {
     title: "녹마동향(祿馬同鄕)",
@@ -447,9 +447,10 @@ const TOOLTIP: Record<string, ShinsalTooltip> = {
   공망: {
     title: "공망(空亡)",
     kind: "중립",
-    oneLine: "비어 있음: 허탈·헛수고·비가시성.",
+    oneLine: "비어 있음: 힘이 잘 안 붙거나, 결과가 늦게/약하게 드러나는 패턴.",
   },
 };
+
 
 export function getShinsalTooltip(rawLabel: string): ShinsalTooltip | null {
   const key = normalizeShinsalKey(rawLabel);
