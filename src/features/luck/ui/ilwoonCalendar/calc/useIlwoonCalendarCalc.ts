@@ -43,6 +43,8 @@ export function useIlwoonCalendarCalc({
   pickedDate,
 }: UseIlwoonCalendarCalcArgs): IlwoonCalendarCalc {
   const rule: DayBoundaryRule = (settings.ilunRule as DayBoundaryRule) || "조자시/야자시";
+  const natalRule: DayBoundaryRule =
+    (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
@@ -51,9 +53,9 @@ export function useIlwoonCalendarCalc({
 
   const dayStem: Stem10sin | undefined = useMemo(() => {
     if (!solarBirth) return undefined;
-    const gz = getDayGanZhi(solarBirth, rule);
+    const gz = getDayGanZhi(solarBirth, natalRule);
     return gz.charAt(0) as Stem10sin;
-  }, [solarBirth, rule]);
+  }, [solarBirth, natalRule]);
 
   const birthRaw = useMemo(
     () => (data ? toCorrected(data, dstOffsetMinutes) : null),
@@ -72,7 +74,7 @@ export function useIlwoonCalendarCalc({
   const baseBranch: Branch10sin | null =
     data && birthSafe
       ? ((settings.sinsalBase === "일지"
-          ? getDayGanZhi(birthSafe, rule).charAt(1)
+          ? getDayGanZhi(birthSafe, natalRule).charAt(1)
           : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
       : null;
 
