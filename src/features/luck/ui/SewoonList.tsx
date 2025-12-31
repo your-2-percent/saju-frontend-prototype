@@ -12,6 +12,7 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { findActiveIndexByDate } from "@/features/luck/utils/active";
 import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 import { ensureSolarBirthDay, isYinUnified, mapEra, toDisplayChar } from "@/features/luck/utils/luckUiUtils";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 /* 경계 회피용: 해당 해 ‘한가운데’(7/2 12:00) */
 function toSafeMiddleOfYear(y: number): Date {
@@ -34,6 +35,7 @@ export default function SewoonList({
 }) {
   const settings = useSettingsStore((s) => s.settings);
   const { date, setFromEvent } = useLuckPickerStore();
+  const dstOffsetMinutes = useDstOffsetMinutes();
 
   /* 1) 리스트 ‘고정(sticky)’: 부모가 일시적으로 빈 배열을 내려줘도 이전 리스트 유지 */
   const [stickyList, setStickyList] = useState<{ at: Date; gz: string }[]>(() => list);
@@ -43,7 +45,7 @@ export default function SewoonList({
 
   /* 2) 최종 뷰 리스트: 우선 현재 list, 없으면 sticky, 그것마저 없으면 한 해짜리 fallback */
   // 출생/좌표 등 파생값
-  const birthRaw = toCorrected(data);
+  const birthRaw = toCorrected(data, dstOffsetMinutes);
   const birth = useMemo(
     () => withSafeClockForUnknownTime(data, birthRaw),
     [data, birthRaw]
@@ -92,8 +94,8 @@ export default function SewoonList({
 
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
-    return toCorrected(ensured);
-  }, [data]);
+    return toCorrected(ensured, dstOffsetMinutes);
+  }, [data, dstOffsetMinutes]);
 
   /* 6) 도메인 파생값(표시/신살 등) — ✅ 안전한 일간/기준지지 */
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";

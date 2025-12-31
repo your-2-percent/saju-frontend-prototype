@@ -15,11 +15,19 @@ export const rawBirthLocal = (ms: MyeongSik): Date => {
   return new Date(y, m - 1, d, hh, mm, 0, 0);
 };
 
-export const parseBirthLocal = (ms: MyeongSik): Date => {
+export const parseBirthLocal = (
+  ms: MyeongSik,
+  opts?: { dstOffsetMinutes?: number }
+): Date => {
   const raw = rawBirthLocal(ms);
   const isUnknownPlace =
     !ms.birthPlace ||
     (typeof ms.birthPlace === "object" && ms.birthPlace.name === "모름");
   const corrected = getCorrectedDate(raw, ms.birthPlace?.lon ?? null, isUnknownPlace);
-  return roundToMinute(corrected);
+  const dstOffsetMinutes = opts?.dstOffsetMinutes ?? 0;
+  const shifted =
+    dstOffsetMinutes !== 0
+      ? new Date(corrected.getTime() + dstOffsetMinutes * 60 * 1000)
+      : corrected;
+  return roundToMinute(shifted);
 };

@@ -11,11 +11,18 @@ export type Daewoon = { at: Date; gz: string, age: number };
 export function useDaewoonList(
   ms: MyeongSik,
   hourTable: DayBoundaryRule = "조자시/야자시",
-  untilYears = 100
+  untilYears = 100,
+  dstOffsetMinutes = 0
 ): Daewoon[] {
   const base  = useMemo(() => ensureSolarBirthDay(ms), [ms]);
-  const birth = useMemo(() => parseBirthLocal(base), [base]);
-  const natal = useMemo(() => computeNatalPillars(base, hourTable), [base, hourTable]);
+  const birth = useMemo(
+    () => parseBirthLocal(base, { dstOffsetMinutes }),
+    [base, dstOffsetMinutes]
+  );
+  const natal = useMemo(
+    () => computeNatalPillars(base, hourTable, { dstOffsetMinutes }),
+    [base, hourTable, dstOffsetMinutes]
+  );
 
   // 달력 나이 계산(이미 파일에 있다면 그걸 재사용)
   const getAge = (b: Date, at: Date) => {

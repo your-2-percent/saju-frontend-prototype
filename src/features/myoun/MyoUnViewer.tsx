@@ -19,9 +19,10 @@ import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/�
 import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { STEMS_ALL, BR_ALL } from "@/shared/domain/간지/const";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
-import type { DayBoundaryRule } from "@/shared/type";
+import type { DayBoundaryRule, DayChangeRule } from "@/shared/type";
 import { toDisplayChar, toKoStem } from "@/shared/domain/간지/convert";
 import { mapEra } from "@/shared/domain/간지/era";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 /* ===== 간단 유틸 ===== */
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
@@ -63,10 +64,22 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const { manualHour } = useHourPredictionStore();
   const { showSibiUnseong, showSibiSinsal, sinsalBase, sinsalMode, sinsalBloom } = settings;
   const { date } = useLuckPickerStore();
+  const dstOffsetMinutes = useDstOffsetMinutes();
+
+  const hourRule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
+  const dayChangeRule: DayChangeRule =
+    (data.DayChangeRule as DayChangeRule) ??
+    (data.mingSikType === "인시" ? "인시일수론" : "자시일수론");
 
   const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
-  const birth = useMemo(() => parseBirthLocal(solarized), [solarized]);
-  const natal = useMemo(() => computeNatalPillars(solarized, "조자시/야자시"), [solarized]);
+  const birth = useMemo(
+    () => parseBirthLocal(solarized, { dstOffsetMinutes }),
+    [solarized, dstOffsetMinutes]
+  );
+  const natal = useMemo(
+    () => computeNatalPillars(solarized, hourRule, { dstOffsetMinutes }),
+    [solarized, dstOffsetMinutes, hourRule]
+  );
 
   const natalDayStem = useMemo<Stem10sin>(
     () => toKoStem(natal.day?.charAt(0) ?? "갑"),
@@ -75,10 +88,19 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   const isUnknownTime = !data.birthTime || data.birthTime === "모름";
 
-  const siju = useMemo(() => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, "조자시/야자시"), [birth, natal.hour, data.dir]);
-  const ilju = useMemo(() => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", "인시일수론"), [siju, natal.day, data.dir]);
+  const siju = useMemo(
+    () => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, hourRule),
+    [birth, natal.hour, data.dir, hourRule]
+  );
+  const ilju = useMemo(
+    () => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", dayChangeRule),
+    [siju, natal.day, data.dir, dayChangeRule]
+  );
   const wolju = useMemo(() => buildWolju(birth, natal.month, data.dir ?? "forward", 120, solarized.birthPlace?.lon ?? 127.5), [birth, natal.month, data.dir, solarized.birthPlace?.lon]);
-  const yeonju = useMemo(() => buildYeonjuFromWolju(wolju, natal.year, data.dir ?? "forward", "인시일수론", birth), [wolju, natal.year, data.dir, birth]);
+  const yeonju = useMemo(
+    () => buildYeonjuFromWolju(wolju, natal.year, data.dir ?? "forward", dayChangeRule, birth),
+    [wolju, natal.year, data.dir, birth, dayChangeRule]
+  );
 
   // // ▼▼ 추가: "첫 전환" 요약 (시주/월주) 
   const firstSijuChange = useMemo(() => { 
@@ -112,7 +134,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
       const hh = BRANCH_TO_HOUR[manualHour.branch] ?? 0;
 
       const pickedDate = new Date(y, m, d, hh, 0);
-      const gz = getDayGanZhi(pickedDate, (data.mingSikType ?? "조자시/야자시") as DayBoundaryRule);
+      const gz = getDayGanZhi(pickedDate, hourRule);
 
       il = ensureGZ(gz, natal.day);
     } else {
@@ -134,14 +156,15 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
     natal,
     isUnknownTime,
     manualHour,
-    data.mingSikType
+    data.mingSikType,
+    hourRule
   ]);
   const live = useMemo(() => ({
-    si: ensureGZ(getHourGanZhi(date, "조자시/야자시")),
-    il: ensureGZ(getDayGanZhi(date, "조자시/야자시")),
+    si: ensureGZ(getHourGanZhi(date, hourRule)),
+    il: ensureGZ(getDayGanZhi(date, hourRule)),
     wl: ensureGZ(getMonthGanZhi(date)),
     yn: ensureGZ(getYearGanZhi(date)),
-  }), [date]);
+  }), [date, hourRule]);
 
   const baseBranch: Branch10sin = useMemo(() => (
     (sinsalBase === "일지" ? natal.day.charAt(1) : natal.year.charAt(1)) as Branch10sin

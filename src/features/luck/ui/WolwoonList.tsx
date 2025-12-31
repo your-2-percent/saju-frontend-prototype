@@ -6,6 +6,7 @@ import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
 import { toCorrected } from "@/shared/domain/meongsik";
 import type { DayBoundaryRule } from "@/shared/type";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 // 십이운성/십이신살
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
@@ -86,21 +87,22 @@ export default function WolwoonList({
   onSelectMonth: (d: Date) => void
 }) {
   const settings = useSettingsStore((s) => s.settings);
+  const dstOffsetMinutes = useDstOffsetMinutes();
 
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
       ? 127.5
       : data.birthPlace.lon;
 
-  const birthRaw = toCorrected(data);
+  const birthRaw = toCorrected(data, dstOffsetMinutes);
   const birth = useMemo(
     () => withSafeClockForUnknownTime(data, birthRaw),
     [data, birthRaw]
   );
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
-    return toCorrected(ensured);
-  }, [data]);
+    return toCorrected(ensured, dstOffsetMinutes);
+  }, [data, dstOffsetMinutes]);
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   // 안전한 일간(십신 계산용)
   const dayStem = useMemo<Stem10sin>(() => {

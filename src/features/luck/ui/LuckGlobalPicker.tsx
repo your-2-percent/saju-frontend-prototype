@@ -4,6 +4,7 @@ import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
 import { useGlobalLuck } from "@/features/luck/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 import DateInput from "@/features/luck/ui/DateTimePicker";
+import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
 
 export default function LuckGlobalPicker({
   ms,
@@ -11,6 +12,7 @@ export default function LuckGlobalPicker({
   ms: MyeongSik;
 }) {
   const { date, setDate } = useLuckPickerStore();
+  const dstOffsetMinutes = useDstOffsetMinutes();
 
   // ✅ ms 변경 감지는 "안정적인 키"로 (객체 레퍼런스 바뀜에 의한 불필요 리셋 방지)
   const msKey = useMemo(() => {
@@ -30,7 +32,7 @@ export default function LuckGlobalPicker({
   }, [msKey]);
 
   // ✅ dae/se/wol 계산 (전역 date 기준은 내부 store가 관리)
-  const luck = useGlobalLuck(ms);
+  const luck = useGlobalLuck(ms, undefined, undefined, { dstOffsetMinutes });
 
   const safeDate = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
 

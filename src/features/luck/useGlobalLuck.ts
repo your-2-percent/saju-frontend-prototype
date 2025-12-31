@@ -61,15 +61,21 @@ export function findCurrentDaewoon(
 export function useGlobalLuck(
   ms: MyeongSik, 
   hourTable?: DayBoundaryRule,
-  externalDate?: Date   // ✅ 이름 바꿈
+  externalDate?: Date,   // ✅ 이름 바꿈
+  options?: { dstOffsetMinutes?: number }
 ) {
   const { date: storeDate, rule: storeRule, lon: storeLon } = useLuckPickerStore();
   const baseDate = useMemo(
     () => externalDate ?? storeDate ?? new Date(),
     [externalDate, storeDate]
   );
-  const daeList = useDaewoonList(ms, ms?.mingSikType);
-  const { gz: daeGz } = findCurrentDaewoon(daeList, baseDate);
+  const dstOffsetMinutes = options?.dstOffsetMinutes ?? 0;
+  const daeList = useDaewoonList(ms, ms?.mingSikType, 100, dstOffsetMinutes);
+  const calcDate =
+    dstOffsetMinutes !== 0
+      ? new Date(baseDate.getTime() + dstOffsetMinutes * 60 * 1000)
+      : baseDate;
+  const { gz: daeGz } = findCurrentDaewoon(daeList, calcDate);
 
   return useMemo(() => {
     try {
@@ -78,10 +84,10 @@ export function useGlobalLuck(
         storeRule ?? (ms?.mingSikType as DayBoundaryRule) ?? hourTable ?? "조자시/야자시";
 
       return {
-        dae: { gz: daeGz, at: baseDate }, 
-        se:  { gz: getYearGanZhi(baseDate, lon), at: baseDate },
-        wol: { gz: getMonthGanZhi(baseDate, lon), at: baseDate },
-        il:  { gz: getDayGanZhi(baseDate, rule), at: baseDate },
+        dae: { gz: daeGz, at: calcDate }, 
+        se:  { gz: getYearGanZhi(calcDate, lon), at: calcDate },
+        wol: { gz: getMonthGanZhi(calcDate, lon), at: calcDate },
+        il:  { gz: getDayGanZhi(calcDate, rule), at: calcDate },
       };
     } catch {
       const now = new Date();

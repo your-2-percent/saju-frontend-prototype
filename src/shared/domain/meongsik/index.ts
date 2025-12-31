@@ -28,7 +28,7 @@ export {
  * - birthTime: HHmm / HH:MM / '모름'
  * - lunar일 경우 양력으로 변환 후 계산
  */
-export function toCorrected(ms: MyeongSik): Date {
+export function toCorrected(ms: MyeongSik, dstOffsetMinutes = 0): Date {
   const solarized = ensureSolarBirthDay(ms);
 
   const parsedDay = parseBirthDayLoose(solarized.birthDay ?? "");
@@ -43,7 +43,10 @@ export function toCorrected(ms: MyeongSik): Date {
 
   const isUnknownPlace = !solarized.birthPlace || (typeof solarized.birthPlace === "object" && solarized.birthPlace.name === "모름");
   const lon = solarized.birthPlace?.lon ?? 127.5;
-  return getCorrectedDate(raw, lon, isUnknownPlace);
+  const corrected = getCorrectedDate(raw, lon, isUnknownPlace);
+  return dstOffsetMinutes !== 0
+    ? new Date(corrected.getTime() + dstOffsetMinutes * 60 * 1000)
+    : corrected;
 }
 
 /**

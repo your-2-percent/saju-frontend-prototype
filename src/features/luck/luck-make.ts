@@ -22,11 +22,18 @@ export type UnCard = {
 export function useCurrentUnCards(
   ms: MyeongSik,
   hourTable: DayBoundaryRule = "조자시/야자시",
+  dstOffsetMinutes = 0
 ): UnCard[] {
 
   const base  = useMemo(() => ensureSolarBirthDay(ms), [ms]);
-  const birth = useMemo(() => parseBirthLocal(base), [base]);
-  const natal = useMemo(() => computeNatalPillars(base, hourTable), [base, hourTable]);
+  const birth = useMemo(
+    () => parseBirthLocal(base, { dstOffsetMinutes }),
+    [base, dstOffsetMinutes]
+  );
+  const natal = useMemo(
+    () => computeNatalPillars(base, hourTable, { dstOffsetMinutes }),
+    [base, hourTable, dstOffsetMinutes]
+  );
 
   return useMemo(() => {
     const wolju = buildWolju(birth, natal.month, base.dir, 120, base?.birthPlace?.lon ?? 127.5);
