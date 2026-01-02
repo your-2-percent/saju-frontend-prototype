@@ -83,7 +83,7 @@ export function SajuRelationPanels({
                     }}
                   >
                     <div
-                      className="border-t border-neutral-200 dark:border-neutral-800 pt-2 desk:pt-0 order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
+                      className="border-t desk:border-0 border-neutral-200 dark:border-neutral-800 pt-2 desk:pt-0 order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
                       style={{
                         gridTemplateColumns: isDesktop
                           ? `repeat(${exposureLevel >= 3 ? 3 : exposureLevel >= 2 ? 2 : exposureLevel >= 1 ? 1 : 0}, minmax(60px, 1fr))`
