@@ -2,8 +2,8 @@
 import { useMemo, useRef, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
-import { type Pillars4 } from "@/features/AnalysisReport/logic/relations";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
+import { type Pillars4 } from "@/analysisReport/calc/logic/relations";
 import CoupleHarmonyPanel from "@/app/pages/CoupleHarmonyPanel";
 import { PeoplePickerModal } from "./couple/PeoplePickerModal";
 import { PersonSlot } from "./couple/PersonSlot";

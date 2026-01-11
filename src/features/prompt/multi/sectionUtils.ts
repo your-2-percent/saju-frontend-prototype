@@ -1,5 +1,5 @@
 // features/prompt/multi/sectionUtils.ts
-import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import { elementToTenGod } from "../promptCore";
 import { isPlainObject, pruneEmptyDeep, sectionPlain } from "../sectionFormat";
 

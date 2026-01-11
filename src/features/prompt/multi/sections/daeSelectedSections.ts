@@ -1,8 +1,8 @@
 // features/prompt/multi/sections/daeSelectedSections.ts
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
-import type { UnifiedPowerResult, LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
-import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import type { ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
+import type { UnifiedPowerResult, LuckChain } from "@/analysisReport/calc/utils/unifiedPower";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import type { DaewoonInfo } from "../types";
 import type { LuckShowToggles, ShinsalSettings } from "../buildLuckBlock";
 import { buildLuckBlock } from "../buildLuckBlock";

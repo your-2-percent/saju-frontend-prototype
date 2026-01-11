@@ -1,4 +1,4 @@
-// features/myoun/MyoUnViewer.tsx
+﻿// features/myoun/MyoUnViewer.tsx
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import {
@@ -10,19 +10,19 @@ import {
   parseBirthLocal,
 } from "@/features/myoun";
 import { formatDate24 } from "@/shared/utils";
-import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
-import { ensureSolarBirthDay } from "@/shared/domain/meongsik/ensureSolarBirthDay";
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
-import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { STEMS_ALL, BR_ALL } from "@/shared/domain/간지/const";
+import { ensureSolarBirthDay } from "@/myeongsik/calc/ensureSolarBirthDay";
+import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
+import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
+import { STEMS_ALL, BR_ALL } from "@/shared/domain/ganji/const";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import type { DayBoundaryRule, DayChangeRule } from "@/shared/type";
-import { toDisplayChar, toKoStem } from "@/shared/domain/간지/convert";
-import { mapEra } from "@/shared/domain/간지/era";
-import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
+import { toDisplayChar, toKoStem } from "@/shared/domain/ganji/convert";
+import { mapEra } from "@/shared/domain/ganji/era";
+import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
 
 /* ===== 간단 유틸 ===== */
 const STEM_SET = new Set<string>(STEMS_ALL as readonly string[]);
@@ -89,8 +89,8 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const isUnknownTime = !data.birthTime || data.birthTime === "모름";
 
   const siju = useMemo(
-    () => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120, hourRule),
-    [birth, natal.hour, data.dir, hourRule]
+    () => buildSijuSchedule(birth, natal.hour, data.dir ?? "forward", 120),
+    [birth, natal.hour, data.dir]
   );
   const ilju = useMemo(
     () => buildIljuFromSiju(siju, natal.day, data.dir ?? "forward", dayChangeRule),
@@ -156,7 +156,6 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
     natal,
     isUnknownTime,
     manualHour,
-    data.mingSikType,
     hourRule
   ]);
   const live = useMemo(() => ({

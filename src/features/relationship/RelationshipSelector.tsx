@@ -1,12 +1,12 @@
-// src/features/relationship/RelationshipSelector.tsx
-import { useState, useEffect } from "react";
+﻿// src/features/relationship/RelationshipSelector.tsx
+import { useEffect, useMemo, useState } from "react";
 import {
   DragDropContext,
   Droppable,
   Draggable,
   type DropResult,
 } from "@hello-pangea/dnd";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import { supabase } from "@/lib/supabase";
 
 type Props = {
@@ -19,11 +19,11 @@ const ETC_VALUE = "__custom__";
 const defaultOptions = [
   { value: "본인", label: "본인 (1인지정만 가능)" },
   { value: "연인/배우자", label: "연인 / 배우자" },
-  { value: "가족", label: "가족" },
-  { value: "고객", label: "고객" },
+  { value: "자녀", label: "자녀" },
   { value: "친구", label: "친구" },
-  { value: "동료", label: "동료" },
+  { value: "직장", label: "직장" },
   { value: "지인", label: "지인" },
+  { value: "기타", label: "기타" },
 ];
 
 export const RelationshipSelector = ({ value, onChange }: Props) => {
@@ -46,9 +46,21 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
     ? options.filter((o) => o.value !== "본인")
     : options;
 
+  const orderedOptions = useMemo(() => {
+    const self = filteredOptions.find((o) => o.value === "본인");
+    if (!self) return filteredOptions;
+    return [self, ...filteredOptions.filter((o) => o.value !== "본인")];
+  }, [filteredOptions]);
+
   useEffect(() => {
     if (value !== undefined) setSelected(value);
   }, [value]);
+
+  useEffect(() => {
+    if (currentValue || hasSelf) return;
+    setSelected("본인");
+    onChange?.("본인");
+  }, [currentValue, hasSelf, onChange]);
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
@@ -64,15 +76,26 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
     }
   };
 
-  // localStorage 복원
+  // localStorage 로드
   useEffect(() => {
     const saved = localStorage.getItem("relationshipOptions");
-    if (saved) {
-      setOptions(JSON.parse(saved));
+    if (!saved) return;
+    try {
+      const parsed = JSON.parse(saved) as Array<{ value: string; label: string }>;
+      const seen = new Set<string>();
+      const merged = [...parsed, ...defaultOptions].filter((opt) => {
+        if (!opt || !opt.value) return false;
+        if (seen.has(opt.value)) return false;
+        seen.add(opt.value);
+        return true;
+      });
+      setOptions(merged);
+    } catch {
+      setOptions(defaultOptions);
     }
   }, []);
 
-  // 서버에 저장된 관계 옵션을 한번 불러와 로컬과 병합
+  // 서버 저장 옵션 병합
   useEffect(() => {
     const loadFromServer = async () => {
       const {
@@ -109,7 +132,7 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
 
       setOptions((prev) => {
         const seen = new Set<string>();
-        // 서버 값 + 로컬 값 + 기본 옵션을 모두 합친 뒤 중복 제거
+        // 서버값 + 로컬값 + 기본 옵션을 중복 제거
         const merged = [...parsed, ...prev, ...defaultOptions].filter((opt) => {
           if (seen.has(opt.value)) return false;
           seen.add(opt.value);
@@ -127,7 +150,7 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
   useEffect(() => {
     localStorage.setItem("relationshipOptions", JSON.stringify(options));
 
-    // 서버에도 저장 (옵션 순서/값)
+    // 서버에도 저장
     const syncToServer = async () => {
       const {
         data: { user },
@@ -199,21 +222,21 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
           onChange={handleChange}
         >
           <option value="" hidden>
-            관계선택
+            관계 선택
           </option>
-          {filteredOptions.map((opt) => (
+          {orderedOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
           ))}
-          <option value={ETC_VALUE}>기타 입력</option>
+          <option value={ETC_VALUE}>직접 입력</option>
         </select>
         <button
           type="button"
           onClick={() => setShowModify(true)}
           className="btn_style"
         >
-          관계수정
+          관계 수정
         </button>
       </div>
 
@@ -221,12 +244,12 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
         <div className="rel_set flex items-center mt-2 gap-2">
           <input
             type="text"
-            placeholder="관계 기타입력"
+            placeholder="관계 직접 입력"
             value={etcValue}
             onChange={(e) => setEtcValue(e.target.value)}
           />
           <button type="button" onClick={handleAdd} className="btn_style">
-            관계추가
+            관계 추가
           </button>
         </div>
       )}
@@ -256,11 +279,11 @@ export const RelationshipSelector = ({ value, onChange }: Props) => {
                           {...prov.dragHandleProps}
                           className="flex justify-between items-center bg-white dark:bg-neutral-800 p-2 rounded border text-sm desk:text-base"
                         >
-                          <span className="cursor-grab mr-2">☰</span>
+                          <span className="cursor-grab mr-2">⠿</span>
                           <span className="flex-1 pr-1">{opt.label}</span>
                           <button
                             type="button"
-                            className="text-red-500"
+                            className="text-red-500 cursor-pointer"
                             onClick={() => handleDelete(opt.value)}
                           >
                             삭제

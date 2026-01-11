@@ -5,11 +5,11 @@ import { isSessionOlderThan, TWO_HOURS_MS } from "./sessionAge";
 import {
   startBinding,
   type RunningBinding,
-} from "@/shared/lib/settings/bindStoreToUserSettingsKv";
+} from "@/settings/save/bindStoreToUserSettingsKv";
 import {
   usePromptCopySectionsStore,
   type PromptCopySections,
-} from "@/features/PromptCopyCard/promptCopySectionsStore";
+} from "@/promptCopy/input/promptCopySectionsStore";
 
 type SyncTable = {
   table: string;

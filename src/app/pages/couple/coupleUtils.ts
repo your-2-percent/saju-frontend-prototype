@@ -1,6 +1,6 @@
 import type { MyeongSik } from "@/shared/lib/storage";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
-import * as Twelve from "@/shared/domain/간지/twelve";
+import * as Twelve from "@/shared/domain/ganji/twelve";
 
 const STEMS_KO = ["갑","을","병","정","무","기","경","신","임","계"] as const;
 const STEMS_HANJA = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"] as const;

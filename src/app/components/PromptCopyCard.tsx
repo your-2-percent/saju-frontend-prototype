@@ -1,1 +1,1 @@
-export { default } from "@/features/PromptCopyCard/PromptCopyCard";
+export { default } from "@/promptCopy/ui/PromptCopyCard";

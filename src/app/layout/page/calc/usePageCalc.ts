@@ -1,6 +1,6 @@
-﻿import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 
 type PageCalc = {
   loading: boolean;

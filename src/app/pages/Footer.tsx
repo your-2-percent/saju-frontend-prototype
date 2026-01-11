@@ -84,13 +84,17 @@ export default function Footer() {
 
             <div className="text-sm leading-relaxed max-h-[60vh] overflow-y-auto pr-2">
               <p className="mb-2">
-                화림만세 서비스는 이용자의 개인정보를 소중히 하며, 아래 목적과 방식으로 처리합니다.
+                화림만세력 서비스는 이용자의 개인정보를 소중히 하며, 아래 목적과 방식으로 처리합니다.
               </p>
 
               <p className="font-semibold mt-4 mb-1">1. 수집 항목</p>
+              <p className="mb-1">
+                · 구글 로그인 시 프로필(이름, 이메일)<br />
+                · 서비스 이용 과정에서 자동 생성되는 로그 정보(이용 기록, 디바이스 정보, 명식 정보)
+              </p>
               <p className="mb-2">
-                · 구글 로그인 프로필(이름, 이메일)<br />
-                · 서비스 이용 과정에서 자동 생성되는 로그 정보(이용 기록, 디바이스 정보)
+                · 카카오 로그인 시 프로필(이름, 이메일)<br />
+                · 서비스 이용 과정에서 자동 생성되는 로그 정보(이용 기록, 디바이스 정보, 명식 정보)
               </p>
 
               <p className="font-semibold mt-4 mb-1">2. 수집 목적</p>
@@ -107,6 +111,9 @@ export default function Footer() {
               </p>
 
               <p className="font-semibold mt-4 mb-1">4. 제3자 제공</p>
+              <p className="mb-1">
+                · 화림 만세력은 고객님의 개인정보를 소중하게 여기고 있습니다.
+              </p>
               <p className="mb-2">
                 · 동의 없이는 제3자에게 제공하지 않습니다.
               </p>

@@ -1,6 +1,6 @@
-﻿import { useEffect } from "react";
+import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 
 type UseAuthStateArgs = {
   setUserId: (next: string | null) => void;

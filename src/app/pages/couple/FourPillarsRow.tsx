@@ -1,7 +1,7 @@
-import type { Branch10sin, Stem10sin } from "@/shared/domain/간지/utils";
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
+import type { Branch10sin, Stem10sin } from "@/shared/domain/ganji/utils";
+import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
 import { PillarCardShared } from "@/shared/ui/PillarCardShared";
-import { useSettingsStore, type Settings as CardSettings } from "@/shared/lib/hooks/useSettingsStore";
+import { useSettingsStore, type Settings as CardSettings } from "@/settings/input/useSettingsStore";
 import { ensureGZ, mapEra } from "./coupleUtils";
 
 export function FourPillarsRow({

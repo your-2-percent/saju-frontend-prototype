@@ -1,4 +1,4 @@
-﻿import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Element } from "@/analysisReport/calc/utils/types";
 
 export const STEM_H2K: Record<string, string> = {
   甲: "갑",

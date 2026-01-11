@@ -1,10 +1,10 @@
 // features/prompt/multi/buildLuckBlock.ts
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { buildAllRelationTags } from "@/features/AnalysisReport/logic/relations";
-import { buildShinsalTags, type ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
-import { getTwelveUnseong, getTwelveShinsalBySettings, type EraType } from "@/shared/domain/간지/twelve";
-import type { LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
-import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import { buildAllRelationTags } from "@/analysisReport/calc/logic/relations";
+import { buildShinsalTags, type ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
+import { getTwelveUnseong, getTwelveShinsalBySettings, type EraType } from "@/shared/domain/ganji/twelve";
+import type { LuckChain, UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import { getNabeum } from "../promptCore";
 import { makeOverlayByLuck } from "../promptOverlay";
 import {

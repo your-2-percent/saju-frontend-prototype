@@ -1,13 +1,13 @@
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import { normalizeGZ } from "@/analysisReport/calc/logic/relations";
 
 import {
   getYearGanZhi,
   getMonthGanZhi,
   getDayGanZhi,
   getHourGanZhi,
-} from "@/shared/domain/간지/공통";
+} from "@/shared/domain/ganji/common";
 import { getCorrectedDate } from "@/shared/lib/core/timeCorrection";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 import type { DayBoundaryRule } from "@/shared/type";

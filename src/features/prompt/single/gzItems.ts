@@ -1,9 +1,9 @@
 // features/prompt/single/gzItems.ts
 
-import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import type { LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
+import type { BlendTab } from "@/analysisReport/calc/logic/blend";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import { normalizeGZ } from "@/analysisReport/calc/logic/relations";
+import type { LuckChain } from "@/analysisReport/calc/utils/unifiedPower";
 import type { JuLabel } from "../promptPosLabels";
 
 export type GzItemKind = "natal" | "luck";

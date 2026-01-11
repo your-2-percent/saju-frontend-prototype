@@ -1,6 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
-import { normalizeFolderValue } from "@/features/sidebar/model/folderModel";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
+import { normalizeFolderValue } from "@/sidebar/calc/folderModel";
 import type { DayBoundaryRule } from "@/shared/type";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { FormState, HourRule, MatchRow } from "../input/customSajuTypes";

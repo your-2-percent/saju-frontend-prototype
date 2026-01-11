@@ -1,14 +1,14 @@
 import { useMemo } from "react";
-import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
+import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
-import { findActiveIndexByDate } from "@/features/luck/utils/active";
+import { findActiveIndexByDate } from "@/luck/calc/active";
 import {
   getYearGanZhi,
   getMonthGanZhi,
   getDayGanZhi,
-} from "@/shared/domain/간지/공통";
+} from "@/shared/domain/ganji/common";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { type LuckChain } from "@/features/AnalysisReport/utils/unifiedPower";
+import { type LuckChain } from "@/analysisReport/calc/utils/unifiedPower";
 
 /**
  * 현재 ms + LuckPickerStore(date, rule, lon)에 따라

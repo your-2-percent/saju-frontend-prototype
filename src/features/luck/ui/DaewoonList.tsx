@@ -2,23 +2,25 @@
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
-import { getElementColor, getSipSin } from "@/shared/domain/간지/utils";
-import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { toCorrected } from "@/shared/domain/meongsik";
-import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
+import { getElementColor, getSipSin } from "@/shared/domain/ganji/utils";
+import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
+import { toCorrected } from "@/myeongsik/calc";
+import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
 import type { DayBoundaryRule } from "@/shared/type";
-import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
+import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
 //import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 // 십이운성/십이신살
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
+import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
 
 // ✅ 전역 설정 스토어 (SajuChart와 동일)
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 
-import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { findActiveIndexByDate } from "@/features/luck/utils/active";
-import { ensureSolarBirthDay, isYinUnified, mapEra, toDisplayChar } from "@/features/luck/utils/luckUiUtils";
+import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
+import { findActiveIndexByDate } from "@/luck/calc/active";
+import { ensureSolarBirthDay  } from "@/myeongsik/calc/ensureSolarBirthDay";
+import { isYinUnified, toDisplayChar } from "@/shared/domain/ganji/convert";
+import { mapEra } from "@/shared/domain/ganji/era";
 
 /* ===== 컴포넌트 ===== */
 export default function DaewoonList({
@@ -93,7 +95,7 @@ export default function DaewoonList({
         {list.map((ev, i) => {
           const stem = ev.gz.charAt(0) as Stem10sin;
           const branch = ev.gz.charAt(1) as Branch10sin;
-          const age = getAge(solarBirth, ev.at);
+          const age = i === 0 ? "0" : getAge(solarBirth, ev.at);
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", charType);
@@ -179,9 +181,13 @@ export default function DaewoonList({
   );
 }
 
-function getAge(birth: Date, target: Date): number {
-  const diffMs = target.getTime() - birth.getTime();
+function getAge(birth: Date, target: Date): string {
+  const diffMs = Math.abs(target.getTime() - birth.getTime());
   const age = diffMs / (365.2425 * 24 * 60 * 60 * 1000);
-  return Math.max(0, Math.round(age));
+  const ageYears = Math.max(0, age);
+  if (ageYears < 1) {
+    return ageYears.toFixed(4);
+  }
+  return `${Math.round(ageYears)}`;
 }
 

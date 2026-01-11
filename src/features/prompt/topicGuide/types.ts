@@ -1,6 +1,6 @@
 // features/prompt/topicGuide/types.ts
 
-import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
+import type { BlendTab } from "@/analysisReport/calc/logic/blend";
 
 /**
  * 메인 카테고리
