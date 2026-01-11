@@ -1,7 +1,7 @@
 ﻿export const daewoonAge = (birth: Date, at: Date, offset = 0) => {
-  const y = at.getFullYear() - birth.getFullYear();
-  const m = at.getMonth() - birth.getMonth();
-  const d = at.getDate() - birth.getDate();
-  const adjusted = m < 0 || (m === 0 && d < 0) ? y - 1 : y;
-  return Math.max(1, adjusted + offset);
+  const raw =
+    (at.getTime() - birth.getTime()) /
+    (365.2425 * 24 * 60 * 60 * 1000);
+  const base = raw < 1 ? 1 + raw : raw;
+  return Math.max(1, base + offset);
 };
