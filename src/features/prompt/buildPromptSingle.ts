@@ -1,17 +1,17 @@
 // features/AnalysisReport/buildPromptSingle.ts
 
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { Pillars4, RelationTags } from "@/features/AnalysisReport/logic/relations";
-import { buildAllRelationTags, buildHarmonyTags, normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { buildShinsalTags, type ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
-import { useSajuSettingsStore } from "@/shared/lib/hooks/useSajuSettingsStore";
-import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
-import { getDaewoonList } from "../luck/daewoonList";
-import type { ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
-import { computeDeukFlags10 } from "@/features/AnalysisReport/utils/strength";
-import type { LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
-import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Pillars4, RelationTags } from "@/analysisReport/calc/logic/relations";
+import { buildAllRelationTags, buildHarmonyTags, normalizeGZ } from "@/analysisReport/calc/logic/relations";
+import { buildShinsalTags, type ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
+import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
+import { useSajuSettingsStore } from "@/saju/input/useSajuSettingsStore";
+import type { BlendTab } from "@/analysisReport/calc/logic/blend";
+import { getDaewoonList } from "@/luck/calc/daewoonList";
+import type { ShinCategory } from "@/analysisReport/calc/logic/shinStrength";
+import { computeDeukFlags10 } from "@/analysisReport/calc/utils/strength";
+import type { LuckChain, UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
+import type { Element } from "@/analysisReport/calc/utils/types";
 
 import { buildTopicGuide, type MainCategoryKey, type RelationMode, type SubCategoryKey } from "./topicGuide";
 import { STEM_TO_ELEMENT, getNabeum } from "./promptCore";

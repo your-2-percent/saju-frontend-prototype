@@ -1,10 +1,10 @@
 // features/prompt/multi/sections/wolMonthSections.ts
-import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
-import type { LuckChain, UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
-import type { Element } from "@/features/AnalysisReport/utils/types";
-import { getYearGanZhi, getMonthGanZhi } from "@/shared/domain/간지/공통";
+import { normalizeGZ } from "@/analysisReport/calc/logic/relations";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import type { ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
+import type { LuckChain, UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
+import type { Element } from "@/analysisReport/calc/utils/types";
+import { getYearGanZhi, getMonthGanZhi } from "@/shared/domain/ganji/common";
 import { findSolarTermUTC } from "@/shared/domain/solar-terms";
 import type { DaewoonInfo } from "../types";
 import {

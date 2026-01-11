@@ -1,6 +1,6 @@
 // features/prompt/multi/luckLookup.ts
-import { normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { getYearGanZhi } from "@/shared/domain/간지/공통";
+import { normalizeGZ } from "@/analysisReport/calc/logic/relations";
+import { getYearGanZhi } from "@/shared/domain/ganji/common";
 import type { DaewoonInfo } from "./types";
 import { findSolarTermUTC } from "@/shared/domain/solar-terms";
 

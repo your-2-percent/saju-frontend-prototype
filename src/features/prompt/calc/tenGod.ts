@@ -1,4 +1,4 @@
-﻿import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import { isYang, KE, KE_REV, SHENG_NEXT, SHENG_PREV, STEM_TO_ELEMENT } from "@/features/prompt/calc/ganjiMaps";
 
 export type TenGodSubtype =

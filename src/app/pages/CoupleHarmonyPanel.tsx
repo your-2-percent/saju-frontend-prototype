@@ -1,5 +1,5 @@
-import { type Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { buildCoupleHarmonyTags_AB  } from "@/features/AnalysisReport/logic/relations";
+import { type Pillars4 } from "@/analysisReport/calc/logic/relations";
+import { buildCoupleHarmonyTags_AB  } from "@/analysisReport/calc/logic/relations";
 
 /** 
  * NOTE: HarmonyResult, toArr, buildCoupleHarmonyTags have been moved to 

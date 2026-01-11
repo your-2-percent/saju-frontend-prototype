@@ -1,19 +1,14 @@
 // features/UnMyounTabs.tsx
 import { useEffect, useMemo, useState } from "react";
-import UnViewer from "@/features/luck/viewer";
+import UnViewer from "@/luck/ui/Viewer";
 import MyoUnViewer from "@/features/myoun/MyoUnViewer";
-import AnalysisReport from "@/features/AnalysisReport/";
+import AnalysisReport from "@/analysisReport/ui/";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { toCorrected, ensureSolarBirthDay } from "@/shared/domain/meongsik";
-import {
-  getYearGanZhi,
-  getMonthGanZhi,
-  getDayGanZhi,
-  getHourGanZhi,
-} from "@/shared/domain/간지/공통";
-import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
+import { toCorrected, ensureSolarBirthDay } from "@/myeongsik/calc";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
+import { withSafeClockForUnknownTime } from "@/luck/calc/withSafeClockForUnknownTime";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import { useDstOffsetMinutes } from "@/shared/lib/hooks/useDstStore";
+import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
 
 /* ────────────────────────────────────────────────────────────
  * 달력 변환/유틸

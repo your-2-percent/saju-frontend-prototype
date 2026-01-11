@@ -1,8 +1,8 @@
-import { getSipSin, getElementColor } from "@/shared/domain/간지/utils";
-import type { Stem10sin } from "@/shared/domain/간지/utils";
+import { getSipSin, getElementColor } from "@/shared/domain/ganji/utils";
+import type { Stem10sin } from "@/shared/domain/ganji/utils";
 import { HiddenStems } from "@/shared/domain/hidden-stem";
 import type { Settings } from "@/shared/lib/hooks/useSettings";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import {
   isYinUnified,
@@ -11,7 +11,7 @@ import {
   toHanjaStem,
   toKoBranch,
   toKoStem,
-} from "@/shared/domain/간지/convert";
+} from "@/shared/domain/ganji/convert";
 
 type Variant = "auto" | "white";
 

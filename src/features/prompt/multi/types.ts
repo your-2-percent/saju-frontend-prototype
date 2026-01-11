@@ -1,9 +1,9 @@
 // features/prompt/multi/types.ts
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import type { ShinsalBasis } from "@/features/AnalysisReport/logic/shinsal";
-import type { ShinCategory } from "@/features/AnalysisReport/logic/shinStrength";
-import type { UnifiedPowerResult } from "@/features/AnalysisReport/utils/unifiedPower";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import type { ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
+import type { ShinCategory } from "@/analysisReport/calc/logic/shinStrength";
+import type { UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
 import type { MainCategoryKey, SubCategoryKey, TimeMode, RelationMode } from "../buildPrompt";
 import type { PromptSectionToggles } from "../promptSectionToggles";
 

@@ -1,10 +1,10 @@
 // features/AnalysisReport/promptOverlay.ts
-import type { BlendTab } from "@/features/AnalysisReport/logic/blend";
+import type { BlendTab } from "@/analysisReport/calc/logic/blend";
 import type {
   LuckChain,
   UnifiedPowerResult,
-} from "@/features/AnalysisReport/utils/unifiedPower";
-//import type { Element } from "@/features/AnalysisReport/utils/types";
+} from "@/analysisReport/calc/utils/unifiedPower";
+//import type { Element } from "@/analysisReport/calc/utils/types";
 import {
   STEM_TO_ELEMENT,
   normalizeTo100,

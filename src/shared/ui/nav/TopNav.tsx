@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
-import { useLoginNudgeStore } from "@/shared/auth/loginNudgeStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
+import { useLoginNudgeStore } from "@/auth/input/loginNudgeStore";
 
 export default function TopNav({
   onOpenSidebar,

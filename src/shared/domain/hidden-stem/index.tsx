@@ -1,7 +1,7 @@
 // features/common/HiddenStems.tsx
-import { getSipSin } from "@/shared/domain/간지/utils";
+import { getSipSin } from "@/shared/domain/ganji/utils";
 import { hiddenStemMappingClassic, hiddenStemMappingHGC } from './const';
-import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
+import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
 
 type Variant = "auto" | "white";
 

@@ -1,5 +1,5 @@
 import type { MyeongSik } from "@/shared/lib/storage";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 
 export function addMyeongSik(payload: MyeongSik) {
   const store = useMyeongSikStore.getState();

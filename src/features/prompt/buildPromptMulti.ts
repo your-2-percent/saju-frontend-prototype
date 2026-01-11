@@ -1,11 +1,11 @@
 ﻿// features/AnalysisReport/buildPromptMulti.ts
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
-import { buildHarmonyTags, normalizeGZ } from "@/features/AnalysisReport/logic/relations";
-import { buildShinsalTags } from "@/features/AnalysisReport/logic/shinsal";
-import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/간지/twelve";
-import { useSajuSettingsStore } from "@/shared/lib/hooks/useSajuSettingsStore";
-import { computeDeukFlags10 } from "@/features/AnalysisReport/utils/strength";
-import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
+import { buildHarmonyTags, normalizeGZ } from "@/analysisReport/calc/logic/relations";
+import { buildShinsalTags } from "@/analysisReport/calc/logic/shinsal";
+import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
+import { useSajuSettingsStore } from "@/saju/input/useSajuSettingsStore";
+import { computeDeukFlags10 } from "@/analysisReport/calc/utils/strength";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import type { DayBoundaryRule } from "@/shared/type";
 
 import { STEM_TO_ELEMENT, elementToTenGod, getNabeum } from "./promptCore";

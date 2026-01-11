@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
-import type { Stem10sin, Branch10sin } from "@/shared/domain/간지/utils";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/간지/공통";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import { buildSijuSchedule, buildIljuFromSiju, buildWolju, buildYeonjuFromWolju } from "@/features/myoun";
 import { FourPillarsRow } from "./FourPillarsRow";
 import { formatDate24 } from "@/shared/utils";
@@ -63,7 +63,7 @@ export function PersonSlot({
   const current = useMemo(() => {
     if (mode !== "묘운" || !birthFixed || !data) return null;
     try {
-      const siju = buildSijuSchedule(birthFixed, natalHour, data.dir, 120, data.mingSikType as DayBoundaryRule);
+      const siju = buildSijuSchedule(birthFixed, natalHour, data.dir, 120);
       const ilju = buildIljuFromSiju(siju, natalDay, data.dir, data.DayChangeRule);
       const wolju = buildWolju(
         birthFixed,

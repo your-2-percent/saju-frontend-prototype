@@ -1,5 +1,5 @@
-﻿import type { Direction } from "@/shared/type";
-import { 천간, 지지 } from "@/shared/domain/간지/const";
+﻿﻿import type { Direction } from "@/shared/type";
+import { 천간, 지지 } from "@/shared/domain/ganji/const";
 
 const SIXTY: readonly string[] = (() => {
   const arr: string[] = [];

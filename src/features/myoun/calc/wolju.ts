@@ -1,6 +1,6 @@
 ﻿import type { Direction, DayChangeRule } from "@/shared/type";
-import { 천간, 지지 } from "@/shared/domain/간지/const";
-import { getMonthGanZhi } from "@/shared/domain/간지/공통";
+import { 천간, 지지 } from "@/shared/domain/ganji/const";
+import { getMonthGanZhi } from "@/shared/domain/ganji/common";
 import { getSolarTermBoundaries } from "@/features/myoun/calc/solarTerms";
 import { normalizeGZtoHJ } from "@/features/myoun/calc/normalize";
 import { dayChangeTrigger } from "@/features/myoun/calc/siju";
@@ -47,11 +47,12 @@ export const buildWolju = (
   );
 
   let relevantSolarTerm: Date | undefined;
+  const natalUtc = natal.getTime();
   if (dir === "forward") {
-    const i = allTerms.findIndex((t) => t.date >= natal);
+    const i = allTerms.findIndex((t) => t.date.getTime() >= natalUtc);
     if (i >= 0) relevantSolarTerm = allTerms[i].date;
   } else {
-    const past = allTerms.filter((t) => t.date <= natal);
+    const past = allTerms.filter((t) => t.date.getTime() <= natalUtc);
     if (past.length) relevantSolarTerm = past[past.length - 1].date;
   }
 
@@ -112,17 +113,21 @@ export const buildWolju = (
     dir === "forward"
       ? Math.floor((firstSijuBoundary.getTime() - natal.getTime()) / 60_000)
       : Math.floor((natal.getTime() - firstSijuBoundary.getTime()) / 60_000);
-  const firstMapMs = Math.round((minuteDiff / 120) * (10 * 24 * 60 * 60 * 1000));
-  let firstMonthChange = new Date(natal.getTime() + firstMapMs);
+  const mappedMs = Math.round((minuteDiff / 120) * (10 * 24 * 60 * 60 * 1000));
+  let firstMonthChange = new Date(natal.getTime() + mappedMs);
 
+  let isAdjacent = false;
   try {
     const refMonthAtBirth = normalizeGZtoHJ(getMonthGanZhi(natal, lon));
-    const isAdjacent =
+    isAdjacent =
       (dir === "forward" && refMonthAtBirthHJ !== refMonthAtBirth) ||
       (dir === "backward" && refMonthAtBirthHJ !== refMonthAtBirth);
     if (isAdjacent) {
-      const epsilonMs = 60_000;
-      firstMonthChange = new Date(natal.getTime() + epsilonMs);
+      const minuteMs = Math.round(minuteDiff * 60_000);
+      firstMonthChange = new Date(natal.getTime() + minuteMs);
+      if (firstMonthChange.getTime() === natal.getTime()) {
+        firstMonthChange = new Date(natal.getTime() + 60_000);
+      }
     }
   } catch {
     // getMonthGanZhi 실패해도 기본 로직 유지
@@ -130,13 +135,15 @@ export const buildWolju = (
 
   const utilsNumber = untilYears / 10;
   const events: WoljuEvent[] = [];
-  for (let i = 0; i < utilsNumber; i += 1) {
-    const at = new Date(firstMonthChange);
+  events.push({ at: firstMonthChange, gz: stepGZLocal(natalMonthGZ, dir, 1) });
+  for (let i = 1; i < utilsNumber; i += 1) {
+    const at = new Date(natal);
     at.setFullYear(at.getFullYear() + i * 10);
     at.setSeconds(0, 0);
     const gz = stepGZLocal(natalMonthGZ, dir, i + 1);
     events.push({ at, gz });
   }
+  events.sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return {
     natalMonthPillar: natalMonthGZ,

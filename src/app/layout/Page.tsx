@@ -1,21 +1,21 @@
 ﻿// page/Page.tsx
 import { useState, useEffect } from "react";
 import { Toaster } from "react-hot-toast";
-import TodaySaju from "@/app/pages/TodaySaju";
-import InputWizard from "@/app/pages/InputApp";
-import SajuChart from "@/app/pages/SajuChart";
+import TodaySaju from "@/saju/ui/TodaySajuPage";
+import InputWizard from "@/myeongsik/ui/InputAppPage";
+import SajuChart from "@/saju/ui/SajuChartPage";
 import UnMyounTabs from "@/app/components/tab";
 import TopNav from "@/shared/ui/nav/TopNav";
 import BottomNav from "@/shared/ui/nav/BottomNav";
-import Sidebar from "@/features/sidebar/Sidebar";
-import MyeongSikEditor from "@/app/pages/MyeongSikEditor";
+import Sidebar from "@/sidebar/ui/Sidebar";
+import MyeongSikEditor from "@/myeongsik/ui/MyeongSikEditorPage";
 import AdminPage from "@/app/admin/AdminPage";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
 import Footer from "@/app/pages/Footer";
-import LuckGlobalPicker from "@/features/luck/ui/LuckGlobalPicker";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import LuckGlobalPicker from "@/luck/ui/LuckGlobalPicker";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
 import { usePageInput } from "@/app/layout/page/input/usePageInput";
@@ -35,9 +35,9 @@ import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
 
 // ✅ Entitlements
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import LoginNudgeModal from "@/shared/auth/LoginNudgeModal";
-import LoginPage from "@/app/layout/login/page";
-import LoginInlineNudge from "@/shared/auth/LoginInlineNudge";
+import LoginNudgeModal from "@/auth/ui/LoginNudgeModal";
+import LoginPage from "@/auth/ui/LoginPage";
+import LoginInlineNudge from "@/auth/ui/LoginInlineNudge";
 import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
 import { AdsenseBanner } from "@/shared/ads/AdsenseBanner";
 
@@ -132,13 +132,14 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
-  // ✅ FAQ: 라우트 없이 Page에 붙이기
+  // ✅ FAQ: 라우트 없이 Page에 붙이기
   const [showFaq, setShowFaq] = useState(false);
+  const [customModalKey, setCustomModalKey] = useState(0);
 
-  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
+  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
   useEffect(() => {
-    if (input.wizardOpen || input.editing) setShowFaq(false);
-  }, [input.wizardOpen, input.editing]);
+    if (input.editing) setShowFaq(false);
+  }, [input.editing]);
 
   // ✅ 광고 노출 여부는 "플랜 문자열"이 아니라 "권한"으로 판단
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
@@ -167,6 +168,21 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     input.setShowToday(false);
     input.setShowCouple(false);
     save.handleSidebarView(...args);
+  };
+
+  const handleCustomClose = () => {
+    input.setOpenCustom(false);
+    setCustomModalKey((prev) => prev + 1);
+  };
+
+  const handleCustomSave = (m: MyeongSik) => {
+    setShowFaq(false);
+    save.handleCustomSave(m);
+  };
+
+  const handleWizardSave = (m: MyeongSik) => {
+    setShowFaq(false);
+    save.handleWizardSave(m);
   };
 
 
@@ -222,9 +238,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       )}
 
       <CustomSajuModal
+        key={customModalKey}
         open={input.openCustom}
-        onClose={() => input.setOpenCustom(false)}
-        onSave={save.handleCustomSave}
+        onClose={handleCustomClose}
+        onSave={handleCustomSave}
       />
 
       <Toaster position="top-center" />
@@ -256,7 +273,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           <div id="wizard-dim" className="bg-black opacity-80 fixed inset-0 w-full min-h-full z-99" />
           <div className="absolute inset-0 transition-opacity duration-150 opacity-100 z-100">
             <div className="py-6 pb-16 overflow-y-auto min-h-[100dvh]">
-              <InputWizard onSave={save.handleWizardSave} onClose={() => input.setWizardOpen(false)} />
+              <InputWizard onSave={handleWizardSave} onClose={() => input.setWizardOpen(false)} />
             </div>
           </div>
         </>
@@ -370,3 +387,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     </div>
   );
 }
+
+
+
+
+
+
+

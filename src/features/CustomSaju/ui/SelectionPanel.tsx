@@ -1,5 +1,5 @@
-import { getElementColor } from "@/shared/domain/간지/utils";
-import type { Settings } from "@/shared/lib/hooks/useSettingsStore";
+import { getElementColor } from "@/shared/domain/ganji/utils";
+import type { Settings } from "@/settings/input/useSettingsStore";
 import { BRANCH_YIN_YANG, GANJI_BRANCHES, GANJI_STEMS, STEM_YIN_YANG } from "../calc/ganjiRules";
 import type { Pillars, Stem } from "../input/customSajuTypes";
 

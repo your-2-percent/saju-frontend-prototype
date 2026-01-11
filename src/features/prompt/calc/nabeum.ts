@@ -1,4 +1,4 @@
-﻿import type { Element } from "@/features/AnalysisReport/utils/types";
+import type { Element } from "@/analysisReport/calc/utils/types";
 import { BRANCH_H2K, STEM_H2K } from "@/features/prompt/calc/ganjiMaps";
 
 type NabeumInfo = {

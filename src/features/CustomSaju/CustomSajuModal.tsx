@@ -1,5 +1,5 @@
-﻿import { X } from "lucide-react";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { X } from "lucide-react";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { OptionsPanel } from "./ui/OptionsPanel";
 import { PillarGrid } from "./ui/PillarGrid";

@@ -1,7 +1,7 @@
 // features/prompt/promptPosLabels.ts
 
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { Pillars4 } from "@/features/AnalysisReport/logic/relations";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
 
 export type JuLabel = "연" | "월" | "일" | "시";
 

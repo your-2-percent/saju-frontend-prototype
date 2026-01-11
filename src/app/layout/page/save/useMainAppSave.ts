@@ -1,9 +1,9 @@
-﻿import { useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { useLuckPickerStore } from "@/shared/lib/hooks/useLuckPickerStore";
-import { useMyeongSikStore } from "@/shared/lib/hooks/useMyeongSikStore";
-import { useSettingsStore } from "@/shared/lib/hooks/useSettingsStore";
+import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
+import { useSettingsStore } from "@/settings/input/useSettingsStore";
 
 type UseMainAppSaveArgs = {
   canAdd: boolean;

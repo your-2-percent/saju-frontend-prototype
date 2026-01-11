@@ -1,4 +1,4 @@
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/간지/공통";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
 import type { DayBoundaryRule } from "@/shared/type";
 import type { HourRule, MatchRow, Pillars } from "../input/customSajuTypes";
 import { TIME_WINDOWS, buildHourMap, GANJI_BRANCHES } from "./ganjiRules";
