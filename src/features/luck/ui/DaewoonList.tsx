@@ -95,7 +95,7 @@ export default function DaewoonList({
         {list.map((ev, i) => {
           const stem = ev.gz.charAt(0) as Stem10sin;
           const branch = ev.gz.charAt(1) as Branch10sin;
-          const age = getAge(solarBirth, ev.at);
+          const age = formatAge(ev.age);
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", charType);
@@ -181,14 +181,9 @@ export default function DaewoonList({
   );
 }
 
-function getAge(birth: Date, target: Date): string {
-  const diffMs = Math.abs(target.getTime() - birth.getTime());
-  const age = diffMs / (365.2425 * 24 * 60 * 60 * 1000);
-  const ageYears = Math.max(0, age);
-  if (ageYears < 1) {
-    const raw = (1 + ageYears).toFixed(4);
-    return raw.replace(/\.?0+$/, "");
-  }
-  return `${Math.round(ageYears)}`;
+function formatAge(age: number): string {
+  if (age >= 2) return String(Math.floor(age));
+  if (Number.isInteger(age)) return String(age);
+  return age.toFixed(4).replace(/\.?0+$/, "");
 }
 

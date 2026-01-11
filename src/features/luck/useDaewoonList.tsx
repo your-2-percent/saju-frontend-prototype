@@ -24,21 +24,20 @@ export function useDaewoonList(
     [base, hourTable, dstOffsetMinutes]
   );
 
-  const getAge = (b: Date, at: Date) => {
-    const y = at.getFullYear() - b.getFullYear();
-    const m = at.getMonth() - b.getMonth();
-    const d = at.getDate() - b.getDate();
-    const adjusted = m < 0 || (m === 0 && d < 0) ? y - 1 : y;
-    return Math.max(1, adjusted);
-  };
+  const getRawAgeYears = (b: Date, at: Date) =>
+    (at.getTime() - b.getTime()) / (365.2425 * 24 * 60 * 60 * 1000);
+  const normalizeBaseAge = (raw: number) => (raw < 1 ? 1 + raw : raw);
 
   return useMemo(() => {
     const wolju = buildWolju(birth, natal.month, base.dir, untilYears, base.birthPlace?.lon ?? 127.5);
     const natalEvent = { at: birth, gz: wolju.natalMonthPillar };
 
-    return [natalEvent, ...wolju.events].map((e) => ({
+    const baseRawAge = wolju.events[0] ? getRawAgeYears(birth, wolju.events[0].at) : 0;
+    const baseAge = normalizeBaseAge(baseRawAge);
+
+    return [natalEvent, ...wolju.events].map((e, i) => ({
       ...e,
-      age: getAge(birth, e.at),
+      age: i === 0 ? 1 : baseAge + (i - 1) * 10,
       // age: getAge(birth, e.at) + (wolju.ageOffset ?? 0),
     }));
   }, [birth, natal.month, base.dir, untilYears, base.birthPlace?.lon]);
@@ -80,9 +79,8 @@ export function useDaewoonActive(
 }
 
 export function daewoonAge(birth: Date, at: Date): number {
-  const y = at.getFullYear() - birth.getFullYear();
-  const m = at.getMonth() - birth.getMonth();
-  const d = at.getDate() - birth.getDate();
-  const adjusted = m < 0 || (m === 0 && d < 0) ? y - 1 : y;
-  return Math.max(1, adjusted);
+  const raw =
+    (at.getTime() - birth.getTime()) /
+    (365.2425 * 24 * 60 * 60 * 1000);
+  return raw < 1 ? 1 + raw : raw;
 }
