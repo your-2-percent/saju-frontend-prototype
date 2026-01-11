@@ -5,7 +5,7 @@ import type { DayBoundaryRule } from "@/shared/type";
 import { computeNatalPillars, buildWolju, parseBirthLocal } from "@/features/myoun";
 import { ensureSolarBirthDay } from "@/myeongsik/calc/ensureSolarBirthDay";
 
-export type Daewoon = { at: Date; gz: string; age: number };
+export type Daewoon = { at: Date; gz: string; age: number; startYear?: number };
 
 /** 대운리스트 생성 (첫 항목에 출생 월주 추가) */
 export function useDaewoonList(
@@ -35,11 +35,16 @@ export function useDaewoonList(
     const baseRawAge = wolju.events[0] ? getRawAgeYears(birth, wolju.events[0].at) : 0;
     const baseAge = normalizeBaseAge(baseRawAge);
 
-    return [natalEvent, ...wolju.events].map((e, i) => ({
-      ...e,
-      age: i === 0 ? 1 : baseAge + (i - 1) * 10,
-      // age: getAge(birth, e.at) + (wolju.ageOffset ?? 0),
-    }));
+    return [natalEvent, ...wolju.events].map((e, i) => {
+      const age = i === 0 ? 1 : baseAge + (i - 1) * 10;
+      const startYear = e.at.getFullYear();
+      return {
+        ...e,
+        age,
+        startYear,
+        // age: getAge(birth, e.at) + (wolju.ageOffset ?? 0),
+      };
+    });
   }, [birth, natal.month, base.dir, untilYears, base.birthPlace?.lon]);
 }
 

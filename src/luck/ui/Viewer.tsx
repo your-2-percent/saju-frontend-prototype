@@ -34,20 +34,33 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
   }, [daeList]);
 
   // ✅ activeYear + 일운 타겟 결정
+  const resolveDaeIndex = (idx: number) =>
+    idx <= 0 && daeList.length > 1 ? 1 : idx;
+
   useEffect(() => {
     if (activeDaeIndex === null) return;
-    const currDae = daeList[activeDaeIndex];
-    const nextDae = daeList[activeDaeIndex + 1];
+    const idx = resolveDaeIndex(activeDaeIndex);
+    const currDae = daeList[idx];
+    const nextDae = daeList[idx + 1];
     if (!currDae) return;
 
     const sewoonList = getSewoonListInDaewoon(currDae, nextDae);
+    if (!Array.isArray(sewoonList) || sewoonList.length === 0) return;
+    const normalized = sewoonList.filter(
+      (it): it is { at: Date; gz: string } =>
+        !!it && it.at instanceof Date && !Number.isNaN(it.at.getTime())
+    );
+    if (!normalized.length) return;
     const now = new Date();
-    const idx = sewoonList.findIndex((it, i) => {
-      const next = sewoonList[i + 1]?.at;
-      return now >= it.at && (!next || now < next);
+    const t = now.getTime();
+    const seIndex = normalized.findIndex((it, i) => {
+      const next = normalized[i + 1]?.at;
+      const curTime = it.at.getTime();
+      const nextTime = next ? next.getTime() : null;
+      return t >= curTime && (nextTime === null || t < nextTime);
     });
 
-    if (idx !== -1) {
+    if (seIndex !== -1) {
       setIlwoonTarget({ year: now.getFullYear(), month: now.getMonth() });
     }
   }, [activeDaeIndex, daeList]);
@@ -65,10 +78,17 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       return luck.dae.at >= d.at && (!next || luck.dae.at < next);
     });
     if (idx === -1) return [];
+    const fixedIdx = resolveDaeIndex(idx);
 
-    const currDae = daeList[idx];
-    const nextDae = daeList[idx + 1];
-    return getSewoonListInDaewoon(currDae, nextDae);
+    const currDae = daeList[fixedIdx];
+    const nextDae = daeList[fixedIdx + 1];
+    const raw = getSewoonListInDaewoon(currDae, nextDae);
+    return Array.isArray(raw)
+      ? raw.filter(
+          (it): it is { at: Date; gz: string } =>
+            !!it && it.at instanceof Date && !Number.isNaN(it.at.getTime())
+        )
+      : [];
   }, [daeList, luck?.dae]);
 
   return (

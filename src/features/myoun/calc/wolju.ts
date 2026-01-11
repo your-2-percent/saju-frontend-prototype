@@ -137,7 +137,7 @@ export const buildWolju = (
   const events: WoljuEvent[] = [];
   events.push({ at: firstMonthChange, gz: stepGZLocal(natalMonthGZ, dir, 1) });
   for (let i = 1; i < utilsNumber; i += 1) {
-    const at = new Date(natal);
+    const at = new Date(firstMonthChange);
     at.setFullYear(at.getFullYear() + i * 10);
     at.setSeconds(0, 0);
     const gz = stepGZLocal(natalMonthGZ, dir, i + 1);
