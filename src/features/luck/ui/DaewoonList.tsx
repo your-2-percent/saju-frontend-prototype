@@ -95,7 +95,7 @@ export default function DaewoonList({
         {list.map((ev, i) => {
           const stem = ev.gz.charAt(0) as Stem10sin;
           const branch = ev.gz.charAt(1) as Branch10sin;
-          const age = i === 0 ? "0" : getAge(solarBirth, ev.at);
+          const age = getAge(solarBirth, ev.at);
           const isActive = i === activeIndex;
 
           const stemDisp = toDisplayChar(stem, "stem", charType);
@@ -186,7 +186,8 @@ function getAge(birth: Date, target: Date): string {
   const age = diffMs / (365.2425 * 24 * 60 * 60 * 1000);
   const ageYears = Math.max(0, age);
   if (ageYears < 1) {
-    return ageYears.toFixed(4);
+    const raw = (1 + ageYears).toFixed(4);
+    return raw.replace(/\.?0+$/, "");
   }
   return `${Math.round(ageYears)}`;
 }

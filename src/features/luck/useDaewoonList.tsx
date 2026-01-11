@@ -29,7 +29,7 @@ export function useDaewoonList(
     const m = at.getMonth() - b.getMonth();
     const d = at.getDate() - b.getDate();
     const adjusted = m < 0 || (m === 0 && d < 0) ? y - 1 : y;
-    return Math.max(0, adjusted);
+    return Math.max(1, adjusted);
   };
 
   return useMemo(() => {
@@ -84,5 +84,5 @@ export function daewoonAge(birth: Date, at: Date): number {
   const m = at.getMonth() - birth.getMonth();
   const d = at.getDate() - birth.getDate();
   const adjusted = m < 0 || (m === 0 && d < 0) ? y - 1 : y;
-  return Math.max(0, adjusted);
+  return Math.max(1, adjusted);
 }
