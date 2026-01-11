@@ -5,18 +5,16 @@ import { Daewoon } from "@/features/luck/useDaewoonList";
 export type Sewoon = { at: Date; gz: string };
 
 export function getSewoonListInDaewoon(dae: Daewoon, nextDae?: Daewoon): Sewoon[] {
-  const startYear = dae.at.getFullYear();
-  const endYear = nextDae ? nextDae.at.getFullYear() : startYear + 10;
+  const startYear = dae.startYear ?? dae.at.getFullYear();
+  const endYear = nextDae
+    ? nextDae.startYear ?? nextDae.at.getFullYear()
+    : startYear + 10;
 
   const result: Sewoon[] = [];
   for (let y = startYear; y < endYear; y++) {
     // 해당 연도 입춘
     const ipchun = findSolarTermUTC(y, 315);
-    let gzYear = y;
-    const now = new Date();
-    if (now < ipchun) gzYear = y - 1;
-
-    const gz = getYearGanZhi(new Date(gzYear, 1, 10));
+    const gz = getYearGanZhi(new Date(y, 1, 10));
     result.push({ at: ipchun, gz });
   }
   return result;
