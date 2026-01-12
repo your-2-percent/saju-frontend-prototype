@@ -1,12 +1,8 @@
 ﻿import type { Direction, DayChangeRule } from "@/shared/type";
 import { 천간, 지지 } from "@/shared/domain/ganji/const";
-import { getMonthGanZhi } from "@/shared/domain/ganji/common";
 import { getSolarTermBoundaries } from "@/features/myoun/calc/solarTerms";
-import { normalizeGZtoHJ } from "@/features/myoun/calc/normalize";
-import { dayChangeTrigger } from "@/features/myoun/calc/siju";
+import { dayChangeTrigger } from "./siju";
 import { stepGZ } from "@/features/myoun/calc/ganjiCycle";
-
-type Branch = "子" | "丑" | "寅" | "卯" | "辰" | "巳" | "午" | "未" | "申" | "酉" | "戌" | "亥";
 
 type WoljuEvent = { at: Date; gz: string };
 
@@ -17,12 +13,7 @@ type WoljuResult = {
   events: WoljuEvent[];
 };
 
-const getHourBranchIndex = (date: Date) => Math.floor(((date.getHours() + 1) % 24) / 2);
-
-const getHourBranch = (date: Date): Branch => {
-  const branches: Branch[] = ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"];
-  return branches[getHourBranchIndex(date)];
-};
+const TWO_HOUR_MS = 2 * 60 * 60 * 1000;
 
 const stepGZLocal = (base: string, direction: Direction, step: number): string => {
   const g = base.charAt(0);
@@ -35,6 +26,105 @@ const stepGZLocal = (base: string, direction: Direction, step: number): string =
   return 천간[gi2] + 지지[zi2];
 };
 
+/**
+ * 시진(2시간 구간) 시작 시각 계산
+ * siju.ts의 getSijinStartHour 로직 사용
+ */
+const getSijinStartHour = (h: number): number => {
+  return (Math.floor((h + 1) / 2) * 2 - 1 + 24) % 24;
+};
+
+/**
+ * 시진 시작 시각을 반환 (siju.ts 로직 기반)
+ */
+const getSijinStartTime = (date: Date): Date => {
+  const h = date.getHours();
+  const startHour = getSijinStartHour(h);
+  
+  const start = new Date(date);
+  start.setHours(startHour, 0, 0, 0);
+  
+  // start가 birth보다 미래면, 이전 시진으로 되돌림
+  if (start.getTime() > date.getTime()) {
+    start.setTime(start.getTime() - TWO_HOUR_MS);
+  }
+  
+  return start;
+};
+
+/**
+ * 시진 시작 시각부터 2시간씩 스텝하면서 절기를 지나가는 시점을 찾음
+ */
+const findMonthPillarChangePoint = (
+  natal: Date,
+  dir: Direction
+): Date => {
+  // 절기 목록 가져오기
+  const allTerms = getSolarTermBoundaries(natal).sort(
+    (a, b) => a.date.getTime() - b.date.getTime()
+  );
+  
+  // 방향에 따라 관련 절기 찾기
+  const natalTime = natal.getTime();
+  let targetTerm: Date;
+  
+  if (dir === "forward") {
+    // 순행: 출생 이후 첫 번째 절기
+    const nextTerm = allTerms.find((t) => t.date.getTime() > natalTime);
+    if (!nextTerm) throw new Error("다음 절기를 찾을 수 없습니다.");
+    targetTerm = nextTerm.date;
+  } else {
+    // 역행: 출생 이전 가장 가까운 절기
+    const pastTerms = allTerms.filter((t) => t.date.getTime() < natalTime);
+    if (pastTerms.length === 0) throw new Error("이전 절기를 찾을 수 없습니다.");
+    targetTerm = pastTerms[pastTerms.length - 1].date;
+  }
+  
+  // 시진 시작 시각부터 2시간씩 스텝
+  const sijinStart = getSijinStartTime(natal);
+  const step = dir === "forward" ? TWO_HOUR_MS : -TWO_HOUR_MS;
+  const targetTime = targetTerm.getTime();
+  
+  let currentTime = new Date(sijinStart.getTime());
+  let iteration = 0;
+  const MAX_ITERATIONS = 365 * 24 / 2; // 최대 1년치
+  
+  while (iteration < MAX_ITERATIONS) {
+    const currentMs = currentTime.getTime();
+    
+    // 절기를 지나갔는지 확인
+    if (dir === "forward") {
+      if (currentMs >= targetTime) {
+        return currentTime;
+      }
+    } else {
+      if (currentMs <= targetTime) {
+        return currentTime;
+      }
+    }
+    
+    currentTime = new Date(currentTime.getTime() + step);
+    iteration++;
+  }
+  
+  throw new Error("월주 변경 시점을 찾을 수 없습니다.");
+};
+
+/**
+ * 2시간 = 10일 비율로 묘운 시작 시점 계산
+ * siju.ts의 SCALE 로직 사용: (10일 / 2시간) = 120
+ */
+const calculateMyounStart = (natal: Date, changePoint: Date): Date => {
+  const timeDiffMs = Math.abs(changePoint.getTime() - natal.getTime());
+  
+  // SCALE = (10 * DAY_MS) / (2 * HOUR_MS) = 120
+  const SCALE = 120;
+  const msToAdd = timeDiffMs * SCALE;
+  
+  // 묘운은 항상 미래로 진행
+  return new Date(natal.getTime() + msToAdd);
+};
+
 export const buildWolju = (
   natal: Date,
   natalMonthGZ: string,
@@ -42,107 +132,26 @@ export const buildWolju = (
   untilYears = 120,
   lon: number
 ): WoljuResult => {
-  const allTerms = getSolarTermBoundaries(natal).sort(
-    (a, b) => a.date.getTime() - b.date.getTime()
-  );
+  console.log(lon);
+  // 2시간씩 스텝하면서 절기를 지나가는 시점 찾기
+  const changePoint = findMonthPillarChangePoint(natal, dir);
+  
+  // 첫 월주 변경 시점 계산 (2시간 = 10일 비율)
+  const firstMonthChange = calculateMyounStart(natal, changePoint);
 
-  let relevantSolarTerm: Date | undefined;
-  const natalUtc = natal.getTime();
-  if (dir === "forward") {
-    const i = allTerms.findIndex((t) => t.date.getTime() >= natalUtc);
-    if (i >= 0) relevantSolarTerm = allTerms[i].date;
-  } else {
-    const past = allTerms.filter((t) => t.date.getTime() <= natalUtc);
-    if (past.length) relevantSolarTerm = past[past.length - 1].date;
-  }
-
-  const getFirstSijuChangeRestored = (dt: Date, solarTermTime?: Date) => {
-    const branch = getHourBranch(dt);
-    const startMap: Record<Branch, number> = {
-      子: 23,
-      丑: 1,
-      寅: 3,
-      卯: 5,
-      辰: 7,
-      巳: 9,
-      午: 11,
-      未: 13,
-      申: 15,
-      酉: 17,
-      戌: 19,
-      亥: 21,
-    };
-    const h0 = startMap[branch];
-    const h1 = (h0 + 2) % 24;
-
-    const base = new Date(dt);
-    base.setSeconds(0, 0);
-
-    if (dir === "backward" && solarTermTime) {
-      const termBranch = getHourBranch(solarTermTime);
-      const termStartHour = startMap[termBranch];
-      const termBoundary = new Date(solarTermTime);
-      termBoundary.setHours(termStartHour, 0, 0, 0);
-      return termBoundary;
-    }
-
-    if (dir === "forward" && solarTermTime) {
-      const termBranch = getHourBranch(solarTermTime);
-      const termStartHour = startMap[termBranch];
-      const termBoundary = new Date(solarTermTime);
-      termBoundary.setHours(termStartHour, 0, 0, 0);
-      if (termBoundary > base) {
-        return termBoundary;
-      }
-    }
-
-    const bnd = new Date(base);
-    if (dir === "forward") {
-      bnd.setHours(h1, 0, 0, 0);
-      if (bnd <= base) bnd.setDate(bnd.getDate() + 1);
-    } else {
-      bnd.setHours(h0, 0, 0, 0);
-      if (bnd >= base) bnd.setDate(bnd.getDate() - 1);
-    }
-    return bnd;
-  };
-
-  const refMonthAtBirthHJ = normalizeGZtoHJ(getMonthGanZhi(natal, 127.5));
-  const firstSijuBoundary = getFirstSijuChangeRestored(natal, relevantSolarTerm);
-  const minuteDiff =
-    dir === "forward"
-      ? Math.floor((firstSijuBoundary.getTime() - natal.getTime()) / 60_000)
-      : Math.floor((natal.getTime() - firstSijuBoundary.getTime()) / 60_000);
-  const mappedMs = Math.round((minuteDiff / 120) * (10 * 24 * 60 * 60 * 1000));
-  let firstMonthChange = new Date(natal.getTime() + mappedMs);
-
-  let isAdjacent = false;
-  try {
-    const refMonthAtBirth = normalizeGZtoHJ(getMonthGanZhi(natal, lon));
-    isAdjacent =
-      (dir === "forward" && refMonthAtBirthHJ !== refMonthAtBirth) ||
-      (dir === "backward" && refMonthAtBirthHJ !== refMonthAtBirth);
-    if (isAdjacent) {
-      const minuteMs = Math.round(minuteDiff * 60_000);
-      firstMonthChange = new Date(natal.getTime() + minuteMs);
-      if (firstMonthChange.getTime() === natal.getTime()) {
-        firstMonthChange = new Date(natal.getTime() + 60_000);
-      }
-    }
-  } catch {
-    // getMonthGanZhi 실패해도 기본 로직 유지
-  }
-
-  const utilsNumber = untilYears / 10;
+  // 10년 단위로 월주 변경 이벤트 생성
+  const eventsCount = Math.floor(untilYears / 10);
   const events: WoljuEvent[] = [];
-  events.push({ at: firstMonthChange, gz: stepGZLocal(natalMonthGZ, dir, 1) });
-  for (let i = 1; i < utilsNumber; i += 1) {
+
+  for (let i = 0; i < eventsCount; i++) {
     const at = new Date(firstMonthChange);
     at.setFullYear(at.getFullYear() + i * 10);
     at.setSeconds(0, 0);
+    
     const gz = stepGZLocal(natalMonthGZ, dir, i + 1);
     events.push({ at, gz });
   }
+
   events.sort((a, b) => a.at.getTime() - b.at.getTime());
 
   return {
