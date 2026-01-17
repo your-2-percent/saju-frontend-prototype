@@ -80,6 +80,16 @@ export default function Page() {
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
+  const [bootingDone, setBootingDone] = useState(false);
+  const booting = input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded);
+
+  useEffect(() => {
+    if (!input.isLoggedIn) setBootingDone(false);
+  }, [input.isLoggedIn]);
+
+  useEffect(() => {
+    if (input.isLoggedIn && !booting) setBootingDone(true);
+  }, [input.isLoggedIn, booting]);
 
   if (!input.authChecked) {
     return (
@@ -93,9 +103,7 @@ export default function Page() {
   if (input.isLoggedIn && input.adminMode) return <AdminPage />;
 
   // ✅ 권한/설정 로드는 로그인 유저만 대기
-  const booting = input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded);
-
-  if (booting) {
+  if (booting && !bootingDone) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-neutral-500">데이터 불러오는 중...</p>

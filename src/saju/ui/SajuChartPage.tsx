@@ -12,7 +12,7 @@ import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStor
 import { useCurrentUnCards } from "@/luck/calc/luck-make";
 import { useGlobalLuck } from "@/luck/calc/useGlobalLuck";
 import { useDstStore } from "@/saju/input/useDstStore";
-import { buildAllRelationTags } from "@/analysisReport/calc/logic/relations";
+import { buildAllRelationTags, buildHarmonyTags } from "@/analysisReport/calc/logic/relations";
 import { buildShinsalTags } from "@/analysisReport/calc/logic/shinsal";
 import { mapEra } from "@/shared/domain/ganji/era";
 import { buildHourCandidates } from "@/saju/calc/sajuHour";
@@ -208,17 +208,31 @@ export default function SajuChart({ data, hourTable }: Props) {
     const toGz = (p?: { stem?: string; branch?: string } | null) =>
       p?.stem && p?.branch ? `${p.stem}${p.branch}` : "";
 
-    return buildAllRelationTags({
-      natal: [
-        toGz(parsed.year),
-        toGz(parsed.month),
-        toGz(parsed.day),
-        toGz(hourData),
-      ],
+    const natal = [
+      toGz(parsed.year),
+      toGz(parsed.month),
+      toGz(parsed.day),
+      toGz(hourData),
+    ] as const;
+
+    const luckTags = buildAllRelationTags({
+      natal: [...natal],
       daewoon: daeGz ?? undefined,
       sewoon: seGz ?? undefined,
       wolwoon: wolGz ?? undefined,
     });
+
+    const natalTags = buildHarmonyTags([...natal], { fillNone: false });
+    const merged = { ...luckTags };
+
+    for (const key of Object.keys(natalTags) as Array<keyof typeof natalTags>) {
+      if (key === "title") continue;
+      const a = (merged as Record<string, string[]>)[key] ?? [];
+      const b = (natalTags as Record<string, string[]>)[key] ?? [];
+      (merged as Record<string, string[]>)[key] = Array.from(new Set([...a, ...b]));
+    }
+
+    return merged;
   }, [parsed, hourData, daeGz, seGz, wolGz]);
 
   const relationChips = useMemo(() => {
