@@ -70,12 +70,26 @@ const findMonthPillarChangePoint = (
   
   if (dir === "forward") {
     // 순행: 출생 이후 첫 번째 절기
-    const nextTerm = allTerms.find((t) => t.date.getTime() > natalTime);
+    let nextTerm = allTerms.find((t) => t.date.getTime() > natalTime);
+    if (!nextTerm) {
+      const nextYear = new Date(natal.getFullYear() + 1, 0, 2, 12, 0, 0, 0);
+      const nextTerms = getSolarTermBoundaries(nextYear).sort(
+        (a, b) => a.date.getTime() - b.date.getTime()
+      );
+      nextTerm = nextTerms.find((t) => t.date.getTime() > natalTime);
+    }
     if (!nextTerm) throw new Error("다음 절기를 찾을 수 없습니다.");
     targetTerm = nextTerm.date;
   } else {
     // 역행: 출생 이전 가장 가까운 절기
-    const pastTerms = allTerms.filter((t) => t.date.getTime() < natalTime);
+    let pastTerms = allTerms.filter((t) => t.date.getTime() < natalTime);
+    if (pastTerms.length === 0) {
+      const prevYear = new Date(natal.getFullYear() - 1, 11, 31, 12, 0, 0, 0);
+      const prevTerms = getSolarTermBoundaries(prevYear).sort(
+        (a, b) => a.date.getTime() - b.date.getTime()
+      );
+      pastTerms = prevTerms.filter((t) => t.date.getTime() < natalTime);
+    }
     if (pastTerms.length === 0) throw new Error("이전 절기를 찾을 수 없습니다.");
     targetTerm = pastTerms[pastTerms.length - 1].date;
   }
