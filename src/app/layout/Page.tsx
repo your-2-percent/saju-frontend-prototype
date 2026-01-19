@@ -80,17 +80,11 @@ export default function Page() {
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
-  const [bootingDone, setBootingDone] = useState(false);
-  const booting = input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded);
 
-  useEffect(() => {
-    if (!input.isLoggedIn) setBootingDone(false);
-  }, [input.isLoggedIn]);
+  // 🔧 개선된 로딩 상태 관리
+  const isBooting = input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded);
 
-  useEffect(() => {
-    if (input.isLoggedIn && !booting) setBootingDone(true);
-  }, [input.isLoggedIn, booting]);
-
+  // 인증 체크 중
   if (!input.authChecked) {
     return (
       <main className="flex min-h-screen items-center justify-center">
@@ -99,11 +93,11 @@ export default function Page() {
     );
   }
 
-  // ✅ 관리자 모드: "로그인 된 상태"에서만 진입
+  // 관리자 모드
   if (input.isLoggedIn && input.adminMode) return <AdminPage />;
 
-  // ✅ 권한/설정 로드는 로그인 유저만 대기
-  if (booting && !bootingDone) {
+  // 로그인 유저 데이터 로딩 중
+  if (isBooting) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         <p className="text-sm text-neutral-500">데이터 불러오는 중...</p>
@@ -140,11 +134,13 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
-  // ✅ FAQ: 라우트 없이 Page에 붙이기
+  // ✅ FAQ: 라우트 없이 Page에 붙이기
+
   const [showFaq, setShowFaq] = useState(false);
   const [customModalKey, setCustomModalKey] = useState(0);
 
-  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
+  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
+
   useEffect(() => {
     if (input.editing) setShowFaq(false);
   }, [input.editing]);

@@ -186,7 +186,7 @@ function applyAbsentDemotion(
     return {
       ...it,
       score: 0,
-      reasons: [...it.reasons, "부재후순위: 원국 부재 → 0점"],
+      reasons: [...it.reasons, "부재후순위: 원국 부재 → 패널티 적용"],
     };
   });
 }

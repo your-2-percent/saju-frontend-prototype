@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import PentagonChart from "./PentagonChart";
 import StrengthBar from "./StrengthBar";
+import YinYangBar from "./YinYangBar";
 import HarmonyTagPanel from "./HarmonyTagPanel";
 import ShinsalTagPanel from "./ShinsalTagPanel";
 import ClimateBars from "./ClimateBars";
@@ -107,26 +108,39 @@ export default function AnalysisReport({
 
   return (
     <div className="space-y-4 mb-4">
-      {/* 운 탭 */}
-      <div className="flex gap-2 justify-center flex-wrap">
-        {BLEND_TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => input.setBlendTab(t)}
-            className={
-              "px-2 py-1 text-xs rounded border cursor-pointer " +
-              (input.blendTab === t
-                ? "bg-yellow-500 text-black border-yellow-600"
-                : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
-            }
-          >
-            {t}
-          </button>
-        ))}
+      {/* 운 탭 섹션 */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="flex gap-2 justify-center flex-wrap mb-4">
+          {BLEND_TABS.map((t) => {
+            const isActive = input.blendTab === t;
+            return (
+              <button
+                key={t}
+                onClick={() => input.setBlendTab(t)}
+                className={`
+                  px-4 py-1.5 text-[11px] font-bold rounded-full transition-all duration-200 active:scale-95 cursor-pointer
+                  ${isActive 
+                    ? "bg-amber-400 text-amber-950 shadow-[0_2px_10px_rgba(251,191,36,0.4)] border border-amber-300" 
+                    : "bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400 border border-transparent hover:bg-neutral-200 dark:hover:bg-neutral-700"}
+                `}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* ✨ 추가된 설명글 영역 */}
+        <div className="flex items-start gap-2 px-4 py-2 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100/50 dark:border-amber-900/20">
+          <span className="text-amber-500 text-[12px] mt-0.5">💡</span>
+          <p className="text-[10.5px] text-amber-700 dark:text-amber-400/80 leading-relaxed font-medium">
+            선택하신 운의 흐름을 바탕으로 <span className="font-bold underline decoration-amber-300/50 underline-offset-2 text-amber-800 dark:text-amber-300">형충회합 분석</span>과 <span className="font-bold underline decoration-amber-300/50 underline-offset-2 text-amber-800 dark:text-amber-300">신살 판정</span> 결과가 실시간으로 업데이트됩니다.
+          </p>
+        </div>
       </div>
 
-      {/* 섹션 탭: ✅ 항상 보이되, 프리면 특정 탭만 잠금 */}
-      <div className="flex gap-2 mb-4 justify-center flex-wrap">
+      {/* 섹션 탭 - 프리미엄 바이올렛 포인트 & 잠금 연출 */}
+      <div className="flex gap-2 mb-8 justify-center flex-wrap">
         {BIG_TABS.map((t) => {
           const locked = !advancedOk && isAdvancedLockedTab(t);
           const isActive = input.bigTab === t;
@@ -135,17 +149,26 @@ export default function AnalysisReport({
             <button
               key={t}
               title={locked ? lockTitle : undefined}
-              onClick={() => input.setBigTab(t)} // ✅ 잠금이어도 눌러지게(잠금 안내 화면 보여주려고)
-              className={
-                "px-3 py-1 text-sm rounded border cursor-pointer " +
-                (locked ? "opacity-60 " : "") +
-                (isActive
-                  ? "bg-violet-500 text-white border-violet-600"
-                  : "bg-neutral-400 dark:bg-neutral-900 text-neutral-100 dark:text-neutral-300 border-neutral-400 dark:border-neutral-700")
-              }
+              onClick={() => input.setBigTab(t)}
+              className={`
+                relative px-4 py-2 text-sm font-bold rounded-2xl border transition-all duration-300 active:scale-95 flex items-center gap-1.5 cursor-pointer
+                ${isActive
+                  ? "bg-violet-600 text-white border-violet-500 shadow-[0_4px_12px_rgba(139,92,246,0.3)] z-10"
+                  : "bg-white dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-neutral-800 hover:border-violet-300 dark:hover:border-violet-700"}
+                ${locked ? "opacity-70 bg-neutral-50 dark:bg-neutral-900/50" : ""}
+              `}
             >
-              {t}
-              {locked ? " 🔒" : ""}
+              <span className={locked ? "mr-1" : ""}>{t}</span>
+              {locked && (
+                <span className="flex items-center justify-center w-4 h-4 bg-neutral-200 dark:bg-neutral-800 rounded-full text-[10px]">
+                  🔒
+                </span>
+              )}
+              
+              {/* 활성화 시 하단 작은 점 표시 (선택사항) */}
+              {isActive && !locked && (
+                <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-white rounded-full"></span>
+              )}
             </button>
           );
         })}
@@ -170,12 +193,18 @@ export default function AnalysisReport({
           <PentagonChart
             key={`pentagon-${calc.revKey}`}
             data={calc.chartData}
-            revKey={calc.revKey}
+            //revKey={calc.revKey}
             perStemElementScaled={calc.overlay?.perStemAugFull}
-            elementPercent={calc.elementPct}
+            //elementPercent={calc.elementPct}
             dayStem={calc.activePillars[2]?.charAt(0) ?? null}
+            yongshinTop={calc.yongshinMulti?.best?.candidates?.[0]?.element ?? null}
+            yongshinKind={calc.yongshinMulti?.bestKind ?? null}
           />
 
+          <YinYangBar
+            natal={calc.activePillars}
+            perStemElementScaled={calc.overlay?.perStemAugFull}
+          />
           <StrengthBar value={calc.dayElementPercent} />
           <ClimateBars natal={calc.activePillars} />
         </div>
@@ -188,15 +217,17 @@ export default function AnalysisReport({
         </div>
       )}
       {input.bigTab === "용신추천" && advancedOk && (
-        <YongshinRecommendCard
-          key={`yongshin-${input.blendTab}-${calc.hourKeyForUi}`}
-          recommend={calc.yongshinMulti}
-          data={normalizedData}
-          pillars={calc.activePillars}
-          hourKey={calc.hourKeyForUi}
-          demoteAbsent={input.demoteAbsent}
-          hiddenStemMode={settings.hiddenStemMode}
-        />
+          <YongshinRecommendCard
+            key={`yongshin-${input.blendTab}-${calc.hourKeyForUi}`}
+            recommend={calc.yongshinMulti}
+            data={normalizedData}
+            pillars={calc.activePillars}
+            hourKey={calc.hourKeyForUi}
+            demoteAbsent={input.demoteAbsent}
+            onDemoteAbsentChange={input.setDemoteAbsent}
+            hasAbsent={calc.hasAbsent}
+            hiddenStemMode={settings.hiddenStemMode}
+          />
       )}
 
       {/* 신살 */}

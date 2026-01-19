@@ -1,5 +1,4 @@
-// features/AnalysisReport/GyeokgukTagPanel.tsx
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect, memo } from "react";
 import type { BlendTab } from "@/analysisReport/calc/logic/blend";
 import { computeNaegyeok, detectMulsangTerms, detectStructureTags } from "@/analysisReport/calc/logic/gyeokguk";
 import { UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
@@ -8,355 +7,210 @@ import { getGyeokgukTooltip } from "@/analysisReport/calc/logic/gyeokguk/rulesTo
 import { getStructureTagTooltipText } from "@/analysisReport/calc/logic/gyeokguk/structureTagTooltips";
 import { getTermTooltipText } from "@/analysisReport/calc/logic/gyeokguk/termTooltips";
 import { getFormatterReasonTooltip, getNaegyeokTooltip } from "@/analysisReport/calc/logic/gyeokguk/formatterTooltips";
-import type { ReasonToken } from "@/analysisReport/calc/logic/gyeokguk/formatter";
 
-/**
- * 격국 · 물상 태그 패널
- * - 월령/사령/진신/가신
- * - 내격
- * - 외격(복수)
- * - 물상/구조어
- */
-export default function GyeokgukTagPanel(props: {
-  /** [연/월/일/시] 간지 배열(예: "갑자") */
+/** 1. 타입 정의 */
+interface GyeokgukTagPanelProps {
   pillars: [string, string, string, string];
-  /** 현재 선택된 탭 */
   tab: BlendTab;
-  /** (선택) 실제 출생 일시 */
   birthDate?: Date;
-  /** (선택) 천간 투출 목록 */
   emittedStems?: string[];
-  /** (선택) 월지 외 지지 목록 */
   otherBranches?: string[];
-  /** (선택) 합/충 무력화 판단 */
   isNeutralized?: (stemKo: string) => boolean;
   mapping: string;
   unified: UnifiedPowerResult;
-}) {
-  const {
-    pillars,
-    tab,
-    birthDate,
-    emittedStems,
-    otherBranches,
-    isNeutralized,
-    mapping,
-    unified,
-  } = props;
+}
 
-  const [yearGZ, monthGZ, dayGZ, hourGZ] = pillars;
+type ColorType = "violet" | "amber" | "blue" | "green" | "red";
 
-  const safeStem = (gz: string): string => (gz && gz.length >= 1 ? gz.charAt(0) : "");
-  const safeBranch = (gz: string): string => (gz && gz.length >= 2 ? gz.charAt(1) : "");
+// Environment 항목을 위한 유니온 타입
+type EnvKey = "월령" | "사령" | "당령" | "진신" | "가신";
 
-  const monthBranch = safeBranch(monthGZ);
-  const dayStem = safeStem(dayGZ);
-
-  const date = birthDate instanceof Date && !Number.isNaN(birthDate.getTime()) ? birthDate : new Date();
-  const inferredEmitted: string[] = [
-    safeStem(yearGZ),
-    safeStem(monthGZ),
-    safeStem(dayGZ),
-    safeStem(hourGZ),
-  ].filter((s): s is string => Boolean(s && s.length === 1));
-
-  const inferredBranches: string[] = [
-    safeBranch(yearGZ),
-    safeBranch(dayGZ),
-    safeBranch(hourGZ),
-  ].filter((b): b is string => Boolean(b && b.length === 1));
-
-  const result = computeNaegyeok({
-    dayStem,
-    monthBranch,
-    date,
-    pillars,
-    emittedStems: emittedStems ?? inferredEmitted,
-    otherBranches: otherBranches ?? inferredBranches,
-    isNeutralized,
-    mapping,
-  });
-  const reasonTokens = result.reasonTokens ?? [];
-  const reasonLabels = result.reason ?? [];
-
-  const row1: string[] = [
-    `월령 : ${result.월령 || "-"}`,
-    `사령 : ${result.사령 || "-"}`,
-    `당령 : ${result.당령 || "-"}`,
-    `진신 : ${result.진신 || "-"}`,
-    `가신 : ${result.가신 || "-"}`,
-  ];
-  const row2: string[] = [`내격 : ${result.내격 || "-"}`];
-
-  const row3: string[] =
-    Array.isArray(result.외격) && result.외격.length > 0
-      ? result.외격.map((x) => `외격 : ${x}`)
-      : ["외격 : -"];
-
-  const mulsangTags = detectMulsangTerms(pillars);
-
-  const row4: string[] = [
-    ...(mulsangTags.length ? mulsangTags.map((t) => `${t}`) : []),
-  ];
-
-  const structureTags = detectStructureTags(pillars, mapping, unified);
-  const row5: string[] = [...structureTags];
-
-  const Chip: React.FC<{ text: string; color: "violet" | "amber" | "blue" | "green" | "red" }> = ({ text, color }) => {
-    const colorMap: Record<typeof color, string> = {
-      violet: "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800",
-      amber:  "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800",
-      blue:   "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200 dark:border-blue-800",
-      green:  "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200 dark:border-green-800",
-      red:    "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200 dark:border-red-800",
-    };
-    return (
-      <span className={`inline-block text-xs px-2 py-1 rounded-full border whitespace-nowrap ${colorMap[color]}`} title={text}>
-        {text}
-      </span>
-    );
-  };
-
-  const RowBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <li className="!flex flex-wrap gap-1 p-1 rounded-sm">
-      {children}
-    </li>
-  );
-
-  const [openTooltipKey, setOpenTooltipKey] = useState<string | null>(null);
-
-  const OuterChip: React.FC<{ text: string }> = ({ text }) => {
-    const label = text.replace(/^외격\s*:\s*/, "").trim();
-    const tip = useMemo(() => getOuterGyeokTooltipText(label), [label]);
-    const key = `outer:${label}`;
-    const open = openTooltipKey === key;
-
-    if (!tip) {
-      return <Chip text={text} color="blue" />;
-    }
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tip}
-        >
-          <Chip text={text} color="blue" />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[180px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tip}
-          </div>
-        )}
-      </span>
-    );
-  };
-
-  const MulsangChip: React.FC<{ text: string }> = ({ text }) => {
-    const label = text.trim();
-    const tip = useMemo(() => getGyeokgukTooltip(label), [label]);
-    const key = `mulsang:${label}`;
-    const open = openTooltipKey === key;
-
-    if (!tip) {
-      return <Chip text={text} color="green" />;
-    }
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tip}
-        >
-          <Chip text={text} color="green" />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[180px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tip}
-          </div>
-        )}
-      </span>
-    );
-  };
-
-  const StructureChip: React.FC<{ text: string }> = ({ text }) => {
-    const label = text.trim();
-    const tip = useMemo(() => getStructureTagTooltipText(label), [label]);
-    const key = `structure:${label}`;
-    const open = openTooltipKey === key;
-
-    if (!tip) {
-      return <Chip text={text} color="red" />;
-    }
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tip}
-        >
-          <Chip text={text} color="red" />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[180px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tip}
-          </div>
-        )}
-      </span>
-    );
-  };
-
-  const TermChip: React.FC<{ text: string; color: "violet" | "amber" }> = ({ text, color }) => {
-    const label = text.trim();
-    const term = label.split(":")[0]?.trim() ?? label;
-    const tip = useMemo(() => getTermTooltipText(term), [term]);
-    const key = `term:${term}`;
-    const open = openTooltipKey === key;
-
-    if (!tip) {
-      return <Chip text={text} color={color} />;
-    }
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tip}
-        >
-          <Chip text={text} color={color} />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[180px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tip}
-          </div>
-        )}
-      </span>
-    );
-  };
-
-  const NaegyeokChip: React.FC<{ text: string }> = ({ text }) => {
-    const tip = useMemo(() => getNaegyeokTooltip(text), [text]);
-    const key = `naegyeok:${text}`;
-    const open = openTooltipKey === key;
-
-    if (!tip) {
-      return <Chip text={text} color="amber" />;
-    }
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tip.text}
-        >
-          <Chip text={text} color="amber" />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[200px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tip.text}
-          </div>
-        )}
-      </span>
-    );
-  };
-
-  const ReasonChip: React.FC<{ token: ReasonToken; fallback: string; idx: number }> = ({ token, fallback, idx }) => {
-    const tip = getFormatterReasonTooltip(token);
-    const label = tip?.title ?? fallback;
-    const tooltipText = tip?.text ?? fallback;
-    const key = `reason:${token.kind}:${"from" in token ? token.from : ""}:${idx}`;
-    const open = openTooltipKey === key;
-
-    return (
-      <span className="relative inline-flex">
-        <button
-          type="button"
-          onClick={() => setOpenTooltipKey(open ? null : key)}
-          className="inline-flex cursor-pointer"
-          title={tooltipText}
-        >
-          <Chip text={label} color="amber" />
-        </button>
-        {open && (
-          <div className="absolute z-10 left-0 top-full mt-1 w-[200px] text-[11px] leading-4 rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 p-2 shadow text-center">
-            {tooltipText}
-          </div>
-        )}
-      </span>
-    );
+/** 2. 정적 서브 컴포넌트 */
+const Chip = memo(({ text, color, onClick }: { text: string; color: ColorType; onClick?: () => void }) => {
+  const colorClasses: Record<ColorType, string> = {
+    violet: "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 dark:border-violet-800",
+    amber: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800",
+    blue: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800",
+    green: "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800",
+    red: "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800",
   };
 
   return (
-    <div
-      className="p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 space-y-3 text-sm"
-      data-revkey={`gyeok:${tab}|${pillars.join("")}|${row1.join(",")}|${row2.join(",")}|${row3.join(",")}`}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border shadow-sm whitespace-nowrap active:scale-95 transition-transform cursor-pointer ${colorClasses[color]}`}
     >
-      <div className="font-bold text-base">격국 · 물상 판정</div>
-      <div className="text-xs text-amber-500 dark:text-amber-400 mb-2">* 칩 버튼을 누르면 간략 설명을 볼 수 있습니다.</div>
+      {text}
+    </button>
+  );
+});
 
-      <ul className="space-y-1">
-        <RowBox>
-          {row1.map((t) => (
-            <TermChip key={t} text={t} color="violet" />
+const TooltipBox = ({ text }: { text: string }) => (
+  <div className="absolute z-50 left-0 top-full mt-2 w-[220px] p-3 bg-white dark:bg-neutral-800 rounded-xl shadow-xl border border-neutral-200 dark:border-neutral-700 text-[11px] leading-relaxed text-left text-neutral-700 dark:text-neutral-200 pointer-events-none transition-none">
+    <div className="absolute -top-1 left-4 w-2 h-2 bg-white dark:bg-neutral-800 border-t border-l border-neutral-200 dark:border-neutral-700 rotate-45" />
+    {text}
+  </div>
+);
+
+const Section = memo(({ title, children }: { title: string; children: React.ReactNode }) => (
+  <div className="flex flex-col gap-2">
+    <div className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase pl-1">
+      {title}
+    </div>
+    <div className="flex flex-wrap gap-1.5">{children}</div>
+  </div>
+));
+
+/** 3. 메인 컴포넌트 */
+export default function GyeokgukTagPanel({
+  pillars,
+  tab,
+  birthDate,
+  emittedStems,
+  otherBranches,
+  isNeutralized,
+  mapping,
+  unified,
+}: GyeokgukTagPanelProps) {
+  const [openTooltipKey, setOpenTooltipKey] = useState<string | null>(null);
+
+  // 탭 전환 시 툴팁 닫기
+  useEffect(() => {
+    setOpenTooltipKey(null);
+  }, [tab, pillars]);
+
+  // 계산 로직 메모이제이션 및 타입 안정성 확보
+  const result = useMemo(() => {
+    const [yearGZ, monthGZ, dayGZ, hourGZ] = pillars;
+    const safeStem = (gz: string) => (gz && gz.length >= 1 ? gz.charAt(0) : "");
+    const safeBranch = (gz: string) => (gz && gz.length >= 2 ? gz.charAt(1) : "");
+
+    const date = birthDate instanceof Date && !Number.isNaN(birthDate.getTime()) ? birthDate : new Date();
+    
+    // 타입 추론을 위한 필터링
+    const inferredEmitted = [safeStem(yearGZ), safeStem(monthGZ), safeStem(dayGZ), safeStem(hourGZ)].filter((s): s is string => !!s);
+    const inferredBranches = [safeBranch(yearGZ), safeBranch(dayGZ), safeBranch(hourGZ)].filter((b): b is string => !!b);
+
+    return computeNaegyeok({
+      dayStem: safeStem(dayGZ),
+      monthBranch: safeBranch(monthGZ),
+      date,
+      pillars,
+      emittedStems: emittedStems ?? inferredEmitted,
+      otherBranches: otherBranches ?? inferredBranches,
+      isNeutralized,
+      mapping,
+    });
+  }, [pillars, birthDate, emittedStems, otherBranches, isNeutralized, mapping]);
+
+  const mulsangTags = useMemo(() => detectMulsangTerms(pillars), [pillars]);
+  const structureTags = useMemo(() => detectStructureTags(pillars, mapping, unified), [pillars, mapping, unified]);
+
+  const handleToggle = (key: string) => {
+    setOpenTooltipKey((prev) => (prev === key ? null : key));
+  };
+
+  // Environment 항목 매핑용 헬퍼
+  const envItems: Array<{ key: EnvKey; value: string | undefined }> = [
+    { key: "월령", value: result.월령 },
+    { key: "사령", value: result.사령 },
+    { key: "당령", value: result.당령 },
+    { key: "진신", value: result.진신 },
+    { key: "가신", value: result.가신 },
+  ];
+
+  return (
+    <div className="p-6 rounded-[2rem] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-sm space-y-6 overflow-visible">
+      <div className="flex items-center justify-between">
+        <h3 className="font-black text-lg text-neutral-800 dark:text-neutral-100 italic">격국 · 물상 판정</h3>
+        <span className="text-[10px] bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-0.5 rounded-full font-bold">
+          💡 칩을 눌러 상세 정보 확인
+        </span>
+      </div>
+
+      <div className="space-y-5">
+        <Section title="월령/사령/당령/진신/가신">
+          {envItems.map(({ key, value }) => (
+            <div key={key} className="relative">
+              <Chip
+                text={`${key}: ${value || "-"}`}
+                color="violet"
+                onClick={() => handleToggle(`env-${key}`)}
+              />
+              {openTooltipKey === `env-${key}` && (
+                <TooltipBox text={getTermTooltipText(key) ?? "정보가 없습니다."} />
+              )}
+            </div>
           ))}
-        </RowBox>
+        </Section>
 
-        <RowBox>
-          {row2.map((t) => (
-            <NaegyeokChip key={t} text={t} />
-          ))}
-        </RowBox>
-
-        <RowBox>
-          {row3.map((t) => (
-            <OuterChip key={t} text={t} />
-          ))}
-        </RowBox>
-
-        <RowBox>
-          {row4.map((t) => (
-            <MulsangChip key={t} text={t} />
-          ))}
-        </RowBox>
-
-        <RowBox>
-          {row5.map((t) => (
-            <StructureChip key={t} text={t} />
-          ))}
-        </RowBox>
-      </ul>
-
-      {reasonTokens.length > 0 ? (
-        <div className="mt-2">
-          <div className="text-xs text-neutral-600 dark:text-neutral-400">내격 사유</div>
-          <div className="mt-1">
-            <RowBox>
-              {reasonTokens.map((token, idx) => (
-                <ReasonChip
-                  key={`${token.kind}-${idx}`}
-                  token={token}
-                  fallback={reasonLabels[idx] ?? token.kind}
-                  idx={idx}
-                />
-              ))}
-            </RowBox>
+        <Section title="내격">
+          <div className="relative">
+            <Chip
+              text={`내격: ${result.내격 || "-"}`}
+              color="amber"
+              onClick={() => handleToggle("naegyeok")}
+            />
+            {openTooltipKey === "naegyeok" && (
+              <TooltipBox text={getNaegyeokTooltip(result.내격 || "")?.text ?? "분석 정보가 없습니다."} />
+            )}
           </div>
+          {result.reasonTokens?.map((token, idx) => {
+            const tip = getFormatterReasonTooltip(token);
+            const key = `reason-${idx}`;
+            return (
+              <div key={key} className="relative">
+                <Chip
+                  text={tip?.title ?? (result.reason[idx] || token.kind)}
+                  color="amber"
+                  onClick={() => handleToggle(key)}
+                />
+                {openTooltipKey === key && <TooltipBox text={tip?.text ?? "상세 사유가 없습니다."} />}
+              </div>
+            );
+          })}
+        </Section>
+
+        <Section title="외격">
+          {result.외격 && result.외격.length > 0 ? (
+            result.외격.map((x, i) => (
+              <div key={`outer-${i}`} className="relative">
+                <Chip text={`외격: ${x}`} color="blue" onClick={() => handleToggle(`outer-${i}`)} />
+                {openTooltipKey === `outer-${i}` && <TooltipBox text={getOuterGyeokTooltipText(x) ?? "설명 없음"} />}
+              </div>
+            ))
+          ) : (
+            <Chip text="외격: -" color="blue" />
+          )}
+        </Section>
+
+        {(mulsangTags.length > 0 || structureTags.length > 0) && (
+          <Section title="물상 및 특징">
+            {mulsangTags.map((t, i) => (
+              <div key={`mul-${i}`} className="relative">
+                <Chip text={t} color="green" onClick={() => handleToggle(`mul-${i}`)} />
+                {openTooltipKey === `mul-${i}` && <TooltipBox text={getGyeokgukTooltip(t) ?? "설명 없음"} />}
+              </div>
+            ))}
+            {structureTags.map((t, i) => (
+              <div key={`str-${i}`} className="relative">
+                <Chip text={t} color="red" onClick={() => handleToggle(`str-${i}`)} />
+                {openTooltipKey === `str-${i}` && <TooltipBox text={getStructureTagTooltipText(t) ?? "설명 없음"} />}
+              </div>
+            ))}
+          </Section>
+        )}
+      </div>
+      
+      {!result.reasonTokens?.length && result.reason.length > 0 && (
+        <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800">
+          <p className="text-[11px] text-neutral-500 leading-relaxed font-medium">
+            <span className="font-bold mr-1 text-neutral-400">※ 분석 근거:</span>
+            {result.reason.join(" / ")}
+          </p>
         </div>
-      ) : result.reason.length > 0 ? (
-        <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-400">
-          이유: {result.reason.join(" / ")}
-        </div>
-      ) : null}
+      )}
     </div>
   );
 }

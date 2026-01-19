@@ -227,7 +227,7 @@ export function useAnalysisReportCalc({
   }, [unified, overlay]);
 
   const elementPct = overlay?.elemPct100 ?? { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
-  const tenSubTotals100 = overlay?.totalsSub ?? null;
+  const tenSubTotals100 = overlay?.totalsSub ?? unified?.perTenGodSub ?? null;
 
   const luckKey = useMemo(
     () =>
