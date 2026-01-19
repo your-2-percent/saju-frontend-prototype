@@ -1,106 +1,140 @@
-// features/AnalysisReport/YongshinRecommendCard.tsx
+
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { YongshinMultiResult, YongshinGroup, YongshinItem } from "@/analysisReport/calc/yongshin/multi";
+import type { YongshinMultiResult, YongshinGroup } from "@/analysisReport/calc/yongshin/multi";
 import { useLuckYongshin } from "@/analysisReport/calc/yongshin/useLuckYongshin";
 import YongshinLuckDiffPanel from "@/analysisReport/ui/YongshinLuckDiffPanel";
 
 type Props = {
-  /** ✅ 원국(기본) 용신 */
   recommend: YongshinMultiResult;
-  /** ✅ 운용신 계산용 */
   data: MyeongSik;
   pillars: [string, string, string, string];
   hourKey: string;
-
   demoteAbsent: boolean;
+  onDemoteAbsentChange?: (next: boolean) => void;
+  hasAbsent?: boolean;
   hiddenStemMode: string;
+};
+
+// --- 공통 UI 컴포넌트 ---
+
+const Badge = ({ children, variant = "neutral" }: { children: React.ReactNode; variant?: "neutral" | "violet" | "amber" | "indigo" }) => {
+  const styles = {
+    neutral: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400",
+    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300",
+    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+    indigo: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  };
+  return (
+    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold tracking-tight shadow-sm ${styles[variant]}`}>
+      {children}
+    </span>
+  );
 };
 
 function pctWidth(score: number, maxScore: number): string {
   if (maxScore <= 0) return "12%";
   const w = Math.round((score / maxScore) * 100);
-  return `${Math.max(2, Math.min(100, w))}%`;
+  return `${Math.max(5, Math.min(100, w))}%`;
 }
 
-function pickTop3(candidates: YongshinItem[]): YongshinItem[] {
-  return candidates.slice(0, 3);
-}
+// --- 서브 섹션 컴포넌트 ---
 
-const Chip: React.FC<{ text: string; tone?: "base" | "best" }> = ({ text, tone = "base" }) => {
-  const cls =
-    tone === "best"
-      ? "bg-violet-100 text-violet-800 border-violet-200 dark:bg-violet-900/30 dark:text-violet-200 dark:border-violet-800"
-      : "bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300";
-  return <span className={`text-[11px] px-2 py-0.5 rounded-full border border-transparent ${cls}`}>{text}</span>;
-};
-
-function GroupDetails({ g, isBest }: { g: YongshinGroup; isBest: boolean }) {
-  const top3 = pickTop3(g.candidates);
+function GroupDetails({
+  g,
+  isBest,
+  demoteAbsent,
+  hasAbsent,
+  onDemoteAbsentChange,
+}: {
+  g: YongshinGroup;
+  isBest: boolean;
+  demoteAbsent: boolean;
+  hasAbsent: boolean;
+  onDemoteAbsentChange?: (next: boolean) => void;
+}) {
+  const top3 = g.candidates.slice(0, 3);
 
   return (
     <details
       open={isBest}
-      className="rounded-lg border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900"
+      className={`group rounded-2xl border transition-all duration-300 ${
+        isBest 
+          ? "border-violet-200 dark:border-violet-800 bg-white dark:bg-neutral-900 shadow-md" 
+          : "border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-neutral-900/50"
+      }`}
     >
-      <summary className="list-none cursor-pointer px-3 py-2 flex flex-col gap-2">
-        <div className="flex flex-wrap items-start gap-2">
-          <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-            {g.marker} {g.title}
-          </span>
-
-          {/* ✅ 말줄임 제거: truncate 제거 + 줄바꿈 허용 */}
-          <span className="max-w-[62%] text-xs text-neutral-600 dark:text-neutral-400 whitespace-normal break-words">
+      <summary className="list-none cursor-pointer p-4 select-none">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`text-sm ${isBest ? "font-black text-violet-600" : "font-bold text-neutral-700 dark:text-neutral-300"}`}>
+                {g.marker} {g.title}
+              </span>
+              {isBest && <Badge variant="violet">최종 채택</Badge>}
+              {!g.applicable && <Badge variant="neutral">미충족</Badge>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-medium text-neutral-400">적합도</span>
+              <span className="text-sm font-black text-neutral-800 dark:text-neutral-100">{g.fitScore}</span>
+              <span className="text-neutral-300 group-open:rotate-180 transition-transform">▼</span>
+            </div>
+          </div>
+          
+          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed whitespace-normal break-words pr-4">
             {g.note}
-          </span>
-
-          {!g.applicable && <Chip text="조건 미충족" />}
-
-          {isBest && <Chip text="최종 선택" tone="best" />}
-
-          <Chip text={`적합도 ${g.fitScore}`} />
+          </p>
         </div>
       </summary>
 
-      <div className="px-3 pb-3 pt-1">
+      <div className="px-4 pb-4 space-y-3">
         {top3.length === 0 ? (
-          <div className="text-xs text-neutral-600 dark:text-neutral-400">후보 없음</div>
+          <div className="text-[11px] text-neutral-400 py-2 text-center border-t border-neutral-100 dark:border-neutral-800">추천 후보가 없습니다.</div>
         ) : (
-          <ul className="space-y-2">
+          <div className="space-y-2 border-t border-neutral-100 dark:border-neutral-800 pt-3">
             {top3.map((it, idx) => (
-              <li
-                key={`${g.kind}-${it.elNorm ?? it.element}-${idx}`}
-                className="flex items-start justify-between gap-3 rounded-lg border border-neutral-200 dark:border-neutral-800 p-2"
+              <div
+                key={`${g.kind}-${it.element}-${idx}`}
+                className="flex items-center gap-4 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800/50 border border-neutral-100 dark:border-neutral-800"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-                    {idx + 1}위
-                  </span>
-                  <span className="text-sm font-semibold">{it.element}</span>
+                <div className="flex flex-col items-center justify-center min-w-[40px]">
+                  <span className="text-[9px] font-bold text-neutral-400 uppercase">{idx + 1}st</span>
+                  <span className="text-sm font-black text-neutral-800 dark:text-neutral-100">{it.element}</span>
                 </div>
 
-                <div className="flex-1">
-                  <div className="mt-1 h-1.5 w-full rounded bg-neutral-300 dark:bg-neutral-800 overflow-hidden">
+                <div className="flex-1 space-y-2">
+                  <div className="h-2 w-full rounded-full bg-neutral-200 dark:bg-neutral-700 overflow-hidden shadow-inner">
                     <div
-                      className="h-1.5 rounded bg-white dark:bg-neutral-100"
+                      className={`h-full rounded-full transition-all duration-700 ${
+                        isBest ? "bg-gradient-to-r from-violet-400 to-indigo-500" : "bg-neutral-400"
+                      }`}
                       style={{ width: pctWidth(it.score ?? 0, g.maxScore) }}
-                      title={`점수 ${it.score}`}
                     />
                   </div>
-
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {(it.reasons ?? []).slice(0, 6).map((r, i) => (
-                      <span
-                        key={i}
-                        className="text-[11px] px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-                      >
+                  <div className="flex flex-wrap gap-1">
+                    {(it.reasons ?? []).slice(0, 4).map((r, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-md bg-white dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400 border border-neutral-100 dark:border-neutral-600 shadow-sm">
                         {r}
                       </span>
                     ))}
                   </div>
                 </div>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
+        )}
+        {hasAbsent && (
+          <button
+            type="button"
+            onClick={() => onDemoteAbsentChange?.(!demoteAbsent)}
+            className={`px-2 py-1 rounded-full text-[10px] font-bold border transition cursor-pointer ${
+              demoteAbsent
+                ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-800"
+                : "bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700"
+            }`}
+            aria-pressed={demoteAbsent}
+          >
+            부재후순위 {demoteAbsent ? "ON" : "OFF"}
+          </button>
         )}
       </div>
     </details>
@@ -111,77 +145,106 @@ function BestSummary({ best }: { best: YongshinGroup | null }) {
   const top = best?.candidates?.[0] ?? null;
 
   return (
-    <div className="rounded-lg border border-neutral-200 dark:border-neutral-800 p-3 bg-white/60 dark:bg-neutral-950/20">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
-          최종 기준
-        </span>
+    <div className="relative overflow-hidden rounded-[2rem] border border-violet-200 dark:border-violet-800 p-6 bg-gradient-to-br from-violet-50 to-white dark:from-violet-950/20 dark:to-neutral-900 shadow-sm">
+      {/* 배경 데코레이션 */}
+      <div className="absolute -right-4 -top-4 w-24 h-24 bg-violet-100 dark:bg-violet-900/20 rounded-full blur-3xl" />
+      
+      <div className="relative z-10 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <Badge variant="indigo">베스트 추천</Badge>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-neutral-400 font-bold uppercase">적합도 점수</span>
+            <span className="text-lg font-black text-violet-600 dark:text-violet-400">{best?.fitScore ?? 0}</span>
+          </div>
+        </div>
 
-        <div className="text-sm font-semibold">
-          {best ? (
-            <>
-              <span className="mr-1">{best.marker}</span>
-              {best.title}
-            </>
-          ) : (
-            "—"
+        <div className="flex items-end gap-3">
+          <h4 className="text-2xl font-black text-neutral-800 dark:text-neutral-100 tracking-tighter">
+            {best ? `${best.marker} ${best.title}` : "분석 결과 없음"}
+          </h4>
+          {top?.element && (
+            <div className="mb-1 flex items-center gap-1">
+              <span className="text-xs text-neutral-400 font-medium">제1용신:</span>
+              <span className="text-base font-black text-indigo-500">{top.element}</span>
+            </div>
           )}
         </div>
 
-        {top?.element ? <Chip text={`1순위: ${top.element}`} /> : null}
-        {best?.fitScore != null ? <Chip text={`적합도 ${best.fitScore}`} /> : null}
+        {best?.note && (
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
+            {best.note}
+          </p>
+        )}
       </div>
-
-      {best?.note ? (
-        <div className="mt-2 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed whitespace-normal break-words">
-          {best.note}
-        </div>
-      ) : null}
     </div>
   );
 }
 
-export function YongshinRecommendCard({ recommend, data, pillars, hourKey, demoteAbsent, hiddenStemMode }: Props) {
-  const natal = recommend;
+// --- 메인 카드 ---
 
-  // ✅ 운용신(대운/세운) 계산은 hook으로 빼서 카드 얇게
-  const luck = useLuckYongshin({
-    data,
-    pillars,
-    hourKey,
-    demoteAbsent,
-    hiddenStemMode,
-  });
+export function YongshinRecommendCard({
+  recommend,
+  data,
+  pillars,
+  hourKey,
+  demoteAbsent,
+  onDemoteAbsentChange,
+  hasAbsent,
+  hiddenStemMode,
+}: Props) {
+  const luck = useLuckYongshin({ data, pillars, hourKey, demoteAbsent, hiddenStemMode });
+  const hasAbsentUi = hasAbsent ?? luck.hasAbsent;
 
   return (
-    <div className="w-full p-4 rounded-xl bg-neutral-100 dark:bg-neutral-900 space-y-4">
-      {/* 원국 */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-sm font-bold">용신 추천 (원국)</div>
-          {luck.hasAbsent ? (
-            <span className="text-xs text-neutral-600 dark:text-neutral-400">
-              * 원국 부재 있음{demoteAbsent ? " (부재후순위 ON)" : ""}
-            </span>
-          ) : null}
+    <div className="w-full p-6 rounded-[2.5rem] bg-white dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shadow-xl space-y-8">
+      {/* 헤더 섹션 */}
+      <div className="flex items-center justify-between px-2">
+        <div className="space-y-1">
+          <h2 className="text-xl font-black text-neutral-800 dark:text-neutral-100 tracking-tighter uppercase">용신 추천</h2>
         </div>
+        {hasAbsentUi && (
+          <div className="flex flex-col items-end">
+             <Badge variant="amber">원국 부재 감지</Badge>
+             {demoteAbsent && <span className="text-[9px] text-amber-500 font-bold mt-1">부재후순위 적용됨</span>}
+          </div>
+        )}
+      </div>
 
-        <BestSummary best={natal.best} />
+      {/* 최종 요약 카드 */}
+      <BestSummary best={recommend.best} />
 
-        <div className="space-y-2">
-          {natal.groups.map((g) => (
-            <GroupDetails key={g.kind} g={g} isBest={natal.bestKind === g.kind} />
+      {/* 상세 추천 그룹 리스트 */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 px-2">
+          <div className="h-px flex-1 bg-neutral-100 dark:bg-neutral-800" />
+          <span className="text-[10px] font-black text-neutral-300 dark:text-neutral-600 uppercase tracking-widest">상세 정보</span>
+          <div className="h-px flex-1 bg-neutral-100 dark:bg-neutral-800" />
+        </div>
+        
+        <div className="grid gap-3">
+          {recommend.groups.map((g) => (
+            <GroupDetails
+              key={g.kind}
+              g={g}
+              isBest={recommend.bestKind === g.kind}
+              demoteAbsent={demoteAbsent}
+              hasAbsent={hasAbsentUi}
+              onDemoteAbsentChange={onDemoteAbsentChange}
+            />
           ))}
         </div>
       </div>
 
-      <YongshinLuckDiffPanel
-        data={data}
-        pillars={pillars}
-        hourKey={hourKey}
-        demoteAbsent={demoteAbsent}
-        natal={recommend}
-      />
+      {/* 운용신 판넬 (카드 하단) */}
+      <div className="pt-2">
+        <YongshinLuckDiffPanel
+          data={data}
+          pillars={pillars}
+          hourKey={hourKey}
+          demoteAbsent={demoteAbsent}
+          natal={recommend}
+        />
+      </div>
     </div>
   );
 }
