@@ -171,13 +171,13 @@ export default function TodaySaju() {
 
   return (
     <div className="flex flex-col justify-center items-center pt-20 desk:pt-16 desk:mt-12 w-full h-auto desk:h-[calc(100dvh_-_212px)] ">
-      <div
+      {/* <div
         className="w-[96%] max-w-[640px] mx-auto mb-2 p-2 bg-white dark:bg-neutral-950
                       text-neutral-900 dark:text-neutral-100 text-xs text-center
                       rounded-xl shadow border border-neutral-200 dark:border-neutral-800 transition-colors">
         광고 가끔씩 클릭해주시면 감사하겠습니다^^ <br /> 
         광고 클릭은 운영자에게 큰 힘이 됩니다 ! (클릭하고 바로 끄셔도 돼요!)
-      </div>
+      </div> */}
       <div
         className="w-[96%] max-w-[640px] mx-auto mb-4 p-4
                       bg-white dark:bg-neutral-950
