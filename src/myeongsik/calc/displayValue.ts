@@ -9,9 +9,9 @@ export function displayValue(
 ): string {
   switch (key) {
     case "birthPlace":
-      return unknownPlace ? "紐⑤쫫" : form.birthPlace?.name || "";
+      return unknownPlace ? "출생지모름" : form.birthPlace?.name || "";
     case "birthTime":
-      return unknownTime ? "紐⑤쫫" : form.birthTime || "";
+      return unknownTime ? "출생시간모름" : form.birthTime || "";
     case "folder":
       return form.folder ? String(form.folder) : UNASSIGNED_LABEL;
     default: {
