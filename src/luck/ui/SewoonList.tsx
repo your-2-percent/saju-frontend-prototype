@@ -149,11 +149,6 @@ export default function SewoonList({
             <div
               key={`${year}-${ev.gz || i}`}
               onClick={() => {
-
-              if (i === 0) {
-                setLocalIndex(i); // 표시만 바뀌게
-                return;           // 내부 세운 이동 금지
-              }
               // 1) 선택 즉시 표시
               setLocalIndex(i);
 
