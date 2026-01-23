@@ -80,11 +80,16 @@ export default function Page() {
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
+  const [booted, setBooted] = useState(false);
 
   // 1. 로딩이 필요한 모든 상황을 하나의 변수로 정의
   // (인증 확인 중) 또는 (로그인했는데 데이터 로딩 중)
   const isInitializing =
     !input.authChecked || !calc.entLoaded || !calc.settingsLoaded;
+
+  useEffect(() => {
+    if (!isInitializing) setBooted(true);
+  }, [isInitializing]);
 
   // 2. 관리자 모드 체크 (데이터 로딩보다 우선순위가 높다면 여기 배치)
   // 단, 관리자 모드도 authCheck가 끝나야 알 수 있으므로 순서 주의
@@ -93,7 +98,7 @@ export default function Page() {
   }
 
   // 3. 통합 로딩 화면
-  if (isInitializing) {
+  if (!booted && isInitializing) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         {/* 문구를 고정하거나, 상태에 따라 부드럽게 변경 */}

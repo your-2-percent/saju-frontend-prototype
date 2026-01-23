@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
   const location = useLocation();
@@ -19,7 +20,19 @@ export default function AuthCallback() {
           return;
         }
 
-        // detectSessionInUrl: true 환경에서는 Supabase가 자동 교환 처리함
+        const code = sp.get("code");
+        if (!code) {
+          setMsg("콜백 code가 없어요. (redirectTo/PKCE 설정 확인)");
+          return;
+        }
+
+        const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
+        if (exErr) {
+          setMsg(`세션 교환 실패: ${exErr.message}`);
+          return;
+        }
+
+        // ✅ 깔끔하게 홈으로
         navigate("/", { replace: true });
       } catch (e) {
         setMsg(e instanceof Error ? e.message : "알 수 없는 오류");
