@@ -12,7 +12,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
 
     // ✅ PKCE에서 콜백 URL에 code 붙는 걸 처리하려면 true 유지
-    detectSessionInUrl: false,
+    detectSessionInUrl: true,
 
     // ✅ GitHub Pages 환경에서도 localStorage로 세션 유지
     storage: localStorage,
