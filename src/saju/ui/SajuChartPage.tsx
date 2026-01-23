@@ -222,9 +222,9 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     const luckTags = buildAllRelationTags({
       natal: [...natal],
-      daewoon: daeGz ?? undefined,
-      sewoon: seGz ?? undefined,
-      wolwoon: wolGz ?? undefined,
+      daewoon: exposureLevel >= 1 ? daeGz ?? undefined : undefined,
+      sewoon: exposureLevel >= 2 ? seGz ?? undefined : undefined,
+      wolwoon: exposureLevel >= 3 ? wolGz ?? undefined : undefined,
     });
 
     const natalTags = buildHarmonyTags([...natal], { fillNone: false });
@@ -234,7 +234,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
 
     return merged;
-  }, [parsed, hourData, daeGz, seGz, wolGz]);
+  }, [parsed, hourData, daeGz, seGz, wolGz, exposureLevel]);
 
   const relationChips = useMemo(() => {
     const all = [
@@ -293,9 +293,9 @@ export default function SajuChart({ data, hourTable }: Props) {
         toGz(parsed.day),
         toGz(hourData),
       ],
-      daewoon: daeGz ?? undefined,
-      sewoon: seGz ?? undefined,
-      wolwoon: wolGz ?? undefined,
+      daewoon: exposureLevel >= 1 ? daeGz ?? undefined : undefined,
+      sewoon: exposureLevel >= 2 ? seGz ?? undefined : undefined,
+      wolwoon: exposureLevel >= 3 ? wolGz ?? undefined : undefined,
     });
 
     const uniq = (items: string[]) =>
@@ -329,7 +329,7 @@ export default function SajuChart({ data, hourTable }: Props) {
         },
       },
     };
-  }, [parsed, hourData, daeGz, seGz, wolGz]);
+  }, [parsed, hourData, daeGz, seGz, wolGz, exposureLevel]);
 
   const tagKindMap = useMemo(() => {
     const map: Record<string, "stem" | "branch" | "both"> = {};
