@@ -83,9 +83,8 @@ export default function Page() {
 
   // 1. 로딩이 필요한 모든 상황을 하나의 변수로 정의
   // (인증 확인 중) 또는 (로그인했는데 데이터 로딩 중)
-  const isInitializing = 
-    !input.authChecked || 
-    (input.isLoggedIn && (!calc.entLoaded || !calc.settingsLoaded));
+  const isInitializing =
+    !input.authChecked || !calc.entLoaded || !calc.settingsLoaded;
 
   // 2. 관리자 모드 체크 (데이터 로딩보다 우선순위가 높다면 여기 배치)
   // 단, 관리자 모드도 authCheck가 끝나야 알 수 있으므로 순서 주의
