@@ -12,7 +12,7 @@ export type {
 } from "./relations/types";
 
 export type { LuckKind, PosLabel } from "./relations/constants";
-export { POS_LABELS, POS, LUCK_ORDER, WEAK_SUFFIX } from "./relations/constants";
+export { POS_LABELS, POS, LUCK_ORDER } from "./relations/constants";
 
 export type { KoBranch, TrioGroup } from "./relations/groups";
 export { SANHE_GROUPS, BANGHAP_GROUPS, TRIAD_SHAPE_GROUPS } from "./relations/groups";

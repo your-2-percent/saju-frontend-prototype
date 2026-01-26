@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY!;
+const DETECT_SESSION_IN_URL = import.meta.env.DEV ? true : false;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
@@ -12,7 +13,7 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     autoRefreshToken: true,
 
     // ✅ PKCE에서 콜백 URL에 code 붙는 걸 처리하려면 true 유지
-    detectSessionInUrl: false,
+    detectSessionInUrl: DETECT_SESSION_IN_URL,
 
     // ✅ GitHub Pages 환경에서도 localStorage로 세션 유지
     storage: localStorage,

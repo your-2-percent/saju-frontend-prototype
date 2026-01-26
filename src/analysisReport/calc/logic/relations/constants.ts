@@ -13,5 +13,3 @@ export const POS = {
 export const LUCK_ORDER = ["대운", "세운", "월운", "일운"] as const;
 export type LuckKind = "대운" | "세운" | "월운" | "일운";
 
-// 연X시(원국) 표기용 약표기. 현재는 빈 문자열 유지.
-export const WEAK_SUFFIX = "";

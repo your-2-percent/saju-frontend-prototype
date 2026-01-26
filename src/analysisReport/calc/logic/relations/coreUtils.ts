@@ -23,9 +23,6 @@ export const posMask = (idxs: number[]) =>
     .map((i) => POS_LABELS[i]!)
     .join("X");
 
-export const isYearHourPair = (i: number, j: number) =>
-  (i === 0 && j === 3) || (i === 3 && j === 0);
-
 export function selectAllPairs(posA: number[], posB: number[]): Array<[number, number]> {
   const raw: Array<[number, number]> = [];
   for (const i of posA) for (const j of posB) {

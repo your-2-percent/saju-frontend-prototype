@@ -1,5 +1,6 @@
 ﻿// page/Page.tsx
 import { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import TodaySaju from "@/saju/ui/TodaySajuPage";
 import InputWizard from "@/myeongsik/ui/InputAppPage";
@@ -81,6 +82,10 @@ export default function Page() {
   usePageSave(input);
   const calc = usePageCalc();
   const [booted, setBooted] = useState(false);
+  const [loadingShown, setLoadingShown] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.sessionStorage.getItem("app_loading_shown_v1") === "1";
+  });
 
   // 1. 로딩이 필요한 모든 상황을 하나의 변수로 정의
   // (인증 확인 중) 또는 (로그인했는데 데이터 로딩 중)
@@ -91,6 +96,19 @@ export default function Page() {
     if (!isInitializing) setBooted(true);
   }, [isInitializing]);
 
+  useEffect(() => {
+    if (!loadingShown && !booted && isInitializing) {
+      setLoadingShown(true);
+      if (typeof window !== "undefined") {
+        try {
+          window.sessionStorage.setItem("app_loading_shown_v1", "1");
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  }, [loadingShown, booted, isInitializing]);
+
   // 2. 관리자 모드 체크 (데이터 로딩보다 우선순위가 높다면 여기 배치)
   // 단, 관리자 모드도 authCheck가 끝나야 알 수 있으므로 순서 주의
   if (input.authChecked && input.isLoggedIn && input.adminMode) {
@@ -98,7 +116,7 @@ export default function Page() {
   }
 
   // 3. 통합 로딩 화면
-  if (!booted && isInitializing) {
+  if (!booted && isInitializing && !loadingShown) {
     return (
       <main className="flex min-h-screen items-center justify-center">
         {/* 문구를 고정하거나, 상태에 따라 부드럽게 변경 */}
@@ -114,6 +132,8 @@ export default function Page() {
 }
 
 function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { list } = useMyeongSikStore();
   const settings = useSettingsStore((s) => s.settings);
 
@@ -150,6 +170,34 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     if (input.editing) setShowFaq(false);
   }, [input.editing]);
 
+  // ✅ 라우트 기준으로 탭 상태 동기화
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === "/faq") {
+      setShowFaq(true);
+      input.setShowCouple(false);
+      input.setShowToday(false);
+      return;
+    }
+    if (path === "/couple") {
+      setShowFaq(false);
+      input.setShowCouple(true);
+      input.setShowToday(false);
+      return;
+    }
+    if (path === "/result") {
+      setShowFaq(false);
+      input.setShowCouple(false);
+      input.setShowToday(false);
+      return;
+    }
+
+    // default: 홈
+    setShowFaq(false);
+    input.setShowCouple(false);
+    input.setShowToday(true);
+  }, [input, location.pathname, input.setShowCouple, input.setShowToday]);
+
   // ✅ 광고 노출 여부는 "플랜 문자열"이 아니라 "권한"으로 판단
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
@@ -176,6 +224,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setShowFaq(false);
     input.setShowToday(false);
     input.setShowCouple(false);
+    navigate("/result", { replace: false });
     save.handleSidebarView(...args);
   };
 
@@ -373,24 +422,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      <BottomNav
-        onShowToday={() => {
-          setShowFaq(false);
-          input.setShowToday(true);
-          input.setShowCouple(false);
-        }}
-        onShowCouple={() => {
-          setShowFaq(false);
-          input.setShowCouple(true);
-          input.setShowToday(false);
-        }}
-        onShowFaq={() => {
-          // ✅ FAQ 켜면 나머지 탭은 꺼버림
-          input.setShowToday(false);
-          input.setShowCouple(false);
-          setShowFaq(true);
-        }}
-      />
+      <BottomNav />
 
       <Footer />
     </div>

@@ -1,6 +1,6 @@
 ﻿// features/AnalysisReport/logic/relations/buildHarmonyTags.ts
 
-import { POS, POS_LABELS, WEAK_SUFFIX } from "./constants";
+import { POS_LABELS } from "./constants";
 import { SANHE_GROUPS, type KoBranch } from "./groups";
 import { normalizeGZ, gzStem, gzBranch } from "./normalize";
 import {
@@ -20,7 +20,6 @@ import {
   STEM_HAP_LABELS,
 } from "./tables";
 import {
-  isYearHourPair,
   labelForPair,
   posMask,
   posToJuLabel,
@@ -48,14 +47,7 @@ function isBanhapWithWang(a: KoBranch, b: KoBranch): boolean {
 
 function addTagUniquePreferStrong(bucket: string[], tag: string, strongMarker: string) {
   const idx = findFirstIdxPerType(bucket, strongMarker);
-  if (idx < 0) {
-    pushUnique(bucket, tag);
-    return;
-  }
-  const prev = bucket[idx] ?? "";
-  const prevWeak = prev.includes(WEAK_SUFFIX);
-  const nextWeak = tag.includes(WEAK_SUFFIX);
-  if (prevWeak && !nextWeak) bucket[idx] = tag;
+  if (idx < 0) pushUnique(bucket, tag);
 }
 
 export function buildHarmonyTags(
@@ -92,8 +84,8 @@ export function buildHarmonyTags(
   const stems = pillars.map((gz) => gzStem(gz));
   const branches = pillars.map((gz) => gzBranch(gz) as KoBranch | "");
 
-  // 1) 천간 합/충: 인접만 처리
-  function addStemPairAdjacent(i: number, j: number) {
+  // 1) 천간 합/충: 모든 조합 처리
+  function addStemPair(i: number, j: number) {
     if (i === j) return;
     const a = stems[i];
     const b = stems[j];
@@ -103,9 +95,11 @@ export function buildHarmonyTags(
     const labelC = labelForPair(STEM_CHUNG_LABELS, a, b);
     if (labelC) pushUnique(out.cheonganChung, `#${POS_LABELS[i]}X${POS_LABELS[j]}_${labelC}`);
   }
-  addStemPairAdjacent(POS.year, POS.month);
-  addStemPairAdjacent(POS.month, POS.day);
-  addStemPairAdjacent(POS.day, POS.hour);
+  for (let i = 0; i < 4; i++) {
+    for (let j = i + 1; j < 4; j++) {
+      addStemPair(i, j);
+    }
+  }
 
   // 2) 지지 2자 관계(모든 조합)
   function addBranchPairsAllByLabel(
@@ -123,12 +117,7 @@ export function buildHarmonyTags(
     }
     const pairs = selectAllPairs(posA, posB);
     for (const [i, j] of pairs) {
-      const weak = isYearHourPair(i, j);
-      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${label}${weak ? WEAK_SUFFIX : ""}`;
-      if (weak) {
-        pushUnique(bucket, tag);
-        continue;
-      }
+      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${label}`;
       if (preferStrong) addTagUniquePreferStrong(bucket, tag, label);
       else pushUnique(bucket, tag);
     }
@@ -158,9 +147,8 @@ export function buildHarmonyTags(
     for (let i = 0; i < 4; i++) {
       if (g.members.includes(branches[i] as KoBranch)) idxs.push(i);
     }
-    const weak = idxs.includes(POS.year) && idxs.includes(POS.hour);
     const mask = posMask(idxs);
-    pushUnique(out.jijiSamhap, `#${mask}_${g.name}삼합${weak ? WEAK_SUFFIX : ""}`);
+    pushUnique(out.jijiSamhap, `#${mask}_${g.name}삼합`);
   }
 
   // 4) 지지 반합(두 지지가 존재하면 모두)
@@ -185,8 +173,7 @@ export function buildHarmonyTags(
     if (pos.length < 2) continue;
 
     for (const [i, j] of selectAllPairsSame(pos)) {
-      const weak = isYearHourPair(i, j);
-      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${br}자형${weak ? WEAK_SUFFIX : ""}`;
+      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${br}자형`;
       addTagUniquePreferStrong(out.jijiHyeong, tag, `${br}자형`);
     }
   }
