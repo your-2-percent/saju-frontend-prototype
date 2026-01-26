@@ -2,9 +2,7 @@
 
 import {
   LUCK_ORDER,
-  POS,
   POS_LABELS,
-  WEAK_SUFFIX,
   type LuckKind,
   type PosLabel,
 } from "./constants";
@@ -34,10 +32,6 @@ import {
 import { labelForPair, posToJuLabel, pushUnique } from "./coreUtils";
 import { finalizeBuckets } from "./buckets";
 import type { LuckOptions, Pillars4, RelationTags } from "./types";
-
-function isYearHourPair(i: number, j: number): boolean {
-  return (i === POS.year && j === POS.hour) || (i === POS.hour && j === POS.year);
-}
 
 function isBanhapWithWang(a: KoBranch, b: KoBranch): boolean {
   for (const g of SANHE_GROUPS) {
@@ -123,8 +117,7 @@ export function buildAllRelationTags(
     }
     const pairs = selectAllPairs(posA, posB);
     for (const [i, j] of pairs) {
-      const weak = isYearHourPair(i, j);
-      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${label}${weak ? WEAK_SUFFIX : ""}`;
+      const tag = `#${POS_LABELS[i]}X${POS_LABELS[j]}_${label}`;
       pushUnique(out.jijiBanhap, tag);
     }
   }

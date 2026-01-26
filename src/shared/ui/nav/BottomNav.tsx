@@ -5,15 +5,7 @@ import { Home, HeartHandshake, Settings, HelpCircle, Sparkles } from "lucide-rea
 import SettingsDrawer from "@/settings/ui/SettingsDrawerPage";
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 
-export default function BottomNav({
-  onShowToday,
-  onShowCouple,
-  onShowFaq,
-}: {
-  onShowToday: () => void;
-  onShowCouple: () => void;
-  onShowFaq: () => void;
-}) {
+export default function BottomNav() {
   const [openSettings, setOpenSettings] = useState(false);
   const [loading, setLoading] = useState(false);
   const list = useMyeongSikStore((s) => s.list);
@@ -54,9 +46,9 @@ export default function BottomNav({
         style={bottomStyle}
       >
         <nav className="flex justify-around items-center max-w-[640px] w-full mx-auto">
-          <NavItem icon={<Home size={22} />} label="오늘운세" onClick={onShowToday} />
-          <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={onShowCouple} />
-          <NavItem icon={<HelpCircle size={22} />} label="FAQ" onClick={onShowFaq} />
+          <NavItem icon={<Home size={22} />} label="오늘운세" onClick={() => navigate("/")} />
+          <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={() => navigate("/couple")} />
+          <NavItem icon={<HelpCircle size={22} />} label="FAQ" onClick={() => navigate("/faq")} />
           <NavItem icon={<Settings size={22} />} label="설정" onClick={() => setOpenSettings(true)} />
           <NavItem icon={<Sparkles size={22} />} label="주역·육효점" onClick={handleIChing} />
         </nav>
