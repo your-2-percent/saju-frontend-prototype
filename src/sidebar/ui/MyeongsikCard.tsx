@@ -176,8 +176,8 @@ export function MyeongsikCard({
                   }}
                 >
                   <option value="자시">자시</option>
-                  <option value="조자/인자">조자/인자</option>
-                  <option value="야자">야자</option>
+                  <option value="조자시/인시시">조자시/인시시</option>
+                  <option value="인시">인시</option>
                 </select>
               </div>
             )}
