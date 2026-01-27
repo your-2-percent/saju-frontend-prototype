@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
 
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import { useDstStore } from "@/saju/input/useDstStore";
@@ -173,6 +174,25 @@ export default function IChingSixYaoPage() {
     alert("명식을 생성한 뒤에 접속해주세요. 메인으로 돌아갑니다.");
     navigate("/", { replace: true });
   }, [hasBooted, list.length, loading, navigate]);
+
+  // ✅ 세션 종료 시 홈으로 이동
+  useEffect(() => {
+    let alive = true;
+
+    void supabase.auth.getSession().then(({ data }) => {
+      if (!alive) return;
+      if (!data.session?.user) navigate("/", { replace: true });
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_evt, session) => {
+      if (!session?.user) navigate("/", { replace: true });
+    });
+
+    return () => {
+      alive = false;
+      data.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
   // ✅ select value도 “없으면 본인/첫번째”로 안정화
   const selectValue = useMemo(() => {
