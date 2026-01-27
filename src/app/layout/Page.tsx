@@ -78,6 +78,8 @@ const EMPTY_MS: MyeongSik = {
 };
 
 export default function Page() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
@@ -95,6 +97,14 @@ export default function Page() {
   useEffect(() => {
     if (!isInitializing) setBooted(true);
   }, [isInitializing]);
+
+  // ✅ 세션 종료 시 홈으로 이동 (특히 /result 새로고침 이슈 방지)
+  useEffect(() => {
+    if (!input.authChecked) return;
+    if (input.isLoggedIn) return;
+    if (location.pathname === "/") return;
+    navigate("/", { replace: true });
+  }, [input.authChecked, input.isLoggedIn, location.pathname, navigate]);
 
   useEffect(() => {
     if (!loadingShown && !booted && isInitializing) {
