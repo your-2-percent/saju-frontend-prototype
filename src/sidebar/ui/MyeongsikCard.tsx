@@ -86,7 +86,7 @@ export function MyeongsikCard({
                 {m.name} ({calc.age}세{calc.genderLabel})
               </div>
               <span className="opacity-40">·</span>
-              <div className="text-sm text-neutral-600 dark:text-neutral-300">
+              <div className="text-sm text-neutral-600 dark:text-neutral-300 text-nowrap">
                 {calc.relationshipLabel}
               </div>
 
