@@ -102,7 +102,7 @@ export default function Page() {
   useEffect(() => {
     if (!input.authChecked) return;
     if (input.isLoggedIn) return;
-    if (location.pathname === "/") return;
+    if (location.pathname === "/" || location.pathname === "/result") return;
     navigate("/", { replace: true });
   }, [input.authChecked, input.isLoggedIn, location.pathname, navigate]);
 
@@ -251,6 +251,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const handleWizardSave = (m: MyeongSik) => {
     setShowFaq(false);
     save.handleWizardSave(m);
+    navigate("/result", { replace: false });
   };
 
 

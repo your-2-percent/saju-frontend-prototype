@@ -9,7 +9,7 @@ export default defineConfig({
   base: "/",
   server: {
     https: {},
-    host: "dev.hwarim.local",
+    host: "0.0.0.0",
     port: 4173,
   },
 });
