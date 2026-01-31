@@ -22,6 +22,7 @@ import { getActivePosLabels, isUnknownTime } from "./promptPosLabels";
 import { sectionJson } from "./sectionFormat";
 import { elementPercentWithTenGodLabels } from "./multi/sectionUtils";
 import { buildSingleGzItems, formatSingleLuckChain } from "./single/gzItems";
+import { computeYinYangSummary } from "./calc/yinYang";
 
 export type { PromptSectionToggles } from "./promptSectionToggles";
 
@@ -127,7 +128,7 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
   const totalsSub = overlay.totalsSub;
 
   // 신강도/득령·득지·득세
-  const { flags: deukFlags0 } = computeDeukFlags10(natal, unified.elementScoreRaw);
+  const { flags: deukFlags0 } = computeDeukFlags10(natal, unified.natalFixed.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${
       deukFlags0.비견.령 ||
@@ -168,6 +169,14 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
 
   // 신강도
   bodyParts.push(sectionJson("신강도", shinLine));
+
+  // 음양수치(원국)
+  const yinYang = computeYinYangSummary({
+    natal,
+    perStemElementScaled:
+      unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+  });
+  if (yinYang) bodyParts.push(sectionJson("음양수치(원국)", yinYang));
 
   // 오행강약(원국 고정)
   bodyParts.push(

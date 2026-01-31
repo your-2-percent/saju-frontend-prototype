@@ -11,6 +11,7 @@ import type { DayBoundaryRule } from "@/shared/type";
 import { STEM_TO_ELEMENT, elementToTenGod, getNabeum } from "./promptCore";
 import { buildTopicGuide } from "./topicGuide";
 import { formatBirthForPrompt } from "./formatBirth";
+import { computeYinYangSummary } from "./calc/yinYang";
 
 import { isUnknownTime, getActivePosLabels, compactNatalForLabels } from "./promptPosLabels";
 
@@ -90,7 +91,7 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
   const sectionModel: string[] = [];
 
   // 1) 원국 고정 섹션
-  const { flags: deukFlags } = computeDeukFlags10(natal, unified.elementScoreRaw);
+  const { flags: deukFlags } = computeDeukFlags10(natal, unified.natalFixed.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${
       deukFlags.비견.령 || deukFlags.겁재.령 || deukFlags.편인.령 || deukFlags.정인.령
@@ -109,6 +110,13 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
     }`,
   ].join(" · ")}`;
   sectionModel.push(sectionPlain("신강도", shinLine));
+
+  const yinYang = computeYinYangSummary({
+    natal,
+    perStemElementScaled:
+      unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+  });
+  if (yinYang) sectionModel.push(sectionPlain("음양수치(원국)", yinYang));
 
   sectionModel.push(
     sectionPlain(
