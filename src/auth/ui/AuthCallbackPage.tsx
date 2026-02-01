@@ -10,19 +10,46 @@ export default function AuthCallback() {
   useEffect(() => {
     const run = async () => {
       try {
+        console.log("[auth-callback] search =", location.search);
+        console.log("[auth-callback] hash =", location.hash);
         const sp = new URLSearchParams(location.search);
+        const rawHash = location.hash.startsWith("#")
+          ? location.hash.slice(1)
+          : location.hash;
+        const hashQueryIndex = rawHash.indexOf("?");
+        const hashParams = new URLSearchParams(
+          hashQueryIndex >= 0 ? rawHash.slice(hashQueryIndex + 1) : rawHash
+        );
 
-        const error = sp.get("error");
-        const errorDesc = sp.get("error_description");
+        const getParam = (key: string) => sp.get(key) ?? hashParams.get(key);
+
+        const error = getParam("error");
+        const errorDesc = getParam("error_description");
         if (error) {
           setMsg(`로그인 실패: ${decodeURIComponent(errorDesc ?? error)}`);
           // 로그인 페이지로 보내고 싶으면 여기서 navigate("/"); 같은 처리
           return;
         }
 
-        const code = sp.get("code");
+        const code = getParam("code");
         if (!code) {
-          setMsg("콜백 code가 없어요. (redirectTo/PKCE 설정 확인)");
+          const accessToken = getParam("access_token");
+          const refreshToken = getParam("refresh_token");
+          if (!accessToken || !refreshToken) {
+            setMsg("콜백 code가 없어요. (redirectTo/PKCE 설정 확인)");
+            return;
+          }
+
+          const { error: setErr } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (setErr) {
+            setMsg(`세션 설정 실패: ${setErr.message}`);
+            return;
+          }
+
+          navigate("/", { replace: true });
           return;
         }
 

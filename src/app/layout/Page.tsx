@@ -83,10 +83,26 @@ export default function Page() {
   const input = usePageInput();
   usePageSave(input);
   const calc = usePageCalc();
+  const getSessionFlag = (key: string) => {
+    if (typeof window === "undefined") return null;
+    try {
+      return window.sessionStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+  const setSessionFlag = (key: string, value: string) => {
+    if (typeof window === "undefined") return;
+    try {
+      window.sessionStorage.setItem(key, value);
+    } catch {
+      // ignore storage write errors
+    }
+  };
   const [booted, setBooted] = useState(false);
   const [loadingShown, setLoadingShown] = useState(() => {
     if (typeof window === "undefined") return false;
-    return window.sessionStorage.getItem("app_loading_shown_v1") === "1";
+    return getSessionFlag("app_loading_shown_v1") === "1";
   });
 
   // 1. 로딩이 필요한 모든 상황을 하나의 변수로 정의
@@ -109,13 +125,7 @@ export default function Page() {
   useEffect(() => {
     if (!loadingShown && !booted && isInitializing) {
       setLoadingShown(true);
-      if (typeof window !== "undefined") {
-        try {
-          window.sessionStorage.setItem("app_loading_shown_v1", "1");
-        } catch {
-          /* ignore */
-        }
-      }
+      setSessionFlag("app_loading_shown_v1", "1");
     }
   }, [loadingShown, booted, isInitializing]);
 
