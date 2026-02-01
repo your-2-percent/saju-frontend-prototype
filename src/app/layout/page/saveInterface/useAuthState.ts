@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
+import { setSessionStartedAtMs } from "@/myeongsik/calc/myeongsikStore/staleSession";
 
 type UseAuthStateArgs = {
   setUserId: (next: string | null) => void;
@@ -26,6 +27,9 @@ export function useAuthState({
 
     const finalizeAuth = (session: { user?: { id?: string } } | null) => {
       applySession(session);
+      if (session) {
+        setSessionStartedAtMs(Date.now());
+      }
       if (!authCheckedSet) {
         authCheckedSet = true;
         setAuthChecked(true);
