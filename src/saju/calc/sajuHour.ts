@@ -17,8 +17,14 @@ function resolveHourBaseIndex(dayStem: string): number {
 export function buildHourCandidates(dayStem: string, useInsi: boolean): string[] {
   const baseIndex = resolveHourBaseIndex(dayStem);
   const order = useInsi ? ORDER_INSI : BRANCHES_KO;
-  return order.map((branch, i) => {
-    const stem = STEMS_KO[(baseIndex + i) % 10] ?? STEMS_KO[0];
+
+  return order.map((branch) => {
+    const branchIndex = BRANCHES_KO.indexOf(branch);
+    let idx = (baseIndex + (branchIndex < 0 ? 0 : branchIndex)) % 10;
+    if (useInsi && (branch === "자" || branch === "축")) {
+      idx = (idx + 2) % 10;
+    }
+    const stem = STEMS_KO[idx] ?? STEMS_KO[0];
     return `${stem}${branch}`;
   });
 }
