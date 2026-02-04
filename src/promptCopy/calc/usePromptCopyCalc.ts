@@ -36,6 +36,7 @@ import {
   normalizePillarsForPrompt,
   resolveEffectiveBasis,
   applyManualHour,
+  applyPrevDayToPillars,
 } from "@/promptCopy/calc/promptCopyCalc";
 
 type Input = {
@@ -100,6 +101,7 @@ export function usePromptCopyCalc({
   }, [canUseLuckTabs, fallbackChain]);
 
   const manualHour = useHourPredictionStore((s) => s.manualHour);
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
   const allowManualHour =
     !ms.birthTime || ms.birthTime === "모름" || !/^\d{4}$/.test(ms.birthTime ?? "");
 
@@ -123,7 +125,7 @@ export function usePromptCopyCalc({
 
   const effectiveBasis = resolveEffectiveBasis(solarValid, lunarValid, "solar");
 
-  const activePillars = useMemo(
+  const activePillarsBase = useMemo(
     () =>
       computeActivePillars(
         effectiveBasis,
@@ -146,6 +148,10 @@ export function usePromptCopyCalc({
       allowManualHour,
     ]
   );
+  const activePillars = useMemo(
+    () => applyPrevDayToPillars(activePillarsBase, usePrevDay),
+    [activePillarsBase, usePrevDay]
+  );
 
   const hourKey = useMemo(
     () => (allowManualHour && manualHour ? manualHour.stem + manualHour.branch : activePillars[3] || ""),
@@ -153,9 +159,13 @@ export function usePromptCopyCalc({
   );
 
   const manualHourStr = computeManualHourStr(manualHour, allowManualHour);
-  const natalWithPrediction = useMemo(
+  const natalWithPredictionBase = useMemo(
     () => buildNatalWithPrediction(ms, manualHourStr, allowManualHour),
     [ms, manualHourStr, allowManualHour]
+  );
+  const natalWithPrediction = useMemo(
+    () => applyPrevDayToPillars(natalWithPredictionBase, usePrevDay),
+    [natalWithPredictionBase, usePrevDay]
   );
 
   const tabForLogic: BlendTab = canUseLuckTabs ? activeTab : "원국";

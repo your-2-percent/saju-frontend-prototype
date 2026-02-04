@@ -86,6 +86,13 @@ export function getDayGanZhi(dateObj: Date, rule: DayBoundaryRule): string {
   return gz;
 }
 
+export function shiftDayGZ(gz: string, offset: number): string {
+  if (!gz) return gz;
+  const idx = 육십갑자_자시.indexOf(gz as (typeof 육십갑자_자시)[number]);
+  if (idx < 0) return gz;
+  return 육십갑자_자시[posMod(idx + offset, 60)] ?? gz;
+}
+
 export function getDayGanZhiilun(date: Date, rule: DayBoundaryRule) {
   const d = new Date(date);
   const offset = getDayOffsetForCalendar(d, rule);

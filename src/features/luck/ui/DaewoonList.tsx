@@ -5,9 +5,11 @@ import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getElementColor, getSipSin } from "@/shared/domain/ganji/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
 import { toCorrected } from "@/myeongsik/calc";
-import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getYearGanZhi, getDayGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import type { DayBoundaryRule } from "@/shared/type";
 import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
+import { withSafeClockForUnknownTime } from "@/luck/calc/withSafeClockForUnknownTime";
 //import { withSafeClockForUnknownTime } from "@/features/luck/utils/withSafeClockForUnknownTime";
 
 // 십이운성/십이신살
@@ -30,18 +32,24 @@ export default function DaewoonList({
 }) {
   const dstOffsetMinutes = useDstOffsetMinutes();
   const list = useDaewoonList(data, data.mingSikType as DayBoundaryRule, 100, dstOffsetMinutes);
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
 
   const solarBirth = useMemo<Date>(() => {
     const ensured = ensureSolarBirthDay(data);
     return toCorrected(ensured, dstOffsetMinutes);
   }, [data, dstOffsetMinutes]);
+  const solarBirthSafe = useMemo(
+    () => withSafeClockForUnknownTime(data, solarBirth),
+    [data, solarBirth]
+  );
 
   // 4) 일간(대운 십신 기준) 재산출 — 반드시 양력(solarBirth) + 규칙(rule)
   const dayStem = useMemo<Stem10sin>(() => {
     const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
-    const dayGz = getDayGanZhi(solarBirth, rule);
-    return dayGz.charAt(0) as Stem10sin;
-  }, [solarBirth, data.mingSikType]);
+    const dayGz = getDayGanZhi(solarBirthSafe, rule);
+    const shifted = usePrevDay ? shiftDayGZ(dayGz, -1) : dayGz;
+    return shifted.charAt(0) as Stem10sin;
+  }, [solarBirthSafe, data.mingSikType, usePrevDay]);
 
   const { date, setFromEvent } = useLuckPickerStore();
   const activeIndex = useMemo(() => findActiveIndexByDate(list, date), [list, date]);
@@ -68,8 +76,11 @@ export default function DaewoonList({
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const baseBranchForShinsal: Branch10sin = (
     sinsalBase === "일지"
-      ? getDayGanZhi(solarBirth, rule).charAt(1)
-      : getYearGanZhi(solarBirth, lon).charAt(1)
+      ? (usePrevDay
+          ? shiftDayGZ(getDayGanZhi(solarBirthSafe, rule), -1)
+          : getDayGanZhi(solarBirthSafe, rule)
+        ).charAt(1)
+      : getYearGanZhi(solarBirthSafe, lon).charAt(1)
   ) as Branch10sin;
 
   const calcUnseong = (branch: Branch10sin) =>

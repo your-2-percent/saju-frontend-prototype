@@ -35,8 +35,9 @@ export function toCorrected(ms: MyeongSik, dstOffsetMinutes = 0): Date {
   if (!parsedDay) throw new Error(`Invalid date: ${ms.birthDay}`);
 
   const parsedTime = parseBirthTimeLoose(solarized.birthTime ?? "");
-  const hh = !parsedTime ? 0 : parsedTime.hh;
-  const mi = !parsedTime ? 0 : parsedTime.mm;
+  const isUnknownTime = !parsedTime;
+  const hh = isUnknownTime ? 4 : parsedTime.hh;
+  const mi = isUnknownTime ? 30 : parsedTime.mm;
 
   const raw = new Date(parsedDay.y, parsedDay.m - 1, parsedDay.d, hh, mi, 0, 0);
   if (Number.isNaN(raw.getTime())) throw new Error(`Invalid date: ${ms.birthDay} ${ms.birthTime}`);

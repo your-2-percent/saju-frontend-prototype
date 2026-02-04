@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { getDayGanZhi, getYearGanZhi } from "@/shared/domain/ganji/common";
+import { getDayGanZhi, getYearGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
 import type { DayBoundaryRule } from "@/shared/type";
 import { toCorrected } from "@/myeongsik/calc";
@@ -8,6 +8,7 @@ import { withSafeClockForUnknownTime } from "@/luck/calc/withSafeClockForUnknown
 import { ensureSolarBirthDay } from "@/luck/calc/luckUiUtils";
 import { fromPropMonth, toNoon } from "@/luck/calc/dateUtils";
 import { collectTermsAround, getJieRangeByDateStrict } from "@/luck/calc/termUtils";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
 type UseIlwoonCalendarCalcArgs = {
   data: MyeongSik;
@@ -42,6 +43,7 @@ export function useIlwoonCalendarCalc({
   settings,
   pickedDate,
 }: UseIlwoonCalendarCalcArgs): IlwoonCalendarCalc {
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
   const rule: DayBoundaryRule = (settings.ilunRule as DayBoundaryRule) || "조자시/야자시";
   const natalRule: DayBoundaryRule =
     (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
@@ -50,12 +52,17 @@ export function useIlwoonCalendarCalc({
     const ensured = ensureSolarBirthDay(data);
     return toCorrected(ensured, dstOffsetMinutes);
   }, [data, dstOffsetMinutes]);
+  const solarBirthSafe = useMemo(
+    () => withSafeClockForUnknownTime(data, solarBirth),
+    [data, solarBirth]
+  );
 
   const dayStem: Stem10sin | undefined = useMemo(() => {
-    if (!solarBirth) return undefined;
-    const gz = getDayGanZhi(solarBirth, natalRule);
-    return gz.charAt(0) as Stem10sin;
-  }, [solarBirth, natalRule]);
+    if (!solarBirthSafe) return undefined;
+    const gz = getDayGanZhi(solarBirthSafe, natalRule);
+    const shifted = usePrevDay ? shiftDayGZ(gz, -1) : gz;
+    return shifted.charAt(0) as Stem10sin;
+  }, [solarBirthSafe, natalRule, usePrevDay]);
 
   const birthRaw = useMemo(
     () => (data ? toCorrected(data, dstOffsetMinutes) : null),
@@ -74,7 +81,10 @@ export function useIlwoonCalendarCalc({
   const baseBranch: Branch10sin | null =
     data && birthSafe
       ? ((settings.sinsalBase === "일지"
-          ? getDayGanZhi(birthSafe, natalRule).charAt(1)
+          ? (usePrevDay
+              ? shiftDayGZ(getDayGanZhi(birthSafe, natalRule), -1)
+              : getDayGanZhi(birthSafe, natalRule)
+            ).charAt(1)
           : getYearGanZhi(birthSafe, lon).charAt(1)) as Branch10sin)
       : null;
 

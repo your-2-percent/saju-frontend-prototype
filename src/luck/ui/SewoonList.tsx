@@ -4,7 +4,7 @@ import { getSipSin, getElementColor } from "@/shared/domain/ganji/utils";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
 import { toCorrected } from "@/myeongsik/calc";
-import { getYearGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getYearGanZhi, getDayGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import type { DayBoundaryRule } from "@/shared/type";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
 import { useSettingsStore } from "@/settings/input/useSettingsStore";
@@ -13,6 +13,7 @@ import { findActiveIndexByDate } from "@/luck/calc/active";
 import { withSafeClockForUnknownTime } from "@/luck/calc/withSafeClockForUnknownTime";
 import { ensureSolarBirthDay, isYinUnified, mapEra, toDisplayChar } from "@/luck/calc/luckUiUtils";
 import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
 /* 경계 회피용: 해당 해 ‘한가운데’(7/2 12:00) */
 function toSafeMiddleOfYear(y: number): Date {
@@ -36,6 +37,7 @@ export default function SewoonList({
   const settings = useSettingsStore((s) => s.settings);
   const { date, setFromEvent } = useLuckPickerStore();
   const dstOffsetMinutes = useDstOffsetMinutes();
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
 
   /* 1) 리스트 ‘고정(sticky)’: 부모가 일시적으로 빈 배열을 내려줘도 이전 리스트 유지 */
   const [stickyList, setStickyList] = useState<{ at: Date; gz: string }[]>(() => list);
@@ -96,21 +98,26 @@ export default function SewoonList({
     const ensured = ensureSolarBirthDay(data);
     return toCorrected(ensured, dstOffsetMinutes);
   }, [data, dstOffsetMinutes]);
+  const solarBirthSafe = useMemo(
+    () => withSafeClockForUnknownTime(data, solarBirth),
+    [data, solarBirth]
+  );
 
   /* 6) 도메인 파생값(표시/신살 등) — ✅ 안전한 일간/기준지지 */
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const dayStem = useMemo<Stem10sin>(() => {
-    const dayGz = getDayGanZhi(solarBirth, rule);
-    return dayGz.charAt(0) as Stem10sin;
-  }, [solarBirth, rule]);
+    const dayGz = getDayGanZhi(solarBirthSafe, rule);
+    const shifted = usePrevDay ? shiftDayGZ(dayGz, -1) : dayGz;
+    return shifted.charAt(0) as Stem10sin;
+  }, [solarBirthSafe, rule, usePrevDay]);
 
   const baseBranch: Branch10sin = useMemo(() => {
     return (
       (settings.sinsalBase === "일지"
-        ? getDayGanZhi(birth, rule).charAt(1)
+        ? (usePrevDay ? shiftDayGZ(getDayGanZhi(birth, rule), -1) : getDayGanZhi(birth, rule)).charAt(1)
         : getYearGanZhi(birth, lon).charAt(1)) as Branch10sin
     );
-  }, [birth, rule, lon, settings.sinsalBase]);
+  }, [birth, rule, lon, settings.sinsalBase, usePrevDay]);
 
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
