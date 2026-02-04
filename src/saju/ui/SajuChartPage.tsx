@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useMediaQuery } from "react-responsive";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
@@ -20,6 +20,7 @@ import {
 import { BUCKET_KEYS } from "@/analysisReport/calc/logic/relations/buckets";
 import { buildShinsalTags } from "@/analysisReport/calc/logic/shinsal";
 import { mapEra } from "@/shared/domain/ganji/era";
+import { shiftDayGZ } from "@/shared/domain/ganji/common";
 import { buildHourCandidates } from "@/saju/calc/sajuHour";
 import { parseMyeongSik } from "@/saju/calc/sajuParse";
 import { formatBirthDisplay, formatCorrectedDisplay, isUnknownTime } from "@/saju/calc/sajuFormat";
@@ -121,29 +122,66 @@ export default function SajuChart({ data, hourTable }: Props) {
   }, [data, useDST]);
 
   const personKey = data.id ?? `${data.birthDay}-${data.birthTime}-${data.name ?? ""}`;
-  const dayStem = parsed.day.stem as Stem10sin;
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
+  const setUsePrevDay = useHourPredictionStore((s) => s.setUsePrevDay);
+  const effectiveDay = useMemo(() => {
+    const dayGz = `${parsed.day.stem}${parsed.day.branch}`;
+    const shiftedDayGz = usePrevDay ? shiftDayGZ(dayGz, -1) : dayGz;
+    return {
+      stem: shiftedDayGz.charAt(0),
+      branch: shiftedDayGz.charAt(1),
+    };
+  }, [parsed.day.stem, parsed.day.branch, usePrevDay]);
+  const baseDayStem = parsed.day.stem as Stem10sin;
+  const dayStem = effectiveDay.stem as Stem10sin;
 
   const [manualHour, setManualHour] = useState<HourGZ | null>(null);
   const [useInsi, setUseInsi] = useState(() => isInsiRule(data.mingSikType));
+  const clearHourPrediction = useHourPredictionStore((s) => s.clearManualHour);
 
   useEffect(() => {
     setManualHour(null);
+    clearHourPrediction();
     setUseInsi(isInsiRule(data.mingSikType));
-  }, [personKey, data.mingSikType]);
+    setUsePrevDay(false);
+  }, [personKey, data.mingSikType, clearHourPrediction, setUsePrevDay]);
 
   useEffect(() => {
     setActiveRelationTag(null);
   }, [personKey]);
 
   const hourCandidates = useMemo(
-    () => buildHourCandidates(dayStem, useInsi),
-    [useInsi, dayStem]
+    () => buildHourCandidates(baseDayStem, useInsi),
+    [useInsi, baseDayStem]
   );
 
   const hourData = manualHour ?? parsed.hour;
   const setHourPrediction = useHourPredictionStore((s) => s.setManualHour);
 
+  const canSelectHourBranch = useCallback(
+    (branch: string) => {
+      if (!usePrevDay) return true;
+      if (useInsi) return branch === "자" || branch === "축";
+      return branch === "자";
+    },
+    [usePrevDay, useInsi]
+  );
+
+  useEffect(() => {
+    if (!manualHour) return;
+    if (!canSelectHourBranch(manualHour.branch)) {
+      setManualHour(null);
+      clearHourPrediction();
+    }
+  }, [manualHour, canSelectHourBranch, clearHourPrediction]);
+
   const handleManualHourSelect = (stem: string, branch: string) => {
+    if (!canSelectHourBranch(branch)) return;
+    if (manualHour?.stem === stem && manualHour?.branch === branch) {
+      setManualHour(null);
+      clearHourPrediction();
+      return;
+    }
     const h = { stem, branch };
     setManualHour(h);
     setHourPrediction(h);
@@ -151,7 +189,7 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   const baseBranchForShinsal =
     (normalizeSinsalBase(settings.sinsalBase) === "일지"
-      ? parsed.day.branch
+      ? effectiveDay.branch
       : parsed.year.branch) as Branch10sin;
 
   const calcUnseong = (branch: string) =>
@@ -216,7 +254,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     const natal = [
       toGz(parsed.year),
       toGz(parsed.month),
-      toGz(parsed.day),
+      toGz(effectiveDay),
       toGz(hourData),
     ] as const;
 
@@ -234,7 +272,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
 
     return merged;
-  }, [parsed, hourData, daeGz, seGz, wolGz, exposureLevel]);
+  }, [parsed, effectiveDay, hourData, daeGz, seGz, wolGz, exposureLevel]);
 
   const relationChips = useMemo(() => {
     const all = [
@@ -290,7 +328,7 @@ export default function SajuChart({ data, hourTable }: Props) {
       natal: [
         toGz(parsed.year),
         toGz(parsed.month),
-        toGz(parsed.day),
+        toGz(effectiveDay),
         toGz(hourData),
       ],
       daewoon: exposureLevel >= 1 ? daeGz ?? undefined : undefined,
@@ -329,7 +367,7 @@ export default function SajuChart({ data, hourTable }: Props) {
         },
       },
     };
-  }, [parsed, hourData, daeGz, seGz, wolGz, exposureLevel]);
+  }, [parsed, effectiveDay, hourData, daeGz, seGz, wolGz, exposureLevel]);
 
   const tagKindMap = useMemo(() => {
     const map: Record<string, "stem" | "branch" | "both"> = {};
@@ -471,7 +509,7 @@ export default function SajuChart({ data, hourTable }: Props) {
           highlightMap={activeHighlightMap}
           pillars={[
             { key: "hour", label: "시주", data: hourData },
-            { key: "day", label: "일주", data: parsed.day },
+            { key: "day", label: "일주", data: effectiveDay },
             { key: "month", label: "월주", data: parsed.month },
             { key: "year", label: "년주", data: parsed.year },
           ]}
@@ -483,6 +521,9 @@ export default function SajuChart({ data, hourTable }: Props) {
           hourCandidates={hourCandidates}
           useInsi={useInsi}
           onToggleRule={() => setUseInsi((prev) => !prev)}
+          usePrevDay={usePrevDay}
+          onTogglePrevDay={() => setUsePrevDay(!usePrevDay)}
+          canSelectHourBranch={canSelectHourBranch}
           manualHour={manualHour}
           onSelectHour={handleManualHourSelect}
         />

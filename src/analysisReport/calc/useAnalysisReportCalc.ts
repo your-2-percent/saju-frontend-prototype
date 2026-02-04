@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
@@ -95,7 +95,7 @@ export function useAnalysisReportCalc({
     return ko || null;
   }, [daewoonGzProp, daeList, autoDaeIndex]);
 
-  const { manualHour } = useHourPredictionStore();
+  const { manualHour, usePrevDay } = useHourPredictionStore();
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
 
   const solarKo = useMemo(() => normalizePillars(pillars), [pillars]);
@@ -150,8 +150,10 @@ export function useAnalysisReportCalc({
       arr[3] = manualHour.stem + manualHour.branch;
     }
     if (arr[3] === "--") arr[3] = "";
-    return arr;
-  }, [effectiveBasis, solarValid, lunarValid, solarKoWithHour, lunarKoWithHour, computedFallback, manualHour]);
+    if (!usePrevDay) return arr;
+    const shifted = shiftDayGZ(arr[2] || "", -1);
+    return [arr[0], arr[1], shifted, arr[3]];
+  }, [effectiveBasis, solarValid, lunarValid, solarKoWithHour, lunarKoWithHour, computedFallback, manualHour, usePrevDay]);
 
   const dayStem = useMemo(() => safeStem(activePillars[2] ?? ""), [activePillars]);
   const monthBranch = useMemo(() => safeBranch(activePillars[1] ?? ""), [activePillars]);

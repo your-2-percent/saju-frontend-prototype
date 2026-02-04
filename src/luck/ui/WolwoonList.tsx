@@ -1,12 +1,13 @@
 // features/luck/WolwoonList.tsx
 import { useMemo } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
-import { getMonthGanZhi, getYearGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getMonthGanZhi, getYearGanZhi, getDayGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import { getSipSin, getElementColor } from "@/shared/domain/ganji/utils";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
 import { toCorrected } from "@/myeongsik/calc";
 import type { DayBoundaryRule } from "@/shared/type";
 import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
+import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 
 // 십이운성/십이신살
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
@@ -88,6 +89,7 @@ export default function WolwoonList({
 }) {
   const settings = useSettingsStore((s) => s.settings);
   const dstOffsetMinutes = useDstOffsetMinutes();
+  const usePrevDay = useHourPredictionStore((s) => s.usePrevDay);
 
   const lon =
     !data.birthPlace || data.birthPlace.name === "모름" || data.birthPlace.lon === 0
@@ -103,15 +105,20 @@ export default function WolwoonList({
     const ensured = ensureSolarBirthDay(data);
     return toCorrected(ensured, dstOffsetMinutes);
   }, [data, dstOffsetMinutes]);
+  const solarBirthSafe = useMemo(
+    () => withSafeClockForUnknownTime(data, solarBirth),
+    [data, solarBirth]
+  );
   const rule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   // 안전한 일간(십신 계산용)
   const dayStem = useMemo<Stem10sin>(() => {
-    const dayGz = getDayGanZhi(solarBirth, rule);
-    return dayGz.charAt(0) as Stem10sin;
-  }, [solarBirth, rule]);
+    const dayGz = getDayGanZhi(solarBirthSafe, rule);
+    const shifted = usePrevDay ? shiftDayGZ(dayGz, -1) : dayGz;
+    return shifted.charAt(0) as Stem10sin;
+  }, [solarBirthSafe, rule, usePrevDay]);
   const baseBranch: Branch10sin = (
     settings.sinsalBase === "일지"
-      ? getDayGanZhi(birth, rule).charAt(1)
+      ? (usePrevDay ? shiftDayGZ(getDayGanZhi(birth, rule), -1) : getDayGanZhi(birth, rule)).charAt(1)
       : getYearGanZhi(birth, lon).charAt(1)
   ) as Branch10sin;
 

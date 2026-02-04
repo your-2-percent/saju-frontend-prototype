@@ -1,6 +1,6 @@
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, shiftDayGZ } from "@/shared/domain/ganji/common";
 import { clamp01, getShinCategory } from "@/analysisReport/calc/logic/shinStrength";
 import { natalShinPercent } from "@/analysisReport/calc/logic/powerPercent";
 import { getDaewoonList } from "@/luck/calc/daewoonList";
@@ -51,6 +51,15 @@ export function normalizePillarsForPrompt(natal: Pillars4, lunar: Pillars4) {
   const solarKo = normalizePillars(natal);
   const lunarKo = normalizePillars(lunar);
   return { solarKo, lunarKo };
+}
+
+export function applyPrevDayToPillars(
+  pillars: [string, string, string, string],
+  usePrevDay: boolean
+): [string, string, string, string] {
+  if (!usePrevDay) return pillars;
+  const shifted = shiftDayGZ(pillars[2] || "", -1);
+  return [pillars[0], pillars[1], shifted, pillars[3]];
 }
 
 export function applyManualHour(
