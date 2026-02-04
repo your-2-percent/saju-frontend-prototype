@@ -478,6 +478,16 @@ export default function SajuChart({ data, hourTable }: Props) {
         />
       </div>
 
+      {unknownTime && (
+        <HourPredictionPanel
+          hourCandidates={hourCandidates}
+          useInsi={useInsi}
+          onToggleRule={() => setUseInsi((prev) => !prev)}
+          manualHour={manualHour}
+          onSelectHour={handleManualHourSelect}
+        />
+      )}
+
       <SajuRelationPanels
         isDesktop={isDesktop}
         exposureLevel={exposureLevel}
@@ -491,15 +501,7 @@ export default function SajuChart({ data, hourTable }: Props) {
         etcShinsalBad={etcShinsal.bad}
       />
 
-      {unknownTime && (
-        <HourPredictionPanel
-          hourCandidates={hourCandidates}
-          useInsi={useInsi}
-          onToggleRule={() => setUseInsi((prev) => !prev)}
-          manualHour={manualHour}
-          onSelectHour={handleManualHourSelect}
-        />
-      )}
+      
     </div>
   );
 }

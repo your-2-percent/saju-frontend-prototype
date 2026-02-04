@@ -17,7 +17,7 @@ export function HourPredictionPanel({
   onSelectHour,
 }: Props) {
   return (
-    <div className="mt-4 p-3 border rounded bg-neutral-50 dark:bg-neutral-800">
+    <div className="my-4 p-3 border rounded bg-neutral-50 dark:bg-neutral-800">
       <div className="flex items-center justify-between mb-2">
         <span className="font-semibold text-sm text-neutral-700 dark:text-neutral-300">
           시주 후보
