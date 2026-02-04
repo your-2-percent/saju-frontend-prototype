@@ -150,9 +150,10 @@ export default function SajuChart({ data, hourTable }: Props) {
     setActiveRelationTag(null);
   }, [personKey]);
 
+  const hourCandidateStem = usePrevDay && useInsi ? dayStem : baseDayStem;
   const hourCandidates = useMemo(
-    () => buildHourCandidates(baseDayStem, useInsi),
-    [useInsi, baseDayStem]
+    () => buildHourCandidates(hourCandidateStem, useInsi),
+    [useInsi, hourCandidateStem]
   );
 
   const hourData = manualHour ?? parsed.hour;
