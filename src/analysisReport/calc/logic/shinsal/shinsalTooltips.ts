@@ -124,6 +124,22 @@ export const TOOLTIP: Record<string, ShinsalTooltip> = {
     kind: "흉",
     oneLine: "법/공문/행정/관청 이슈로 읽는 흉살.",
   },
+  상문살: {
+    title: "상문살(喪門)",
+    kind: "흉",
+    oneLine: "상례·애도·집안 우환 같은 무거운 이슈를 상징.",
+  },
+  조객살: {
+    title: "조객살(弔客)",
+    kind: "흉",
+    oneLine: "조문/상가 방문 등 애도성 이벤트가 겹치기 쉬운 흐름으로 해석.",
+  },
+  삼재: {
+    title: "삼재(三災)",
+    kind: "흉",
+    oneLine: "세운에서 3년 연속 변동·손재·부담이 이어지는 흐름으로 보는 악재.",
+    bullets: ["들삼재·눌삼재·날삼재로 단계 구분해 해석하는 편."],
+  },
   태음: {
     title: "태음(太陰)",
     kind: "흉",
