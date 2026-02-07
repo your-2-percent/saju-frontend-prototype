@@ -259,6 +259,7 @@ export function useLuckYongshin(args: {
       elemPct: elemPctFallback,
       presentMap,
       demoteAbsent,
+      pillars,
       gyeokgukList: Array.isArray(gyeokgukList) ? gyeokgukList : null,
     });
   }, [dae, pillars, tab, chain, hourKey, presentMap, demoteAbsent, gyeokgukList, mode]);

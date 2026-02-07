@@ -82,8 +82,6 @@ export function usePromptCopyModel({
   return {
     sections: input.sections,
     toggleSection: input.toggleSection,
-    tone: input.tone,
-    setTone: input.setTone,
     friendMode: input.friendMode,
     setFriendMode: input.setFriendMode,
     teacherMode: input.teacherMode,

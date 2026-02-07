@@ -186,7 +186,7 @@ function applyAbsentDemotion(
     return {
       ...it,
       score: 0,
-      reasons: [...it.reasons, "부재후순위: 원국 부재 → 패널티 적용"],
+      reasons: [...it.reasons, "부재후순위: 원국 부재 → 0점"],
     };
   });
 }
@@ -362,6 +362,7 @@ export function buildMultiYongshin(args: {
   presentMap: Record<Element, boolean>;
   demoteAbsent: boolean;
   // TODO: 격국용신은 나중에 주입 가능하게 뚫어둠
+  pillars: string[];
   gyeokgukList?: YongshinItem[] | null;
 }): YongshinMultiResult {
   const { eokbuList, monthGz, elemPct, presentMap, demoteAbsent, gyeokgukList } = args;

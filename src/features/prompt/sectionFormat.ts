@@ -1,16 +1,19 @@
-// features/prompt/sectionFormat.ts
-// 프롬프트 섹션 포맷팅(빈값 제거 + JSON 출력 스타일) 공통 유틸
+import {
+  formatGzRows,
+  formatHarmonyBlock,
+  formatInlineKV,
+  formatListLines,
+  formatNabeumMap,
+  formatShinsalBlock,
+  formatYinYangLine,
+  type GzRow,
+} from "./promptFormat";
 
 export type JsonBlockStyle = "plain" | "fenced";
 
 export const isPlainObject = (v: unknown): v is Record<string, unknown> =>
   typeof v === "object" && v !== null && !Array.isArray(v);
 
-/**
- * 빈 값 정리
- * - null/undefined 제거
- * - 빈 배열/빈 객체 제거
- */
 export function pruneEmptyDeep<T>(value: T): T | undefined {
   if (value === null || value === undefined) return undefined;
 
@@ -43,15 +46,139 @@ function formatPrimitive(value: unknown): string {
   return "";
 }
 
+type Primitive = string | number | boolean;
+
+const isPrimitive = (v: unknown): v is Primitive =>
+  typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+
+const isYinYangSummaryLike = (v: Record<string, unknown>): v is { yang: number; yin: number } =>
+  typeof v.yang === "number" && typeof v.yin === "number";
+
+const isShinsalLike = (v: Record<string, unknown>): boolean =>
+  "good" in v || "bad" in v || "meta" in v;
+
+const REL_KEYS = new Set([
+  "cheonganHap",
+  "cheonganChung",
+  "jijiSamhap",
+  "jijiBanhap",
+  "jijiBanghap",
+  "jijiYukhap",
+  "jijiChung",
+  "jijiHyeong",
+  "jijiPa",
+  "jijiHae",
+  "jijiWonjin",
+  "jijiGwimun",
+  "amhap",
+  "ganjiAmhap",
+]);
+
+const isRelationTagsLike = (v: Record<string, unknown>): boolean =>
+  Object.keys(v).some((k) => REL_KEYS.has(k));
+
+function toGzRow(obj: Record<string, unknown>): GzRow | null {
+  const pos = typeof obj.pos === "string" ? obj.pos : "";
+  const gz = typeof obj.gz === "string" ? obj.gz : "";
+  if (!pos || !gz) return null;
+  const value =
+    (typeof obj.unseong === "string" && obj.unseong) ||
+    (typeof obj.shinsal === "string" && obj.shinsal) ||
+    (typeof obj.nabeum === "string" && obj.nabeum) ||
+    (typeof obj.value === "string" && obj.value) ||
+    "";
+  if (!value) return null;
+  return { pos, gz, value };
+}
+
+function formatPlainValue(value: unknown): string {
+  if (value === null || value === undefined) return "";
+
+  const prim = formatPrimitive(value);
+  if (prim) return prim;
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "";
+    if (value.every(isPrimitive)) return formatListLines(value.map(String));
+
+    const rows: GzRow[] = [];
+    for (const v of value) {
+      if (!isPlainObject(v)) continue;
+      const row = toGzRow(v);
+      if (row) rows.push(row);
+    }
+    if (rows.length > 0) return formatGzRows(rows);
+
+    return value.map((v) => formatPlainValue(v)).filter(Boolean).join("\n\n");
+  }
+
+  if (isPlainObject(value)) {
+    if (isYinYangSummaryLike(value)) return formatYinYangLine(value);
+    if (isShinsalLike(value)) return formatShinsalBlock(value);
+    if (isRelationTagsLike(value)) return formatHarmonyBlock(value);
+
+    const entries = Object.entries(value);
+    if (entries.length === 0) return "";
+
+    const allPrim = entries.every(([, v]) => isPrimitive(v));
+    if (allPrim) return formatInlineKV(value as Record<string, Primitive>);
+
+    const arrayValues = entries.every(([, v]) => Array.isArray(v));
+    if (arrayValues) {
+      const blocks = entries.map(([k, arr]) => {
+        const body = (arr as unknown[])
+          .map((item) => formatPlainValue(item))
+          .filter(Boolean)
+          .join("\n\n");
+        return body ? `[${k}]\n${body}` : "";
+      });
+      return blocks.filter(Boolean).join("\n");
+    }
+
+    const objectLikeValues = entries.every(
+      ([, v]) => v === null || v === undefined || isPrimitive(v) || isPlainObject(v),
+    );
+    if (objectLikeValues) {
+      const lines = entries
+        .map(([k, v]) => {
+          if (v === null || v === undefined) return "";
+          const body = formatPlainValue(v);
+          if (!body) return "";
+          const sep = body.includes("\n") ? "\n" : " ";
+          return `${k}:${sep}${body}`;
+        })
+        .filter(Boolean);
+      if (lines.length > 0) return lines.join("\n");
+    }
+
+    const nabeumLike = entries.every(([, v]) =>
+      !v || (isPlainObject(v) && typeof (v as Record<string, unknown>).gz === "string"),
+    );
+    if (nabeumLike) {
+      return formatNabeumMap(value as Record<string, { gz?: string; nabeum?: string } | null>);
+    }
+
+    const row = toGzRow(value);
+    if (row) return formatGzRows([row]);
+
+    return JSON.stringify(value, null, 2);
+  }
+
+  return String(value ?? "");
+}
+
 export function formatForPrompt(raw: unknown, style: JsonBlockStyle): string {
   const cleaned = pruneEmptyDeep(raw);
   if (cleaned === undefined) return "";
+
+  if (style === "plain") {
+    return formatPlainValue(cleaned);
+  }
 
   const prim = formatPrimitive(cleaned);
   if (prim !== "") return prim;
 
   const json = JSON.stringify(cleaned, null, 2);
-  if (style === "plain") return json;
   return ["```json", json, "```"].join("\n");
 }
 
@@ -61,10 +188,8 @@ export function sectionBlock(title: string, raw: unknown, style: JsonBlockStyle)
   return `## ${title}\n${body}`;
 }
 
-// 기존 멀티는 plain 스타일 사용
 export const sectionPlain = (title: string, raw: unknown): string =>
   sectionBlock(title, raw, "plain");
 
-// 단일/복사용은 fenced(JSON 코드블록) 스타일
 export const sectionJson = (title: string, raw: unknown): string =>
   sectionBlock(title, raw, "fenced");

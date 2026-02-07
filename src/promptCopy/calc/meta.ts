@@ -1,6 +1,7 @@
 import type { BlendTab } from "@/analysisReport/calc/logic/blend";
 import type { MainCategoryKey, SubCategoryKey } from "@/features/prompt/buildPrompt";
-import type { ToneMeta } from "@/promptCopy/types";
+
+type ToneMeta = Record<string, { label: string; desc: string }>;
 
 export const TONE_META: ToneMeta = {
   analysis: {

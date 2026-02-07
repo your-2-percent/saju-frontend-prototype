@@ -27,6 +27,39 @@ const SEASONAL_BIAS: Record<string, number> = {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+const summaryFromYang = (yangPercent: number): YinYangSummary => {
+  const yang = round1(yangPercent);
+  const yin = round1(100 - yangPercent);
+  const harmony = round1(100 - Math.abs(yang - 50) * 2);
+  const category: YinYangCategory = yang >= 55 ? "양" : yang <= 45 ? "음" : "중용";
+  return { yang, yin, harmony, category };
+};
+
+function yangPercentFromStemMap(perStemElementScaled?: Record<string, number>): number | null {
+  if (!perStemElementScaled) return null;
+  let bYang = 0;
+  let bYin = 0;
+  Object.entries(perStemElementScaled).forEach(([label, raw]) => {
+    const score = Number(raw) || 0;
+    if (NATURE_YANG.has(label.charAt(0))) bYang += score;
+    else bYin += score;
+  });
+  const sum = bYang + bYin;
+  if (sum <= 0) return null;
+  return (bYang / sum) * 100;
+}
+
+function yangPercentFromGZ(gz: string | null | undefined): number | null {
+  if (!gz || gz.length < 2) return null;
+  const stem = gz.charAt(0);
+  const branch = gz.charAt(1);
+  const main = BRANCH_MAIN_STEM[branch];
+  const stems = [stem, main].filter(Boolean) as string[];
+  if (!stems.length) return null;
+  const yangCount = stems.filter((s) => NATURE_YANG.has(s)).length;
+  return (yangCount / stems.length) * 100;
+}
+
 export type YinYangSummary = {
   yang: number;
   yin: number;
@@ -34,11 +67,14 @@ export type YinYangSummary = {
   category: YinYangCategory;
 };
 
+type YinYangMode = "natal" | "luck";
+
 export function computeYinYangSummary(args: {
   natal?: string[];
   perStemElementScaled?: Record<string, number>;
+  mode?: YinYangMode;
 }): YinYangSummary | null {
-  const { natal, perStemElementScaled } = args;
+  const { natal, perStemElementScaled, mode = "natal" } = args;
   if (!perStemElementScaled || !natal || natal.length < 3) return null;
 
   // A. 베이스 데이터(20%) 분석
@@ -51,7 +87,7 @@ export function computeYinYangSummary(args: {
   });
   const baseDiff = (bYang + bYin) > 0 ? (bYang - bYin) / (bYang + bYin) : 0;
 
-  // B. 본질(30%) & 성질(30%) 분석
+  // B. 본질(40%) & 성질(20%) 분석
   let eYang = 0;
   let eYin = 0;
   let nYang = 0;
@@ -88,24 +124,65 @@ export function computeYinYangSummary(args: {
   const seasonCorrection = (SEASONAL_BIAS[monthBranch ?? ""] || 0) / 100;
 
   // E. 최종 통합 계산
+  const weights =
+    mode === "luck"
+      ? { essence: 0.15, nature: 0.15, base: 0.7, position: 0.0, season: 0 }
+      : { essence: 0.3, nature: 0.3, base: 0.2, position: 0.2, season: 1 };
+
   const totalDiff =
-    (essenceDiff * 0.3) +
-    (natureDiff * 0.3) +
-    (baseDiff * 0.2) +
-    (positionDiff * 0.2) +
-    seasonCorrection;
+    (essenceDiff * weights.essence) +
+    (natureDiff * weights.nature) +
+    (baseDiff * weights.base) +
+    (positionDiff * weights.position) +
+    seasonCorrection * weights.season;
   if (!Number.isFinite(totalDiff)) return null;
   const yangPercent = (Math.min(1, Math.max(-1, totalDiff)) + 1) * 50;
-  const harmonyScore = 100 - Math.abs(yangPercent - 50) * 2;
+  return summaryFromYang(yangPercent);
+}
 
-  const yang = round1(yangPercent);
-  const yin = round1(100 - yangPercent);
-  const category: YinYangCategory = yang >= 55 ? "양" : yang <= 45 ? "음" : "중용";
+export type YinYangLuckWeights = {
+  natal: number;
+  dae?: number;
+  se?: number;
+  wol?: number;
+  il?: number;
+};
 
-  return {
-    yang,
-    yin,
-    harmony: round1(harmonyScore),
-    category,
-  };
+export function computeYinYangSummaryWithLuckWeights(args: {
+  natal?: string[];
+  natalScaled?: Record<string, number>;
+  chain?: { dae?: string | null; se?: string | null; wol?: string | null; il?: string | null };
+  weights: YinYangLuckWeights;
+}): YinYangSummary | null {
+  const { natal, natalScaled, chain, weights } = args;
+  if (!natal || natal.length < 3) return null;
+
+  const natalSummary = computeYinYangSummary({
+    natal,
+    perStemElementScaled: natalScaled,
+    mode: "natal",
+  });
+  const natalYang = natalSummary?.yang ?? yangPercentFromStemMap(natalScaled);
+  if (natalYang == null) return null;
+
+  const parts: Array<{ yang: number; weight: number }> = [];
+  if (weights.natal > 0) parts.push({ yang: natalYang, weight: weights.natal });
+
+  const daeYang = yangPercentFromGZ(chain?.dae ?? null);
+  if (daeYang != null && (weights.dae ?? 0) > 0) parts.push({ yang: daeYang, weight: weights.dae ?? 0 });
+
+  const seYang = yangPercentFromGZ(chain?.se ?? null);
+  if (seYang != null && (weights.se ?? 0) > 0) parts.push({ yang: seYang, weight: weights.se ?? 0 });
+
+  const wolYang = yangPercentFromGZ(chain?.wol ?? null);
+  if (wolYang != null && (weights.wol ?? 0) > 0) parts.push({ yang: wolYang, weight: weights.wol ?? 0 });
+
+  const ilYang = yangPercentFromGZ(chain?.il ?? null);
+  if (ilYang != null && (weights.il ?? 0) > 0) parts.push({ yang: ilYang, weight: weights.il ?? 0 });
+
+  const sumW = parts.reduce((a, b) => a + b.weight, 0);
+  if (sumW <= 0) return natalSummary ?? null;
+
+  const totalYang = parts.reduce((a, b) => a + b.yang * b.weight, 0) / sumW;
+  return summaryFromYang(totalYang);
 }

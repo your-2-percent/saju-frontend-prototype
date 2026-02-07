@@ -117,6 +117,7 @@ function calcLuckMulti(args: {
     elemPct: elemPctFallback,
     presentMap,
     demoteAbsent,
+    pillars,
     gyeokgukList: Array.isArray(gyeokgukList) ? gyeokgukList : null,
   });
 }
