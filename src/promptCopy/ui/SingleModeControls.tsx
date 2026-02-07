@@ -22,8 +22,9 @@ export default function SingleModeControls({
     <>
       <div className="flex desk:justify-between flex-col desk:flex-row gap-2">
         <div className="flex gap-1 flex-wrap">
-          {tabs.map((t) => {
-            const locked = !canUseLuckTabs && t !== "원국";
+          {tabs.map((t, idx) => {
+            const isNatalTab = idx === 0;
+            const locked = !canUseLuckTabs && !isNatalTab;
             const isActive = !locked && activeTab === t;
 
             return (
@@ -35,7 +36,7 @@ export default function SingleModeControls({
                   setActiveTab(t);
                 }}
                 disabled={locked}
-                title={locked ? "프리미엄 기능입니다." : t}
+                title={locked ? "프리 플랜 기능" : t}
                 className={[
                   "px-2 py-1 text-xs rounded-md border transition-colors",
                   locked
@@ -48,7 +49,7 @@ export default function SingleModeControls({
                       : "",
                 ].join(" ")}
               >
-                {t} {locked ? "🔒" : ""}
+                {t} {locked ? "(잠김)" : ""}
               </button>
             );
           })}
@@ -58,9 +59,8 @@ export default function SingleModeControls({
       </div>
 
       <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
-        <p>아래에서 날짜를 조정하면 해당 시점의 운이 적용됩니다.</p>
-        <p>운 탭에 따라 기준 간지가 바뀝니다.</p>
-        <p>프롬프트 복사 전에도 설정을 변경할 수 있습니다.</p>
+        <p>날짜를 바꾸면 해당 시점의 운이 반영됩니다.</p>
+        <p>탭 변경 후에도 프롬프트에 적용돼요.</p>
       </div>
     </>
   );

@@ -21,26 +21,59 @@ export type DaeListItem = {
 
 type EffectiveBasis = "solar" | "lunar";
 
+function resolveDaeByDate(list: string[], baseDate: Date): string | null {
+  if (!Array.isArray(list) || list.length === 0) return null;
+
+  const parsed = list
+    .map((raw) => {
+      const m = String(raw ?? "").match(/(\d{4})년\s*(\d{1,2})월\s*([가-힣]{2})/);
+      if (!m) return null;
+      const y = Number(m[1]);
+      const mm = Number(m[2]);
+      const gz = normalizeGZLocal(m[3] ?? "");
+      if (!Number.isFinite(y) || !Number.isFinite(mm) || !gz) return null;
+      const at = new Date(y, mm - 1, 1, 12, 0, 0, 0);
+      return { at, gz };
+    })
+    .filter(Boolean) as Array<{ at: Date; gz: string }>;
+
+  if (parsed.length === 0) return null;
+
+  const t = baseDate.getTime();
+  for (let i = parsed.length - 1; i >= 0; i -= 1) {
+    const cur = parsed[i]!;
+    if (t >= cur.at.getTime()) return cur.gz;
+  }
+  return parsed[0]!.gz;
+}
+
 export function buildFallbackChain(
   chain: LuckChain | undefined,
   baseDate: Date,
-  rule: DayBoundaryRule
+  rule: DayBoundaryRule,
+  ms?: MyeongSik
 ): LuckChain {
-  if (chain) {
-    return {
-      dae: chain.dae ?? null,
-      se: chain.se ?? null,
-      wol: chain.wol ?? null,
-      il: chain.il ?? null,
-    };
-  }
-
   const se = normalizeGZLocal(getYearGanZhi(baseDate) || "");
   const wol = normalizeGZLocal(getMonthGanZhi(baseDate) || "");
   const il = normalizeGZLocal(getDayGanZhi(baseDate, rule) || "");
 
+  let dae = chain?.dae ? normalizeGZLocal(chain.dae) : null;
+  if (!dae && ms) {
+    const daeList = getDaewoonList(ms);
+    dae = resolveDaeByDate(daeList, baseDate);
+  }
+
+  if (chain) {
+    return {
+      dae,
+      se: chain.se ?? (se || null),
+      wol: chain.wol ?? (wol || null),
+      il: chain.il ?? (il || null),
+    };
+  }
+
   return {
-    dae: null,
+    dae,
     se: se || null,
     wol: wol || null,
     il: il || null,

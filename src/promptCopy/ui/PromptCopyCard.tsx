@@ -12,7 +12,7 @@ import SingleModeControls from "@/promptCopy/ui/SingleModeControls";
 import MultiModeControls from "@/promptCopy/ui/MultiModeControls";
 import ExtraQuestionsEditor from "@/promptCopy/ui/ExtraQuestionsEditor";
 import PromptOutput from "@/promptCopy/ui/PromptOutput";
-import { TONE_META, TABS, MAIN_CATEGORY_META, CATEGORY_SUBS } from "@/promptCopy/calc/meta";
+import { TABS, MAIN_CATEGORY_META, CATEGORY_SUBS } from "@/promptCopy/calc/meta";
 import { usePromptCopyModel } from "@/promptCopy/input/usePromptCopyModel";
 
 type Props = {
@@ -78,9 +78,6 @@ export default function PromptCopyCard({
       <PromptSectionsToggle sections={model.sections} toggleSection={model.toggleSection} />
 
       <TonePicker
-        tone={model.tone}
-        toneMeta={TONE_META}
-        setTone={model.setTone}
         friendMode={model.friendMode}
         setFriendMode={(e) => model.setFriendMode(e.target.checked)}
         teacherMode={model.teacherMode}

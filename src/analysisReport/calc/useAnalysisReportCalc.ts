@@ -346,6 +346,7 @@ export function useAnalysisReportCalc({
       elemPct: elemForFallback,
       presentMap,
       demoteAbsent,
+      pillars: activePillars,
       gyeokgukList,
     });
   }, [activePillars, eokbuListForMulti, elemForFallback, presentMap, demoteAbsent, gyeokgukList]);

@@ -1,28 +1,31 @@
-// features/AnalysisReport/buildPromptSingle.ts
-
 import type { MyeongSik } from "@/shared/lib/storage";
-import type { Pillars4, RelationTags } from "@/analysisReport/calc/logic/relations";
+import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
 import { buildAllRelationTags, buildHarmonyTags, normalizeGZ } from "@/analysisReport/calc/logic/relations";
 import { buildShinsalTags, type ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
 import { useSajuSettingsStore } from "@/saju/input/useSajuSettingsStore";
 import type { BlendTab } from "@/analysisReport/calc/logic/blend";
-import { getDaewoonList } from "@/luck/calc/daewoonList";
 import type { ShinCategory } from "@/analysisReport/calc/logic/shinStrength";
 import { computeDeukFlags10 } from "@/analysisReport/calc/utils/strength";
-import type { LuckChain, UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
+import { computeUnifiedPower, type LuckChain, type UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
 import type { Element } from "@/analysisReport/calc/utils/types";
 
-import { buildTopicGuide, type MainCategoryKey, type RelationMode, type SubCategoryKey } from "./topicGuide";
+import type { MainCategoryKey, RelationMode, SubCategoryKey } from "./topicGuide";
 import { STEM_TO_ELEMENT, getNabeum } from "./promptCore";
 import { formatBirthForPrompt } from "./formatBirth";
 import type { PromptSectionToggles } from "./promptSectionToggles";
 import { makeOverlayByLuck } from "./promptOverlay";
 import { getActivePosLabels, isUnknownTime } from "./promptPosLabels";
-import { sectionJson } from "./sectionFormat";
 import { elementPercentWithTenGodLabels } from "./multi/sectionUtils";
-import { buildSingleGzItems, formatSingleLuckChain } from "./single/gzItems";
-import { computeYinYangSummary } from "./calc/yinYang";
+import { computeYinYangSummary, computeYinYangSummaryWithLuckWeights } from "./calc/yinYang";
+import {
+  formatGzRows,
+  formatHarmonyBlock,
+  formatInlineKV,
+  formatShinsalBlock,
+  formatYinYangLine,
+  labelTenGodSubWithStems,
+} from "./promptFormat";
 
 export type { PromptSectionToggles } from "./promptSectionToggles";
 
@@ -41,16 +44,12 @@ export type SinglePromptInput = {
   timeMode?: "single";
   relationMode?: RelationMode;
   partnerMs?: MyeongSik | null;
+  baseDate?: Date;
 
-  // 🔥 추가
   teacherMode?: boolean;
   friendMode?: boolean;
   sections?: PromptSectionToggles;
 };
-
-/* ─────────────────────────────────────────────
- * 단일 탭용 프롬프트 (원국/대운/세운/월운/일운)
- * ──────────────────────────────────────────── */
 
 export type ChatPromptParts = {
   header: string;
@@ -59,21 +58,7 @@ export type ChatPromptParts = {
 };
 
 export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts {
-  const {
-    ms,
-    natal: natalRaw,
-    chain,
-    basis,
-    tab,
-    unified,
-    percent,
-    category,
-    topic,
-    subTopic,
-    relationMode,
-    teacherMode,
-    sections,
-  } = input;
+  const { ms, natal: natalRaw, chain, basis, tab, unified, percent, category, sections } = input;
 
   const showTenGod = sections?.tenGod ?? true;
   const showTwelveUnseong = sections?.twelveUnseong ?? true;
@@ -83,9 +68,7 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
 
   const unknownTime = isUnknownTime(ms);
   const hour = normalizeGZ(natalRaw[3] ?? "");
-  const hasHour = !!hour;
 
-  // ✅ 시주: 출생시간 모름이면 무조건 제외
   const natal: Pillars4 = [
     normalizeGZ(natalRaw[0] ?? ""),
     normalizeGZ(natalRaw[1] ?? ""),
@@ -93,56 +76,18 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
     hour,
   ];
 
-  const daeList = getDaewoonList(ms).slice(0, 10);
-
-  // 형충회합(운 포함)
-  const relWithLuck: RelationTags = buildAllRelationTags({
-    natal,
-    daewoon: tab !== "원국" ? chain?.dae ?? undefined : undefined,
-    sewoon:
-      tab === "세운" || tab === "월운" || tab === "일운"
-        ? chain?.se ?? undefined
-        : undefined,
-    wolwoon: tab === "월운" || tab === "일운" ? chain?.wol ?? undefined : undefined,
-    ilwoon: tab === "일운" ? chain?.il ?? undefined : undefined,
-  });
-
-  const sinsalWithLuck = buildShinsalTags({
-    natal,
-    daewoon: tab !== "원국" ? chain?.dae ?? undefined : undefined,
-    sewoon:
-      tab === "세운" || tab === "월운" || tab === "일운"
-        ? chain?.se ?? undefined
-        : undefined,
-    wolwoon: tab === "월운" || tab === "일운" ? chain?.wol ?? undefined : undefined,
-    ilwoon: tab === "일운" ? chain?.il ?? undefined : undefined,
-  });
-
-  // 십이신살(설정 반영)
   const { shinsalEra, shinsalGaehwa, shinsalBase } = useSajuSettingsStore.getState();
   const baseBranch = shinsalBase === "연지" ? natal[0]?.charAt(1) ?? "" : natal[2]?.charAt(1) ?? "";
 
-  // 오버레이(탭 기준)
-  const overlay = makeOverlayByLuck(unified, tab, chain);
-  const elemPercentObj = overlay.elementPercent;
-  const totalsSub = overlay.totalsSub;
-
-  // 신강도/득령·득지·득세
   const { flags: deukFlags0 } = computeDeukFlags10(natal, unified.natalFixed.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${
-      deukFlags0.비견.령 ||
-      deukFlags0.겁재.령 ||
-      deukFlags0.편인.령 ||
-      deukFlags0.정인.령
+      deukFlags0.비견.령 || deukFlags0.겁재.령 || deukFlags0.편인.령 || deukFlags0.정인.령
         ? "인정"
         : "불인정"
     }`,
     `득지 ${
-      deukFlags0.비견.지 ||
-      deukFlags0.겁재.지 ||
-      deukFlags0.편인.지 ||
-      deukFlags0.정인.지
+      deukFlags0.비견.지 || deukFlags0.겁재.지 || deukFlags0.편인.지 || deukFlags0.정인.지
         ? "인정"
         : "불인정"
     }`,
@@ -150,181 +95,236 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
   ].join(", ")}`;
 
   const posLabels = getActivePosLabels(ms, natal);
-  const dayStem = unified.dayStem; // ex) "정"
+  const dayStem = unified.dayStem;
   const dayEl =
     (STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT] ??
       STEM_TO_ELEMENT[unified.dayStem as keyof typeof STEM_TO_ELEMENT] ??
       "목") as Element;
 
-  const header = [
-    `📌 명식: ${ms.name ?? "이름없음"} (${formatBirthForPrompt(ms, unknownTime)}) 성별: ${ms.gender}`,
-    `원국 ${natal[0]}년 ${natal[1]}월 ${natal[2]}일` + (hasHour ? ` ${natal[3]}시` : ""),
-    `운: ${formatSingleLuckChain(tab, chain)}`,
-  ].join("\n");
+  const header = `명식: ${ms.name ?? "이름없음"}  (${formatBirthForPrompt(ms, unknownTime)}) 
+${ms.ganjiText} / 성별: ${ms.gender}`;
+
+  const section = (title: string, content: string): string => {
+    const body = (content ?? "").trim();
+    if (!body) return "";
+    return `## ${title}\n${body}`;
+  };
 
   const bodyParts: string[] = [];
 
-  // 대운 리스트
-  bodyParts.push(sectionJson("대운 리스트 (10개)", daeList));
+  const natalParts: string[] = [];
+  natalParts.push("원국 ver.");
+  natalParts.push(section("신강도", shinLine));
 
-  // 신강도
-  bodyParts.push(sectionJson("신강도", shinLine));
-
-  // 음양수치(원국)
-  const yinYang = computeYinYangSummary({
+  const yinYangNatal = computeYinYangSummary({
     natal,
     perStemElementScaled:
       unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+    mode: "natal",
   });
-  if (yinYang) bodyParts.push(sectionJson("음양수치(원국)", yinYang));
+  if (yinYangNatal) natalParts.push(section("음양수치(원국)", formatYinYangLine(yinYangNatal)));
 
-  // 오행강약(원국 고정)
-  bodyParts.push(
-    sectionJson(
+  natalParts.push(
+    section(
       "오행강약(퍼센트·원국 기준 고정)",
-      elementPercentWithTenGodLabels(unified.natalFixed.elementPercent100, dayEl),
+      formatInlineKV(elementPercentWithTenGodLabels(unified.natalFixed.elementPercent100, dayEl)),
     ),
   );
 
-  // 오행강약(현재 탭 기준) — 원국 탭이 아니면만 출력
-  if (tab !== "원국") {
-    bodyParts.push(
-      sectionJson(
-        `오행강약(퍼센트·탭=${tab})`,
-        elementPercentWithTenGodLabels(elemPercentObj, dayEl),
-      ),
-    );
-  }
-
-  // 십신 강약
   if (showTenGod) {
-    bodyParts.push(
-      sectionJson(
-        "십신 강약(소분류 10개·원국·합계 100)",
-        unified.natalFixed.totalsSub,
-      ),
+    const labeled = labelTenGodSubWithStems(unified.natalFixed.totalsSub, dayStem);
+    natalParts.push(section("십신 강약(소분류 10개·원국·합계 100)", formatInlineKV(labeled)));
+  }
+
+  if (showTwelveUnseong) {
+    const rows = posLabels
+      .map((pos, i) => {
+        const gz = natal[i] ?? "";
+        if (!gz) return null;
+        return { pos, gz, value: getTwelveUnseong(dayStem, gz.charAt(1)) };
+      })
+      .filter(Boolean) as { pos: string; gz: string; value: string }[];
+    if (rows.length > 0) natalParts.push(section("십이운성(원국)", formatGzRows(rows)));
+  }
+
+  if (showTwelveShinsal) {
+    const rows = posLabels
+      .map((pos, i) => {
+        const gz = natal[i] ?? "";
+        if (!gz) return null;
+        return {
+          pos,
+          gz,
+          value: getTwelveShinsalBySettings({
+            baseBranch,
+            targetBranch: gz.charAt(1),
+            era: shinsalEra,
+            gaehwa: shinsalGaehwa,
+          }),
+        };
+      })
+      .filter(Boolean) as { pos: string; gz: string; value: string }[];
+    if (rows.length > 0) natalParts.push(section("십이신살(원국)", formatGzRows(rows)));
+  }
+
+  if (showNabeum) {
+    const rows = posLabels
+      .map((pos, i) => {
+        const gz = natal[i] ?? "";
+        if (!gz) return null;
+        const info = getNabeum(gz);
+        if (!info) return null;
+        return { pos, gz, value: info.name };
+      })
+      .filter(Boolean) as { pos: string; gz: string; value: string }[];
+    if (rows.length > 0) natalParts.push(section("납음오행", formatGzRows(rows)));
+  }
+
+  natalParts.push(
+    section(
+      "형충회합(원국)",
+      formatHarmonyBlock(buildHarmonyTags(posLabels.map((_, i) => natal[i] ?? ""))),
+    ),
+  );
+
+  if (showShinsal) {
+    const baseShinsal = buildShinsalTags({
+      natal,
+      daewoon: null,
+      sewoon: null,
+      wolwoon: null,
+      ilwoon: null,
+      basis,
+    });
+    natalParts.push(section("신살(원국)", formatShinsalBlock(baseShinsal)));
+  }
+
+  const natalBlock = natalParts.filter(Boolean).join("\n\n");
+  if (natalBlock) bodyParts.push(natalBlock);
+
+  const yinYangWeightsByTab: Record<BlendTab, { natal: number; dae?: number; se?: number; wol?: number; il?: number }> = {
+    원국: { natal: 100 },
+    대운: { natal: 70, dae: 30 },
+    세운: { natal: 60, dae: 25, se: 15 },
+    월운: { natal: 55, dae: 20, se: 15, wol: 10 },
+    일운: { natal: 50, dae: 20, se: 15, wol: 10, il: 5 },
+  };
+
+  const buildLuckBlock = (luckTab: BlendTab, baseUnified?: UnifiedPowerResult): string => {
+    if (luckTab === "원국") return "";
+
+    const u =
+      baseUnified ??
+      computeUnifiedPower({
+        natal,
+        tab: luckTab,
+        chain,
+        hourKey: "prompt",
+      });
+
+    const overlayLuck = makeOverlayByLuck(u, luckTab, chain);
+    const elemPercent = overlayLuck.elementPercent;
+    const totalsSubLuck = overlayLuck.totalsSub;
+
+    const luckParts: string[] = [];
+    luckParts.push(`${luckTab} ver.`);
+
+    // 단일 모드에서는 대운/세운/월운 리스트를 출력하지 않음
+
+    const normChain = {
+      dae: chain?.dae ? normalizeGZ(chain.dae) : null,
+      se: chain?.se ? normalizeGZ(chain.se) : null,
+      wol: chain?.wol ? normalizeGZ(chain.wol) : null,
+      il: chain?.il ? normalizeGZ(chain.il) : null,
+    };
+
+    const yinYangLuck = computeYinYangSummaryWithLuckWeights({
+      natal,
+      natalScaled: unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+      chain: normChain,
+      weights: yinYangWeightsByTab[luckTab],
+    });
+    if (yinYangLuck) luckParts.push(section(`음양수치(원국 + ${luckTab})`, formatYinYangLine(yinYangLuck)));
+
+    luckParts.push(
+      section(`오행강약(원국 + ${luckTab})`, formatInlineKV(elementPercentWithTenGodLabels(elemPercent, dayEl))),
     );
 
-    if (tab !== "원국") {
-      bodyParts.push(sectionJson(`십신 강약(소분류 10개·탭=${tab}·합계 100)`, totalsSub));
+    if (showTenGod) {
+      const labeled = labelTenGodSubWithStems(totalsSubLuck, dayStem);
+      luckParts.push(section(`십신 강약(원국 + ${luckTab})`, formatInlineKV(labeled)));
     }
-  }
 
-  // 원국+운 간지 아이템
-  const gzItems = buildSingleGzItems({ tab, natal, posLabels, chain });
+    const luckGz =
+      luckTab === "대운"
+        ? chain?.dae
+        : luckTab === "세운"
+          ? chain?.se
+          : luckTab === "월운"
+            ? chain?.wol
+            : luckTab === "일운"
+              ? chain?.il
+              : null;
+    const luckGzNorm = luckGz ? normalizeGZ(luckGz) : "";
 
-  // 십이운성(원국+운 반영)
-  if (showTwelveUnseong) {
-    const rows = gzItems.map(({ pos, gz }) => ({
-      pos,
-      gz,
-      unseong: getTwelveUnseong(natal[2]?.charAt(0) ?? "", gz.charAt(1)),
-    }));
+    if (luckGzNorm && showTwelveUnseong) {
+      const unseong = getTwelveUnseong(dayStem, luckGzNorm.charAt(1));
+      luckParts.push(section(`십이운성(${luckTab})`, formatGzRows([{ pos: luckTab, gz: luckGzNorm, value: unseong }])));
+    }
 
-    bodyParts.push(sectionJson("십이운성(원국+운 반영)", rows));
-  }
-
-  // 십이신살(원국+운 반영·설정 적용)
-  if (showTwelveShinsal) {
-    const rows = gzItems.map(({ pos, gz }) => ({
-      pos,
-      gz,
-      shinsal: getTwelveShinsalBySettings({
+    if (luckGzNorm && showTwelveShinsal) {
+      const shinsal = getTwelveShinsalBySettings({
         baseBranch,
-        targetBranch: gz.charAt(1),
+        targetBranch: luckGzNorm.charAt(1),
         era: shinsalEra,
         gaehwa: shinsalGaehwa,
-      }),
-    }));
-
-    bodyParts.push(sectionJson("십이신살(원국+운 반영·설정 적용)", rows));
-  }
-
-  // 납음오행(원국+운 반영)
-  if (showNabeum) {
-    type NabeumRow =
-      | { pos: string; gz: string; nabeum: null }
-      | { pos: string; gz: string; nabeum: string; element: Element; code: string };
-
-    const rows: NabeumRow[] = [];
-    for (const it of gzItems) {
-      const info = getNabeum(it.gz);
-      if (!info) {
-        if (it.kind === "natal") rows.push({ pos: it.pos, gz: it.gz, nabeum: null });
-        continue;
-      }
-
-      rows.push({
-        pos: it.pos,
-        gz: it.gz,
-        nabeum: info.name,
-        element: info.element,
-        code: info.code,
       });
+      luckParts.push(section(`십이신살(${luckTab})`, formatGzRows([{ pos: luckTab, gz: luckGzNorm, value: shinsal }])));
     }
 
-    bodyParts.push(sectionJson("납음오행(원국+운 반영)", rows));
-  }
+    if (luckGzNorm && showNabeum) {
+      const info = getNabeum(luckGzNorm);
+      if (info) {
+        luckParts.push(section("납음오행", formatGzRows([{ pos: luckTab, gz: luckGzNorm, value: info.name }])));
+      }
+    }
 
-  // 형충회합(원국)
-  bodyParts.push(sectionJson("형충회합(원국)", buildHarmonyTags(posLabels.map((_, i) => natal[i] ?? ""))));
+    const relByTab = buildAllRelationTags({
+      natal,
+      daewoon: luckTab !== "대운" ? chain?.dae ?? undefined : undefined,
+      sewoon: luckTab === "세운" || luckTab === "월운" || luckTab === "일운" ? chain?.se ?? undefined : undefined,
+      wolwoon: luckTab === "월운" || luckTab === "일운" ? chain?.wol ?? undefined : undefined,
+      ilwoon: luckTab === "일운" ? chain?.il ?? undefined : undefined,
+    });
+    luckParts.push(section(`형충회합(${luckTab})`, formatHarmonyBlock(relByTab)));
 
-  // 형충회합(운 포함: 탭 연동)
-  bodyParts.push(sectionJson("형충회합(운 포함: 탭 연동)", relWithLuck));
+    return luckParts.filter(Boolean).join("\n\n");
+  };
 
-  // 신살(원국 / 운 포함)
-  if (showShinsal) {
-    if (tab === "원국") {
-      const baseShinsal = buildShinsalTags({
-        natal,
-        daewoon: null,
-        sewoon: null,
-        wolwoon: null,
-        ilwoon: null,
-        basis,
-      });
+  if (tab !== "원국") {
+    const order: BlendTab[] =
+      tab === "대운"
+        ? ["대운"]
+        : tab === "세운"
+          ? ["대운", "세운"]
+          : tab === "월운"
+            ? ["대운", "세운", "월운"]
+            : tab === "일운"
+              ? ["대운", "세운", "월운", "일운"]
+              : [];
 
-      bodyParts.push(
-        sectionJson("신살(원국 전용)", {
-          good: baseShinsal.good,
-          bad: baseShinsal.bad,
-          meta: baseShinsal.meta,
-        }),
-      );
-    } else {
-      bodyParts.push(sectionJson(`신살(운 포함·탭=${tab})`, sinsalWithLuck));
+    for (const t of order) {
+      const block = buildLuckBlock(t, t === tab ? unified : undefined);
+      if (block) bodyParts.push(block);
     }
   }
 
   const body = bodyParts.filter((s) => s && s.trim().length > 0).join("\n\n");
 
-  const topicGuide = buildTopicGuide({
-    topic,
-    subTopic,
-    timeMode: "single",
-    tab,
-    relationMode,
-    teacherMode,
-  });
-
-  const guideParts: string[] = [
-    "-----",
-    "🧭 해석 가이드",
-    "",
-    "1. 위 데이터는 사주 원국과 현재 선택된 탭(원국/대운/세운/월운/일운)의 수치·태그 정보다.",
-    "2. 해석 시, 원국 → 선택 탭 순서로 변화 포인트를 요약한다.",
-  ];
-
-  if (topicGuide) {
-    guideParts.push("", "🎯 질문 포커스(카테고리 반영)", topicGuide);
-  }
-
-  const guide = guideParts.join("\n");
-
-  return { header, body, guide };
+  return { header, body, guide: "" };
 }
 
 export function buildChatPrompt(input: SinglePromptInput): string {
   const { header, body, guide } = buildChatPromptParts(input);
-  return [header, body, guide].join("\n\n");
+  return [header, body, guide].filter((v) => v && v.trim().length > 0).join("\n\n");
 }

@@ -90,7 +90,7 @@ export default function MultiModeControls({
       {multiTab === "대운" && (
         <div>
           <div className="text-xs font-semibold mb-2 text-neutral-700 dark:text-neutral-200">
-            대운 선택 (다중 선택 가능)
+            대운 선택 (복수 선택 가능)
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             {daeList.map((dae, idx) => (
@@ -206,7 +206,7 @@ export default function MultiModeControls({
 
       <div className="text-[11px] text-neutral-500 dark:text-neutral-400">
         <p>선택한 {multiTab}의 데이터가 프롬프트에 포함됩니다.</p>
-        <p>필요하면 탭마다 값을 별도로 조정하세요.</p>
+        <p>필요하면 기간을 줄여서 선택하세요.</p>
       </div>
     </div>
   );

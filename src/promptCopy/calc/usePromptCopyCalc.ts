@@ -18,7 +18,7 @@ import { extractMyeongSikInfoOnly } from "@/promptCopy/calc/infoOnly";
 import {
   buildFriendInstruction,
   buildPartnerPromptFragment,
-  buildToneInstruction,
+  buildTeacherInstruction,
 } from "@/promptCopy/calc/promptTextUtils";
 import type { PartnerOption } from "@/promptCopy/calc/types";
 import type { PromptCopyInputState } from "@/promptCopy/input/usePromptCopyInput";
@@ -63,7 +63,6 @@ export function usePromptCopyCalc({
   input,
 }: Input) {
   const {
-    tone,
     friendMode,
     teacherMode,
     partnerId,
@@ -93,7 +92,10 @@ export function usePromptCopyCalc({
 
   const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
   const baseDate = useMemo(() => date ?? new Date(), [date]);
-  const fallbackChain = useMemo(() => buildFallbackChain(chain, baseDate, rule), [chain, baseDate, rule]);
+  const fallbackChain = useMemo(
+    () => buildFallbackChain(chain, baseDate, rule, ms),
+    [chain, baseDate, rule, ms]
+  );
 
   const gatedChain = useMemo<LuckChain>(() => {
     if (canUseLuckTabs) return fallbackChain;
@@ -223,6 +225,7 @@ export function usePromptCopyCalc({
       partnerMs: partnerForPrompt,
       teacherMode,
       sections,
+      baseDate,
     });
   }, [
     ms,
@@ -240,6 +243,7 @@ export function usePromptCopyCalc({
     partnerForPrompt,
     teacherMode,
     sections,
+    baseDate,
   ]);
 
   const multiText = useMemo(() => {
@@ -298,15 +302,15 @@ export function usePromptCopyCalc({
   );
 
   const baseText = isMultiMode ? multiText : normalText;
-  const toneInstruction = useMemo(() => buildToneInstruction(tone), [tone]);
+  const teacherInstruction = useMemo(() => buildTeacherInstruction(teacherMode), [teacherMode]);
   const friendInstruction = useMemo(() => buildFriendInstruction(friendMode), [friendMode]);
 
   const basePrompt = useMemo(
     () =>
       baseText || partnerPromptFragment
-        ? `${baseText}${partnerPromptFragment}\n${toneInstruction}${friendInstruction}`
+        ? `${baseText}${partnerPromptFragment}\n${teacherInstruction}${friendInstruction}`
         : "",
-    [toneInstruction, friendInstruction, baseText, partnerPromptFragment]
+    [teacherInstruction, friendInstruction, baseText, partnerPromptFragment]
   );
 
   const finalText = useMemo(() => buildFinalPrompt(basePrompt, extraQuestions), [basePrompt, extraQuestions]);
@@ -355,6 +359,7 @@ export function usePromptCopyCalc({
       partnerMs: partnerForPrompt,
       teacherMode,
       sections,
+      baseDate,
     });
   }, [
     ms,
@@ -380,6 +385,7 @@ export function usePromptCopyCalc({
     sections,
     gatedChain,
     tabForLogic,
+    baseDate,
   ]);
 
   const infoOnlyText = useMemo(() => {

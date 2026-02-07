@@ -3,7 +3,7 @@ import type { BlendTab } from "@/analysisReport/calc/logic/blend";
 import type { MainCategoryKey, SubCategoryKey, RelationMode } from "@/features/prompt/buildPrompt";
 import { usePromptCopySectionsStore } from "@/promptCopy/input/promptCopySectionsStore";
 import { useMultiRangeControls } from "@/promptCopy/input/useMultiRangeControls";
-import type { MultiTab, ToneKey } from "@/promptCopy/calc/types";
+import type { MultiTab } from "@/promptCopy/calc/types";
 
 type Args = {
   msId: string;
@@ -15,7 +15,6 @@ export function usePromptCopyInput({ msId, canUseMultiMode, canUseLuckTabs }: Ar
   const sections = usePromptCopySectionsStore((s) => s.sections);
   const toggleSection = usePromptCopySectionsStore((s) => s.toggleSection);
 
-  const [tone, setTone] = useState<ToneKey>("analysis");
   const [friendMode, setFriendMode] = useState(false);
   const [teacherMode, setTeacherMode] = useState(false);
 
@@ -86,8 +85,6 @@ export function usePromptCopyInput({ msId, canUseMultiMode, canUseLuckTabs }: Ar
   return {
     sections,
     toggleSection,
-    tone,
-    setTone,
     friendMode,
     setFriendMode,
     teacherMode,
