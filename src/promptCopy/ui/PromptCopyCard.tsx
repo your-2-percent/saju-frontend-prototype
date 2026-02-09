@@ -54,7 +54,7 @@ export default function PromptCopyCard({
   const isPromptLocked = model.promptAccess !== "full";
   const lockTitle = isPromptLocked ? "프리 플랜에서는 프롬프트 사용이 불가합니다. 🔒" : undefined;
 
-  const canCopyInfo = !isPromptLocked && model.canCopyInfo;
+  //const canCopyInfo = !isPromptLocked && model.canCopyInfo;
   const canCopyAll = !isPromptLocked && model.canCopyAll;
 
   return (
@@ -174,7 +174,7 @@ export default function PromptCopyCard({
 
       <div className="flex justify-end">
         <div className="flex gap-2 w-full desk:w-auto">
-          <button
+          {/* <button
             type="button"
             onClick={model.onCopyInfoOnly}
             disabled={!canCopyInfo}
@@ -190,7 +190,7 @@ export default function PromptCopyCard({
             ].join(" ")}
           >
             {model.copiedInfo ? "복사됨" : `명식 정보만 복사${!canCopyInfo ? " 🔒" : ""}`}
-          </button>
+          </button> */}
 
           <button
             type="button"
