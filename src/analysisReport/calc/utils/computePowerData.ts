@@ -408,8 +408,6 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
   orderMajors.forEach((god) => {
     const target = totals.find((t) => t.name === god)?.value ?? 0; // ex) 33
     const majorEl = elementOfGodMajor(god, dayEl);
-
-    // 이 오행의 2간(예: 금 → 경금/신금)
     const parts = Object.entries(perStemRaw).filter(([label]) => label.endsWith(majorEl)); // ["경금", v1], ["신금", v2] 등
 
     const labels = parts.map(([label]) => label);
