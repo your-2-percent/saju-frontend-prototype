@@ -1,6 +1,7 @@
 // features/AnalysisReport/strength.ts
 import type { Element, TenGod } from "./types";
 import { STEM_H2K, BRANCH_H2K } from "@/shared/domain/ganji/const";
+import { BRANCH_MAIN_ELEMENT } from "./hiddenStem";
 
 /**
  * Day Stem → Element
@@ -116,31 +117,19 @@ export function getCategoryElementMap(dayEl: Element): Record<TenGod, Element> {
 
 
 // ▼ 여기부터 함수 본문만 교체
-/** 일간 → 득령/득지 인정 지지 세트 */
-const DEUK_MAP: Record<string, string[]> = {
-  갑: ["인", "寅", "묘", "卯", "자", "子", "해", "亥"],
-  을: ["인", "寅", "묘", "卯", "자", "子", "해", "亥"],
+function isDeukJiByDayBranch(dayBranch: string | undefined, el: Element): boolean {
+  if (!dayBranch) return false;
+  const dayEl = BRANCH_MAIN_ELEMENT[dayBranch];
+  return !!dayEl && dayEl === el;
+}
 
-  병: ["인", "寅", "묘", "卯", "오", "午", "사", "巳"],
-  정: ["인", "寅", "묘", "卯", "오", "午", "사", "巳"],
-
-  무: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "오", "午", "사", "巳"],
-  기: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "오", "午", "사", "巳"],
-
-  경: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "신", "申", "유", "酉"],
-  신: ["진", "辰", "술", "戌", "축", "丑", "미", "未", "신", "申", "유", "酉"],
-
-  임: ["신", "申", "유", "酉", "해", "亥", "자", "子"],
-  계: ["신", "申", "유", "酉", "해", "亥", "자", "子"],
-};
-
-const ELEMENT_DEUK_BRANCHES: Record<Element, string[]> = {
-  목: DEUK_MAP["갑"] ?? [],
-  화: DEUK_MAP["병"] ?? [],
-  토: DEUK_MAP["무"] ?? [],
-  금: DEUK_MAP["경"] ?? [],
-  수: DEUK_MAP["임"] ?? [],
-};
+function isDeukSe(elementScoreRaw: Record<Element, number>, el: Element): boolean {
+  const total = Object.values(elementScoreRaw).reduce((a, b) => a + Math.max(0, b), 0);
+  if (total <= 0) return false;
+  const v = Math.max(0, elementScoreRaw[el] ?? 0);
+  const pct = (v / total) * 100;
+  return pct >= 30;
+}
 
 /**
  * 득령/득지/득세 계산
@@ -181,16 +170,16 @@ export function computeDeukFlags(
   };
 
   const monthB = brs[1]!;
+  const monthEl = BRANCH_MAIN_ELEMENT[monthB];
 
   // ── 득령/득지/득세: 분류별 오행 기준으로 판단
   const catEl = getCategoryElementMap(dayEl);
-  const branchCandidates = [brs[0], brs[2], brs[3]].filter(Boolean);
+  const dayBranch = brs[2];
   (Object.keys(flags) as TenGod[]).forEach((k) => {
     const el = catEl[k];
-    const allowBranches = ELEMENT_DEUK_BRANCHES[el] ?? [];
-    if (allowBranches.includes(monthB)) flags[k].령 = true;
-    if (branchCandidates.some((b) => allowBranches.includes(b))) flags[k].지 = true;
-    flags[k].세 = (elementScoreRaw[el] ?? 0) >= 30;
+    if (monthEl && monthEl === el) flags[k].령 = true;
+    if (isDeukJiByDayBranch(dayBranch, el)) flags[k].지 = true;
+    flags[k].세 = isDeukSe(elementScoreRaw, el);
   });
 
   return { flags, monthBranch: monthB, dayEl };
@@ -255,7 +244,8 @@ export function computeDeukFlags10(
   };
 
   const monthB = brs[1]!;
-  const branchCandidates = [brs[0], brs[2], brs[3]].filter(Boolean);
+  const monthEl = BRANCH_MAIN_ELEMENT[monthB];
+  const dayBranch = brs[2];
   const subElementMap: Record<keyof DeukFlags10, Element> = {
     비견: dayEl,
     겁재: dayEl,
@@ -271,10 +261,9 @@ export function computeDeukFlags10(
 
   (Object.keys(flags) as Array<keyof DeukFlags10>).forEach((k) => {
     const el = subElementMap[k];
-    const allowBranches = ELEMENT_DEUK_BRANCHES[el] ?? [];
-    if (allowBranches.includes(monthB)) flags[k].령 = true;
-    if (branchCandidates.some((b) => allowBranches.includes(b))) flags[k].지 = true;
-    flags[k].세 = (elementScoreRaw[el] ?? 0) >= 30;
+    if (monthEl && monthEl === el) flags[k].령 = true;
+    if (isDeukJiByDayBranch(dayBranch, el)) flags[k].지 = true;
+    flags[k].세 = isDeukSe(elementScoreRaw, el);
   });
 
   return { flags, monthBranch: monthB, dayEl };

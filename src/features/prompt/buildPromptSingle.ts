@@ -82,12 +82,12 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
   const { flags: deukFlags0 } = computeDeukFlags10(natal, unified.natalFixed.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${
-      deukFlags0.비견.령 || deukFlags0.겁재.령 || deukFlags0.편인.령 || deukFlags0.정인.령
+      deukFlags0.비견.령 || deukFlags0.겁재.령 || deukFlags0.정인.령 || deukFlags0.편인.령
         ? "인정"
         : "불인정"
     }`,
     `득지 ${
-      deukFlags0.비견.지 || deukFlags0.겁재.지 || deukFlags0.편인.지 || deukFlags0.정인.지
+      deukFlags0.비견.지 || deukFlags0.겁재.지 || deukFlags0.정인.지 || deukFlags0.편인.지
         ? "인정"
         : "불인정"
     }`,

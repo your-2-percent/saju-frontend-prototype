@@ -91,12 +91,12 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
   const { flags: deukFlags } = computeDeukFlags10(natal, unified.natalFixed.elementScoreRaw);
   const shinLine = `${category} (${percent.toFixed(1)}%) · ${[
     `득령 ${
-      deukFlags.비견.령 || deukFlags.겁재.령 || deukFlags.편인.령 || deukFlags.정인.령
+      deukFlags.비견.령 || deukFlags.겁재.령 || deukFlags.정인.령 || deukFlags.편인.령
         ? "인정"
         : "불인정"
     }`,
     `득지 ${
-      deukFlags.비견.지 || deukFlags.겁재.지 || deukFlags.편인.지 || deukFlags.정인.지
+      deukFlags.비견.지 || deukFlags.겁재.지 || deukFlags.정인.지 || deukFlags.편인.지
         ? "인정"
         : "불인정"
     }`,
