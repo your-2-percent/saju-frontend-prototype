@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 export default function AuthCallback() {
   const location = useLocation();
   const navigate = useNavigate();
+  const didExchange = useRef(false);
   const [msg, setMsg] = useState("로그인 처리 중...");
 
   useEffect(() => {
@@ -53,8 +54,28 @@ export default function AuthCallback() {
           return;
         }
 
+        if (didExchange.current) {
+          return;
+        }
+        didExchange.current = true;
+
+        const {
+          data: { session: preSession },
+        } = await supabase.auth.getSession();
+        if (preSession) {
+          navigate("/", { replace: true });
+          return;
+        }
+
         const { error: exErr } = await supabase.auth.exchangeCodeForSession(code);
         if (exErr) {
+          const {
+            data: { session: postSession },
+          } = await supabase.auth.getSession();
+          if (postSession) {
+            navigate("/", { replace: true });
+            return;
+          }
           setMsg(`세션 교환 실패: ${exErr.message}`);
           return;
         }
@@ -67,7 +88,7 @@ export default function AuthCallback() {
     };
 
     void run();
-  }, [location.search, navigate]);
+  }, [location.search, navigate, location.hash]);
 
   return (
     <main className="min-h-screen flex items-center justify-center">
