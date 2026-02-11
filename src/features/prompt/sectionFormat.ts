@@ -77,6 +77,24 @@ const REL_KEYS = new Set([
 const isRelationTagsLike = (v: Record<string, unknown>): boolean =>
   Object.keys(v).some((k) => REL_KEYS.has(k));
 
+const isNabeumDetailLike = (v: Record<string, unknown>): boolean => {
+  const keys = Object.keys(v);
+  if (!keys.includes("납음") && !keys.includes("오행")) return false;
+  return keys.every((k) => k === "납음" || k === "오행" || k === "간지");
+};
+
+const isUnseongDetailLike = (v: Record<string, unknown>): boolean => {
+  const keys = Object.keys(v);
+  if (!keys.includes("운성")) return false;
+  return keys.every((k) => k === "운" || k === "운성" || k === "간지");
+};
+
+const isShinsalDetailLike = (v: Record<string, unknown>): boolean => {
+  const keys = Object.keys(v);
+  if (!keys.includes("신살")) return false;
+  return keys.every((k) => k === "운" || k === "신살" || k === "간지");
+};
+
 function toGzRow(obj: Record<string, unknown>): GzRow | null {
   const pos = typeof obj.pos === "string" ? obj.pos : "";
   const gz = typeof obj.gz === "string" ? obj.gz : "";
@@ -116,6 +134,23 @@ function formatPlainValue(value: unknown): string {
     if (isYinYangSummaryLike(value)) return formatYinYangLine(value);
     if (isShinsalLike(value)) return formatShinsalBlock(value);
     if (isRelationTagsLike(value)) return formatHarmonyBlock(value);
+    if (isNabeumDetailLike(value)) {
+      const nabeum = value["납음"];
+      const element = value["오행"];
+      if (isPrimitive(nabeum) && isPrimitive(element)) {
+        return `${nabeum} / 오행: ${element}`;
+      }
+      if (isPrimitive(nabeum)) return String(nabeum);
+      if (isPrimitive(element)) return `오행: ${element}`;
+    }
+    if (isUnseongDetailLike(value)) {
+      const unseong = value["운성"];
+      if (isPrimitive(unseong)) return String(unseong);
+    }
+    if (isShinsalDetailLike(value)) {
+      const shinsal = value["신살"];
+      if (isPrimitive(shinsal)) return String(shinsal);
+    }
 
     const entries = Object.entries(value);
     if (entries.length === 0) return "";

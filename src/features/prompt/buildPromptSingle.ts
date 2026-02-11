@@ -266,6 +266,9 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
               ? chain?.il
               : null;
     const luckGzNorm = luckGz ? normalizeGZ(luckGz) : "";
+    if (luckGzNorm) {
+      luckParts[0] = `${luckTab} ver. 간지 : ${luckGzNorm}`;
+    }
 
     if (luckGzNorm && showTwelveUnseong) {
       const unseong = getTwelveUnseong(dayStem, luckGzNorm.charAt(1));

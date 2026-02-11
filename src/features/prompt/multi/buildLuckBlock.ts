@@ -117,19 +117,17 @@ export function buildLuckBlock(params: {
       ? {
           납음오행: nabeum
             ? {
-                gz,
-                nabeum: nabeum.name,
-                element: nabeum.element,
-                code: nabeum.code,
+                납음: nabeum.name,
+                오행: nabeum.element,
               }
             : null,
         }
       : {}),
     ...(show.twelveUnseong
-      ? { 십이운성: { pos: scope, gz, unseong } }
+      ? { 십이운성: { 운: scope, 운성: unseong } }
       : {}),
     ...(show.twelveShinsal
-      ? { 십이신살: { pos: scope, gz, shinsal: shinsal12 } }
+      ? { 십이신살: { 운: scope, 신살: shinsal12 } }
       : {}),
   };
 
