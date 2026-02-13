@@ -113,18 +113,32 @@ function normalizePillarsSafe(arr?: string[] | null): [string, string, string, s
   return a.map((s) => (typeof s === "string" ? s : "")) as [string, string, string, string];
 }
 
+export type ClimatePercents = {
+  hanNanPct: number;
+  joSeupPct: number;
+  raw: { han: number; nan: number; jo: number; seup: number };
+  weights: { branch: Record<PosIndex, number>; stem: Record<PosIndex, number> };
+};
+
+function calcClimatePercentsSafe(safePillars: [string, string, string, string]): ClimatePercents {
+  const { han, nan, jo, seup } = accumulateClimate(safePillars);
+  const hanNanPct = ratioPct(han, nan);
+  const joSeupPct = ratioPct(seup, jo);
+  return {
+    hanNanPct: clamp01(hanNanPct),
+    joSeupPct: clamp01(joSeupPct),
+    raw: { han, nan, jo, seup },
+    weights: { branch: W_BRANCH, stem: W_STEM },
+  };
+}
+
+/** 외부에서 퍼센트만 필요할 때 사용 (컴포넌트 아님) */
+export function calcClimatePercents(natal?: string[] | null): ClimatePercents {
+  return calcClimatePercentsSafe(normalizePillarsSafe(natal));
+}
+
 /** 외부에서 퍼센트만 필요할 때 사용 (컴포넌트 아님) */
 export function useClimatePercents(natal?: string[] | null) {
   const safePillars = normalizePillarsSafe(natal);
-  return useMemo(() => {
-    const { han, nan, jo, seup } = accumulateClimate(safePillars);
-    const hanNanPct = ratioPct(han, nan);
-    const joSeupPct = ratioPct(seup, jo);
-    return {
-      hanNanPct: clamp01(hanNanPct),
-      joSeupPct: clamp01(joSeupPct),
-      raw: { han, nan, jo, seup },
-      weights: { branch: W_BRANCH, stem: W_STEM },
-    };
-  }, [safePillars]);
+  return useMemo(() => calcClimatePercentsSafe(safePillars), [safePillars]);
 }
