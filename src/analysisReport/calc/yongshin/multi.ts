@@ -1,5 +1,6 @@
 // features/AnalysisReport/calc/yongshin/multi.ts
 import type { Element } from "@/analysisReport/calc/utils/types";
+import { calcClimatePercents, type ClimatePercents } from "@/analysisReport/input/useClimatePercents";
 
 export type YongshinKind = "EOKBU" | "JOHU" | "TONGGWAN" | "BYEONGYAK" | "GYEOKGUK";
 
@@ -43,6 +44,44 @@ function getSeasonKind(monthGz: string): SeasonKind {
   if (["인", "묘", "진"].includes(b)) return "SPRING";
   if (["신", "유", "술"].includes(b)) return "AUTUMN";
   return "UNKNOWN";
+}
+
+type TempKind = "cold" | "hot" | "mild";
+type WetKind = "wet" | "dry" | "normal";
+
+const CLIMATE_EXTREME_DELTA = 12;
+
+function tempKindFromPct(pct: number): TempKind {
+  if (pct <= 40) return "cold";
+  if (pct >= 60) return "hot";
+  return "mild";
+}
+
+function wetKindFromPct(pct: number): WetKind {
+  if (pct >= 60) return "wet";
+  if (pct <= 40) return "dry";
+  return "normal";
+}
+
+function isClimateExtreme(pct: number): boolean {
+  return Math.abs(pct - 50) >= CLIMATE_EXTREME_DELTA;
+}
+
+function pickJohuWeight(season: SeasonKind, climate: ClimatePercents | null): number {
+  if (!climate) return season === "WINTER" || season === "SUMMER" ? 0.85 : 0.55;
+
+  const tempExtreme = isClimateExtreme(climate.hanNanPct);
+  const wetExtreme = isClimateExtreme(climate.joSeupPct);
+  const climateExtreme = tempExtreme || wetExtreme;
+
+  if (!climateExtreme) return season === "WINTER" || season === "SUMMER" ? 0.55 : 0.45;
+
+  const tempKind = tempKindFromPct(climate.hanNanPct);
+  const seasonTemp: TempKind = season === "WINTER" ? "cold" : season === "SUMMER" ? "hot" : "mild";
+  const seasonMatch = tempKind === "mild" || seasonTemp === "mild" || tempKind === seasonTemp;
+
+  if (season === "WINTER" || season === "SUMMER") return seasonMatch ? 0.85 : 0.6;
+  return 0.65;
 }
 
 function calcPresentBalance(elemPct: Record<Element, number>, presentMap: Record<Element, boolean>) {
@@ -117,8 +156,8 @@ type Conflict = {
 
 function detectConflicts(elemPct: Record<Element, number>): Conflict[] {
   // 강한 상극이 “구조적으로 의미있게” 나타나는지 간단 감지
-  // 기준 너무 빡세게 잡으면 안 잡힘 → 실무용으로 적당히(20% 이상 둘 다)
-  const th = 20;
+  // 기준 너무 빡세게 잡으면 안 잡힘 → 실무용으로 적당히(24% 이상 둘 다)
+  const th = 24;
 
   const pairs: Array<[Element, Element]> = [
     ["금", "목"],
@@ -134,6 +173,8 @@ function detectConflicts(elemPct: Record<Element, number>): Conflict[] {
     const px = elemPct[x] ?? 0;
     const py = elemPct[y] ?? 0;
     if (px < th || py < th) continue;
+    const ratio = Math.min(px, py) / Math.max(px, py);
+    if (ratio < 0.6) continue;
 
     // 컨트롤 관계 확정
     let controller: Element | null = null;
@@ -208,8 +249,12 @@ function sortCandidates(items: YongshinItem[], presentMap: Record<Element, boole
 // --------------------
 // Type builders
 // --------------------
-export function buildJohuCandidates(monthGz: string, elemPct: Record<Element, number>): YongshinItem[] {
-  // 조후: “월지(계절)” 기반으로 한냉/조열 보정
+export function buildJohuCandidates(
+  monthGz: string,
+  elemPct: Record<Element, number>,
+  climate?: ClimatePercents | null
+): YongshinItem[] {
+  // 조후: 월지(계절) + 한난/조습 퍼센트 반영
   const gz = (monthGz ?? "").trim();
   const branch = gz ? gz[gz.length - 1] : "";
 
@@ -219,42 +264,103 @@ export function buildJohuCandidates(monthGz: string, elemPct: Record<Element, nu
   const autumn = new Set(["신", "유", "술"]);
 
   type Pref = { el: Element; base: number; why: string };
-  let prefs: Pref[] = [];
 
-  if (winter.has(branch)) {
-    prefs = [
-      { el: "화", base: 110, why: "조후(한냉): 난온 필요 → 화 우선" },
-      { el: "토", base: 60, why: "조후 보조: 한습 완화·기운 안정 → 토 보조" },
-    ];
-  } else if (summer.has(branch)) {
-    prefs = [
-      { el: "수", base: 110, why: "조후(조열): 청량 필요 → 수 우선" },
-      { el: "금", base: 70, why: "조후 보조: 수를 돕는 금(생수) 보조" },
-    ];
-  } else if (spring.has(branch)) {
-    prefs = [
-      { el: "화", base: 90, why: "조후(춘한): 온기 올림 → 화 보조/우선" },
-      { el: "목", base: 55, why: "조후 보조: 생발(성장) 동력 → 목 보조" },
-    ];
-  } else if (autumn.has(branch)) {
-    prefs = [
-      { el: "화", base: 85, why: "조후(서량): 온기 필요 → 화 보조" },
-      { el: "수", base: 75, why: "조후(조건): 윤택 필요 → 수 보조" },
-    ];
-  } else {
-    // 월지 파싱 실패/특이값
-    prefs = [
-      { el: "화", base: 60, why: "조후: 월지 판독 불명 → 기본 보정 후보(화)" },
-      { el: "수", base: 60, why: "조후: 월지 판독 불명 → 기본 보정 후보(수)" },
-    ];
+  const scores = Object.fromEntries(ELEMENTS.map((el) => [el, 0])) as Record<Element, number>;
+  const reasons = Object.fromEntries(ELEMENTS.map((el) => [el, [] as string[]])) as Record<Element, string[]>;
+
+  const addScore = (el: Element, base: number, why: string) => {
+    scores[el] += base;
+    reasons[el].push(why);
+  };
+
+  const addPrefs = (prefs: Pref[]) => {
+    for (const p of prefs) addScore(p.el, p.base, p.why);
+  };
+
+  let usedClimate = false;
+  if (climate) {
+    const tempExtreme = isClimateExtreme(climate.hanNanPct);
+    const wetExtreme = isClimateExtreme(climate.joSeupPct);
+    if (tempExtreme || wetExtreme) {
+      usedClimate = true;
+      const tempKind = tempKindFromPct(climate.hanNanPct);
+      const wetKind = wetKindFromPct(climate.joSeupPct);
+      const tempDelta = Math.abs(climate.hanNanPct - 50);
+      const wetDelta = Math.abs(climate.joSeupPct - 50);
+      const tScale = Math.min(1, tempDelta / 35);
+      const wScale = Math.min(1, wetDelta / 35);
+
+      const coldPct = Math.round(100 - climate.hanNanPct);
+      const hotPct = Math.round(climate.hanNanPct);
+      const wetPct = Math.round(climate.joSeupPct);
+      const dryPct = Math.round(100 - climate.joSeupPct);
+
+      if (tempExtreme) {
+        const main = Math.round(80 + 50 * tScale);
+        const sub = Math.round(40 + 25 * tScale);
+        if (tempKind === "cold") {
+          addScore("화", main, `조후(한냉 ${coldPct}%): 난온 필요 -> 화`);
+          addScore("토", sub, "조후 보조: 한습 완화 -> 토");
+        } else if (tempKind === "hot") {
+          addScore("수", main, `조후(조열 ${hotPct}%): 청량 필요 -> 수`);
+          addScore("금", sub, "조후 보조: 생수 -> 금");
+        }
+      }
+
+      if (wetExtreme) {
+        const main = Math.round(55 + 35 * wScale);
+        const sub = Math.round(25 + 20 * wScale);
+        if (wetKind === "wet") {
+          addScore("토", main, `조후(습 ${wetPct}%): 습 조정 -> 토`);
+          addScore("화", sub, "조후 보조: 습냉 가온 -> 화");
+        } else if (wetKind === "dry") {
+          addScore("수", main, `조후(조 ${dryPct}%): 윤택 필요 -> 수`);
+          addScore("목", sub, "조후 보조: 생발 -> 목");
+        }
+      }
+    }
   }
 
-  return prefs.map((p) => ({
-    element: p.el,
-    elNorm: p.el,
-    score: needAdjustedScore(p.base, elemPct[p.el] ?? 0),
-    reasons: [p.why, `현재 ${p.el} 비율 ${Math.round(elemPct[p.el] ?? 0)}%`],
-  }));
+  if (!usedClimate) {
+    let prefs: Pref[] = [];
+    if (winter.has(branch)) {
+      prefs = [
+        { el: "화", base: 110, why: "조후(한냉): 난온 필요 → 화 우선" },
+        { el: "토", base: 60, why: "조후 보조: 한습 완화·기운 안정 → 토 보조" },
+      ];
+    } else if (summer.has(branch)) {
+      prefs = [
+        { el: "수", base: 110, why: "조후(조열): 청량 필요 → 수 우선" },
+        { el: "금", base: 70, why: "조후 보조: 수를 돕는 금(생수) 보조" },
+      ];
+    } else if (spring.has(branch)) {
+      prefs = [
+        { el: "화", base: 90, why: "조후(춘한): 온기 올림 → 화 보조/우선" },
+        { el: "목", base: 55, why: "조후 보조: 생발(성장) 동력 → 목 보조" },
+      ];
+    } else if (autumn.has(branch)) {
+      prefs = [
+        { el: "화", base: 85, why: "조후(서량): 온기 필요 → 화 보조" },
+        { el: "수", base: 75, why: "조후(조건): 윤택 필요 → 수 보조" },
+      ];
+    } else {
+      // 월지 파싱 실패/특이값
+      prefs = [
+        { el: "화", base: 60, why: "조후: 월지 판독 불명 → 기본 보정 후보(화)" },
+        { el: "수", base: 60, why: "조후: 월지 판독 불명 → 기본 보정 후보(수)" },
+      ];
+    }
+    addPrefs(prefs);
+  }
+
+  return ELEMENTS
+    .filter((el) => scores[el] > 0)
+    .map((el) => ({
+      element: el,
+      elNorm: el,
+      score: needAdjustedScore(scores[el], elemPct[el] ?? 0),
+      reasons: [...reasons[el], `현재 ${el} 비율 ${Math.round(elemPct[el] ?? 0)}%`],
+    }));
 }
 
 export function buildTonggwanCandidates(elemPct: Record<Element, number>): { applicable: boolean; items: YongshinItem[]; note: string } {
@@ -365,7 +471,8 @@ export function buildMultiYongshin(args: {
   pillars: string[];
   gyeokgukList?: YongshinItem[] | null;
 }): YongshinMultiResult {
-  const { eokbuList, monthGz, elemPct, presentMap, demoteAbsent, gyeokgukList } = args;
+  const { eokbuList, monthGz, elemPct, presentMap, demoteAbsent, gyeokgukList, pillars } = args;
+  const climate = calcClimatePercents(pillars);
 
   // 1) 억부(현재 네 computeYongshin 결과를 그대로 “억부용신”으로 취급)
   const eokbuCandidates = sortCandidates(
@@ -376,7 +483,7 @@ export function buildMultiYongshin(args: {
 
   // 2) 조후
   const johuCandidates = sortCandidates(
-    applyAbsentDemotion(buildJohuCandidates(monthGz, elemPct), presentMap, demoteAbsent),
+    applyAbsentDemotion(buildJohuCandidates(monthGz, elemPct, climate), presentMap, demoteAbsent),
     presentMap,
     demoteAbsent
   );
@@ -384,8 +491,8 @@ export function buildMultiYongshin(args: {
   const season = getSeasonKind(monthGz);
   const balance = calcPresentBalance(elemPct, presentMap);
 
-  // ✅ 조후는 “한냉/조열(겨울/여름)”에서만 강하게
-  const johuWeight = season === "WINTER" || season === "SUMMER" ? 0.85 : 0.55;
+  // ✅ 조후는 한난/조습 퍼센트와 계절 일치도를 함께 반영
+  const johuWeight = pickJohuWeight(season, climate);
 
   // ✅ 억부는 좀 더 강하게
   const eokbuWeight = 1.25;
