@@ -146,10 +146,6 @@ export default function SajuChart({ data, hourTable }: Props) {
     setUsePrevDay(false);
   }, [personKey, data.mingSikType, clearHourPrediction, setUsePrevDay]);
 
-  useEffect(() => {
-    setActiveRelationTag(null);
-  }, [personKey]);
-
   const hourCandidateStem = usePrevDay && useInsi ? dayStem : baseDayStem;
   const hourCandidates = useMemo(
     () => buildHourCandidates(hourCandidateStem, useInsi),
@@ -246,7 +242,21 @@ export default function SajuChart({ data, hourTable }: Props) {
   const seGz = luck.se.gz;
   const wolGz = luck.wol.gz;
 
+  const maxRelationApplyLevel = useMemo(() => {
+    if (exposureLevel >= 3 && wolGz) return 3;
+    if (exposureLevel >= 2 && seGz) return 2;
+    if (exposureLevel >= 1 && daeGz) return 1;
+    return 0;
+  }, [exposureLevel, daeGz, seGz, wolGz]);
+
+  const [relationApplyLevel, setRelationApplyLevel] =
+    useState<number>(maxRelationApplyLevel);
   const [activeRelationTag, setActiveRelationTag] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRelationApplyLevel(maxRelationApplyLevel);
+    setActiveRelationTag(null);
+  }, [personKey, maxRelationApplyLevel]);
 
   const relationTags = useMemo(() => {
     const toGz = (p?: { stem?: string; branch?: string } | null) =>
@@ -261,9 +271,9 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     const luckTags = buildAllRelationTags({
       natal: [...natal],
-      daewoon: exposureLevel >= 1 ? daeGz ?? undefined : undefined,
-      sewoon: exposureLevel >= 2 ? seGz ?? undefined : undefined,
-      wolwoon: exposureLevel >= 3 ? wolGz ?? undefined : undefined,
+      daewoon: relationApplyLevel >= 1 ? daeGz ?? undefined : undefined,
+      sewoon: relationApplyLevel >= 2 ? seGz ?? undefined : undefined,
+      wolwoon: relationApplyLevel >= 3 ? wolGz ?? undefined : undefined,
     });
 
     const natalTags = buildHarmonyTags([...natal], { fillNone: false });
@@ -273,7 +283,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
 
     return merged;
-  }, [parsed, effectiveDay, hourData, daeGz, seGz, wolGz, exposureLevel]);
+  }, [parsed, effectiveDay, hourData, daeGz, seGz, wolGz, relationApplyLevel]);
 
   const relationChips = useMemo(() => {
     const all = [
@@ -293,6 +303,12 @@ export default function SajuChart({ data, hourTable }: Props) {
 
     return Array.from(new Set(all));
   }, [relationTags]);
+
+  useEffect(() => {
+    if (activeRelationTag && !relationChips.includes(activeRelationTag)) {
+      setActiveRelationTag(null);
+    }
+  }, [activeRelationTag, relationChips]);
 
   const relationByPillar = useMemo(() => {
     const addUnique = (arr: string[], tag: string) => {
@@ -533,6 +549,9 @@ export default function SajuChart({ data, hourTable }: Props) {
       <SajuRelationPanels
         isDesktop={isDesktop}
         exposureLevel={exposureLevel}
+        relationApplyLevel={relationApplyLevel}
+        maxRelationApplyLevel={maxRelationApplyLevel}
+        onChangeRelationApplyLevel={setRelationApplyLevel}
         relationChips={relationChips}
         relationByPillar={relationByPillar}
         activeRelationTag={activeRelationTag}

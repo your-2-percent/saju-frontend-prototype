@@ -14,6 +14,9 @@ type EtcShinsalGroup = {
 type Props = {
   isDesktop: boolean;
   exposureLevel: number;
+  relationApplyLevel: number;
+  maxRelationApplyLevel: number;
+  onChangeRelationApplyLevel: (level: number) => void;
   relationChips: string[];
   relationByPillar: RelationByPillar;
   activeRelationTag: string | null;
@@ -24,9 +27,19 @@ type Props = {
   etcShinsalBad: EtcShinsalGroup;
 };
 
+const RELATION_APPLY_OPTIONS = [
+  { level: 0, label: "원국만 적용" },
+  { level: 1, label: "대운까지 적용" },
+  { level: 2, label: "세운까지 적용" },
+  { level: 3, label: "월운까지 적용" },
+] as const;
+
 export function SajuRelationPanels({
   isDesktop,
   exposureLevel,
+  relationApplyLevel,
+  maxRelationApplyLevel,
+  onChangeRelationApplyLevel,
   relationChips,
   relationByPillar,
   activeRelationTag,
@@ -61,6 +74,31 @@ export function SajuRelationPanels({
 
             {isRelationOpen && (
               <>
+                <div className="pl-1 mb-2">
+                  <div className="flex flex-wrap gap-1">
+                    {RELATION_APPLY_OPTIONS.filter(
+                      (option) => option.level <= maxRelationApplyLevel
+                    ).map((option) => {
+                      const isSelected = relationApplyLevel === option.level;
+                      return (
+                        <button
+                          key={option.level}
+                          type="button"
+                          onClick={() => onChangeRelationApplyLevel(option.level)}
+                          className={[
+                            "px-2 py-1 text-[11px] rounded border transition cursor-pointer",
+                            isSelected
+                              ? "bg-purple-500 text-white border-purple-500"
+                              : "bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 border-neutral-200 dark:border-neutral-700",
+                          ].join(" ")}
+                        >
+                          {option.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div className="text-[11px] text-amber-600 dark:text-amber-300 pl-1 mb-2">
                   버튼을 누르면 해당 글자가 활성화 됩니다.
                 </div>
@@ -72,85 +110,87 @@ export function SajuRelationPanels({
                     className="grid w-full gap-2 desk:gap-4 grid-cols-1"
                     style={{
                       gridTemplateColumns: isDesktop
-                        ? exposureLevel >= 3
+                        ? relationApplyLevel >= 3
                           ? "4fr 5fr"
-                          : exposureLevel >= 2
+                          : relationApplyLevel >= 2
                           ? "3.5fr 6.5fr"
-                          : exposureLevel >= 1
+                          : relationApplyLevel >= 1
                           ? "2fr 8fr"
                           : "1fr"
                         : undefined,
                     }}
                   >
-                    <div
-                      className="border-t desk:border-0 border-neutral-200 dark:border-neutral-800 pt-2 desk:pt-0 order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
-                      style={{
-                        gridTemplateColumns: isDesktop
-                          ? `repeat(${exposureLevel >= 3 ? 3 : exposureLevel >= 2 ? 2 : exposureLevel >= 1 ? 1 : 0}, minmax(60px, 1fr))`
-                          : undefined,
-                      }}
-                    >
-                      {(isDesktop
-                        ? [
-                            exposureLevel >= 3 && (
-                              <PillarChipColumn
-                                key="wol"
-                                title="월운"
-                                tags={relationByPillar.luck.wol}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                            exposureLevel >= 2 && (
-                              <PillarChipColumn
-                                key="se"
-                                title="세운"
-                                tags={relationByPillar.luck.se}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                            exposureLevel >= 1 && (
-                              <PillarChipColumn
-                                key="dae"
-                                title="대운"
-                                tags={relationByPillar.luck.dae}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                          ]
-                        : [
-                            exposureLevel >= 1 && (
-                              <PillarChipColumn
-                                key="dae"
-                                title="대운"
-                                tags={relationByPillar.luck.dae}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                            exposureLevel >= 2 && (
-                              <PillarChipColumn
-                                key="se"
-                                title="세운"
-                                tags={relationByPillar.luck.se}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                            exposureLevel >= 3 && (
-                              <PillarChipColumn
-                                key="wol"
-                                title="월운"
-                                tags={relationByPillar.luck.wol}
-                                activeTag={activeRelationTag}
-                                onToggle={onToggleRelationTag}
-                              />
-                            ),
-                          ]
-                      ).filter(Boolean)}
-                    </div>
+                    {relationApplyLevel >= 1 && (
+                      <div
+                        className="border-t desk:border-0 border-neutral-200 dark:border-neutral-800 pt-2 desk:pt-0 order-2 desk:order-1 flex-4 grid grid-cols-1 gap-1 desk:gap-2"
+                        style={{
+                          gridTemplateColumns: isDesktop
+                            ? `repeat(${relationApplyLevel >= 3 ? 3 : relationApplyLevel >= 2 ? 2 : 1}, minmax(60px, 1fr))`
+                            : undefined,
+                        }}
+                      >
+                        {(isDesktop
+                          ? [
+                              relationApplyLevel >= 3 && (
+                                <PillarChipColumn
+                                  key="wol"
+                                  title="월운"
+                                  tags={relationByPillar.luck.wol}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                              relationApplyLevel >= 2 && (
+                                <PillarChipColumn
+                                  key="se"
+                                  title="세운"
+                                  tags={relationByPillar.luck.se}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                              relationApplyLevel >= 1 && (
+                                <PillarChipColumn
+                                  key="dae"
+                                  title="대운"
+                                  tags={relationByPillar.luck.dae}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                            ]
+                          : [
+                              relationApplyLevel >= 1 && (
+                                <PillarChipColumn
+                                  key="dae"
+                                  title="대운"
+                                  tags={relationByPillar.luck.dae}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                              relationApplyLevel >= 2 && (
+                                <PillarChipColumn
+                                  key="se"
+                                  title="세운"
+                                  tags={relationByPillar.luck.se}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                              relationApplyLevel >= 3 && (
+                                <PillarChipColumn
+                                  key="wol"
+                                  title="월운"
+                                  tags={relationByPillar.luck.wol}
+                                  activeTag={activeRelationTag}
+                                  onToggle={onToggleRelationTag}
+                                />
+                              ),
+                            ]
+                        ).filter(Boolean)}
+                      </div>
+                    )}
 
                     <div className="order-1 desk:order-2 flex flex-col desk:flex-row flex-5 gap-1 desk:gap-2 desk:pl-0 desk:border-t-0 desk:border-l-0">
                       <PillarChipColumn
