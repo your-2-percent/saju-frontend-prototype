@@ -22,7 +22,7 @@ export default function CategorySelectors({
   onSubCategoryChange,
 }: Props) {
   return (
-    <div className="flex flex-wrap gap-2 items-center">
+    <div className="hidden flex-wrap gap-2 items-center">
       <select
         value={mainCategory}
         onChange={(e) => onMainCategoryChange(e.target.value as MainCategoryKey)}
