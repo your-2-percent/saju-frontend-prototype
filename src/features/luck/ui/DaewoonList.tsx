@@ -56,6 +56,7 @@ export default function DaewoonList({
 
   // ✅ 전역 설정 (SajuChart와 동일한 소스)
   const settings = useSettingsStore((s) => s.settings);
+  const setSettingsKey = useSettingsStore((s) => s.setKey);
   const {
     charType,
     thinEum,
@@ -65,6 +66,7 @@ export default function DaewoonList({
     sinsalBase,   // "일지" | "연지"
     sinsalMode,   // "classic" | "modern"
     sinsalBloom,  // boolean
+    daewoonDisplayBase,
   } = settings;
 
   // 경도(연간/연지 산출에 필요 시)
@@ -98,8 +100,32 @@ export default function DaewoonList({
 
   return (
     <div className="w-full max-w-[640px] mx-auto rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <div className="px-3 py-2 text-sm font-semibold tracking-wider bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300">
-        대운리스트
+      <div className="px-3 py-2 text-sm font-semibold tracking-wider bg-neutral-50 dark:bg-neutral-800/60 text-neutral-700 dark:text-neutral-300 flex items-center justify-between gap-2">
+        <span>대운리스트</span>
+        <div className="inline-flex rounded-md overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800">
+          <button
+            type="button"
+            onClick={() => setSettingsKey("daewoonDisplayBase", "묘운기준")}
+            className={`px-2 py-1 text-[11px] desk:text-xs tracking-[-1px] cursor-pointer transition-colors ${
+              daewoonDisplayBase === "묘운기준"
+                ? "bg-indigo-600 text-white"
+                : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+            }`}
+          >
+            정밀기준
+          </button>
+          <button
+            type="button"
+            onClick={() => setSettingsKey("daewoonDisplayBase", "일반기준")}
+            className={`px-2 py-1 text-[11px] desk:text-xs tracking-[-1px] cursor-pointer transition-colors ${
+              daewoonDisplayBase === "일반기준"
+                ? "bg-indigo-600 text-white"
+                : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
+            }`}
+          >
+            일반기준
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-0.5 desk:gap-1 py-2 desk:p-2 flex-row-reverse">
