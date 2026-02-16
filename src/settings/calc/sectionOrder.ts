@@ -6,6 +6,7 @@ export const DEFAULT_SECTION_KEYS = [
   "sinsalBase",
   "sinsalBloom",
   "exposure",
+  "daewoonDisplayBase",
   "charType",
   "thinEum",
   "visibility",

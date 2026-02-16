@@ -15,6 +15,8 @@ const purgeLocalSettings = () => {
   }
 };
 
+export type DaewoonDisplayBase = "묘운기준" | "일반기준";
+
 export type Settings = {
   hiddenStem: "all" | "regular";
   hiddenStemMode: "classic" | "hgc";
@@ -23,6 +25,7 @@ export type Settings = {
   sinsalBase: "일지" | "연지";
   sinsalBloom: boolean;
   exposure: "원국" | "대운" | "세운" | "월운";
+  daewoonDisplayBase: DaewoonDisplayBase;
   charType: "한자" | "한글";
   thinEum: boolean;
   showSipSin: boolean;
@@ -48,6 +51,7 @@ export const defaultSettings: Settings = {
   sinsalBase: "일지",
   sinsalBloom: false,
   exposure: "원국",
+  daewoonDisplayBase: "묘운기준",
   charType: "한자",
   thinEum: false,
   showSipSin: true,
@@ -70,6 +74,7 @@ export const defaultSettings: Settings = {
     "sinsalBase",
     "sinsalBloom",
     "exposure",
+    "daewoonDisplayBase",
     "charType",
     "thinEum",
     "visibility",
@@ -86,6 +91,7 @@ const SECTION_KEYS = [
   "sinsalBase",
   "sinsalBloom",
   "exposure",
+  "daewoonDisplayBase",
   "charType",
   "thinEum",
   "visibility",
