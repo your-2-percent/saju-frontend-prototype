@@ -69,17 +69,17 @@ export default function MultiModeControls({
   ilDaysCount,
 }: Props) {
   return (
-    <div className="space-y-3 p-3 bg-neutral-50 dark:bg-neutral-800 rounded-lg">
-      <div className="flex gap-1.5 border-b pb-2">
+    <div className="space-y-3 p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg mt-2">
+      <div className="flex gap-1 p-1 bg-neutral-100 dark:bg-neutral-800 rounded-md">
         {(["대운", "세운", "월운", "일운"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
             onClick={() => setMultiTab(tab)}
-            className={`px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors ${
+            className={`flex-1 px-3 py-1.5 text-xs font-medium rounded cursor-pointer transition-all ${
               multiTab === tab
-                ? "bg-blue-600 text-white font-semibold"
-                : "bg-white dark:bg-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-600"
+                ? "bg-white dark:bg-neutral-600 text-neutral-900 dark:text-white shadow-sm"
+                : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700"
             }`}
           >
             {tab}

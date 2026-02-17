@@ -11,6 +11,7 @@ import { computeUnifiedPower, type LuckChain, type UnifiedPowerResult } from "@/
 import type { Element } from "@/analysisReport/calc/utils/types";
 
 import type { MainCategoryKey, RelationMode, SubCategoryKey } from "./topicGuide";
+import { appendTimeModeGuide } from "./topicGuide/timeModeGuide";
 import { STEM_TO_ELEMENT, getNabeum } from "./promptCore";
 import { formatBirthForPrompt } from "./formatBirth";
 import type { PromptSectionToggles } from "./promptSectionToggles";
@@ -323,8 +324,15 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
   }
 
   const body = bodyParts.filter((s) => s && s.trim().length > 0).join("\n\n");
+  const guideLines: string[] = [];
+  appendTimeModeGuide(guideLines, {
+    mode: "single",
+    tab,
+    isStudyTone: input.teacherMode === true,
+  });
+  const guide = guideLines.join("\n").trim();
 
-  return { header, body, guide: "" };
+  return { header, body, guide };
 }
 
 export function buildChatPrompt(input: SinglePromptInput): string {

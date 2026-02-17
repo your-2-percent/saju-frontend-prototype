@@ -145,20 +145,6 @@ export default function SettingsDrawer({ open, onClose }: Props) {
           </Section>
         );
 
-      case "daewoonDisplayBase":
-        return (
-          <Section title="대운 표기 기준">
-            <SegmentedControl
-              value={input.localSettings.daewoonDisplayBase}
-              onChange={(v) => input.updateSetting("daewoonDisplayBase", v)}
-              options={[
-                { label: "정밀기준", value: "묘운기준" },
-                { label: "일반기준", value: "일반기준" },
-              ]}
-            />
-          </Section>
-        );
-
       case "charType":
         return (
           <Section title="글자 타입">

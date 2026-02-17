@@ -24,7 +24,7 @@ const getGeneralBaseAge = (birth: Date, dir: "forward" | "backward") => {
   try {
     const term = dir === "forward" ? findNextJie(birth) : findPrevJie(birth);
     const diffDays = Math.abs(daySerial(term) - daySerial(birth));
-    // 일반기준(일수/3): 순행은 후절기 포함으로 +1일 보정
+    // 표준기준(일수/3): 순행은 후절기 포함으로 +1일 보정
     const adjustedDays = dir === "forward" ? diffDays + 1 : diffDays;
     return adjustedDays / 3;
   } catch {
@@ -39,7 +39,7 @@ const buildGeneralEvents = (
   untilYears: number
 ) => {
   const rawBaseAge = getGeneralBaseAge(birth, dir);
-  // 일반기준: 대운수(세는나이) 기준으로 연도 앵커를 맞춘다.
+  // 표준기준: 대운수(세는나이) 기준으로 연도 앵커를 맞춘다.
   // 예) 대운수 7 => 출생연 + 6년(해당 연도 시작)부터 첫 대운 적용.
   const daeNumber = Math.max(1, Math.floor(rawBaseAge + 1e-9));
   const firstChange = new Date(birth.getFullYear() + Math.max(0, daeNumber - 1), 0, 1, 12, 0, 0, 0);
@@ -88,7 +88,7 @@ export function useDaewoonList(
         };
       });
 
-    if (daewoonDisplayBase === "일반기준") {
+    if (daewoonDisplayBase === "표준기준") {
       const general = buildGeneralEvents(birth, natal.month, dir, untilYears);
       const natalEvent = { at: birth, gz: natal.month };
       return mapWithAge([natalEvent, ...general.events], general.baseAge);

@@ -4,13 +4,11 @@ import type { LuckChain } from "@/analysisReport/calc/utils/unifiedPower";
 import type { ShinsalBasis } from "@/analysisReport/calc/logic/shinsal";
 import PromptCopyHeader from "@/promptCopy/ui/PromptCopyHeader";
 import PromptSectionsToggle from "@/promptCopy/ui/PromptSectionsToggle";
-import TonePicker from "@/promptCopy/ui/TonePicker";
 import CategorySelectors from "@/promptCopy/ui/CategorySelectors";
 import RelationSelectors from "@/promptCopy/ui/RelationSelectors";
 import ModeSwitch from "@/promptCopy/ui/ModeSwitch";
 import SingleModeControls from "@/promptCopy/ui/SingleModeControls";
 import MultiModeControls from "@/promptCopy/ui/MultiModeControls";
-import ExtraQuestionsEditor from "@/promptCopy/ui/ExtraQuestionsEditor";
 import PromptOutput from "@/promptCopy/ui/PromptOutput";
 import { TABS, MAIN_CATEGORY_META, CATEGORY_SUBS } from "@/promptCopy/calc/meta";
 import { usePromptCopyModel } from "@/promptCopy/input/usePromptCopyModel";
@@ -56,6 +54,15 @@ export default function PromptCopyCard({
 
   //const canCopyInfo = !isPromptLocked && model.canCopyInfo;
   const canCopyAll = !isPromptLocked && model.canCopyAll;
+  const geminiUrl = "https://gemini.google.com/app";
+  const chatGptUrl = "https://chatgpt.com/";
+
+  const handleCopyAndMove = async (url: string) => {
+    await model.onCopyAll();
+
+    if (typeof window === "undefined") return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="relative rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-3 space-y-2 desk:space-y-3">
@@ -76,13 +83,6 @@ export default function PromptCopyCard({
       <PromptCopyHeader />
 
       <PromptSectionsToggle sections={model.sections} toggleSection={model.toggleSection} />
-
-      <TonePicker
-        friendMode={model.friendMode}
-        setFriendMode={(e) => model.setFriendMode(e.target.checked)}
-        teacherMode={model.teacherMode}
-        setTeacherMode={(e) => model.setTeacherMode(e.target.checked)}
-      />
 
       <CategorySelectors
         mainCategory={model.mainCategory}
@@ -159,21 +159,10 @@ export default function PromptCopyCard({
         />
       )}
 
-      <ExtraQuestionsEditor
-        questionDraft={model.questionDraft}
-        onChangeDraft={(e) => model.setQuestionDraft(e.target.value)}
-        onAddQuestion={model.handleAddQuestion}
-        extraQuestions={model.extraQuestions}
-        onClearAll={model.handleClearQuestions}
-        onRemoveQuestion={model.handleRemoveQuestion}
-        locked={isPromptLocked}
-        lockTitle={lockTitle}
-      />
-
       <PromptOutput value={model.finalText} lockSelection={isPromptLocked} />
 
       <div className="flex justify-end">
-        <div className="flex gap-2 w-full desk:w-auto">
+        <div className="flex flex-col desk:flex-row gap-2 w-full desk:w-auto">
           {/* <button
             type="button"
             onClick={model.onCopyInfoOnly}
@@ -205,7 +194,37 @@ export default function PromptCopyCard({
                 : "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black",
             ].join(" ")}
           >
-            {model.copiedAll ? "복사됨" : `전체 프롬프트 복사${!canCopyAll ? " 🔒" : ""}`}
+            {model.copiedAll ? "복사됨" : `복사만하기${!canCopyAll ? " 🔒" : ""}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleCopyAndMove(geminiUrl)}
+            disabled={!canCopyAll}
+            title={!canCopyAll ? lockTitle : undefined}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              canCopyAll
+                ? "cursor-pointer bg-blue-600 text-white dark:bg-blue-500"
+                : "cursor-not-allowed opacity-50 bg-blue-600 text-white dark:bg-blue-500",
+            ].join(" ")}
+          >
+            {`복사 및 제미나이로 이동${!canCopyAll ? " 🔒" : ""}`}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => void handleCopyAndMove(chatGptUrl)}
+            disabled={!canCopyAll}
+            title={!canCopyAll ? lockTitle : undefined}
+            className={[
+              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              canCopyAll
+                ? "cursor-pointer bg-emerald-600 text-white dark:bg-emerald-500"
+                : "cursor-not-allowed opacity-50 bg-emerald-600 text-white dark:bg-emerald-500",
+            ].join(" ")}
+          >
+            {`복사 및 챗지피티로 이동${!canCopyAll ? " 🔒" : ""}`}
           </button>
         </div>
       </div>
