@@ -9,6 +9,7 @@ import type { ShinCategory } from "@/analysisReport/calc/logic/shinStrength";
 import { computeDeukFlags10 } from "@/analysisReport/calc/utils/strength";
 import { computeUnifiedPower, type LuckChain, type UnifiedPowerResult } from "@/analysisReport/calc/utils/unifiedPower";
 import type { Element } from "@/analysisReport/calc/utils/types";
+import { computeAlignedNatalFixed } from "@/features/prompt/calc/natalFixedAligned";
 
 import type { MainCategoryKey, RelationMode, SubCategoryKey } from "./topicGuide";
 import { appendTimeModeGuide } from "./topicGuide/timeModeGuide";
@@ -101,6 +102,12 @@ export function buildChatPromptParts(input: SinglePromptInput): ChatPromptParts 
     (STEM_TO_ELEMENT[dayStem as keyof typeof STEM_TO_ELEMENT] ??
       STEM_TO_ELEMENT[unified.dayStem as keyof typeof STEM_TO_ELEMENT] ??
       "목") as Element;
+  const natalFixedAligned = computeAlignedNatalFixed({
+    natal,
+    dayStem,
+    perStemSource:
+      unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+  });
 
   const header = `명식: ${ms.name ?? "이름없음"}  (${formatBirthForPrompt(ms, unknownTime)}) 
 ${ms.ganjiText} / 성별: ${ms.gender}`;
@@ -128,12 +135,12 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
   natalParts.push(
     section(
       "오행강약(퍼센트·원국 기준 고정)",
-      formatInlineKV(elementPercentWithTenGodLabels(unified.natalFixed.elementPercent100, dayEl)),
+      formatInlineKV(elementPercentWithTenGodLabels(natalFixedAligned.elementPercent100, dayEl)),
     ),
   );
 
   if (showTenGod) {
-    const labeled = labelTenGodSubWithStems(unified.natalFixed.totalsSub, dayStem);
+    const labeled = labelTenGodSubWithStems(natalFixedAligned.totalsSub100, dayStem);
     natalParts.push(section("십신 강약(소분류 10개·원국·합계 100)", formatInlineKV(labeled)));
   }
 
