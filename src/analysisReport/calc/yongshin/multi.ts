@@ -589,6 +589,28 @@ function normalizePercents(pcts: Record<Element, number>): Record<Element, numbe
   return out;
 }
 
+export function adjustElementPercentByBranchBoost(
+  elemPct: Record<Element, number>,
+  monthGz: string,
+  pillars: string[]
+): Record<Element, number> {
+  const monthEl = getMonthBranchElement(monthGz);
+  const combinations = detectCombinations(pillars);
+  const out = { ...elemPct };
+  const perElementBoost: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+
+  for (const combo of combinations) {
+    perElementBoost[combo.element] += combo.score;
+  }
+  if (monthEl) {
+    perElementBoost[monthEl] += BRANCH_BOOST.monthBranch;
+  }
+  for (const el of ELEMENTS) {
+    out[el] = (out[el] ?? 0) + Math.min(BRANCH_BOOST.maxPerElement, perElementBoost[el]);
+  }
+  return normalizePercents(out);
+}
+
 function getTenGodRelation(day: Element, target: Element): "비겁" | "식상" | "재성" | "관성" | "인성" {
   if (day === target) return "비겁";
   if (produces(day) === target) return "식상";
@@ -612,34 +634,23 @@ export function buildMultiYongshin(args: {
   const climate = calcClimatePercents(pillars);
 
   const dayEl = getDayStemElement(pillars);
-  const monthEl = getMonthBranchElement(monthGz);
   const season = getSeasonKind(monthGz); // 계절 미리 계산
 
   // 0) 세력 재계산: 삼합 & 월지 가중치 적용
   const combinations = detectCombinations(pillars);
-  let adjustedElemPct = { ...elemPct };
+  const adjustedElemPct = adjustElementPercentByBranchBoost(elemPct, monthGz, pillars);
   const boostNotes: string[] = [];
-  const perElementBoost: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
 
   // 0-1. 합국 보정 (삼합/반합)
   for (const combo of combinations) {
-    perElementBoost[combo.element] += combo.score;
     boostNotes.push(combo.name);
   }
 
   // 0-2. 월지(계절) 보정
+  const monthEl = getMonthBranchElement(monthGz);
   if (monthEl) {
-    perElementBoost[monthEl] += BRANCH_BOOST.monthBranch;
     boostNotes.push(`월지(${monthEl}) 득령`);
   }
-
-  for (const el of ELEMENTS) {
-    const capped = Math.min(BRANCH_BOOST.maxPerElement, perElementBoost[el]);
-    adjustedElemPct[el] = (adjustedElemPct[el] ?? 0) + capped;
-  }
-
-  // 정규화
-  adjustedElemPct = normalizePercents(adjustedElemPct);
 
   // 1) 최강 세력 및 신강/신약 판별
   const strongest = getStrongestElement(adjustedElemPct);

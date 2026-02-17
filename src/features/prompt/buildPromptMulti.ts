@@ -6,6 +6,7 @@ import { useSajuSettingsStore } from "@/saju/input/useSajuSettingsStore";
 import { computeDeukFlags10 } from "@/analysisReport/calc/utils/strength";
 import type { Element } from "@/analysisReport/calc/utils/types";
 import type { DayBoundaryRule } from "@/shared/type";
+import { computeAlignedNatalFixed } from "@/features/prompt/calc/natalFixedAligned";
 
 import { STEM_TO_ELEMENT, elementToTenGod, getNabeum } from "./promptCore";
 import { formatBirthForPrompt } from "./formatBirth";
@@ -68,6 +69,12 @@ export function buildMultiLuckPromptParts(input: MultiPromptInput): MultiPromptP
   const posLabels = getActivePosLabels(ms, natal);
   const dayStem = natal[2]?.charAt(0) ?? "";
   const dayEl = STEM_TO_ELEMENT[dayStem] ?? STEM_TO_ELEMENT[unified.dayStem] ?? "목";
+  const natalFixedAligned = computeAlignedNatalFixed({
+    natal,
+    dayStem,
+    perStemSource:
+      unified.natalFixed.overlay.perStemAugFull ?? unified.natalFixed.overlay.perStemAugBare,
+  });
 
   const showTenGod = !!includeTenGod && (sections?.tenGod ?? true);
   const showTwelveUnseong = sections?.twelveUnseong ?? true;
@@ -121,7 +128,7 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
       "오행강약(퍼센트·원국 기준 고정)",
       formatInlineKV(
         Object.fromEntries(
-          Object.entries(unified.natalFixed.elementPercent100).map(([el, val]) => [
+          Object.entries(natalFixedAligned.elementPercent100).map(([el, val]) => [
             `${el}(${elementToTenGod(dayEl, el as Element)})`,
             val,
           ]),
@@ -131,7 +138,7 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
   );
 
   if (showTenGod) {
-    const labeled = labelTenGodSubWithStems(unified.natalFixed.totalsSub, dayStem);
+    const labeled = labelTenGodSubWithStems(natalFixedAligned.totalsSub100, dayStem);
     natalParts.push(section("십신 강약(소분류 10개·원국·합계 100)", formatInlineKV(labeled)));
   }
 
