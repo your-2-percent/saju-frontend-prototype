@@ -34,7 +34,7 @@ export default function PromptSectionsToggle({ sections, toggleSection }: Props)
               key={item.key}
               type="button"
               onClick={() => toggleSection(item.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium rounded-full border transition-all cursor-pointer ${
                 isChecked
                   ? "bg-neutral-900 border-neutral-900 text-white dark:bg-neutral-100 dark:border-neutral-100 dark:text-black shadow-sm"
                   : "bg-white border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
