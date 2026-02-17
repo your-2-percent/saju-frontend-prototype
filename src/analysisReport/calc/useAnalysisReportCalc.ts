@@ -6,7 +6,7 @@ import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { normalizeGZ } from "@/analysisReport/calc/logic/relations";
-import { computeUnifiedPower } from "@/analysisReport/calc/utils/unifiedPower";
+import { computeUnifiedPower, mapElementToTenGod } from "@/analysisReport/calc/utils/unifiedPower";
 import computeYongshin from "@/analysisReport/calc/yongshin";
 import { natalShinPercent } from "@/analysisReport/calc/logic/powerPercent";
 import { getTenGodColors } from "@/analysisReport/calc/utils/colors";
@@ -53,6 +53,13 @@ type Args = {
 
 const safeStem = (gz: string) => (gz && gz.length >= 1 ? gz.charAt(0) : "");
 const safeBranch = (gz: string) => (gz && gz.length >= 2 ? gz.charAt(1) : "");
+const ELEMENT_STEM_PAIRS: Record<Element, readonly [string, string]> = {
+  목: ["갑", "을"],
+  화: ["병", "정"],
+  토: ["무", "기"],
+  금: ["경", "신"],
+  수: ["임", "계"],
+};
 
 function parseBirthDateNoon(birthDay?: string | null): Date {
   const s = String(birthDay ?? "");
@@ -217,7 +224,7 @@ export function useAnalysisReportCalc({
   const elemForFallback =
     overlay?.elemPct100 ?? unified?.elementPercent100 ?? lightElementScoreFromPillars(activePillars);
 
-  const chartData = useMemo(() => {
+  const baseChartData = useMemo(() => {
     if (!unified || !overlay) return [] as Array<{ name: TenGodMain; value: number; color: string }>;
     const colors = getTenGodColors(unified.dayStem);
     return (Object.entries(overlay.totalsMain) as [TenGodMain, number][])
@@ -244,19 +251,6 @@ export function useAnalysisReportCalc({
       ].join("|"),
     [blendTab, daewoonGz, seGz, wolGz, ilGz, date, hourKeyForUi]
   );
-
-  const revKey = useMemo(() => {
-    const subsSig = tenSubTotals100
-      ? Object.entries(tenSubTotals100)
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([k, v]) => `${k}:${v}`)
-          .join(",")
-      : "none";
-
-    const dataSig = chartData.map((d) => `${d.name}:${d.value}`).join(",");
-
-    return `${luckKey}||${activePillars.join("")}||${dataSig}||${subsSig}`;
-  }, [luckKey, activePillars, chartData, tenSubTotals100]);
 
   // --------------------
   // 기존 억부용신(= computeYongshin 결과)
@@ -351,6 +345,101 @@ export function useAnalysisReportCalc({
     });
   }, [activePillars, eokbuListForMulti, elemForFallback, presentMap, demoteAbsent, gyeokgukList]);
 
+  const adjustedElemPct100 = useMemo<Record<Element, number> | null>(() => {
+    const adjusted = yongshinMulti.adjustedElemPct;
+    if (!adjusted) return null;
+    return normalizeTo100({
+      목: adjusted.목 ?? 0,
+      화: adjusted.화 ?? 0,
+      토: adjusted.토 ?? 0,
+      금: adjusted.금 ?? 0,
+      수: adjusted.수 ?? 0,
+    }) as Record<Element, number>;
+  }, [yongshinMulti.adjustedElemPct]);
+
+  const chartData = useMemo(() => {
+    if (!dayStem || !adjustedElemPct100) return baseChartData;
+
+    const totals: Record<TenGodMain, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 };
+    for (const el of ["목", "화", "토", "금", "수"] as const) {
+      const ten = mapElementToTenGod(dayStem, el) as TenGodMain;
+      totals[ten] += adjustedElemPct100[el] ?? 0;
+    }
+
+    const normalized = normalizeTo100(totals) as Record<TenGodMain, number>;
+    const colors = getTenGodColors(dayStem);
+
+    return (Object.entries(normalized) as [TenGodMain, number][])
+      .map(([name, value]) => ({
+        name,
+        value,
+        color: colors[name as TenGod],
+      }));
+  }, [adjustedElemPct100, baseChartData, dayStem]);
+
+  const pentagonPerStemScaled = useMemo(() => {
+    const baseFull = overlay?.perStemAugFull;
+    if (!baseFull || !adjustedElemPct100) return baseFull;
+
+    const baseMap = baseFull as Record<string, number>;
+    const outBare: Record<string, number> = {};
+
+    for (const el of ["목", "화", "토", "금", "수"] as const) {
+      const [s1, s2] = ELEMENT_STEM_PAIRS[el];
+      const k1 = `${s1}${el}`;
+      const k2 = `${s2}${el}`;
+      const b1 = Math.max(0, Number(baseMap[k1] ?? 0));
+      const b2 = Math.max(0, Number(baseMap[k2] ?? 0));
+      const baseSum = b1 + b2;
+      const target = Math.max(0, Number(adjustedElemPct100[el] ?? 0));
+
+      if (target <= 0) {
+        outBare[s1] = 0;
+        outBare[s2] = 0;
+        continue;
+      }
+
+      if (baseSum <= 0) {
+        outBare[s1] = Math.round(target);
+        outBare[s2] = 0;
+        continue;
+      }
+
+      const r1 = (b1 / baseSum) * target;
+      const r2 = (b2 / baseSum) * target;
+      const f1 = Math.floor(r1);
+      const f2 = Math.floor(r2);
+      let rem = Math.round(target) - (f1 + f2);
+
+      let n1 = f1;
+      let n2 = f2;
+      if (rem > 0) {
+        if (r1 - f1 >= r2 - f2) n1 += 1;
+        else n2 += 1;
+        rem -= 1;
+      }
+      if (rem > 0) n1 += rem;
+
+      outBare[s1] = n1;
+      outBare[s2] = n2;
+    }
+
+    return bareToFullStemMap(outBare);
+  }, [adjustedElemPct100, overlay?.perStemAugFull]);
+
+  const revKey = useMemo(() => {
+    const subsSig = tenSubTotals100
+      ? Object.entries(tenSubTotals100)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, v]) => `${k}:${v}`)
+          .join(",")
+      : "none";
+
+    const dataSig = chartData.map((d) => `${d.name}:${d.value}`).join(",");
+
+    return `${luckKey}||${activePillars.join("")}||${dataSig}||${subsSig}`;
+  }, [luckKey, activePillars, chartData, tenSubTotals100]);
+
   // 기존 UI 호환용: best 후보 리스트(없으면 억부)
   const yongshinList = useMemo<YongshinItem[]>(() => {
     const best = yongshinMulti.best;
@@ -385,6 +474,7 @@ export function useAnalysisReportCalc({
     unified,
     overlay,
     chartData,
+    pentagonPerStemScaled,
     elementPct,
     tenSubTotals100,
     hourKeyForUi,

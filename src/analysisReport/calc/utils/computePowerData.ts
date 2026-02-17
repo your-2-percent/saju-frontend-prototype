@@ -1,4 +1,4 @@
-﻿// features/AnalysisReport/utils/computePowerData.ts
+﻿﻿// features/AnalysisReport/utils/computePowerData.ts
 import type { PowerData, TenGod, Element } from "./types";
 import { getTenGodColors } from "./colors";
 import { TONGGEUN_HAGEONCHUNG, TONGGEUN_CLASSIC } from "./tonggeun";
@@ -35,6 +35,48 @@ import {
 } from "@/analysisReport/calc/powerDataBuilders";
 
 export { elementOfGodMajor, normalizeTo100Strict };
+
+// --- 세력 보정 상수 (multi.ts/powerPercent.ts와 동기화) ---
+const BRANCH_BOOST = {
+  threeHarmony: 20,
+  halfStrong: 12,
+  halfMedium: 8,
+  halfWeak: 4,
+  monthBranch: 10,
+  maxPerElement: 30,
+} as const;
+
+function detectCombinations(pillarsKo: string[]): { element: Element; score: number }[] {
+  const branches = pillarsKo.map((p) => (p && p.length > 1 ? p[1] : ""));
+  const bSet = new Set(branches);
+  const results: { element: Element; score: number }[] = [];
+
+  // 1. 삼합 (Three Harmony)
+  if (bSet.has("인") && bSet.has("오") && bSet.has("술")) results.push({ element: "화", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("사") && bSet.has("유") && bSet.has("축")) results.push({ element: "금", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("신") && bSet.has("자") && bSet.has("진")) results.push({ element: "수", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("해") && bSet.has("묘") && bSet.has("미")) results.push({ element: "목", score: BRANCH_BOOST.threeHarmony });
+
+  // 2. 반합 (Half Harmony)
+  // 목
+  if (bSet.has("해") && bSet.has("묘")) results.push({ element: "목", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("묘") && bSet.has("미")) results.push({ element: "목", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("해") && bSet.has("미")) results.push({ element: "목", score: BRANCH_BOOST.halfWeak });
+  // 화
+  if (bSet.has("인") && bSet.has("오")) results.push({ element: "화", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("오") && bSet.has("술")) results.push({ element: "화", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("인") && bSet.has("술")) results.push({ element: "화", score: BRANCH_BOOST.halfWeak });
+  // 금
+  if (bSet.has("사") && bSet.has("유")) results.push({ element: "금", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("유") && bSet.has("축")) results.push({ element: "금", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("사") && bSet.has("축")) results.push({ element: "금", score: BRANCH_BOOST.halfWeak });
+  // 수
+  if (bSet.has("신") && bSet.has("자")) results.push({ element: "수", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("자") && bSet.has("진")) results.push({ element: "수", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("신") && bSet.has("진")) results.push({ element: "수", score: BRANCH_BOOST.halfWeak });
+
+  return results;
+}
 
 /* =========================
  * 메인 계산기
@@ -274,6 +316,29 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     if (luck.tab === "일운") addLuckGZ(luck.il, "il");
   }
 
+  /* 3.6) 합국/월지 세력 보정 (오행 순환도 반영용) */
+  // pillarsKo는 이미 한글로 정규화되어 있음
+  const combinations = detectCombinations(pillarsKo);
+  const monthBranchChar = pillarsKo[1] ? gzBranch(pillarsKo[1]) : "";
+  const monthEl = BRANCH_EL(monthBranchChar);
+
+  const perElementBoost: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+  
+  for (const combo of combinations) {
+    perElementBoost[combo.element] += combo.score;
+  }
+  if (monthEl) {
+    perElementBoost[monthEl] += BRANCH_BOOST.monthBranch;
+  }
+
+  // 보정치를 elementScore에 가산 (최대치 제한 적용)
+  (["목", "화", "토", "금", "수"] as Element[]).forEach(el => {
+    const boost = Math.min(BRANCH_BOOST.maxPerElement, perElementBoost[el]);
+    if (boost > 0) {
+      elementScore[el] += boost;
+    }
+  });
+
   /* 4) 오행→십신 대분류 누적 (단일 소스: elementScore) */
   const tenAccSimple: Record<TenGod, number> = { 비겁: 0, 식상: 0, 재성: 0, 관성: 0, 인성: 0 };
   (Object.entries(elementScore) as [Element, number][]).forEach(([el, v]) => {
@@ -486,5 +551,3 @@ export function computePowerDataDetailed(opts: ComputeOptions): ComputeResult {
     elementPercent100,
   };
 }
-
-

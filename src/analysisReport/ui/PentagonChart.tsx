@@ -46,6 +46,38 @@ function elementOfGod(god: TenGod, dayEl: Element): Element {
 }
 const SHENG_PREV_LOCAL: Record<Element, Element> = { 화: "목", 토: "화", 금: "토", 수: "금", 목: "수" };
 
+function rebalancePairToTarget(
+  items: Array<[StemSub, number]>,
+  target: number
+): Array<[StemSub, number]> {
+  const targetInt = Math.max(0, Math.round(target));
+  if (items.length === 0) return [];
+
+  const a = items[0]!;
+  const b = items[1] ?? [a[0], 0];
+  const av = Math.max(0, Number(a[1] ?? 0));
+  const bv = Math.max(0, Number(b[1] ?? 0));
+  const sum = av + bv;
+
+  if (targetInt <= 0) return [[a[0], 0], [b[0], 0]];
+  if (sum <= 0) return [[a[0], targetInt], [b[0], 0]];
+
+  const ra = (av / sum) * targetInt;
+  const rb = (bv / sum) * targetInt;
+  let na = Math.floor(ra);
+  let nb = Math.floor(rb);
+  let rem = targetInt - (na + nb);
+
+  if (rem > 0) {
+    if (ra - na >= rb - nb) na += 1;
+    else nb += 1;
+    rem -= 1;
+  }
+  if (rem > 0) na += rem;
+
+  return [[a[0], na], [b[0], nb]];
+}
+
 /** 3. 메인 컴포넌트 */
 export default function PentagonChart({
   data,
@@ -185,11 +217,12 @@ export default function PentagonChart({
         {points.map((p) => {
           const god = p.name as TenGod;
           const el = dayEl ? elementOfGod(god, dayEl) : null;
-          const items: Array<[StemSub, number]> = el 
+          const rawItems: Array<[StemSub, number]> = el 
             ? ALL_STEMS
                 .filter((st) => STEM_TO_ELEMENT_FULL[st] === el)
                 .map((st) => [st, perStemElementScaled?.[st] ?? 0])
             : [];
+          const items = rebalancePairToTarget(rawItems, p.value);
 
           return (
             <g key={p.name} transform={`translate(${p.x},${p.y})`}>

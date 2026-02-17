@@ -37,6 +37,39 @@ function pctWidth(score: number, maxScore: number): string {
   return `${Math.max(5, Math.min(100, w))}%`;
 }
 
+function AdjustedBalanceBar({ pct }: { pct: Record<string, number> }) {
+  const elements = ["목", "화", "토", "금", "수"] as const;
+  const colors: Record<string, string> = {
+    목: "bg-green-500",
+    화: "bg-red-500",
+    토: "bg-yellow-500",
+    금: "bg-gray-400",
+    수: "bg-black",
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">보정 세력 분포 (합국/월지 반영)</span>
+      </div>
+      <div className="flex h-2.5 w-full rounded-full overflow-hidden bg-neutral-100 dark:bg-neutral-800 shadow-inner">
+        {elements.map((el) => {
+          const p = pct[el] || 0;
+          if (p <= 0) return null;
+          return <div key={el} className={`h-full ${colors[el]} transition-all duration-500`} style={{ width: `${p}%` }} />;
+        })}
+      </div>
+      <div className="flex flex-wrap gap-2 mt-1.5">
+        {elements.map((el) => {
+          const p = pct[el] || 0;
+          if (p <= 0) return null;
+          return <div key={el} className="flex items-center gap-1"><div className={`w-1.5 h-1.5 rounded-full ${colors[el]}`} /><span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-medium">{el} {Math.round(p)}%</span></div>;
+        })}
+      </div>
+    </div>
+  );
+}
+
 // --- 서브 섹션 컴포넌트 ---
 
 function GroupDetails({
@@ -141,8 +174,50 @@ function GroupDetails({
   );
 }
 
-function BestSummary({ best }: { best: YongshinGroup | null }) {
-  const top = best?.candidates?.[0] ?? null;
+function BestSummary({ result }: { result: YongshinMultiResult }) {
+  // 1. 전체 그룹에서 후보군 통합 및 정렬 (Global Top 3)
+  const allCandidates = result.groups
+    .filter((g) => g.applicable)
+    .flatMap((g) =>
+      g.candidates.map((c) => ({
+        ...c,
+        groupTitle: g.title,
+        groupKind: g.kind,
+        // finalScore는 multi.ts에서 계산됨
+        sortScore: c.finalScore ?? 0,
+      }))
+    )
+    .sort((a, b) => b.sortScore - a.sortScore);
+
+  // 중복 제거 (같은 오행이 여러 용신법으로 추천될 수 있음 -> 가장 높은 점수만 남김? 
+  // 아니면 사용자가 "억부 & 조후" 처럼 병기되길 원하므로, 상위 랭크에 서로 다른 이유로 올라온 것을 그대로 둠)
+  // 여기서는 단순 Top 3를 뽑되, 상위권 점수가 비슷하면 타이틀에 병기
+  const top3 = allCandidates.slice(0, 3);
+  const top1 = top3[0];
+
+  // 2. 타이틀 생성 로직
+  let displayTitle = "분석 결과 없음";
+  let displayScore = 0;
+  let displayNote = "";
+
+  if (top1) {
+    displayScore = top1.sortScore;
+    displayNote = result.best?.note ?? ""; // 노트는 기존 Best 그룹의 노트를 유지 (가장 주된 관점)
+
+    // 타이틀 병기 로직: 1위와 2위의 점수 차이가 5점 이내이고, 종류가 다르면 병기
+    const top2 = top3[1];
+    const isClose = top2 && (top1.sortScore - top2.sortScore <= 5);
+    const isDifferentKind = top2 && top1.groupKind !== top2.groupKind;
+
+    if (isClose && isDifferentKind) {
+      // 예: "억부 & 조후용신"
+      const t1 = top1.groupTitle.replace("용신", "");
+      const t2 = top2.groupTitle; // 뒤쪽은 "용신" 포함
+      displayTitle = `${t1} & ${t2}`;
+    } else {
+      displayTitle = top1.groupTitle;
+    }
+  }
 
   return (
     <div className="relative overflow-hidden rounded-[2rem] border border-violet-200 dark:border-violet-800 p-6 bg-gradient-to-br from-violet-50 to-white dark:from-violet-950/20 dark:to-neutral-900 shadow-sm">
@@ -154,27 +229,37 @@ function BestSummary({ best }: { best: YongshinGroup | null }) {
           <Badge variant="indigo">베스트 추천</Badge>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] text-neutral-400 font-bold uppercase">적합도 점수</span>
-            <span className="text-lg font-black text-violet-600 dark:text-violet-400">{best?.fitScore ?? 0}</span>
+            <span className="text-lg font-black text-violet-600 dark:text-violet-400">{displayScore}</span>
           </div>
         </div>
 
-        <div className="flex items-end gap-3">
+        <div className="flex flex-col gap-2">
           <h4 className="text-2xl font-black text-neutral-800 dark:text-neutral-100 tracking-tighter">
-            {best ? `${best.marker} ${best.title}` : "분석 결과 없음"}
+            {result.best ? `${result.best.marker} ${displayTitle}` : "분석 결과 없음"}
           </h4>
-          {top?.element && (
-            <div className="mb-1 flex items-center gap-1">
-              <span className="text-xs text-neutral-400 font-medium">제1용신:</span>
-              <span className="text-base font-black text-indigo-500">{top.element}</span>
+          
+          {/* 1,2,3위 표시 */}
+          {top3.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-1">
+              {top3.map((cand, idx) => (
+                <div key={`${cand.element}-${idx}`} className="flex items-center gap-1.5 bg-white/60 dark:bg-black/20 px-2.5 py-1.5 rounded-lg border border-violet-100 dark:border-violet-900/30">
+                  <span className="text-[10px] font-bold text-neutral-500">{idx + 1}순위</span>
+                  <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">{cand.element}</span>
+                  <span className="text-[9px] text-neutral-400">({cand.groupTitle.replace("용신", "")})</span>
+                </div>
+              ))}
             </div>
           )}
         </div>
 
-        {best?.note && (
-          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium">
-            {best.note}
+        {displayNote && (
+          <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-medium mt-1">
+            {displayNote}
           </p>
         )}
+
+        {/* 보정된 세력 분포 바 추가 */}
+        {result.adjustedElemPct && <AdjustedBalanceBar pct={result.adjustedElemPct} />}
       </div>
     </div>
   );
@@ -211,7 +296,7 @@ export function YongshinRecommendCard({
       </div>
 
       {/* 최종 요약 카드 */}
-      <BestSummary best={recommend.best} />
+      <BestSummary result={recommend} />
 
       {/* 상세 추천 그룹 리스트 */}
       <div className="space-y-4">
