@@ -15,6 +15,8 @@ import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import { useHourPredictionStore } from "@/shared/lib/hooks/useHourPredictionStore";
 import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
 import { extractMyeongSikInfoOnly } from "@/promptCopy/calc/infoOnly";
+import { useDaewoonList } from "@/features/luck/useDaewoonList";
+import { useDstOffsetMinutes } from "@/saju/input/useDstStore";
 import {
   buildFriendInstruction,
   buildPartnerPromptFragment,
@@ -80,6 +82,7 @@ export function usePromptCopyCalc({
 
   const list = useMyeongSikStore((s) => s.list);
   const { date, setDate } = useLuckPickerStore();
+  const dstOffsetMinutes = useDstOffsetMinutes();
 
   useEffect(() => {
     setDate(new Date());
@@ -91,10 +94,15 @@ export function usePromptCopyCalc({
   }, [partnerId, list]);
 
   const rule: DayBoundaryRule = (ms.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
+  const daewoonListForPrompt = useDaewoonList(ms, rule, 100, dstOffsetMinutes);
+  const daewoonEventsForPrompt = useMemo(
+    () => daewoonListForPrompt.slice(1),
+    [daewoonListForPrompt]
+  );
   const baseDate = useMemo(() => date ?? new Date(), [date]);
   const fallbackChain = useMemo(
-    () => buildFallbackChain(chain, baseDate, rule, ms),
-    [chain, baseDate, rule, ms]
+    () => buildFallbackChain(chain, baseDate, rule, ms, daewoonEventsForPrompt),
+    [chain, baseDate, rule, ms, daewoonEventsForPrompt]
   );
 
   const gatedChain = useMemo<LuckChain>(() => {
@@ -190,7 +198,10 @@ export function usePromptCopyCalc({
     [natalWithPrediction]
   );
 
-  const daeList = useMemo(() => buildDaeList(ms), [ms]);
+  const daeList = useMemo(
+    () => buildDaeList(ms, daewoonEventsForPrompt),
+    [ms, daewoonEventsForPrompt]
+  );
   const partnerOptions = useMemo<PartnerOption[]>(
     () => buildPartnerOptions(list ?? [], ms.id),
     [list, ms.id]

@@ -9,6 +9,7 @@ import { normalizeGZLocal, normalizePillars, hasValidYmd } from "@/promptCopy/ca
 import type { Pillars4 } from "@/analysisReport/calc/logic/relations";
 import type { LuckChain } from "@/analysisReport/calc/utils/unifiedPower";
 import type { ShinCategory } from "@/analysisReport/calc/logic/shinStrength";
+import type { Daewoon } from "@/features/luck/useDaewoonList";
 
 export type DaeListItem = {
   gz: string;
@@ -21,7 +22,21 @@ export type DaeListItem = {
 
 type EffectiveBasis = "solar" | "lunar";
 
-function resolveDaeByDate(list: string[], baseDate: Date): string | null {
+function resolveDaeByDateFromEvents(
+  list: Array<{ at: Date; gz: string }>,
+  baseDate: Date
+): string | null {
+  if (!Array.isArray(list) || list.length === 0) return null;
+
+  const t = baseDate.getTime();
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const cur = list[i]!;
+    if (t >= cur.at.getTime()) return cur.gz;
+  }
+  return list[0]!.gz;
+}
+
+function resolveDaeByDateFromLegacyText(list: string[], baseDate: Date): string | null {
   if (!Array.isArray(list) || list.length === 0) return null;
 
   const parsed = list
@@ -32,26 +47,19 @@ function resolveDaeByDate(list: string[], baseDate: Date): string | null {
       const mm = Number(m[2]);
       const gz = normalizeGZLocal(m[3] ?? "");
       if (!Number.isFinite(y) || !Number.isFinite(mm) || !gz) return null;
-      const at = new Date(y, mm - 1, 1, 12, 0, 0, 0);
-      return { at, gz };
+      return { at: new Date(y, mm - 1, 1, 12, 0, 0, 0), gz };
     })
     .filter(Boolean) as Array<{ at: Date; gz: string }>;
 
-  if (parsed.length === 0) return null;
-
-  const t = baseDate.getTime();
-  for (let i = parsed.length - 1; i >= 0; i -= 1) {
-    const cur = parsed[i]!;
-    if (t >= cur.at.getTime()) return cur.gz;
-  }
-  return parsed[0]!.gz;
+  return resolveDaeByDateFromEvents(parsed, baseDate);
 }
 
 export function buildFallbackChain(
   chain: LuckChain | undefined,
   baseDate: Date,
   rule: DayBoundaryRule,
-  ms?: MyeongSik
+  ms?: MyeongSik,
+  daewoonEvents?: Daewoon[]
 ): LuckChain {
   const se = normalizeGZLocal(getYearGanZhi(baseDate) || "");
   const wol = normalizeGZLocal(getMonthGanZhi(baseDate) || "");
@@ -59,8 +67,12 @@ export function buildFallbackChain(
 
   let dae = chain?.dae ? normalizeGZLocal(chain.dae) : null;
   if (!dae && ms) {
-    const daeList = getDaewoonList(ms);
-    dae = resolveDaeByDate(daeList, baseDate);
+    if (daewoonEvents && daewoonEvents.length > 0) {
+      dae = resolveDaeByDateFromEvents(daewoonEvents, baseDate);
+    } else {
+      const daeList = getDaewoonList(ms);
+      dae = resolveDaeByDateFromLegacyText(daeList, baseDate);
+    }
   }
 
   if (chain) {
@@ -187,10 +199,28 @@ export function computeShinCategory(natalArr: string[]): { percent: number; cate
   return { percent, category: getShinCategory(percent) };
 }
 
-export function buildDaeList(ms: MyeongSik): DaeListItem[] {
-  const rawList = getDaewoonList(ms).slice(0, 10);
+export function buildDaeList(ms: MyeongSik, daewoonEvents?: Daewoon[]): DaeListItem[] {
   const birthYear = ms.birthDay ? Number(ms.birthDay.slice(0, 4)) : 0;
 
+  if (daewoonEvents && daewoonEvents.length > 0) {
+    return daewoonEvents.slice(0, 10).map((ev, idx) => {
+      const startYear = ev.at.getFullYear();
+      const startMonth = ev.at.getMonth() + 1;
+      const startDay = ev.at.getDate();
+      const age = birthYear > 0 ? koreanAgeByYear(birthYear, startYear) : idx * 10;
+
+      return {
+        gz: ev.gz,
+        age,
+        startYear,
+        startMonth,
+        startDay,
+        endYear: startYear + 10,
+      };
+    });
+  }
+
+  const rawList = getDaewoonList(ms).slice(0, 10);
   return rawList.map((str, idx) => {
     const match = str.match(/(\d{4})년\s+(\d{1,2})월\s+([가-힣]{2})\s+대운/);
     const startYear = match ? Number(match[1]) : 0;

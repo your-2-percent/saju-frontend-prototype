@@ -8,33 +8,33 @@ export default function ModeSwitch({ isMultiMode, setIsMultiMode, canUseMultiMod
   const multiLocked = !canUseMultiMode;
 
   return (
-    <div className="flex gap-2">
+    <div className="grid grid-cols-2 p-1 gap-1 bg-neutral-100 dark:bg-neutral-800 rounded-lg">
       <button
         type="button"
         onClick={() => setIsMultiMode(false)}
-        className={`px-3 py-1.5 text-xs rounded-md border cursor-pointer ${
+        className={`flex items-center justify-center py-2 text-xs font-medium rounded-md transition-all cursor-pointer ${
           !isMultiMode
-            ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black"
-            : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300"
+            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm"
+            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
         }`}
       >
-        단일 모드
+        단일 시점 (특정 날짜)
       </button>
 
       <button
         type="button"
         onClick={() => setIsMultiMode(true)}
         disabled={multiLocked}
-        title={multiLocked ? "프리미엄 기능입니다." : "멀티모드 (여러 시점 입력)"}
-        className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+        title={multiLocked ? "프리미엄 기능입니다." : "멀티 시점 (운의 흐름)"}
+        className={`flex items-center justify-center py-2 text-xs font-medium rounded-md transition-all ${
           multiLocked
-            ? "bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 cursor-not-allowed opacity-70"
+            ? "text-neutral-400 cursor-not-allowed opacity-50"
             : isMultiMode
-              ? "bg-neutral-900 text-white dark:bg-yellow-500 dark:text-black cursor-pointer"
-              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 cursor-pointer"
+            ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm cursor-pointer"
+            : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer"
         }`}
       >
-        멀티모드 (여러 시점 입력) {multiLocked ? "🔒" : ""}
+        멀티 시점 (운의 흐름) {multiLocked ? "🔒" : ""}
       </button>
     </div>
   );

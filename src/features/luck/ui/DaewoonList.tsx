@@ -105,25 +105,25 @@ export default function DaewoonList({
         <div className="inline-flex rounded-md overflow-hidden border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-800">
           <button
             type="button"
-            onClick={() => setSettingsKey("daewoonDisplayBase", "묘운기준")}
+            onClick={() => setSettingsKey("daewoonDisplayBase", "정밀기준")}
             className={`px-2 py-1 text-[11px] desk:text-xs tracking-[-1px] cursor-pointer transition-colors ${
-              daewoonDisplayBase === "묘운기준"
+              daewoonDisplayBase === "정밀기준"
                 ? "bg-indigo-600 text-white"
                 : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
             }`}
           >
-            정밀기준
+            정밀대운
           </button>
           <button
             type="button"
-            onClick={() => setSettingsKey("daewoonDisplayBase", "일반기준")}
+            onClick={() => setSettingsKey("daewoonDisplayBase", "표준기준")}
             className={`px-2 py-1 text-[11px] desk:text-xs tracking-[-1px] cursor-pointer transition-colors ${
-              daewoonDisplayBase === "일반기준"
+              daewoonDisplayBase === "표준기준"
                 ? "bg-indigo-600 text-white"
                 : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
             }`}
           >
-            일반기준
+            표준대운
           </button>
         </div>
       </div>

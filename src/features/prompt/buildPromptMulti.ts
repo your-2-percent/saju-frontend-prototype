@@ -11,6 +11,7 @@ import { STEM_TO_ELEMENT, elementToTenGod, getNabeum } from "./promptCore";
 import { formatBirthForPrompt } from "./formatBirth";
 import { computeYinYangSummary } from "./calc/yinYang";
 import { isUnknownTime, getActivePosLabels, compactNatalForLabels } from "./promptPosLabels";
+import { appendTimeModeGuide } from "./topicGuide/timeModeGuide";
 
 import type { MultiPromptInput } from "./multi/types";
 import { pruneEmptyDeep } from "./multi/sectionUtils";
@@ -290,7 +291,14 @@ ${ms.ganjiText} / 성별: ${ms.gender}`;
   }
 
   const body = (pruneEmptyDeep(sectionModel.join("\n\n")) ?? "").toString();
-  return { header, body, guide: "" };
+  const guideLines: string[] = [];
+  appendTimeModeGuide(guideLines, {
+    mode: "multi",
+    isStudyTone: input.teacherMode === true,
+  });
+  const guide = guideLines.join("\n").trim();
+
+  return { header, body, guide };
 }
 
 export function buildMultiLuckPrompt(input: MultiPromptInput): string {
