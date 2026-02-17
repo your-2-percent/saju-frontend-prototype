@@ -164,7 +164,7 @@ export default function YinYangBar({
       </div>
 
       {/* 2. 에너지 바 세션 (수직 분리 마커) */}
-      <div className="relative mb-14 px-1">
+      <div className="relative mb-14">
         {/* 내면 마커 (위) */}
         {animate && (
           <div 

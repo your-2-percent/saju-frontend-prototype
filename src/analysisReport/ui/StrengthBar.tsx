@@ -3,7 +3,11 @@ import { clamp01, getShinCategory, ShinCategory } from "@/analysisReport/calc/lo
 
 const TICKS = [10, 20, 35, 45, 55, 65, 80];
 
-export default function StrengthBar({ value }: { value: number }) {
+export default function StrengthBar({ value, deukFlags, strongestOpponent }: { 
+  value: number; 
+  deukFlags?: { 령: boolean; 지: boolean; 세: boolean };
+  strongestOpponent?: string;
+}) {
   const [animate, setAnimate] = useState(false);
   const percent = useMemo(() => clamp01(value), [value]);
   const category: ShinCategory = useMemo(() => getShinCategory(percent), [percent]);
@@ -40,6 +44,39 @@ export default function StrengthBar({ value }: { value: number }) {
       advice: "자신을 보호해주는 귀인의 조력이나 전문적인 지식을 쌓는 것이 유리합니다."
     };
   }, [percent]);
+
+  // 상세 분석 멘트 생성
+  const detailAnalysis = useMemo(() => {
+    if (!deukFlags) return null;
+    
+    const isShinGang = percent >= 50; // 50% 이상이면 신강 성향
+    const parts: string[] = [];
+
+    if (isShinGang) {
+      parts.push("인성과 비겁의 세력이 뭉쳐 자신의 자아가 강하며,");
+      
+      const reasons: string[] = [];
+      if (deukFlags.령) reasons.push("득령(월지)");
+      if (deukFlags.지) reasons.push("득지(일지)");
+      if (deukFlags.세) reasons.push("득세");
+      
+      if (reasons.length > 0) {
+        parts.push(`${reasons.join("·")}하여 신강 쪽에 가까운 명식입니다.`);
+      } else {
+        parts.push("전반적인 세력이 두터운 명식입니다.");
+      }
+    } else {
+      // 신약
+      const opp = strongestOpponent || "식재관";
+      parts.push(`${opp}의 영향이 강하고`);
+      
+      if (!deukFlags.령) parts.push("실령,");
+      if (!deukFlags.지) parts.push("실지하여");
+      parts.push("신약 쪽에 가까운 명식입니다.");
+    }
+
+    return parts.join(" ").replace(" ,", ",");
+  }, [percent, deukFlags, strongestOpponent]);
 
   return (
     <div className="w-full p-6 bg-white dark:bg-neutral-900 rounded-3xl shadow-lg border border-neutral-100 dark:border-neutral-800">
@@ -115,6 +152,16 @@ export default function StrengthBar({ value }: { value: number }) {
             💡 {description.advice}
           </p>
         </div>
+
+        {/* 상세 분석 멘트 추가 */}
+        {detailAnalysis && (
+          <div className="mt-3 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+            <p className="text-[11px] text-neutral-600 dark:text-neutral-400 leading-relaxed">
+              <span className="font-bold text-neutral-500 mr-1">분석:</span>
+              {detailAnalysis}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -14,6 +14,8 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 import { YongshinRecommendCard } from "@/analysisReport/ui/YongshinRecommendCard";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { natalElementRaw } from "@/analysisReport/calc/logic/powerPercent";
+import { computeDeukFlags } from "@/analysisReport/calc/utils/strength";
 
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
@@ -97,6 +99,20 @@ export default function AnalysisReport({
   const lockTitle = useMemo(() => {
     return `🔒 웹 접속시간 누적 100시간을 달성하면 사용 가능합니다! (로그인 시에만 카운트)`;
   }, []);
+
+  // 신강/신약 상세 분석용 데이터 계산
+  const deukInfo = useMemo(() => {
+    if (!calc.activePillars) return null;
+    const rawScore = natalElementRaw(calc.activePillars);
+    return computeDeukFlags(calc.activePillars, rawScore);
+  }, [calc.activePillars]);
+
+  const strongestOpponent = useMemo(() => {
+    if (!calc.chartData) return undefined;
+    const opponents = calc.chartData.filter(d => ["식상", "재성", "관성"].includes(d.name));
+    opponents.sort((a, b) => b.value - a.value);
+    return opponents[0]?.name;
+  }, [calc.chartData]);
 
   if (!calc.isValidActive) {
     return (
@@ -205,7 +221,11 @@ export default function AnalysisReport({
             natal={calc.activePillars}
             perStemElementScaled={calc.overlay?.perStemAugFull}
           />
-          <StrengthBar value={calc.dayElementPercent} />
+          <StrengthBar 
+            value={calc.dayElementPercent} 
+            deukFlags={deukInfo?.flags.비겁}
+            strongestOpponent={strongestOpponent}
+          />
           <ClimateBars natal={calc.activePillars} />
         </div>
       )}

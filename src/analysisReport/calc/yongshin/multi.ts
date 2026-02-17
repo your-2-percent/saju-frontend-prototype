@@ -9,6 +9,7 @@ export type YongshinItem = {
   elNorm: Element | null; // 표준화(목/화/토/금/수)
   score: number;
   reasons: string[];
+  finalScore?: number; // ✅ 최종 보정 점수 (UI 표시 및 랭킹용)
 };
 
 export type YongshinGroup = {
@@ -29,9 +30,18 @@ export type YongshinMultiResult = {
   bestKind: YongshinKind | null;
   best: YongshinGroup | null;
   groups: YongshinGroup[]; // priority 순 정렬
+  adjustedElemPct: Record<Element, number>; // ✅ 보정된 오행 퍼센트 (삼합 등 반영)
 };
 
 const ELEMENTS: readonly Element[] = ["목", "화", "토", "금", "수"] as const;
+const BRANCH_BOOST = {
+  threeHarmony: 20, // (하향) 합국이 너무 지배적이지 않게
+  halfStrong: 12,   // (하향) 반합도 적당한 가산점으로
+  halfMedium: 8,
+  halfWeak: 4,
+  monthBranch: 10,  // (대폭 하향) 현대적 관점: 월지 독재 방지, 일주/시주 세력 존중
+  maxPerElement: 30, // (하향) 보정치 총합 상한선 낮춤
+} as const;
 
 type SeasonKind = "WINTER" | "SUMMER" | "SPRING" | "AUTUMN" | "UNKNOWN";
 
@@ -49,7 +59,7 @@ function getSeasonKind(monthGz: string): SeasonKind {
 type TempKind = "cold" | "hot" | "mild";
 type WetKind = "wet" | "dry" | "normal";
 
-const CLIMATE_EXTREME_DELTA = 12;
+const CLIMATE_EXTREME_DELTA = 30; // 80% 이상(혹은 20% 이하)일 때만 급한 조후로 판단
 
 function tempKindFromPct(pct: number): TempKind {
   if (pct <= 40) return "cold";
@@ -80,7 +90,8 @@ function pickJohuWeight(season: SeasonKind, climate: ClimatePercents | null): nu
   const seasonTemp: TempKind = season === "WINTER" ? "cold" : season === "SUMMER" ? "hot" : "mild";
   const seasonMatch = tempKind === "mild" || seasonTemp === "mild" || tempKind === seasonTemp;
 
-  if (season === "WINTER" || season === "SUMMER") return seasonMatch ? 0.85 : 0.6;
+  // 조후가 급하면(매우 춥거나 뜨거우면) 억부(1.25)보다 우선순위를 높임 (1.5)
+  if (season === "WINTER" || season === "SUMMER") return seasonMatch ? 1.5 : 0.8;
   return 0.65;
 }
 
@@ -129,6 +140,16 @@ function produces(el: Element): Element {
   }
 }
 
+function producedBy(el: Element): Element {
+  switch (el) {
+    case "목": return "수";
+    case "화": return "목";
+    case "토": return "화";
+    case "금": return "토";
+    case "수": return "금";
+  }
+}
+
 function controls(el: Element): Element {
   // "el이 극하는 오행"
   switch (el) {
@@ -142,6 +163,17 @@ function controls(el: Element): Element {
       return "목";
     case "수":
       return "화";
+  }
+}
+
+function controlledBy(el: Element): Element {
+  // "el을 극하는 오행" (Controller)
+  switch (el) {
+    case "목": return "금";
+    case "화": return "수";
+    case "토": return "목";
+    case "금": return "화";
+    case "수": return "토";
   }
 }
 
@@ -277,6 +309,8 @@ export function buildJohuCandidates(
     for (const p of prefs) addScore(p.el, p.base, p.why);
   };
 
+  let avoidForTemp: Element | null = null;
+
   let usedClimate = false;
   if (climate) {
     const tempExtreme = isClimateExtreme(climate.hanNanPct);
@@ -301,9 +335,11 @@ export function buildJohuCandidates(
         if (tempKind === "cold") {
           addScore("화", main, `조후(한냉 ${coldPct}%): 난온 필요 -> 화`);
           addScore("토", sub, "조후 보조: 한습 완화 -> 토");
+          avoidForTemp = "수";
         } else if (tempKind === "hot") {
           addScore("수", main, `조후(조열 ${hotPct}%): 청량 필요 -> 수`);
           addScore("금", sub, "조후 보조: 생수 -> 금");
+          avoidForTemp = "화";
         }
       }
 
@@ -312,9 +348,13 @@ export function buildJohuCandidates(
         const sub = Math.round(25 + 20 * wScale);
         if (wetKind === "wet") {
           addScore("토", main, `조후(습 ${wetPct}%): 습 조정 -> 토`);
-          addScore("화", sub, "조후 보조: 습냉 가온 -> 화");
+          if (avoidForTemp !== "화") {
+            addScore("화", sub, "조후 보조: 습냉 가온 -> 화");
+          }
         } else if (wetKind === "dry") {
-          addScore("수", main, `조후(조 ${dryPct}%): 윤택 필요 -> 수`);
+          if (avoidForTemp !== "수") {
+            addScore("수", main, `조후(조 ${dryPct}%): 윤택 필요 -> 수`);
+          }
           addScore("목", sub, "조후 보조: 생발 -> 목");
         }
       }
@@ -461,6 +501,103 @@ export function buildByeongyakCandidates(
   };
 }
 
+// Helper: 가장 강한 오행 찾기
+function getStrongestElement(elemPct: Record<Element, number>): { el: Element; pct: number } {
+  let maxEl: Element = "목";
+  let maxVal = -1;
+  for (const el of ELEMENTS) {
+    const val = elemPct[el] ?? 0;
+    if (val > maxVal) {
+      maxVal = val;
+      maxEl = el;
+    }
+  }
+  return { el: maxEl, pct: maxVal };
+}
+
+function getDayStemElement(pillars: string[]): Element | null {
+  const stem = pillars[2]?.charAt(0);
+  if (!stem) return null;
+  if ("갑을".includes(stem)) return "목";
+  if ("병정".includes(stem)) return "화";
+  if ("무기".includes(stem)) return "토";
+  if ("경신".includes(stem)) return "금";
+  if ("임계".includes(stem)) return "수";
+  return null;
+}
+
+function getMonthBranchElement(monthGz: string): Element | null {
+  const branch = (monthGz || "").trim().slice(-1);
+  if ("인묘寅卯".includes(branch)) return "목";
+  if ("사오巳午".includes(branch)) return "화";
+  if ("신유申酉".includes(branch)) return "금";
+  if ("해자亥子".includes(branch)) return "수";
+  if ("진술축미辰戌丑未".includes(branch)) return "토";
+  return null;
+}
+
+// 한자 -> 한글 변환 헬퍼
+function toKoBranch(b: string): string {
+  const map: Record<string, string> = {
+    子: "자", 丑: "축", 寅: "인", 卯: "묘", 辰: "진", 巳: "사",
+    午: "오", 未: "미", 申: "신", 酉: "유", 戌: "술", 亥: "해"
+  };
+  return map[b] ?? b;
+}
+
+// Helper: 합국(Hap) 감지 - 삼합 및 반합
+function detectCombinations(pillars: string[]): { element: Element; name: string; score: number }[] {
+  // 지지를 한글로 통일하여 Set 생성
+  const branches = pillars.map((p) => (p && p.length > 1 ? toKoBranch(p[1]) : ""));
+  const bSet = new Set(branches);
+  const results: { element: Element; name: string; score: number }[] = [];
+
+  // 1. 삼합 (Three Harmony)
+  if (bSet.has("인") && bSet.has("오") && bSet.has("술")) results.push({ element: "화", name: "인오술 화국", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("사") && bSet.has("유") && bSet.has("축")) results.push({ element: "금", name: "사유축 금국", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("신") && bSet.has("자") && bSet.has("진")) results.push({ element: "수", name: "신자진 수국", score: BRANCH_BOOST.threeHarmony });
+  if (bSet.has("해") && bSet.has("묘") && bSet.has("미")) results.push({ element: "목", name: "해묘미 목국", score: BRANCH_BOOST.threeHarmony });
+
+  // 2. 반합 (Half Harmony)
+  // 목
+  if (bSet.has("해") && bSet.has("묘")) results.push({ element: "목", name: "해묘 반합(목국)", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("묘") && bSet.has("미")) results.push({ element: "목", name: "묘미 반합(목국)", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("해") && bSet.has("미")) results.push({ element: "목", name: "해미 반합(목국)", score: BRANCH_BOOST.halfWeak }); // 가합
+  // 화
+  if (bSet.has("인") && bSet.has("오")) results.push({ element: "화", name: "인오 반합(화국)", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("오") && bSet.has("술")) results.push({ element: "화", name: "오술 반합(화국)", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("인") && bSet.has("술")) results.push({ element: "화", name: "인술 반합(화국)", score: BRANCH_BOOST.halfWeak });
+  // 금
+  if (bSet.has("사") && bSet.has("유")) results.push({ element: "금", name: "사유 반합(금국)", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("유") && bSet.has("축")) results.push({ element: "금", name: "유축 반합(금국)", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("사") && bSet.has("축")) results.push({ element: "금", name: "사축 반합(금국)", score: BRANCH_BOOST.halfWeak });
+  // 수
+  if (bSet.has("신") && bSet.has("자")) results.push({ element: "수", name: "신자 반합(수국)", score: BRANCH_BOOST.halfStrong });
+  else if (bSet.has("자") && bSet.has("진")) results.push({ element: "수", name: "자진 반합(수국)", score: BRANCH_BOOST.halfMedium });
+  else if (bSet.has("신") && bSet.has("진")) results.push({ element: "수", name: "신진 반합(수국)", score: BRANCH_BOOST.halfWeak });
+
+  return results;
+}
+
+function normalizePercents(pcts: Record<Element, number>): Record<Element, number> {
+  const sum = Object.values(pcts).reduce((a, b) => a + b, 0);
+  if (sum <= 0.001) return pcts;
+  const out = { ...pcts };
+  for (const k of ELEMENTS) {
+    out[k] = (out[k] / sum) * 100;
+  }
+  return out;
+}
+
+function getTenGodRelation(day: Element, target: Element): "비겁" | "식상" | "재성" | "관성" | "인성" {
+  if (day === target) return "비겁";
+  if (produces(day) === target) return "식상";
+  if (controls(day) === target) return "재성";
+  if (controls(target) === day) return "관성";
+  if (produces(target) === day) return "인성";
+  return "비겁"; // fallback
+}
+
 export function buildMultiYongshin(args: {
   eokbuList: YongshinItem[];
   monthGz: string;
@@ -474,9 +611,121 @@ export function buildMultiYongshin(args: {
   const { eokbuList, monthGz, elemPct, presentMap, demoteAbsent, gyeokgukList, pillars } = args;
   const climate = calcClimatePercents(pillars);
 
-  // 1) 억부(현재 네 computeYongshin 결과를 그대로 “억부용신”으로 취급)
+  const dayEl = getDayStemElement(pillars);
+  const monthEl = getMonthBranchElement(monthGz);
+  const season = getSeasonKind(monthGz); // 계절 미리 계산
+
+  // 0) 세력 재계산: 삼합 & 월지 가중치 적용
+  const combinations = detectCombinations(pillars);
+  let adjustedElemPct = { ...elemPct };
+  const boostNotes: string[] = [];
+  const perElementBoost: Record<Element, number> = { 목: 0, 화: 0, 토: 0, 금: 0, 수: 0 };
+
+  // 0-1. 합국 보정 (삼합/반합)
+  for (const combo of combinations) {
+    perElementBoost[combo.element] += combo.score;
+    boostNotes.push(combo.name);
+  }
+
+  // 0-2. 월지(계절) 보정
+  if (monthEl) {
+    perElementBoost[monthEl] += BRANCH_BOOST.monthBranch;
+    boostNotes.push(`월지(${monthEl}) 득령`);
+  }
+
+  for (const el of ELEMENTS) {
+    const capped = Math.min(BRANCH_BOOST.maxPerElement, perElementBoost[el]);
+    adjustedElemPct[el] = (adjustedElemPct[el] ?? 0) + capped;
+  }
+
+  // 정규화
+  adjustedElemPct = normalizePercents(adjustedElemPct);
+
+  // 1) 최강 세력 및 신강/신약 판별
+  const strongest = getStrongestElement(adjustedElemPct);
+  const target = strongest.el;
+  const targetPct = strongest.pct;
+
+  let refinedEokbuList = [...eokbuList];
+  let eokbuNote = "제1용신. 일간 강약/균형(억부)을 최우선으로 봄";
+
+  // 신강/신약 판단 (일간 + 인성 vs 식상 + 재성 + 관성)
+  let isShinGang = false;
+  if (dayEl) {
+    const selfPct = adjustedElemPct[dayEl] ?? 0;
+    const resourcePct = adjustedElemPct[producedBy(dayEl)] ?? 0;
+    const myForce = selfPct + resourcePct;
+    isShinGang = myForce >= 45; // 45% 이상이면 신강으로 간주 (보정된 수치 기준)
+  }
+
+  // 2) 억부/격국적 용신 판단 (세력이 30% 이상으로 뚜렷할 때)
+  if (targetPct >= 30 && dayEl) {
+    let recommendedEl: Element | null = null;
+    let methodReason = "";
+    const relation = getTenGodRelation(dayEl, target);
+
+    // 로직:
+    // 1. 신강하면 -> 식상(설기) > 관성(제어) > 재성(소모) 순으로 고려
+    // 2. 신약하면 -> 인성(생조) > 비겁(방신) 순으로 고려
+    // 3. 단, 특정 세력(target)이 태왕하여 병이 되는 경우, 그 병을 치료하는 약을 우선함.
+
+    switch (relation) {
+      case "비겁": // 신강(비겁태왕) -> 식상 설기 우선, 관성 제어 차선
+        {
+          // ✅ 겨울 수일간 특수 처리: 꽁꽁 언 물은 나무를 키울 수 없으므로 화(재성)가 최우선
+          if (dayEl === "수" && season === "WINTER") {
+            recommendedEl = "화";
+            methodReason = `겨울 수(${dayEl})가 태왕하여 조후 겸 억부로 화(재성)를 용신으로 삼음`;
+          } else {
+            const output = produces(dayEl);
+            // 식상이 너무 약하지 않으면 식상 우선
+            recommendedEl = output;
+            methodReason = `일간(${dayEl})이 태왕하여 식상(${output})으로 설기`;
+          }
+        }
+        break;
+      case "인성": // 신강(인성태왕) -> 재성으로 인성 제어 (용재파인)
+        recommendedEl = controlledBy(target); // ✅ Fix: 인성을 극하는 오행(재성)을 찾아야 함
+        methodReason = `인성(${target})이 강해 재성(${recommendedEl})으로 제어(용재파인)`;
+        break;
+      case "식상": // 신약(식상태왕) -> 인성으로 일간 보호 (상관패인)
+        recommendedEl = producedBy(dayEl);
+        methodReason = `식상(${target})이 강해 인성(${recommendedEl})으로 일간 보호(상관패인)`;
+        break;
+      case "재성": // 신약(재성태왕) -> 비겁으로 재성 감당 (득비리재)
+        recommendedEl = dayEl;
+        methodReason = `재성(${target})이 강해 비겁(${recommendedEl})으로 힘을 보탬(득비리재)`;
+        break;
+      case "관성": // 신약(관살태왕) -> 인성으로 화살 (살인상생)
+        // 관살이 강할 때 식상제살(식상) vs 살인상생(인성)
+        // 일간이 너무 약하면 인성이 우선.
+        if (isShinGang) {
+             recommendedEl = produces(dayEl); // 식상 (식신제살)
+             methodReason = `관살(${target})에 대항하여 식상(${recommendedEl})으로 제살(식신제살)`;
+        } else {
+             recommendedEl = producedBy(dayEl); // 인성 (살인상생)
+             methodReason = `관살(${target})이 강해 인성(${recommendedEl})으로 화살(살인상생)`;
+        }
+        break;
+    }
+    
+    if (recommendedEl) {
+      const boostReason = boostNotes.length > 0 ? `[${boostNotes.join(", ")}] 반영` : "세력 균형";
+      refinedEokbuList = [
+        {
+          element: recommendedEl,
+          elNorm: recommendedEl,
+          score: 150, // 압도적 점수 부여
+          reasons: [methodReason, boostReason],
+        },
+        ...eokbuList.filter((x) => x.elNorm !== recommendedEl),
+      ];
+      eokbuNote = `세력 분석: ${methodReason}`;
+    }
+  }
+
   const eokbuCandidates = sortCandidates(
-    applyAbsentDemotion(eokbuList, presentMap, demoteAbsent),
+    applyAbsentDemotion(refinedEokbuList, presentMap, demoteAbsent),
     presentMap,
     demoteAbsent
   );
@@ -488,13 +737,12 @@ export function buildMultiYongshin(args: {
     demoteAbsent
   );
 
-  const season = getSeasonKind(monthGz);
   const balance = calcPresentBalance(elemPct, presentMap);
 
   // ✅ 조후는 한난/조습 퍼센트와 계절 일치도를 함께 반영
   const johuWeight = pickJohuWeight(season, climate);
 
-  // ✅ 억부는 좀 더 강하게
+  // ✅ 억부는 기본 가중치
   const eokbuWeight = 1.25;
 
   // 3) 통관
@@ -518,6 +766,12 @@ export function buildMultiYongshin(args: {
   const ggApplicable = ggRaw.length > 0;
   const ggCandidates = sortCandidates(applyAbsentDemotion(ggRaw, presentMap, demoteAbsent), presentMap, demoteAbsent);
 
+  // "세력이 매우 장악했을때, 그것을 따르는게 나으니 격국용신으로 잡아주십시오."
+  // 특정 오행이 60% 이상이면 종격 가능성이 높으므로 격국 가중치 상향
+  const isDominant = strongest.pct >= 60;
+  const gyeokgukWeight = isDominant ? 1.6 : 0.55; // 지배적일 경우 억부(1.25)보다 높게
+  const gyeokgukNote = isDominant ? "세력이 매우 강하여 이를 따르는 격국(종격 등) 우선 고려" : (ggApplicable ? "억부/조후와 겹치지 않을 때 보조적으로 고려" : "격국 후보 없음");
+
   const mkMax = (xs: YongshinItem[]) => Math.max(0, ...xs.map((x) => (Number.isFinite(x.score) ? x.score : 0)));
 
   const groupsBase: Array<Omit<YongshinGroup, "maxScore" | "fitScore" | "finalScore">> = [
@@ -528,7 +782,7 @@ export function buildMultiYongshin(args: {
       priority: 1,
       weight: eokbuWeight, // ✅
       applicable: eokbuCandidates.length > 0,
-      note: "제1용신. 일간 강약/균형(억부)을 최우선으로 봄",
+      note: eokbuNote,
       candidates: eokbuCandidates,
     },
     {
@@ -571,42 +825,55 @@ export function buildMultiYongshin(args: {
       title: "격국용신",
       marker: "·",
       priority: 4,
-      weight: 0.55,
+      weight: gyeokgukWeight,
       applicable: ggApplicable,
-      note: ggApplicable
-        ? "억부/조후와 겹치지 않을 때 보조적으로 고려(내격·진신·가신 기반)"
-        : "격국 후보 없음(내격/진신/가신 판독 불가)",
+      note: gyeokgukNote,
       candidates: ggCandidates,
     },
   ];
 
   const groups: YongshinGroup[] = groupsBase
     .map((g) => {
-      const maxScore = mkMax(g.candidates);
-      const top = g.candidates[0];
-      let fitScore = 0;
+      // 1) 그룹 내 모든 후보에 대해 finalScore 계산
+      const calculatedCandidates = g.candidates.map((cand) => {
+        if (!g.applicable) return { ...cand, finalScore: 0 };
 
-      if (g.applicable && top) {
-        // fitScore = top.score * weight (부재면 추가 패널티)
-        fitScore = top.score * g.weight;
-        // ✅ 억부는 기본 1용신이라 “불균형일수록” 약간 보너스
-        if (g.kind === "EOKBU" && !balance.balancedPresent) {
-          const bonus = Math.min(35, Math.round(balance.spread * 0.9)); // spread가 클수록 보너스↑
-          fitScore += bonus;
+        let fs = cand.score * g.weight;
+
+        // 억부 보너스/패널티
+        if (g.kind === "EOKBU") {
+          if (!balance.balancedPresent) {
+            const bonus = Math.min(35, Math.round(balance.spread * 0.9));
+            fs += bonus;
+          } else {
+            fs *= 0.75;
+          }
         }
 
-        // ✅ 반대로 “삼행/사행 균형이 아주 좋은 경우”에는 억부 강제력을 낮춤
-        if (g.kind === "EOKBU" && balance.balancedPresent) {
-          fitScore *= 0.75;
+        // 부재 패널티 (demoteAbsent가 true면 이미 score가 0이지만, false일 때도 우선순위 낮춤)
+        if (cand.elNorm && !presentMap[cand.elNorm]) {
+          fs *= 0.25;
         }
-        if (top.elNorm && !presentMap[top.elNorm]) fitScore *= 0.25;
-      }
+
+        // 스케일링
+        fs = Math.min(99, fs * 0.55);
+        
+        return { ...cand, finalScore: Math.round(fs) };
+      });
+
+      // 2) finalScore 기준 재정렬
+      calculatedCandidates.sort((a, b) => (b.finalScore ?? 0) - (a.finalScore ?? 0));
+
+      const top = calculatedCandidates[0];
+      const fitScore = top?.finalScore ?? 0;
+      const maxScore = mkMax(calculatedCandidates);
 
       return {
         ...g,
         maxScore,
-        fitScore: Math.round(fitScore),
-        finalScore: Math.round(fitScore)
+        fitScore,
+        finalScore: fitScore, // 그룹 대표 점수
+        candidates: calculatedCandidates,
       };
     })
     .sort((a, b) => a.priority - b.priority);
@@ -638,5 +905,6 @@ export function buildMultiYongshin(args: {
       bestKind,
       best: bestFinal,
       groups: groupsFinal,
+    adjustedElemPct,
     };
 }
