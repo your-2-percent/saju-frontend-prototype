@@ -123,7 +123,8 @@ export type ClimatePercents = {
 function calcClimatePercentsSafe(safePillars: [string, string, string, string]): ClimatePercents {
   const { han, nan, jo, seup } = accumulateClimate(safePillars);
   const hanNanPct = ratioPct(han, nan);
-  const joSeupPct = ratioPct(seup, jo);
+  // 조습은 "0=조, 100=습" 기준으로 사용
+  const joSeupPct = ratioPct(jo, seup);
   return {
     hanNanPct: clamp01(hanNanPct),
     joSeupPct: clamp01(joSeupPct),
