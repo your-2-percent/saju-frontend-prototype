@@ -127,8 +127,8 @@ export default function ClimateBars({ natal }: { natal: Pillars4 }) {
     else if (hanNanPct < 40) comment += "차분하고 냉철한 기운이 지배적이며, ";
     else comment += "적절한 온도감을 갖춘 중화된 환경이며, ";
 
-    if (joSeupPct > 60) comment += "활동이 활발하고 결실을 맺기에 유리한 환경입니다.";
-    else if (joSeupPct < 40) comment += "수용성이 좋고 유연한 관계 맺기에 유리한 환경입니다.";
+    if (joSeupPct > 60) comment += "수용성이 좋고 유연한 관계 맺기에 유리한 환경입니다.";
+    else if (joSeupPct < 40) comment += "활동이 활발하고 결실을 맺기에 유리한 환경입니다.";
     else comment += "치우침 없는 쾌적한 심리 상태를 보입니다.";
     
     return comment;
@@ -148,14 +148,14 @@ export default function ClimateBars({ natal }: { natal: Pillars4 }) {
           rightHint="난"
           gradientClass="bg-gradient-to-r from-blue-500 via-neutral-200 to-red-500"
         />
-        {/* 조습: 0=습(Teal/Navy) → 100=조(Orange/Brown) */}
+        {/* 조습: 0=조(Orange/Brown) → 100=습(Teal/Navy) */}
         <BiBar
           label="조습 (습도)"
           percent={joSeupPct}
-          leftHint="습"
+          leftHint="조"
           midHint="중화"
-          rightHint="조"
-          gradientClass="bg-gradient-to-r from-teal-600 via-neutral-200 to-orange-600"
+          rightHint="습"
+          gradientClass="bg-gradient-to-r from-orange-600 via-neutral-200 to-teal-600"
         />
       </div>
 
