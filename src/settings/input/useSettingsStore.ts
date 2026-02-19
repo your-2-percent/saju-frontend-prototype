@@ -51,7 +51,7 @@ export const defaultSettings: Settings = {
   sinsalBase: "일지",
   sinsalBloom: false,
   exposure: "원국",
-  daewoonDisplayBase: "정밀기준",
+  daewoonDisplayBase: "표준기준",
   charType: "한자",
   thinEum: false,
   showSipSin: true,
