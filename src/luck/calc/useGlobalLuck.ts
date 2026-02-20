@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 // features/luck/useGlobalLuck.ts
 import { useMemo } from "react";
-import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
+import { getYearGanZhi, getMonthGanZhi, getDayGanZhi, getHourGanZhi } from "@/shared/domain/ganji/common";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
 import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
@@ -89,6 +89,7 @@ export function useGlobalLuck(
         se:  { gz: getYearGanZhi(calcDate, lon), at: calcDate },
         wol: { gz: getMonthGanZhi(calcDate, lon), at: calcDate },
         il:  { gz: getDayGanZhi(calcDate, rule), at: calcDate },
+        si:  { gz: getHourGanZhi(calcDate, rule), at: calcDate },
       };
     } catch {
       const now = new Date();
@@ -97,6 +98,7 @@ export function useGlobalLuck(
         se:  { gz: "", at: now },
         wol: { gz: "", at: now },
         il:  { gz: "", at: now },
+        si:  { gz: "", at: now },
       };
     }
   }, [storeRule, storeLon, ms, hourTable, daeGz, calcDate]);

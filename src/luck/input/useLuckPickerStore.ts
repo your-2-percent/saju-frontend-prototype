@@ -3,12 +3,13 @@ import { persist } from "zustand/middleware";
 import type { DayBoundaryRule } from "@/shared/type";
 import { getYearGanZhi, getMonthGanZhi, getDayGanZhi } from "@/shared/domain/ganji/common";
 
-export type LuckScope = "원국만" | "대운" | "세운" | "월운" | "일운";
+export type LuckScope = "원국만" | "대운" | "세운" | "월운" | "일운" | "시운";
 
 export interface LuckPickerState {
   date: Date;
   scope: LuckScope;
   rule: DayBoundaryRule;
+  showSiwoon: boolean;
   lon: number | null;
   dstOffsetMinutes: number;
 
@@ -19,6 +20,7 @@ export interface LuckPickerState {
   setDate: (next: Date) => void;
   setScope: (next: LuckScope) => void;
   setRule: (next: DayBoundaryRule) => void;
+  setShowSiwoon: (next: boolean) => void;
   setLon: (next: number | null) => void;
   setDstOffsetMinutes: (next: number) => void;
   setFromEvent: (ev: { at: Date; gz?: string }, scope: LuckScope) => void;
@@ -32,6 +34,7 @@ export const useLuckPickerStore = create<LuckPickerState>()(
     (set, get) => {
       const initialDate = new Date();
       const initialRule: DayBoundaryRule = "조자시/야자시";
+      const initialShowSiwoon = true;
       const initialLon: number | null = 127.5;
       const initialDstOffsetMinutes = 0;
 
@@ -48,6 +51,7 @@ export const useLuckPickerStore = create<LuckPickerState>()(
         date: initialDate,
         scope: "원국만",
         rule: initialRule,
+        showSiwoon: initialShowSiwoon,
         lon: initialLon,
         dstOffsetMinutes: initialDstOffsetMinutes,
 
@@ -104,6 +108,8 @@ export const useLuckPickerStore = create<LuckPickerState>()(
             dayGZ: getDayGanZhi(calcDate, next),
           });
         },
+
+        setShowSiwoon: (next) => set({ showSiwoon: next }),
 
         setLon: (next) => {
           const { date, rule, dstOffsetMinutes } = get();
