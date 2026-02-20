@@ -1,5 +1,5 @@
 ﻿// features/myoun/MyoUnViewer.tsx
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import {
   computeNatalPillars,
@@ -48,6 +48,9 @@ const BRANCH_TO_HOUR: Record<string, number> = {
   "해": 22,
 };
 
+const toMyounBaseRule = (mingSikType?: string): "인시" | "자시" =>
+  mingSikType === "인시" ? "인시" : "자시";
+
 // 이벤트 검색
 function lastAtOrNull<T extends { at: Date }>(arr: T[], t: Date): T | null {
   let ans: T | null = null;
@@ -66,10 +69,16 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
   const { date } = useLuckPickerStore();
   const dstOffsetMinutes = useDstOffsetMinutes();
 
-  const hourRule: DayBoundaryRule = (data.mingSikType as DayBoundaryRule) ?? "조자시/야자시";
-  const dayChangeRule: DayChangeRule =
-    (data.DayChangeRule as DayChangeRule) ??
-    (data.mingSikType === "인시" ? "인시일수론" : "자시일수론");
+  const [myounBaseRule, setMyounBaseRule] = useState<"인시" | "자시">(() =>
+    toMyounBaseRule(data.mingSikType)
+  );
+
+  useEffect(() => {
+    setMyounBaseRule(toMyounBaseRule(data.mingSikType));
+  }, [data.id, data.mingSikType]);
+
+  const hourRule: DayBoundaryRule = myounBaseRule === "인시" ? "인시" : "자시";
+  const dayChangeRule: DayChangeRule = myounBaseRule === "인시" ? "인시일수론" : "자시일수론";
 
   const solarized = useMemo(() => ensureSolarBirthDay(data), [data]);
   const birth = useMemo(
@@ -217,6 +226,21 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
           <span className="text-neutral-500 dark:text-neutral-400">(출생: {formatDate24(birth)})</span>
         </div>
       </header>
+
+      <div className="mb-3 flex items-center justify-end gap-2">
+        <label htmlFor="myoun-base-rule" className="text-xs text-neutral-600 dark:text-neutral-300">
+          묘운 기준
+        </label>
+        <select
+          id="myoun-base-rule"
+          value={myounBaseRule}
+          onChange={(e) => setMyounBaseRule(e.target.value as "인시" | "자시")}
+          className="h-30 text-xs rounded px-2 py-1 cursor-pointer bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+        >
+          <option value="인시">인시기준</option>
+          <option value="자시">자시기준</option>
+        </select>
+      </div>
 
       <div className="grid grid-cols-2 gap-2 desk:gap-4 mb-6">
         {/* 묘운뷰어 */}
