@@ -17,11 +17,17 @@ export default function IlwoonCalendar({
   year,
   month,
   selectedMonth,
+  onSelectDay,
+  showSiwoon = true,
+  onToggleSiwoon,
 }: {
   data: MyeongSik;
   year: number;
   month: number;
   selectedMonth: Date | null;
+  onSelectDay?: (dayLocal: Date) => void;
+  showSiwoon?: boolean;
+  onToggleSiwoon?: () => void;
 }) {
   const dstOffsetMinutes = useDstOffsetMinutes();
   const input = useIlwoonCalendarInput();
@@ -40,27 +46,41 @@ export default function IlwoonCalendar({
     <div className="w-full max-w-[800px] mx-auto mb-4 rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 overflow-hidden">
       {/* 헤더 */}
       <div className="flex justify-center items-center px-2 desk:px-4 py-2 bg-neutral-50 dark:bg-neutral-800/60">
-        <div className="text-center text-[11px] desk:text-sm font-semibold text-neutral-700 dark:text-neutral-200">
-          {calc.cur?.name ? (
-            <>
-              {calc.cur.name} {" ~ "}
-              {calc.next?.name ?? ""}
-            </>
-          ) : (
-            `${year}년 ${month}월`
-          )}
-          {calc.termMarks.length > 0 && (
-            <div className="mt-0.5 text-[10px] desk:text-xs font-normal text-neutral-500 dark:text-neutral-400">
-              [
-              {calc.termMarks.map((t, i) => (
-                <span key={`${t.name}_${t.date.getTime()}_${i}`}>
-                  {t.name} {formatStartKST(t.date)}
-                  {i < calc.termMarks.length - 1 ? " · " : ""}
-                </span>
-              ))}
-              ]
-            </div>
-          )}
+        <div className="grid w-full grid-cols-[1fr_auto_1fr] items-start">
+          <div />
+          <div className="text-center text-[11px] desk:text-sm font-semibold text-neutral-700 dark:text-neutral-200">
+            {calc.cur?.name ? (
+              <>
+                {calc.cur.name} {" ~ "}
+                {calc.next?.name ?? ""}
+              </>
+            ) : (
+              `${year}년 ${month}월`
+            )}
+            {calc.termMarks.length > 0 && (
+              <div className="mt-0.5 text-[10px] desk:text-xs font-normal text-neutral-500 dark:text-neutral-400">
+                [
+                {calc.termMarks.map((t, i) => (
+                  <span key={`${t.name}_${t.date.getTime()}_${i}`}>
+                    {t.name} {formatStartKST(t.date)}
+                    {i < calc.termMarks.length - 1 ? " · " : ""}
+                  </span>
+                ))}
+                ]
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end">
+            {onToggleSiwoon ? (
+              <button
+                type="button"
+                onClick={onToggleSiwoon}
+                className="h-30 px-2 text-[10px] desk:text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800"
+              >
+                {showSiwoon ? "시운 안보이기" : "시운 보이기"}
+              </button>
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -137,7 +157,10 @@ export default function IlwoonCalendar({
             return (
               <div
                 key={d.toISOString()}
-                onClick={() => save.handleDayClick(dayBase)}
+                onClick={() => {
+                  save.handleDayClick(dayBase);
+                  onSelectDay?.(dayBase);
+                }}
                 className={`space-y-1 bg-white dark:bg-neutral-900 flex flex-col items-center justify-start p-1 text-xs border cursor-pointer ${
                   isActive ? "border-yellow-500" : "border-neutral-200 dark:border-neutral-800"
                 }`}

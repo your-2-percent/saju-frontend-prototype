@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
 import DaewoonList from "@/features/luck/ui/DaewoonList";
 import SewoonList from "@/luck/ui/SewoonList";
 import WolwoonList from "@/luck/ui/WolwoonList";
 import IlwoonCalendar from "@/luck/ui/IlwoonCalendar";
+import SiwoonList from "@/luck/ui/SiwoonList";
 import { useDaewoonList } from "@/features/luck/useDaewoonList";
 import { getSewoonListInDaewoon } from "@/luck/calc/useSewoonList";
 import { useGlobalLuck } from "@/luck/calc/useGlobalLuck";
@@ -14,13 +15,21 @@ import type { DayBoundaryRule } from "@/shared/type";
 export default function UnViewer({ data }: { data: MyeongSik }) {
   const dstOffsetMinutes = useDstOffsetMinutes();
   const daeList = useDaewoonList(data, data.mingSikType as DayBoundaryRule, 100, dstOffsetMinutes);
+  const { date, showSiwoon, setShowSiwoon } = useLuckPickerStore();
 
   const [activeDaeIndex, setActiveDaeIndex] = useState<number | null>(null);
   const [ilwoonTarget, setIlwoonTarget] = useState<{ year: number; month: number } | null>(null);
 
-  // 처음에는 일운까지 전부 보이게
-  const [visibleLevel, setVisibleLevel] = useState<"dae" | "se" | "wol" | "il">("il");
+  // 처음에는 시운 저장 상태에 따라 기본 레벨 결정
+  const [visibleLevel, setVisibleLevel] = useState<"dae" | "se" | "wol" | "il" | "si">(
+    showSiwoon ? "si" : "il"
+  );
   const [selectedMonth, setSelectedMonth] = useState<Date | null>(null);
+  const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (!showSiwoon && visibleLevel === "si") setVisibleLevel("il");
+  }, [showSiwoon, visibleLevel]);
 
   // 로드 시 현재 대운 자동 선택
   useEffect(() => {
@@ -34,8 +43,10 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
   }, [daeList]);
 
   // ✅ activeYear + 일운 타겟 결정
-  const resolveDaeIndex = (idx: number) =>
-    idx <= 0 && daeList.length > 1 ? 1 : idx;
+  const resolveDaeIndex = useCallback(
+    (idx: number) => (idx <= 0 && daeList.length > 1 ? 1 : idx),
+    [daeList.length]
+  );
 
   useEffect(() => {
     if (activeDaeIndex === null) return;
@@ -63,10 +74,9 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
     if (seIndex !== -1) {
       setIlwoonTarget({ year: now.getFullYear(), month: now.getMonth() });
     }
-  }, [activeDaeIndex, daeList]);
+  }, [activeDaeIndex, daeList, resolveDaeIndex]);
 
   const luck = useGlobalLuck(data, undefined, undefined, { dstOffsetMinutes });
-  const { date } = useLuckPickerStore();
   const activeYear = date.getMonth() + 1 === 1
     ? date.getFullYear() - 1
     : date.getFullYear();
@@ -89,7 +99,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
             !!it && it.at instanceof Date && !Number.isNaN(it.at.getTime())
         )
       : [];
-  }, [daeList, luck?.dae]);
+  }, [daeList, luck?.dae, resolveDaeIndex]);
 
   return (
     <div className="w-full space-y-4">
@@ -99,7 +109,7 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       />
 
       {/* 세운 */}
-      {visibleLevel === "se" || visibleLevel === "wol" || visibleLevel === "il" ? (
+      {visibleLevel === "se" || visibleLevel === "wol" || visibleLevel === "il" || visibleLevel === "si" ? (
         <SewoonList
           data={data}
           list={seList}
@@ -110,12 +120,13 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       ) : null}
 
       {/* 월운 */}
-      {visibleLevel === "wol" || visibleLevel === "il" ? (
+      {visibleLevel === "wol" || visibleLevel === "il" || visibleLevel === "si" ? (
         <WolwoonList
           data={data}
           activeYear={activeYear}
           onSelect={(y, m) => {
             setIlwoonTarget({ year: y, month: m });
+            setSelectedDay(null);
             setVisibleLevel("il"); // 월운 클릭 → 일운까지 보임
           }}
           onSelectMonth={setSelectedMonth}
@@ -123,14 +134,26 @@ export default function UnViewer({ data }: { data: MyeongSik }) {
       ) : null}
 
       {/* 일운 */}
-      {visibleLevel === "il" && ilwoonTarget && (
+      {(visibleLevel === "il" || visibleLevel === "si") && ilwoonTarget && (
         <IlwoonCalendar
           data={data}
           year={ilwoonTarget.year}
           month={ilwoonTarget.month + 1}
           selectedMonth={selectedMonth}
+          showSiwoon={showSiwoon}
+          onToggleSiwoon={() => {
+            const next = !showSiwoon;
+            setShowSiwoon(next);
+            setVisibleLevel(next ? "si" : "il");
+          }}
+          onSelectDay={(day) => {
+            setSelectedDay(day);
+            setVisibleLevel(showSiwoon ? "si" : "il");
+          }}
         />
       )}
+
+      {visibleLevel === "si" && showSiwoon && <SiwoonList data={data} selectedDay={selectedDay} />}
     </div>
   );
 }

@@ -52,7 +52,7 @@ export default function PromptCopyCard({
   const isPromptLocked = model.promptAccess !== "full";
   const lockTitle = isPromptLocked ? "프리 플랜에서는 프롬프트 사용이 불가합니다. 🔒" : undefined;
 
-  //const canCopyInfo = !isPromptLocked && model.canCopyInfo;
+  const canCopyInfo = !isPromptLocked && model.canCopyInfo;
   const canCopyAll = !isPromptLocked && model.canCopyAll;
   const geminiUrl = "https://gemini.google.com/app";
   const chatGptUrl = "https://chatgpt.com/";
@@ -163,7 +163,7 @@ export default function PromptCopyCard({
 
       <div className="flex justify-end">
         <div className="flex flex-col desk:flex-row gap-2 w-full desk:w-auto">
-          {/* <button
+          <button
             type="button"
             onClick={model.onCopyInfoOnly}
             disabled={!canCopyInfo}
@@ -178,8 +178,8 @@ export default function PromptCopyCard({
                 : "bg-orange-600/70 text-white border-orange-600/50",
             ].join(" ")}
           >
-            {model.copiedInfo ? "복사됨" : `명식 정보만 복사${!canCopyInfo ? " 🔒" : ""}`}
-          </button> */}
+            {model.copiedInfo ? "복사됨" : `명식정보만복사${!canCopyInfo ? " 🔒" : ""}`}
+          </button>
 
           <button
             type="button"
