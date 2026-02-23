@@ -58,10 +58,17 @@ export default function PromptCopyCard({
   const chatGptUrl = "https://chatgpt.com/";
 
   const handleCopyAndMove = async (url: string) => {
+    if (typeof window === "undefined") return;
+    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
+
     await model.onCopyAll();
 
-    if (typeof window === "undefined") return;
-    window.open(url, "_blank", "noopener,noreferrer");
+    if (popup && !popup.closed) {
+      popup.location.href = url;
+      return;
+    }
+
+    window.location.href = url;
   };
 
   return (
