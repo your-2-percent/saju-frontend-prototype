@@ -75,7 +75,7 @@ export default function IlwoonCalendar({
               <button
                 type="button"
                 onClick={onToggleSiwoon}
-                className="h-30 px-2 text-[10px] desk:text-xs rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                className="h-9 desk:h-30 px-3 desk:px-2 text-xs desk:text-xs font-medium rounded-md desk:rounded border border-neutral-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-700 dark:text-neutral-200 cursor-pointer hover:bg-neutral-100 dark:hover:bg-neutral-800"
               >
                 {showSiwoon ? "시운 안보이기" : "시운 보이기"}
               </button>

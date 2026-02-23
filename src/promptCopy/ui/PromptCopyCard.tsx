@@ -57,18 +57,19 @@ export default function PromptCopyCard({
   const geminiUrl = "https://gemini.google.com/app";
   const chatGptUrl = "https://chatgpt.com/";
 
-  const handleCopyAndMove = async (url: string) => {
-    if (typeof window === "undefined") return;
-    const popup = window.open("about:blank", "_blank", "noopener,noreferrer");
-
-    await model.onCopyAll();
-
-    if (popup && !popup.closed) {
-      popup.location.href = url;
-      return;
+  const handleCopyAndMove = (url: string) => {
+    if (typeof document !== "undefined") {
+      const link = document.createElement("a");
+      link.href = url;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.style.display = "none";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    window.location.href = url;
+    void model.onCopyAll();
   };
 
   return (

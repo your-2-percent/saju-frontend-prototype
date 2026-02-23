@@ -235,7 +235,7 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
           id="myoun-base-rule"
           value={myounBaseRule}
           onChange={(e) => setMyounBaseRule(e.target.value as "인시" | "자시")}
-          className="h-30 text-xs rounded px-2 py-1 cursor-pointer bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+          className="h-9 desk:h-30 text-sm desk:text-xs rounded-md desk:rounded px-3 desk:px-2 py-1.5 desk:py-1 font-medium cursor-pointer bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
         >
           <option value="인시">인시기준</option>
           <option value="자시">자시기준</option>
