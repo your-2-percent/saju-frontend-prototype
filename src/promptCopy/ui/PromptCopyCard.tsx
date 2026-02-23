@@ -177,7 +177,7 @@ export default function PromptCopyCard({
             disabled={!canCopyInfo}
             title={!canCopyInfo ? lockTitle : undefined}
             className={[
-              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap border",
+              "w-full desk:w-auto h-30 px-3 py-1 rounded-md text-xs whitespace-nowrap border",
               canCopyInfo ? "cursor-pointer" : "cursor-not-allowed opacity-50",
               model.copiedInfo
                 ? "bg-green-600 text-white border-green-600"
@@ -195,7 +195,7 @@ export default function PromptCopyCard({
             disabled={!canCopyAll}
             title={!canCopyAll ? lockTitle : undefined}
             className={[
-              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              "w-full desk:w-auto px-3 h-30 py-1 rounded-md text-xs whitespace-nowrap",
               canCopyAll ? "cursor-pointer" : "cursor-not-allowed opacity-50",
               model.copiedAll
                 ? "bg-green-600 text-white"
@@ -211,7 +211,7 @@ export default function PromptCopyCard({
             disabled={!canCopyAll}
             title={!canCopyAll ? lockTitle : undefined}
             className={[
-              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              "w-full desk:w-auto px-3 h-30 py-1 rounded-md text-xs whitespace-nowrap",
               canCopyAll
                 ? "cursor-pointer bg-blue-600 text-white dark:bg-blue-500"
                 : "cursor-not-allowed opacity-50 bg-blue-600 text-white dark:bg-blue-500",
@@ -226,7 +226,7 @@ export default function PromptCopyCard({
             disabled={!canCopyAll}
             title={!canCopyAll ? lockTitle : undefined}
             className={[
-              "w-full desk:w-auto px-3 py-1 rounded-md text-xs whitespace-nowrap",
+              "w-full desk:w-auto px-3 h-30 py-1 rounded-md text-xs whitespace-nowrap",
               canCopyAll
                 ? "cursor-pointer bg-emerald-600 text-white dark:bg-emerald-500"
                 : "cursor-not-allowed opacity-50 bg-emerald-600 text-white dark:bg-emerald-500",
