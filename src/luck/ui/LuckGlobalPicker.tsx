@@ -121,7 +121,7 @@ export default function LuckGlobalPicker({
                 setDraftDateTime(toDateTimeLocal(safeDate));
               }
             }}
-            className="h-30 px-2 py-1 text-xs border rounded bg-white dark:bg-neutral-700"
+            className="h-9 desk:h-30 px-3 desk:px-2 py-1.5 desk:py-1 text-sm desk:text-xs font-medium border rounded-md desk:rounded bg-white dark:bg-neutral-700"
           />
         </label>
       </div>
