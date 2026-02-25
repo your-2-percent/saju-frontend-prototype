@@ -17,9 +17,11 @@ type Props = {
   showNabeum: boolean;
   hiddenMode: "all" | "main";
   hiddenStemMode: "classic" | "hgc";
-  calcUnseong: (branch: string) => string | null;
+  calcUnseong: (branch: string, stem?: string) => string | null;
   calcShinsal: (branch: string) => string | null;
   highlightMap?: Record<string, { stem: boolean; branch: boolean }>;
+  isDayMasterMode?: boolean;
+  isDetailMode?: boolean;
 };
 
 export function SajuPillarsPanel({
@@ -37,6 +39,8 @@ export function SajuPillarsPanel({
   calcUnseong,
   calcShinsal,
   highlightMap = {},
+  isDayMasterMode = false,
+  isDetailMode = false,
 }: Props) {
   const size = isDesktop ? "regular" : "compact";
   const titleClass = isDesktop
@@ -46,8 +50,9 @@ export function SajuPillarsPanel({
 
   return (
     <div className="flex-2 rounded-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow">
-      <div className={titleClass}>
+      <div className={`${titleClass} flex justify-between items-center`}>
         <b>원국</b>
+        {isDayMasterMode && <span className="text-[10px] text-indigo-500 animate-pulse">● 일간 중심 연결</span>}
       </div>
       <div className={isDesktop ? "pb-2" : "px-1 pb-2"}>
         <div className={gridClass}>
@@ -72,6 +77,8 @@ export function SajuPillarsPanel({
               size={size}
               highlightedStem={highlight.stem}
               highlightedBranch={highlight.branch}
+              isDayMasterMode={isDayMasterMode}
+              isDetailMode={isDetailMode}
             />
           );
           })}

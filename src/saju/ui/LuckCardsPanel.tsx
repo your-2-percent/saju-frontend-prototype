@@ -16,7 +16,7 @@ type Props = {
   showNabeum: boolean;
   hiddenMode: "all" | "main";
   hiddenStemMode: "classic" | "hgc";
-  calcUnseong: (branch: string) => string | null;
+  calcUnseong: (branch: string, stem?: string) => string | null;
   calcShinsal: (branch: string) => string | null;
   daeGz?: string | null;
   seGz?: string | null;

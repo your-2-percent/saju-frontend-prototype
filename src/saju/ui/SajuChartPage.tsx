@@ -3,6 +3,7 @@ import { useMediaQuery } from "react-responsive";
 import type { MyeongSik } from "@/shared/lib/storage";
 import type { DayBoundaryRule } from "@/shared/type";
 import type { Stem10sin, Branch10sin } from "@/shared/domain/ganji/utils";
+import { getSipSin } from "@/shared/domain/ganji/utils";
 import { lunarToSolarStrict } from "@/shared/lib/calendar/lunar";
 import { isDST } from "@/shared/lib/core/timeCorrection";
 import { getTwelveUnseong, getTwelveShinsalBySettings } from "@/shared/domain/ganji/twelve";
@@ -76,6 +77,21 @@ function formatBirthDisplayWithLunar(
   }
 }
 
+const STEMS = ["갑", "을", "병", "정", "무", "기", "경", "신", "임", "계"];
+const TEN_GODS = ["비견", "겁재", "식신", "상관", "편재", "정재", "편관", "정관", "편인", "정인"] as const;
+
+function getInjongStem(dayStem: string, targetTenGod: string): string {
+  const idx = STEMS.indexOf(dayStem);
+  if (idx === -1) return dayStem;
+  
+  for (const s of STEMS) {
+    if (getSipSin(dayStem as Stem10sin, { stem: s as Stem10sin }) === targetTenGod) {
+      return s;
+    }
+  }
+  return dayStem;
+}
+
 export default function SajuChart({ data, hourTable }: Props) {
   const { date, setDstOffsetMinutes } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
@@ -139,6 +155,11 @@ export default function SajuChart({ data, hourTable }: Props) {
   const [useInsi, setUseInsi] = useState(() => isInsiRule(data.mingSikType));
   const clearHourPrediction = useHourPredictionStore((s) => s.clearManualHour);
 
+  const [isDayMasterMode, setIsDayMasterMode] = useState(true);
+  const [fateLabTarget, setFateLabTarget] = useState<string | null>(null);
+  const [fateLabContext, setFateLabContext] = useState<"year" | "day" | "month" | "hour" | null>(null);
+  const [isDetailMode, setIsDetailMode] = useState(false);
+
   useEffect(() => {
     setManualHour(null);
     clearHourPrediction();
@@ -189,8 +210,19 @@ export default function SajuChart({ data, hourTable }: Props) {
       ? effectiveDay.branch
       : parsed.year.branch) as Branch10sin;
 
-  const calcUnseong = (branch: string) =>
-    settings.showSibiUnseong ? getTwelveUnseong(dayStem, branch) : null;
+  const calcUnseong = useCallback((branch: string, pillarStem?: string) => {
+    if (!settings.showSibiUnseong) return null;
+    
+    let targetStem = dayStem; // Default Bong-beop (Day Stem)
+
+    if (isDayMasterMode) {
+      targetStem = dayStem;
+    } else {
+      targetStem = (pillarStem as Stem10sin) || dayStem;
+    }
+
+    return getTwelveUnseong(targetStem, branch);
+  }, [settings.showSibiUnseong, dayStem, isDayMasterMode]);
 
   const calcShinsal = (targetBranch: string) =>
     settings.showSibiSinsal
@@ -439,6 +471,27 @@ export default function SajuChart({ data, hourTable }: Props) {
     return next;
   }, [activeRelationTag, tagKindMap]);
   
+  // Fate Lab: 보유 육친 확인
+  const existingTenGods = useMemo(() => {
+    const set = new Set<string>();
+    const check = (s?: string) => {
+      if(s) set.add(getSipSin(dayStem, { stem: s as Stem10sin }));
+    };
+    // 천간
+    check(parsed.year.stem);
+    check(parsed.month.stem);
+    check(hourData?.stem);
+    // 지지 (지장간 포함 여부는 기획에 따라 다르나 보통 본기 기준)
+    // 여기서는 간단히 지지 본기 십신 체크
+    const checkBranch = (b?: string) => {
+      if(b) set.add(getSipSin(dayStem, { branch: b as Branch10sin }));
+    };
+    checkBranch(parsed.year.branch);
+    checkBranch(parsed.month.branch);
+    checkBranch(effectiveDay.branch);
+    checkBranch(hourData?.branch);
+    return set;
+  }, [dayStem, parsed, effectiveDay, hourData]);
 
   return (
     <div className="w-full max-w-[640px] mx-auto">
@@ -476,6 +529,38 @@ export default function SajuChart({ data, hourTable }: Props) {
           {data.birthPlace?.name ? `출생지: ${data.birthPlace.name}` : ""} / 기준 경도: {lon.toFixed(2)}° · {rule} 기준
         </div>
       </div>
+
+      <div className="px-2 mb-2 flex justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={isDetailMode} 
+              onChange={(e) => setIsDetailMode(e.target.checked)}
+              className="w-3 h-3 accent-indigo-600"
+            />
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">십이운성 상세보기</span>
+          </label>
+        </div>
+
+        {isDetailMode && (
+          <button
+            onClick={() => setIsDayMasterMode(!isDayMasterMode)}
+            className={`flex items-center h-30 gap-2 px-3 rounded-full text-xs font-bold transition-all shadow-sm border cursor-pointer ${
+              isDayMasterMode
+                ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-900"
+                : "bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700"
+            }`}
+          >
+            <span className="text-md">{isDayMasterMode ? "●" : "○"}</span>
+            {isDayMasterMode ? "일간 중심 모드 (봉법)" : "간지 중심 모드 (거법)"}
+          </button>
+        )}
+      </div>
+
+      {isDetailMode && <p className="mb-2 text-right text-xs text-neutral-500 dark:text-neutral-400">
+        좌법은 지장간을 클릭하면 볼 수 있습니다
+      </p>}
 
       <div
         className={`grid gap-2 p-2 desk:p-0 ${
@@ -524,6 +609,8 @@ export default function SajuChart({ data, hourTable }: Props) {
           calcUnseong={calcUnseong}
           calcShinsal={calcShinsal}
           highlightMap={activeHighlightMap}
+          isDayMasterMode={isDayMasterMode}
+          isDetailMode={isDetailMode}
           pillars={[
             { key: "hour", label: "시주", data: hourData },
             { key: "day", label: "일주", data: effectiveDay },
@@ -545,6 +632,130 @@ export default function SajuChart({ data, hourTable }: Props) {
           onSelectHour={handleManualHourSelect}
         />
       )}
+
+      {isDetailMode && <div className="mt-2 mb-6 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-lg">🧪</span>
+          <h3 className="font-bold text-sm text-neutral-800 dark:text-neutral-200">인종법 (가상 육친 대입)</h3>
+        </div>
+        <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3">
+          내 사주에 없는 글자가 들어오면 어떤 힘을 받을까요? 아이콘을 눌러 확인해보세요.
+        </p>
+        
+        <div className="flex flex-wrap gap-2">
+          {TEN_GODS.map((tg) => {
+            const isMissing = !existingTenGods.has(tg);
+            const isSelected = fateLabTarget === tg;
+            return (
+              <button
+                key={tg}
+                onClick={() => {
+                  setFateLabTarget(isSelected ? null : tg);
+                  setFateLabContext(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs border transition-all cursor-pointer ${
+                  isSelected
+                    ? "bg-purple-600 text-white border-purple-600 shadow-md transform scale-105"
+                    : isMissing
+                    ? "bg-white text-neutral-600 border-dashed border-neutral-400 font-bold hover:border-purple-400 hover:text-purple-500 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-600"
+                    : "bg-neutral-50 text-neutral-400 border-transparent hover:bg-neutral-100 dark:bg-neutral-800/50 dark:text-neutral-500"
+                }`}
+                title={isMissing ? "미보유 (가상 대입)" : "보유중 (가상 대입)"}
+              >
+                {tg}
+              </button>
+            );
+          })}
+        </div>
+
+        {fateLabTarget && (
+          <div className="mt-4 p-3 bg-white dark:bg-neutral-800 rounded-lg border border-purple-100 dark:border-purple-900/30 animate-fadeIn">
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-neutral-600 dark:text-neutral-400 text-center mb-2">
+                어느 영역에서 확인하시겠습니까?
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setFateLabContext("year")}
+                  className={`flex items-center gap-3 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                    fateLabContext === "year"
+                      ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 ring-1 ring-purple-200 dark:ring-purple-800"
+                      : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  <span className="text-lg">🌳</span>
+                  <div>
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200">근본과 배경 (연지)</div>
+                    <div className="text-[10px] text-neutral-500">"초년운과 가문은 어떠한가?"</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setFateLabContext("day")}
+                  className={`flex items-center gap-3 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                    fateLabContext === "day"
+                      ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 ring-1 ring-purple-200 dark:ring-purple-800"
+                      : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  <span className="text-lg">🏠</span>
+                  <div>
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200">나의 기본 역량 (일지)</div>
+                    <div className="text-[10px] text-neutral-500">"내가 이 기운을 다룰 능력이 있는가?"</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setFateLabContext("month")}
+                  className={`flex items-center gap-3 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                    fateLabContext === "month"
+                      ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 ring-1 ring-purple-200 dark:ring-purple-800"
+                      : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  <span className="text-lg">🏢</span>
+                  <div>
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200">사회적 환경 (월지)</div>
+                    <div className="text-[10px] text-neutral-500">"세상이 나에게 이 기운을 허락하는가?"</div>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setFateLabContext("hour")}
+                  className={`flex items-center gap-3 p-2 rounded-lg border text-left transition-colors cursor-pointer ${
+                    fateLabContext === "hour"
+                      ? "bg-purple-50 border-purple-200 dark:bg-purple-900/20 dark:border-purple-800 ring-1 ring-purple-200 dark:ring-purple-800"
+                      : "border-neutral-200 dark:border-neutral-700 hover:bg-neutral-50 dark:hover:bg-neutral-700"
+                  }`}
+                >
+                  <span className="text-lg">👨‍👧‍👧</span>
+                  <div>
+                    <div className="text-xs font-bold text-neutral-800 dark:text-neutral-200">미래와 방향성 (시지)</div>
+                    <div className="text-[10px] text-neutral-500">"미래에 이 기운이 남아있는가?"</div>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {fateLabContext && (
+              <div className="mt-4 pt-3 border-t border-neutral-100 dark:border-neutral-700 animate-fadeIn">
+                {(() => {
+                  const targetStem = getInjongStem(dayStem, fateLabTarget) as Stem10sin;
+                  const targetBranch = fateLabContext === 'day' ? effectiveDay.branch : fateLabContext === 'month' ? parsed.month.branch : fateLabContext === 'year' ? parsed.year.branch : hourData?.branch;
+                  
+                  if (!targetBranch) return <div className="text-xs text-neutral-500 text-center">해당 지지 정보를 알 수 없습니다.</div>;
+
+                  const unseong = getTwelveUnseong(targetStem, targetBranch as Branch10sin);
+                  const contextDesc = fateLabContext === 'day' ? "나의 능력에서는" : fateLabContext === 'month' ? "환경적 지원에서는" : fateLabContext === 'year' ? "가문의 배경에서는" : "미래의 기운에서는";
+
+                  return (
+                    <div className="text-center space-y-2">
+                      <div className="text-xs text-white">{contextDesc} <strong className="text-amber-300">{unseong}</strong>의 상태입니다.</div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+      </div>}
 
       <SajuRelationPanels
         isDesktop={isDesktop}
