@@ -74,7 +74,6 @@ export function PillarCard({
     >
       <div className={`${headerClass} bg-neutral-50 dark:bg-neutral-800/60 text-neutral-600 dark:text-neutral-300 transition-colors ${isDayMasterMode ? "bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 font-bold" : ""}`}>
         {title}
-        {isDayMasterMode && <span className="text-[9px] ml-1 opacity-70">봉법</span>}
       </div>
       <div className={`${bodyClass} flex flex-col items-center gap-1 relative z-10`}>
         {data ? (
