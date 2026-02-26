@@ -158,7 +158,7 @@ export default function SajuChart({ data, hourTable }: Props) {
   const [isDayMasterMode, setIsDayMasterMode] = useState(true);
   const [fateLabTarget, setFateLabTarget] = useState<string | null>(null);
   const [fateLabContext, setFateLabContext] = useState<"year" | "day" | "month" | "hour" | null>(null);
-  const [isDetailMode, setIsDetailMode] = useState(false);
+  const [isDetailMode, setIsDetailMode] = useState(true);
 
   useEffect(() => {
     setManualHour(null);
