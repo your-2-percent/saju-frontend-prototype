@@ -148,7 +148,7 @@ export function PillarCard({
               const isWeak = ["절", "태", "사", "묘"].includes(unseong);
               
               return (
-                <div key={`${hStem}-${idx}`} className="flex px-0.5 gap-0.5 items-center justify-between text-xs">
+                <div key={`${hStem}-${idx}`} className="flex px-1 desk:px-2 gap-0.5 items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     <span className="w-4 text-center font-serif font-bold">{hStem}</span>
                   </div>
