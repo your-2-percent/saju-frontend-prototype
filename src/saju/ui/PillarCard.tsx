@@ -132,7 +132,7 @@ export function PillarCard({
 
       {isDetailMode && data && (
         <div 
-          className={`absolute inset-x-0 bottom-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800 p-2 z-20 transition-transform duration-300 ease-out transform cursor-pointer ${isHovered ? "translate-y-0" : "translate-y-full"}`}
+          className={`absolute inset-x-0 bottom-0 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-sm border-t border-neutral-100 dark:border-neutral-800 py-2 z-20 transition-transform duration-300 ease-out transform cursor-pointer ${isHovered ? "translate-y-0" : "translate-y-full"}`}
           onClick={(e) => {
             e.stopPropagation();
             setIsHovered(false);
@@ -153,10 +153,9 @@ export function PillarCard({
                     <span className="w-4 text-center font-serif font-bold">{hStem}</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className={`text-[10px] ${isStrong ? "text-red-500 font-bold" : isWeak ? "text-neutral-400" : "text-neutral-700 dark:text-neutral-300"}`}>
+                    <span className={`text-[10px] text-nowrap ${isStrong ? "text-red-500 font-bold" : isWeak ? "text-neutral-400" : "text-neutral-700 dark:text-neutral-300"}`}>
                       {unseong}
                     </span>
-                    <div className={`w-1.5 h-1.5 rounded-full ${isStrong ? "bg-red-500" : isWeak ? "bg-neutral-300" : "bg-green-500"}`} />
                   </div>
                 </div>
               );
