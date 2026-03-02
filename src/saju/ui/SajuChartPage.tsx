@@ -672,27 +672,6 @@ export default function SajuChart({ data, hourTable }: Props) {
         </div>
       </div>
 
-      <div className="px-2 mb-2 flex justify-between gap-2">
-
-        {isDetailMode && (
-          <button
-            onClick={() => setIsDayMasterMode(!isDayMasterMode)}
-            className={`flex items-center h-30 gap-2 px-3 rounded-full text-xs font-bold transition-all shadow-sm border cursor-pointer ${
-              isDayMasterMode
-                ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-900"
-                : "bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700"
-            }`}
-          >
-            <span className="text-md">{isDayMasterMode ? "●" : "○"}</span>
-            {isDayMasterMode ? "일간 중심 모드 (봉법)" : "간지 중심 모드 (거법)"}
-          </button>
-        )}
-      </div>
-
-      {isDetailMode && <p className="mb-2 text-right text-xs text-neutral-500 dark:text-neutral-400">
-        좌법은 지장간을 클릭하면 볼 수 있습니다
-      </p>}
-
       {showRelationBox && (
         <RelationChipBar
           chipGroups={mergedRelationChips}
@@ -757,6 +736,7 @@ export default function SajuChart({ data, hourTable }: Props) {
           isDayMasterMode={isDayMasterMode}
           isDetailMode={isDetailMode}
           onToggleDetailMode={setIsDetailMode}
+          onToggleDayMasterMode={() => setIsDayMasterMode((prev) => !prev)}
           pillars={[
             { key: "hour", label: "시주", data: hourData },
             { key: "day", label: "일주", data: effectiveDay },
