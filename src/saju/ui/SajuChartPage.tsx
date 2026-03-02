@@ -16,9 +16,8 @@ import { useDstStore } from "@/saju/input/useDstStore";
 import {
   buildAllRelationTags,
   buildHarmonyTags,
-  type RelationTags,
+  mergeRelationTags,
 } from "@/analysisReport/calc/logic/relations";
-import { BUCKET_KEYS } from "@/analysisReport/calc/logic/relations/buckets";
 import { buildShinsalTags } from "@/analysisReport/calc/logic/shinsal";
 import { mapEra } from "@/shared/domain/ganji/era";
 import { shiftDayGZ } from "@/shared/domain/ganji/common";
@@ -433,12 +432,7 @@ export default function SajuChart({ data, hourTable }: Props) {
     });
 
     const natalTags = buildHarmonyTags([...natal], { fillNone: false });
-    const merged: RelationTags = { ...luckTags };
-    for (const key of BUCKET_KEYS) {
-      merged[key] = Array.from(new Set([...(merged[key] ?? []), ...(natalTags[key] ?? [])]));
-    }
-
-    return merged;
+    return mergeRelationTags(luckTags, natalTags);
   }, [parsed, effectiveDay, hourData, daeGz, seGz, wolGz, relationApplyLevel]);
 
   const relationChips = useMemo(() => {

@@ -1,6 +1,8 @@
 ﻿// features/AnalysisReport/logic/relations/buckets.ts
 
 import type { RelationTags } from "./types";
+import { SANHE_GROUPS } from "./groups";
+import { BR_BANHAP_LABELS } from "./tables";
 
 export function isNoneTag(s: string | undefined | null): boolean {
   if (!s) return false;
@@ -43,6 +45,41 @@ export function suppressPairHyeongWhenTriad(hyeongTags: string[]): string[] {
   });
 }
 
+// 지지삼합이 성립한 그룹의 반합은 표시하지 않음
+function suppressBanhapWhenSamhap(banhapTags: string[], samhapTags: string[]): string[] {
+  if (!banhapTags || banhapTags.length === 0) return banhapTags;
+  if (!samhapTags || samhapTags.length === 0) return banhapTags;
+
+  const samhap = Array.from(new Set(samhapTags.map((t) => t?.normalize("NFKC") ?? ""))).filter(Boolean);
+  const banhap = Array.from(new Set(banhapTags.map((t) => t?.normalize("NFKC") ?? ""))).filter(Boolean);
+
+  const activeSanhapGroups = new Set(
+    SANHE_GROUPS
+      .filter((g) => samhap.some((t) => t.includes(`${g.name}삼합`) || t.includes(`삼합(${g.name})`)))
+      .map((g) => g.name),
+  );
+  if (activeSanhapGroups.size === 0) return banhap;
+
+  const banhapLabelsByGroup = new Map<string, Set<string>>();
+  for (const g of SANHE_GROUPS) {
+    const labels = BR_BANHAP_LABELS
+      .filter(({ pair: [a, b] }) => g.members.includes(a) && g.members.includes(b))
+      .map(({ label }) => label);
+    banhapLabelsByGroup.set(g.name, new Set(labels));
+  }
+
+  return banhap.filter((tag) => {
+    for (const groupName of activeSanhapGroups) {
+      const labels = banhapLabelsByGroup.get(groupName);
+      if (!labels) continue;
+      for (const lab of labels) {
+        if (tag.includes(lab)) return false;
+      }
+    }
+    return true;
+  });
+}
+
 export function finalizeBuckets(out: RelationTags): RelationTags {
   for (const k of BUCKET_KEYS) {
     const raw = (out[k] ?? []) as string[];
@@ -54,6 +91,7 @@ export function finalizeBuckets(out: RelationTags): RelationTags {
   }
 
   out.jijiHyeong = suppressPairHyeongWhenTriad(out.jijiHyeong);
+  out.jijiBanhap = suppressBanhapWhenSamhap(out.jijiBanhap, out.jijiSamhap);
 
   return out;
 }
