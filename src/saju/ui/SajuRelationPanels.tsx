@@ -54,6 +54,7 @@ const PILLAR_CONFIG: Record<string, { short: string; color: string }> = {
   대운: { short: "대운", color: "bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300" },
   세운: { short: "세운", color: "bg-pink-100 dark:bg-pink-900/40 text-pink-700 dark:text-pink-300" },
   월운: { short: "월운", color: "bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300" },
+  일운: { short: "일운", color: "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300" },
 };
 
 // 천간 전용 글자 (신은 지지와 겹치므로 제외)
@@ -97,12 +98,12 @@ function parseRelationTag(tag: string): ParsedTag {
   return { pillars, label, type, category, raw: tag };
 }
 
-const LUCK_PILLARS = new Set(["대운", "세운", "월운"]);
+const LUCK_PILLARS = new Set(["대운", "세운", "월운", "일운"]);
 
 // 일 > 월 > 시 > 연 > 운 순서
 const PILLAR_PRIORITY: Record<string, number> = {
   일: 0, 월: 1, 시: 2, 연: 3,
-  대운: 10, 세운: 11, 월운: 12,
+  대운: 10, 세운: 11, 월운: 12, 일운: 13,
 };
 
 type BadgeType = "원국" | "원국+운" | "운";
@@ -206,8 +207,11 @@ function RelationFlowList({
   const isLuck = (p: ParsedTag) => p.pillars.some((pl) => LUCK_PILLARS.has(pl));
 
   const getBadge = (p: ParsedTag): BadgeType => {
-    if (!isLuck(p)) return "원국";
-    return "원국+운";
+    const hasLuck = p.pillars.some((pl) => LUCK_PILLARS.has(pl));
+    const hasNatal = p.pillars.some((pl) => !LUCK_PILLARS.has(pl));
+    if (hasLuck && hasNatal) return "원국+운";
+    if (hasLuck) return "운";
+    return "원국";
   };
 
   // 가장 중요한 원국 기둥 우선순위 반환 (일=0 > 월=1 > 시=2 > 연=3)

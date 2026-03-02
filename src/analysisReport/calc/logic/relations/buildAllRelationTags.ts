@@ -252,17 +252,63 @@ export function buildAllRelationTags(
     }
   }
 
+  // 운-운 2자 관계
+  {
+    const luckEntries = lucks
+      .map(([kind, raw]) => {
+        const gz = normalizeGZ(raw ?? "");
+        if (gz.length < 2) return null;
+        return { kind, stem: gzStem(gz), branch: gzBranch(gz) as KoBranch };
+      })
+      .filter((v): v is { kind: LuckKind; stem: string; branch: KoBranch } => !!v);
+
+    for (let i = 0; i < luckEntries.length; i++) {
+      for (let j = i + 1; j < luckEntries.length; j++) {
+        const a = luckEntries[i]!;
+        const b = luckEntries[j]!;
+        const [k1, k2] = [a.kind, b.kind].sort(
+          (x, y) => LUCK_ORDER.indexOf(x) - LUCK_ORDER.indexOf(y),
+        );
+        const mask = `${k1}X${k2}`;
+
+        const stemHap = labelForPair(STEM_HAP_LABELS, a.stem, b.stem);
+        if (stemHap) pushUnique(out.cheonganHap, `#${mask}_${stemHap}`);
+        const stemChung = labelForPair(STEM_CHUNG_LABELS, a.stem, b.stem);
+        if (stemChung) pushUnique(out.cheonganChung, `#${mask}_${stemChung}`);
+
+        const yukhap = labelForPair(BR_YUKHAP_LABELS, a.branch, b.branch);
+        if (yukhap) pushUnique(out.jijiYukhap, `#${mask}_${yukhap}`);
+        const chung = labelForPair(BR_CHUNG_LABELS, a.branch, b.branch);
+        if (chung) pushUnique(out.jijiChung, `#${mask}_${chung}`);
+        const pa = labelForPair(BR_PA_LABELS, a.branch, b.branch);
+        if (pa) pushUnique(out.jijiPa, `#${mask}_${pa}`);
+        const hae = labelForPair(BR_HAE_LABELS, a.branch, b.branch);
+        if (hae) pushUnique(out.jijiHae, `#${mask}_${hae}`);
+        const wonjin = labelForPair(BR_WONJIN_LABELS, a.branch, b.branch);
+        if (wonjin) pushUnique(out.jijiWonjin, `#${mask}_${wonjin}`);
+        const gwimun = labelForPair(BR_GWIMUN_LABELS, a.branch, b.branch);
+        if (gwimun) pushUnique(out.jijiGwimun, `#${mask}_${gwimun}`);
+
+        const sang = labelForPair(BR_SANGHYEONG_LABELS, a.branch, b.branch);
+        if (sang) pushUnique(out.jijiHyeong, `#${mask}_${sang}`);
+        else {
+          const zamyo = labelForPair(BR_ZAMYO_HYEONG_LABELS, a.branch, b.branch);
+          if (zamyo) pushUnique(out.jijiHyeong, `#${mask}_${zamyo}`);
+          else if (a.branch === b.branch && BR_SELF_HYEONG_ALLOWED.has(a.branch)) {
+            pushUnique(out.jijiHyeong, `#${mask}_${a.branch}${b.branch}자형`);
+          }
+        }
+
+        const amhap = labelForPair(AMHAP_BR_LABELS, a.branch, b.branch);
+        if (amhap) pushUnique(out.amhap, `#${mask}_${amhap}`);
+      }
+    }
+  }
+
   // 운 2개 + 원국 1개 삼형
   {
     const luckBranches: Array<{ kind: LuckKind; b: KoBranch }> = [];
-    const maybeLuck: Array<[LuckKind, string | undefined | null]> = [
-      ["대운", input.daewoon],
-      ["세운", input.sewoon],
-      ["월운", input.wolwoon],
-      ["일운", input.ilwoon],
-    ];
-
-    for (const [k, raw] of maybeLuck) {
+    for (const [k, raw] of lucks) {
       const g = normalizeGZ(raw ?? "");
       if (g.length >= 2) {
         luckBranches.push({ kind: k, b: gzBranch(g) as KoBranch });
@@ -306,19 +352,5 @@ export function buildAllRelationTags(
     });
   }
 
-  return finalizeBuckets(removeLuckPairTags(out));
-}
-
-function removeLuckPairTags(out: RelationTags): RelationTags {
-  const luckPairs = /(대운|세운|월운|일운)X(대운|세운|월운|일운)/;
-  const next: RelationTags = { ...out };
-
-  for (const key of Object.keys(out) as Array<keyof RelationTags>) {
-    if (key === "title") continue;
-    const arr = out[key];
-    if (!Array.isArray(arr)) continue;
-    next[key] = arr.filter((tag) => !luckPairs.test(tag ?? ""));
-  }
-
-  return next;
+  return finalizeBuckets(out);
 }

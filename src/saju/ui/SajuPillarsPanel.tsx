@@ -30,7 +30,7 @@ type Props = {
 // 원국 기둥 → 그리드 열 번호 (1-based)
 // 주 접미사 형식(기둥암합 태그)도 포함
 const NATAL_COL: Record<string, number> = { 시: 1, 시주: 1, 일: 2, 일주: 2, 월: 3, 월주: 3, 연: 4, 연주: 4 };
-const LUCK_SET = new Set(["대운", "세운", "월운"]);
+const LUCK_SET = new Set(["대운", "세운", "월운", "일운"]);
 
 const CONNECTOR_COLOR: Record<string, { bar: string; text: string }> = {
   충:   { bar: "bg-red-500",     text: "text-red-600 dark:text-red-400" },
