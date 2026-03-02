@@ -176,7 +176,7 @@ export function SajuPillarsPanel({
                 className="flex flex-col items-center gap-0.5"
               >
                 <div className={`h-1 w-full rounded-full opacity-70 ${connector.bar}`} />
-                <span className={`text-[10px] font-bold ${connector.text}`}>{connector.label}</span>
+                <span className={`text-[10px] font-bold mb-2 ${connector.text}`}>{connector.label}</span>
               </div>
             ))}
           </div>

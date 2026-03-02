@@ -14,6 +14,7 @@ import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 import { AdfitScriptManager } from "@/shared/ads/AdfitScriptManager";
 import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
 import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
+import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
 
 const AD_SIDE = "DAN-INfSKh1pW2cEtWNu"; // 160x600
 
@@ -205,7 +206,7 @@ export default function IChingSixYaoPage() {
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
       <AdfitScriptManager enabled={showAds} />
 
-      {showAds && (
+      {showAds && ADSENSE_ENABLED && (
         <AdsenseSideDock
           enabled
           clientId="ca-pub-4729618898154189"

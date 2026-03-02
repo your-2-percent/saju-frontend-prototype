@@ -41,6 +41,7 @@ import LoginPage from "@/auth/ui/LoginPage";
 import LoginInlineNudge from "@/auth/ui/LoginInlineNudge";
 import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
 import { AdsenseBanner } from "@/shared/ads/AdsenseBanner";
+import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
 
 // =========================
 // ✅ 광고 유닛
@@ -269,7 +270,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     <div className="min-h-screen pb-16">
       <AdfitScriptManager enabled={showAds} />
 
-      {showAds && showResult && (
+      {showAds && showResult && ADSENSE_ENABLED && (
         <AdsenseSideDock
           enabled
           clientId="ca-pub-4729618898154189"
@@ -377,7 +378,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             <UnMyounTabs data={calc.current as MyeongSik} />
           </div>
 
-          {showAds && showResult && settings.showPromptBox && (
+          {showAds && showResult && settings.showPromptBox && ADSENSE_ENABLED && (
             <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
               <AdsenseBanner
                 enabled={true}
