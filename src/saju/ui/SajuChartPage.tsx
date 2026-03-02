@@ -92,6 +92,127 @@ function getInjongStem(dayStem: string, targetTenGod: string): string {
   return dayStem;
 }
 
+// ─── 관계 유형 색상 (chip bar 전용) ────────────────────────────
+const LUCK_PILL_SET = new Set(["대운", "세운", "월운"]);
+
+function getChipColors(label: string): { idle: string; active: string } {
+  if (label.includes("방합") || label.includes("삼합") || label.includes("반합"))
+    return { idle: "border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-400", active: "bg-emerald-500 text-white border-emerald-500" };
+  if (label.includes("암합"))
+    return { idle: "border-indigo-300 dark:border-indigo-700 text-indigo-700 dark:text-indigo-400", active: "bg-indigo-500 text-white border-indigo-500" };
+  if (label.includes("충"))
+    return { idle: "border-red-300 dark:border-red-700 text-red-700 dark:text-red-400", active: "bg-red-500 text-white border-red-500" };
+  if (label.includes("합"))
+    return { idle: "border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400", active: "bg-blue-500 text-white border-blue-500" };
+  if (label.includes("형"))
+    return { idle: "border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-400", active: "bg-orange-500 text-white border-orange-500" };
+  if (label.includes("파"))
+    return { idle: "border-yellow-300 dark:border-yellow-700 text-yellow-700 dark:text-yellow-400", active: "bg-yellow-500 text-white border-yellow-500" };
+  if (label.includes("해"))
+    return { idle: "border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-400", active: "bg-purple-500 text-white border-purple-500" };
+  return { idle: "border-neutral-300 dark:border-neutral-600 text-neutral-600 dark:text-neutral-400", active: "bg-neutral-600 text-white border-neutral-600" };
+}
+
+const APPLY_LABELS = ["원국", "대운", "세운", "월운"] as const;
+
+function RelationChipBar({
+  relationChips,
+  activeTag,
+  onToggle,
+  relationApplyLevel,
+  maxRelationApplyLevel,
+  onChangeLevel,
+}: {
+  relationChips: string[];
+  activeTag: string | null;
+  onToggle: (tag: string | null) => void;
+  relationApplyLevel: number;
+  maxRelationApplyLevel: number;
+  onChangeLevel: (level: number) => void;
+}) {
+  if (relationChips.length === 0 && maxRelationApplyLevel === 0) return null;
+
+  return (
+    <div className="px-2 desk:px-0 mb-2 space-y-1.5">
+      {/* 적용 범위 */}
+      {maxRelationApplyLevel > 0 && (
+        <div className="flex gap-1">
+          {APPLY_LABELS.slice(0, maxRelationApplyLevel + 1).map((label, level) => (
+            <button
+              key={level}
+              type="button"
+              onClick={() => onChangeLevel(level)}
+              className={[
+                "px-2.5 py-0.5 text-[10px] rounded-full border transition cursor-pointer",
+                relationApplyLevel === level
+                  ? "bg-neutral-700 dark:bg-neutral-200 text-white dark:text-neutral-900 border-transparent"
+                  : "text-neutral-500 dark:text-neutral-400 border-neutral-300 dark:border-neutral-600",
+              ].join(" ")}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* 관계 칩 */}
+      {relationChips.length === 0 ? (
+        <p className="text-[11px] text-neutral-400">표시할 관계 없음</p>
+      ) : (() => {
+        const parseTag = (tag: string) => {
+          const plain = tag.replace(/^#/, "");
+          const underIdx = plain.indexOf("_");
+          const label = underIdx >= 0 ? plain.slice(underIdx + 1).replace(/_/g, " ") : plain;
+          const prefix = underIdx >= 0 ? plain.slice(0, underIdx) : "";
+          const pillars = prefix.split("X").filter(Boolean);
+          const hasLuck = pillars.some((p) => LUCK_PILL_SET.has(p));
+          return { label, hasLuck };
+        };
+        const renderChip = (tag: string) => {
+          const { label, hasLuck } = parseTag(tag);
+          const isActive = activeTag === tag;
+          const { idle, active } = getChipColors(label);
+          return (
+            <button
+              key={tag}
+              type="button"
+              onClick={() => onToggle(isActive ? null : tag)}
+              className={[
+                "flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium transition cursor-pointer",
+                isActive ? active : `bg-white dark:bg-neutral-900 ${idle}`,
+              ].join(" ")}
+            >
+              {label}
+              {hasLuck && (
+                <span className={`text-[9px] ${isActive ? "opacity-70" : "opacity-50"}`}>+운</span>
+              )}
+            </button>
+          );
+        };
+        const natalChips = relationChips.filter((t) => !parseTag(t).hasLuck);
+        const luckChips = relationChips.filter((t) => parseTag(t).hasLuck);
+        return (
+          <div className="space-y-1.5">
+            {natalChips.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {natalChips.map(renderChip)}
+              </div>
+            )}
+            {luckChips.length > 0 && (
+              <>
+                {natalChips.length > 0 && <div className="border-t border-neutral-100 dark:border-neutral-800" />}
+                <div className="flex flex-wrap gap-1">
+                  {luckChips.map(renderChip)}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
 export default function SajuChart({ data, hourTable }: Props) {
   const { date, setDstOffsetMinutes } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
@@ -342,33 +463,6 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
   }, [activeRelationTag, relationChips]);
 
-  const relationByPillar = useMemo(() => {
-    const addUnique = (arr: string[], tag: string) => {
-      if (!arr.includes(tag)) arr.push(tag);
-    };
-
-    const out = {
-      luck: { wol: [] as string[], se: [] as string[], dae: [] as string[] },
-      natal: { hour: [] as string[], day: [] as string[], month: [] as string[], year: [] as string[] },
-    };
-
-    for (const tag of relationChips) {
-      const prefix = tag.replace(/^#/, "").split("_")[0] ?? "";
-      const tokens = prefix.split("X").filter(Boolean);
-
-      if (tokens.includes("월운")) addUnique(out.luck.wol, tag);
-      if (tokens.includes("세운")) addUnique(out.luck.se, tag);
-      if (tokens.includes("대운")) addUnique(out.luck.dae, tag);
-
-      if (tokens.includes("시")) addUnique(out.natal.hour, tag);
-      if (tokens.includes("일")) addUnique(out.natal.day, tag);
-      if (tokens.includes("월")) addUnique(out.natal.month, tag);
-      if (tokens.includes("연")) addUnique(out.natal.year, tag);
-    }
-
-    return out;
-  }, [relationChips]);
-
   const etcShinsal = useMemo(() => {
     const toGz = (p?: { stem?: string; branch?: string } | null) =>
       p?.stem && p?.branch ? `${p.stem}${p.branch}` : "";
@@ -444,10 +538,10 @@ export default function SajuChart({ data, hourTable }: Props) {
     const prefix = activeRelationTag.replace(/^#/, "").split("_")[0] ?? "";
     const tokens = prefix.split("X").filter(Boolean);
     const mapKey: Record<string, string> = {
-      "연": "year",
-      "월": "month",
-      "일": "day",
-      "시": "hour",
+      "연": "year",   "연주": "year",
+      "월": "month",  "월주": "month",
+      "일": "day",    "일주": "day",
+      "시": "hour",   "시주": "hour",
       "대운": "daeun",
       "세운": "seun",
       "월운": "wolun",
@@ -562,6 +656,17 @@ export default function SajuChart({ data, hourTable }: Props) {
         좌법은 지장간을 클릭하면 볼 수 있습니다
       </p>}
 
+      {showRelationBox && (
+        <RelationChipBar
+          relationChips={relationChips}
+          activeTag={activeRelationTag}
+          onToggle={setActiveRelationTag}
+          relationApplyLevel={relationApplyLevel}
+          maxRelationApplyLevel={maxRelationApplyLevel}
+          onChangeLevel={setRelationApplyLevel}
+        />
+      )}
+
       <div
         className={`grid gap-2 p-2 desk:p-0 ${
           filteredCards.length === 0
@@ -592,6 +697,7 @@ export default function SajuChart({ data, hourTable }: Props) {
             seGz={seGz}
             wolGz={wolGz}
             highlightMap={activeHighlightMap}
+            activeRelationTag={activeRelationTag}
           />
         )}
 
@@ -609,6 +715,7 @@ export default function SajuChart({ data, hourTable }: Props) {
           calcUnseong={calcUnseong}
           calcShinsal={calcShinsal}
           highlightMap={activeHighlightMap}
+          activeRelationTag={activeRelationTag}
           isDayMasterMode={isDayMasterMode}
           isDetailMode={isDetailMode}
           pillars={[
@@ -764,10 +871,9 @@ export default function SajuChart({ data, hourTable }: Props) {
         maxRelationApplyLevel={maxRelationApplyLevel}
         onChangeRelationApplyLevel={setRelationApplyLevel}
         relationChips={relationChips}
-        relationByPillar={relationByPillar}
         activeRelationTag={activeRelationTag}
         onToggleRelationTag={setActiveRelationTag}
-        showRelationBox={showRelationBox}
+        showRelationBox={false}
         showEtcShinsalBox={showEtcShinsalBox}
         etcShinsalGood={etcShinsal.good}
         etcShinsalBad={etcShinsal.bad}

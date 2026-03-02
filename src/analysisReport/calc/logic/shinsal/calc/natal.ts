@@ -446,6 +446,7 @@ export function calcNatalShinsal({
     const pairs: Array<[PosIndex, PosIndex]> = [
       [idx.year, idx.month],
       [idx.year, idx.day],
+      [idx.year, idx.hour],
       [idx.month, idx.day],
       [idx.month, idx.hour],
       [idx.day, idx.hour],
@@ -464,6 +465,7 @@ export function calcNatalShinsal({
   {
     const targetPairs: Array<[PosIndex, PosIndex, number]> = [
       [idx.year, idx.month, 0],
+      [idx.year, idx.hour, 0],
       [idx.month, idx.day, 1],
       [idx.month, idx.hour, 0],
       [idx.day, idx.hour, 0],
