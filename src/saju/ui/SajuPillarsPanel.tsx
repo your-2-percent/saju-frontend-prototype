@@ -24,6 +24,7 @@ type Props = {
   isDayMasterMode?: boolean;
   isDetailMode?: boolean;
   onToggleDetailMode?: (next: boolean) => void;
+  onToggleDayMasterMode?: () => void;
 };
 
 // 원국 기둥 → 그리드 열 번호 (1-based)
@@ -94,6 +95,7 @@ export function SajuPillarsPanel({
   isDayMasterMode = false,
   isDetailMode = false,
   onToggleDetailMode,
+  onToggleDayMasterMode,
 }: Props) {
   const size = isDesktop ? "regular" : "compact";
   const titleClass = isDesktop
@@ -177,6 +179,30 @@ export function SajuPillarsPanel({
                 <span className={`text-[10px] font-bold ${connector.text}`}>{connector.label}</span>
               </div>
             ))}
+          </div>
+        )}
+
+        {isDetailMode && typeof onToggleDayMasterMode === "function" && (
+          <div className={`${isDesktop ? "px-3" : "px-1"} pb-1 flex justify-end`}>
+            <button
+              onClick={onToggleDayMasterMode}
+              className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold transition-all shadow-sm border cursor-pointer ${
+                isDayMasterMode
+                  ? "bg-indigo-600 text-white border-indigo-600 ring-2 ring-indigo-200 dark:ring-indigo-900"
+                  : "bg-white text-neutral-600 border-neutral-300 hover:bg-neutral-50 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700"
+              }`}
+            >
+              <span className="text-md">{isDayMasterMode ? "●" : "○"}</span>
+              {isDayMasterMode ? "일간 중심 모드 (봉법)" : "간지 중심 모드 (거법)"}
+            </button>
+          </div>
+        )}
+
+        {isDetailMode && (
+          <div className="px-2 pb-2">
+            <p className="mt-1 text-right text-[10px] text-neutral-500 dark:text-neutral-400">
+              좌법은 지장간을 클릭하면 볼 수 있습니다
+            </p>
           </div>
         )}
       </div>
