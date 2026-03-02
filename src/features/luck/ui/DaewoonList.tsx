@@ -24,6 +24,24 @@ import { ensureSolarBirthDay  } from "@/myeongsik/calc/ensureSolarBirthDay";
 import { isYinUnified, toDisplayChar } from "@/shared/domain/ganji/convert";
 import { mapEra } from "@/shared/domain/ganji/era";
 
+function toSafeDaewoonAnchor(start: Date, next?: Date): Date {
+  const startTime = start.getTime();
+  let anchor = new Date(start.getFullYear(), 5, 15, 12, 0, 0, 0); // 6/15 12:00
+
+  // 시작시각 이전이면 다음 해 6월로 이동
+  if (anchor.getTime() <= startTime) {
+    anchor = new Date(start.getFullYear() + 1, 5, 15, 12, 0, 0, 0);
+  }
+
+  // 다음 대운 시작을 넘기면 구간 중간값으로 보정
+  if (next && anchor.getTime() >= next.getTime()) {
+    anchor = new Date(startTime + Math.floor((next.getTime() - startTime) / 2));
+    anchor.setHours(12, 0, 0, 0);
+  }
+
+  return anchor;
+}
+
 /* ===== 컴포넌트 ===== */
 export default function DaewoonList({
   data,
@@ -149,7 +167,11 @@ export default function DaewoonList({
           return (
             <div
               key={`${ev.gz}-${i}`}
-              onClick={() => setFromEvent(ev, "대운")}
+              onClick={() => {
+                const next = list[i + 1]?.at;
+                const anchorAt = toSafeDaewoonAnchor(ev.at, next);
+                setFromEvent({ at: anchorAt, gz: ev.gz }, "대운");
+              }}
               className={`flex-1 rounded-sm desk:rounded-lg bg-white dark:bg-neutral-900 overflow-hidden cursor-pointer ${
                 isActive
                   ? "border border-yellow-500"
