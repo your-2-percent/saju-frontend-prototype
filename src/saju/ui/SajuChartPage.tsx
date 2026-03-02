@@ -93,7 +93,7 @@ function getInjongStem(dayStem: string, targetTenGod: string): string {
 }
 
 // ─── 관계 유형 색상 (chip bar 전용) ────────────────────────────
-const LUCK_PILL_SET = new Set(["대운", "세운", "월운"]);
+const LUCK_PILL_SET = new Set(["대운", "세운", "월운", "일운"]);
 
 function getChipColors(label: string): { idle: string; active: string } {
   if (label.includes("방합") || label.includes("삼합") || label.includes("반합"))
