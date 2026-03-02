@@ -115,22 +115,54 @@ function getChipColors(label: string): { idle: string; active: string } {
 
 const APPLY_LABELS = ["원국", "대운", "세운", "월운"] as const;
 
+type ChipGroup = {
+  mergedTag: string;
+  label: string;
+  hasLuck: boolean;
+  hasNatalBase: boolean;
+  kind: "stem" | "branch" | "both";
+};
+
 function RelationChipBar({
-  relationChips,
+  chipGroups,
   activeTag,
   onToggle,
   relationApplyLevel,
   maxRelationApplyLevel,
   onChangeLevel,
 }: {
-  relationChips: string[];
+  chipGroups: ChipGroup[];
   activeTag: string | null;
   onToggle: (tag: string | null) => void;
   relationApplyLevel: number;
   maxRelationApplyLevel: number;
   onChangeLevel: (level: number) => void;
 }) {
-  if (relationChips.length === 0 && maxRelationApplyLevel === 0) return null;
+  if (chipGroups.length === 0 && maxRelationApplyLevel === 0) return null;
+
+  const renderChip = ({ mergedTag, label, hasLuck }: ChipGroup) => {
+    const isActive = activeTag === mergedTag;
+    const { idle, active } = getChipColors(label);
+    return (
+      <button
+        key={mergedTag}
+        type="button"
+        onClick={() => onToggle(isActive ? null : mergedTag)}
+        className={[
+          "flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium transition cursor-pointer",
+          isActive ? active : `bg-white dark:bg-neutral-900 ${idle}`,
+        ].join(" ")}
+      >
+        {label}
+        {hasLuck && (
+          <span className={`text-[9px] ${isActive ? "opacity-70" : "opacity-50"}`}>+운</span>
+        )}
+      </button>
+    );
+  };
+
+  const natalGroups = chipGroups.filter((g) => g.hasNatalBase);
+  const luckGroups = chipGroups.filter((g) => g.hasLuck && !g.hasNatalBase);
 
   return (
     <div className="px-2 desk:px-0 mb-2 space-y-1.5">
@@ -155,60 +187,31 @@ function RelationChipBar({
         </div>
       )}
 
-      {/* 관계 칩 */}
-      {relationChips.length === 0 ? (
+      {/* 관계 칩 — 레이블 기준으로 그룹화, 원국 먼저 */}
+      {chipGroups.length === 0 ? (
         <p className="text-[11px] text-neutral-400">표시할 관계 없음</p>
-      ) : (() => {
-        const parseTag = (tag: string) => {
-          const plain = tag.replace(/^#/, "");
-          const underIdx = plain.indexOf("_");
-          const label = underIdx >= 0 ? plain.slice(underIdx + 1).replace(/_/g, " ") : plain;
-          const prefix = underIdx >= 0 ? plain.slice(0, underIdx) : "";
-          const pillars = prefix.split("X").filter(Boolean);
-          const hasLuck = pillars.some((p) => LUCK_PILL_SET.has(p));
-          return { label, hasLuck };
-        };
-        const renderChip = (tag: string) => {
-          const { label, hasLuck } = parseTag(tag);
-          const isActive = activeTag === tag;
-          const { idle, active } = getChipColors(label);
-          return (
-            <button
-              key={tag}
-              type="button"
-              onClick={() => onToggle(isActive ? null : tag)}
-              className={[
-                "flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-medium transition cursor-pointer",
-                isActive ? active : `bg-white dark:bg-neutral-900 ${idle}`,
-              ].join(" ")}
-            >
-              {label}
-              {hasLuck && (
-                <span className={`text-[9px] ${isActive ? "opacity-70" : "opacity-50"}`}>+운</span>
-              )}
-            </button>
-          );
-        };
-        const natalChips = relationChips.filter((t) => !parseTag(t).hasLuck);
-        const luckChips = relationChips.filter((t) => parseTag(t).hasLuck);
-        return (
-          <div className="space-y-1.5">
-            {natalChips.length > 0 && (
+      ) : (
+        <div className="space-y-1.5">
+          {natalGroups.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {natalGroups.map(renderChip)}
+            </div>
+          )}
+          {luckGroups.length > 0 && (
+            <>
+              {natalGroups.length > 0 && <div className="border-t border-neutral-100 dark:border-neutral-800" />}
               <div className="flex flex-wrap gap-1">
-                {natalChips.map(renderChip)}
+                {luckGroups.map(renderChip)}
               </div>
-            )}
-            {luckChips.length > 0 && (
-              <>
-                {natalChips.length > 0 && <div className="border-t border-neutral-100 dark:border-neutral-800" />}
-                <div className="flex flex-wrap gap-1">
-                  {luckChips.map(renderChip)}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      })()}
+            </>
+          )}
+        </div>
+      )}
+      <div className="flex items-center mb-1">
+        <p className="text-[10px] text-neutral-500 dark:text-neutral-400">
+          ● 형충회합 칩을 누르면 글자가 활성화됩니다.
+        </p>
+      </div>
     </div>
   );
 }
@@ -457,12 +460,6 @@ export default function SajuChart({ data, hourTable }: Props) {
     return Array.from(new Set(all));
   }, [relationTags]);
 
-  useEffect(() => {
-    if (activeRelationTag && !relationChips.includes(activeRelationTag)) {
-      setActiveRelationTag(null);
-    }
-  }, [activeRelationTag, relationChips]);
-
   const etcShinsal = useMemo(() => {
     const toGz = (p?: { stem?: string; branch?: string } | null) =>
       p?.stem && p?.branch ? `${p.stem}${p.branch}` : "";
@@ -532,9 +529,60 @@ export default function SajuChart({ data, hourTable }: Props) {
     return map;
   }, [relationTags]);
 
+  // 같은 레이블의 칩을 하나로 합치고, 연관 기둥을 모두 병합한 merged 태그 생성
+  const mergedRelationChips = useMemo((): ChipGroup[] => {
+    type Group = {
+      pillars: Set<string>;
+      kind: "stem" | "branch" | "both";
+      hasLuck: boolean;
+      hasNatalBase: boolean;
+    };
+    const groups = new Map<string, Group>();
+
+    for (const tag of relationChips) {
+      const plain = tag.replace(/^#/, "");
+      const underIdx = plain.indexOf("_");
+      const label = underIdx >= 0 ? plain.slice(underIdx + 1) : plain;
+      const prefix = underIdx >= 0 ? plain.slice(0, underIdx) : "";
+      const pillars = prefix.split("X").filter(Boolean);
+      const hasLuckTag = pillars.some((p) => LUCK_PILL_SET.has(p));
+      if (!groups.has(label)) {
+        groups.set(label, {
+          pillars: new Set(),
+          kind: tagKindMap[tag] ?? "branch",
+          hasLuck: false,
+          hasNatalBase: false,
+        });
+      }
+      const group = groups.get(label)!;
+      for (const p of pillars) group.pillars.add(p);
+      if (hasLuckTag) group.hasLuck = true;
+      else group.hasNatalBase = true;
+    }
+
+    return [...groups.entries()].map(([label, { pillars, kind, hasLuck, hasNatalBase }]) => {
+      const pillarsArr = [...pillars];
+      const mergedTag = `#${pillarsArr.join("X")}_${label}`;
+      return { mergedTag, label, hasLuck, hasNatalBase, kind };
+    });
+  }, [relationChips, tagKindMap]);
+
+  const mergedKindMap = useMemo(() => {
+    const map: Record<string, "stem" | "branch" | "both"> = {};
+    for (const { mergedTag, kind } of mergedRelationChips) map[mergedTag] = kind;
+    return map;
+  }, [mergedRelationChips]);
+
+  // merged 태그 기준으로 activeRelationTag 초기화
+  useEffect(() => {
+    if (activeRelationTag && !mergedRelationChips.some((c) => c.mergedTag === activeRelationTag)) {
+      setActiveRelationTag(null);
+    }
+  }, [activeRelationTag, mergedRelationChips]);
+
   const activeHighlightMap = useMemo(() => {
     if (!activeRelationTag) return {};
-    const kind = tagKindMap[activeRelationTag] ?? "branch";
+    const kind = mergedKindMap[activeRelationTag] ?? tagKindMap[activeRelationTag] ?? "branch";
     const prefix = activeRelationTag.replace(/^#/, "").split("_")[0] ?? "";
     const tokens = prefix.split("X").filter(Boolean);
     const mapKey: Record<string, string> = {
@@ -563,8 +611,8 @@ export default function SajuChart({ data, hourTable }: Props) {
     }
 
     return next;
-  }, [activeRelationTag, tagKindMap]);
-  
+  }, [activeRelationTag, mergedKindMap, tagKindMap]);
+
   // Fate Lab: 보유 육친 확인
   const existingTenGods = useMemo(() => {
     const set = new Set<string>();
@@ -625,17 +673,6 @@ export default function SajuChart({ data, hourTable }: Props) {
       </div>
 
       <div className="px-2 mb-2 flex justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <label className="flex items-center gap-1 cursor-pointer">
-            <input 
-              type="checkbox" 
-              checked={isDetailMode} 
-              onChange={(e) => setIsDetailMode(e.target.checked)}
-              className="w-3 h-3 accent-indigo-600"
-            />
-            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">십이운성 상세보기</span>
-          </label>
-        </div>
 
         {isDetailMode && (
           <button
@@ -658,13 +695,14 @@ export default function SajuChart({ data, hourTable }: Props) {
 
       {showRelationBox && (
         <RelationChipBar
-          relationChips={relationChips}
+          chipGroups={mergedRelationChips}
           activeTag={activeRelationTag}
           onToggle={setActiveRelationTag}
           relationApplyLevel={relationApplyLevel}
           maxRelationApplyLevel={maxRelationApplyLevel}
           onChangeLevel={setRelationApplyLevel}
         />
+
       )}
 
       <div
@@ -718,6 +756,7 @@ export default function SajuChart({ data, hourTable }: Props) {
           activeRelationTag={activeRelationTag}
           isDayMasterMode={isDayMasterMode}
           isDetailMode={isDetailMode}
+          onToggleDetailMode={setIsDetailMode}
           pillars={[
             { key: "hour", label: "시주", data: hourData },
             { key: "day", label: "일주", data: effectiveDay },

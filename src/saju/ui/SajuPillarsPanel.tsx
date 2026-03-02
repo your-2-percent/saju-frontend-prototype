@@ -23,6 +23,7 @@ type Props = {
   activeRelationTag?: string | null;
   isDayMasterMode?: boolean;
   isDetailMode?: boolean;
+  onToggleDetailMode?: (next: boolean) => void;
 };
 
 // 원국 기둥 → 그리드 열 번호 (1-based)
@@ -92,6 +93,7 @@ export function SajuPillarsPanel({
   activeRelationTag = null,
   isDayMasterMode = false,
   isDetailMode = false,
+  onToggleDetailMode,
 }: Props) {
   const size = isDesktop ? "regular" : "compact";
   const titleClass = isDesktop
@@ -105,7 +107,17 @@ export function SajuPillarsPanel({
     <div className="flex-2 rounded-lg bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white border border-neutral-200 dark:border-neutral-700 shadow">
       <div className={`${titleClass} flex justify-between items-center`}>
         <b>원국</b>
-        {isDayMasterMode && <span className="text-[10px] text-indigo-500 animate-pulse">● 일간 중심 연결</span>}
+        {typeof onToggleDetailMode === "function" && (
+          <label className="flex items-center gap-1 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isDetailMode}
+              onChange={(e) => onToggleDetailMode(e.target.checked)}
+              className="w-3 h-3 accent-indigo-600"
+            />
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">십이운성 상세보기</span>
+          </label>
+        )}
       </div>
       <div className={isDesktop ? "pb-2" : "px-1 pb-2"}>
         {/* 천간 관계 연결 바 (위) */}
