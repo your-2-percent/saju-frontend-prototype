@@ -19,6 +19,9 @@ export interface MyeongSikRepo {
 
   fetchRows(userId: string): Promise<MyeongSikRow[]>;
 
+  // Includes soft-deleted rows.
+  fetchExistingIds(userId: string): Promise<string[]>;
+
   upsertOne(userId: string, item: MyeongSikWithOrder): Promise<void>;
 
   updateOne(userId: string, id: string, item: MyeongSikWithOrder): Promise<void>;
@@ -27,5 +30,10 @@ export interface MyeongSikRepo {
 
   upsertOrderPatch(userId: string, list: MyeongSikWithOrder[]): Promise<void>;
 
-  subscribe(userId: string, onPayload: (payload: RealtimePayload) => void, onStatus?: (s: RealtimeStatus) => void): Promise<RealtimeSubscription>;
+  subscribe(
+    userId: string,
+    onPayload: (payload: RealtimePayload) => void,
+    onStatus?: (s: RealtimeStatus) => void,
+  ): Promise<RealtimeSubscription>;
 }
+

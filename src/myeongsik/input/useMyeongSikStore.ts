@@ -9,7 +9,11 @@ import {
   setSessionStartedAtMs,
   shouldHardReloadBecauseStaleSession,
 } from "@/myeongsik/calc/myeongsikStore/staleSession";
-import { migrateLegacyLocalListToServer } from "@/myeongsik/save/migrateLocalToServer";
+import {
+  migrateLegacyLocalListToServer,
+  migrateMyowoonLocalListToGuest,
+  migrateMyowoonLocalListToServer,
+} from "@/myeongsik/save/migrateLocalToServer";
 import { createReorderWriteQueue } from "@/myeongsik/calc/myeongsikStore/reorderQueue";
 import { toDnDArgs, type MoveItemArgs } from "@/myeongsik/calc/myeongsikStore/dndArgs";
 import { reduceListByRealtime } from "@/myeongsik/calc/myeongsikStore/realtimeReducer";
@@ -43,17 +47,133 @@ function canAddNowOrWarn(currentCount: number): boolean {
   return res.ok;
 }
 
-async function migrateGuestListToServerIfAny(userId: string): Promise<void> {
+function toMsSignature(v: {
+  name?: string;
+  birthDay?: string;
+  birthTime?: string;
+  gender?: string;
+  folder?: string;
+}): string {
+  return `${v.name ?? ""}|${v.birthDay ?? ""}|${v.birthTime ?? ""}|${v.gender ?? ""}|${v.folder ?? ""}`;
+}
+
+function mergeServerAndGuestList(
+  server: MyeongSikWithOrder[],
+  guest: MyeongSikWithOrder[],
+): MyeongSikWithOrder[] {
+  if (!guest.length) return server;
+  if (!server.length) return sortByOrder(guest);
+
+  const merged: MyeongSikWithOrder[] = [...server];
+  const idSet = new Set(server.map((x) => x.id));
+  const sigSet = new Set(
+    server.map((x) =>
+      toMsSignature({
+        name: x.name,
+        birthDay: x.birthDay,
+        birthTime: x.birthTime,
+        gender: x.gender,
+        folder: x.folder,
+      }),
+    ),
+  );
+
+  let nextOrder = merged.reduce((max, x) => Math.max(max, Number(x.sortOrder ?? 0)), 0);
+  for (const item of guest) {
+    const sig = toMsSignature({
+      name: item.name,
+      birthDay: item.birthDay,
+      birthTime: item.birthTime,
+      gender: item.gender,
+      folder: item.folder,
+    });
+
+    if (idSet.has(item.id) || sigSet.has(sig)) continue;
+
+    nextOrder += 1;
+    merged.push({
+      ...item,
+      sortOrder:
+        typeof item.sortOrder === "number" && Number.isFinite(item.sortOrder)
+          ? item.sortOrder
+          : nextOrder,
+    });
+    idSet.add(item.id);
+    sigSet.add(sig);
+  }
+
+  return sortByOrder(merged);
+}
+
+async function migrateGuestListToServerIfAny(
+  userId: string,
+): Promise<{ ok: boolean; remainingGuest: MyeongSikWithOrder[] }> {
   const guest = loadGuestList();
-  if (!guest.length) return;
+  if (!guest.length) return { ok: true, remainingGuest: [] };
+
+  // ✅ soft-deleted 포함 서버 전체 id를 먼저 확인
+  // (이미 존재하는 항목은 upsert/merge 금지 → 삭제 복원 버그 방지)
+  let existingIds: Set<string> = new Set();
+  try {
+    existingIds = new Set(await repo.fetchExistingIds(userId));
+  } catch (e) {
+    console.warn("[myeongsik] fetchExistingIds failed:", e);
+    // 서버 상태를 알 수 없으면 guest를 merge에 포함하지 않음
+    return { ok: false, remainingGuest: [] };
+  }
 
   try {
     for (const item of guest) {
-      await repo.upsertOne(userId, item);
+      if (!existingIds.has(item.id)) {
+        await repo.upsertOne(userId, item);
+      }
     }
-    clearGuestList();
+
+    const serverRows = await repo.fetchRows(userId);
+    const serverList = sortByOrder(serverRows.map(fromRow));
+    const serverIdSet = new Set(serverList.map((x) => x.id));
+    const serverSigSet = new Set(
+      serverList.map((x) =>
+        toMsSignature({
+          name: x.name,
+          birthDay: x.birthDay,
+          birthTime: x.birthTime,
+          gender: x.gender,
+          folder: x.folder,
+        }),
+      ),
+    );
+
+    const remainingGuest = guest.filter((item) => {
+      // 서버에 존재(soft-deleted 포함)하면 guest에서도 제거
+      if (existingIds.has(item.id)) return false;
+      if (serverIdSet.has(item.id)) return false;
+      const sig = toMsSignature({
+        name: item.name,
+        birthDay: item.birthDay,
+        birthTime: item.birthTime,
+        gender: item.gender,
+        folder: item.folder,
+      });
+      return !serverSigSet.has(sig);
+    });
+
+    if (remainingGuest.length === 0) {
+      clearGuestList();
+      return { ok: true, remainingGuest: [] };
+    }
+
+    saveGuestList(remainingGuest);
+    console.warn("[myeongsik] guest->server migration partial, keeping guest fallback", {
+      total: guest.length,
+      remaining: remainingGuest.length,
+    });
+    return { ok: false, remainingGuest };
   } catch (e) {
     console.warn("[myeongsik] migrateGuestListToServerIfAny failed:", e);
+    // ✅ existingIds로 안전하게 필터링 (삭제된 항목 되살아남 방지)
+    const safeRemaining = guest.filter((item) => !existingIds.has(item.id));
+    return { ok: false, remainingGuest: safeRemaining };
   }
 }
 
@@ -165,7 +285,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       const user = await repo.getUser();
 
       const st2 = get();
-      if (user && st2.loaded && st2.loadedUserId === user.id) {
+      if (user && st2.loaded && st2.loadedUserId === user.id && st2.list.length > 0) {
         set({ loading: false });
         return;
       }
@@ -180,10 +300,11 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       }
 
       // ✅ 로그인: 게스트가 있으면 서버로 자동 이관
-      await migrateGuestListToServerIfAny(user.id);
+      const migrateResult = await migrateGuestListToServerIfAny(user.id);
 
       const rows = await repo.fetchRows(user.id);
-      const list = sortByOrder(rows.map(fromRow));
+      const serverList = sortByOrder(rows.map(fromRow));
+      const list = mergeServerAndGuestList(serverList, migrateResult.remainingGuest);
 
       const prevCurrent = get().currentId;
       const firstId =
@@ -202,10 +323,11 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
   migrateLocalToServer: async () => {
     try {
+      // 로그인 전에도 구(myowoon96) 로컬 키를 현재 게스트 저장소로 이관
+      migrateMyowoonLocalListToGuest();
       await migrateLegacyLocalListToServer(repo);
-
-      const user = await repo.getUser();
-      if (user) await migrateGuestListToServerIfAny(user.id);
+      await migrateMyowoonLocalListToServer(repo);
+      // ✅ 게스트→서버 이관은 loadFromServer 내부에서만 수행 (중복 방지)
     } catch (e) {
       console.error("useMyeongSikStore.migrateLocalToServer exception:", e);
     }
@@ -277,6 +399,15 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     if (!user) {
       saveGuestList(filtered);
       return;
+    }
+
+    // Keep guest fallback in sync to avoid deleted rows being re-migrated on next login.
+    const guestNow = loadGuestList();
+    if (guestNow.length) {
+      const guestFiltered = guestNow.filter((x) => x.id !== id);
+      if (guestFiltered.length !== guestNow.length) {
+        saveGuestList(guestFiltered);
+      }
     }
 
     await repo.softDelete(id);

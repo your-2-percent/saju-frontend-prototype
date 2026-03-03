@@ -101,7 +101,11 @@ function BlankCard({
 /* =======================
         컴포넌트
 ======================= */
-export default function TodaySaju() {
+type TodaySajuProps = {
+  compactTop?: boolean;
+};
+
+export default function TodaySaju({ compactTop = false }: TodaySajuProps) {
   const settings = useSettingsStore((s) => s.settings);
 
   const [pick, setPick] = useState<Date>(new Date());
@@ -169,8 +173,12 @@ export default function TodaySaju() {
 
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
+  const topSpacingClass = compactTop
+    ? "pt-14 desk:pt-0 desk:mt-0 desk:h-[calc(100dvh_-_362px)]"
+    : "pt-20 desk:pt-16 desk:mt-12 desk:h-[calc(100dvh_-_212px)]";
+
   return (
-    <div className="flex flex-col justify-center items-center pt-20 desk:pt-16 desk:mt-12 w-full h-auto desk:h-[calc(100dvh_-_212px)] ">
+    <div className={`flex flex-col justify-center items-center ${topSpacingClass} w-full h-auto `}>
       {/* <div
         className="w-[96%] max-w-[640px] mx-auto mb-2 p-2 bg-white dark:bg-neutral-950
                       text-neutral-900 dark:text-neutral-100 text-xs text-center

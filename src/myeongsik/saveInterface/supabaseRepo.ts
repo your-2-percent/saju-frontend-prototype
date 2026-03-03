@@ -72,6 +72,20 @@ export function makeSupabaseMyeongSikRepo(): MyeongSikRepo {
         .filter((row) => row.user_id === userId);
     },
 
+    async fetchExistingIds(userId: string) {
+      const { data, error } = await supabase
+        .from("myeongsik")
+        .select("id")
+        .eq("user_id", userId);
+      if (error) {
+        throw error;
+      }
+      const rows = Array.isArray(data) ? data : [];
+      return rows
+        .map((r) => (typeof r?.id === "string" ? r.id : ""))
+        .filter((id): id is string => id.length > 0);
+    },
+
     async upsertOne(userId: string, item: MyeongSikWithOrder) {
       const row = buildRowForUpsert(item, userId);
       const { error } = await supabase.from("myeongsik").upsert(row, { onConflict: "id" });
