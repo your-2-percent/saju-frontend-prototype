@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://hwarim.myowoon96.com/sitemap.xml
+Sitemap: https://hwarim.me/sitemap.xml
