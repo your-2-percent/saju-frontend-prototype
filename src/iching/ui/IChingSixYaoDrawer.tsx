@@ -2,7 +2,6 @@
 import { toYinYang } from "@/iching/calc/ichingDrawerUtils";
 import { useIChingSixYaoDrawer } from "@/iching/calc/useIChingSixYaoDrawer";
 import type { DivinationRecord, SajuContext } from "@/iching/calc/ichingTypes";
-import { AdfitSlot } from "@/shared/ads/AdfitSlot";
 
 export type { SajuContext, DivinationRecord } from "@/iching/calc/ichingTypes";
 
@@ -13,9 +12,6 @@ type Props = {
   initialQuestion?: string;
   onBaseDateChange?: (date: Date | null) => void;
 };
-
-const AD_TOP_MOBILE = "DAN-GW4jrUdfiXklZ12U"; // 320x50
-const AD_TOP_DESKTOP = "DAN-CeRuC0yKzSAs5Gju"; // 728x90
 
 export default function IChingSixYaoDrawer(props: Props) {
   const {
@@ -170,14 +166,6 @@ export default function IChingSixYaoDrawer(props: Props) {
       </div>
 
       <div className="mt-4" ref={resultRef}>
-        <div className="mb-3">
-          <div className="hidden md:block">
-            <AdfitSlot enabled adUnit={AD_TOP_DESKTOP} width={728} height={90} />
-          </div>
-          <div className="md:hidden">
-            <AdfitSlot enabled adUnit={AD_TOP_MOBILE} width={320} height={50} />
-          </div>
-        </div>
         {selectedCardText ? (
           <div className="rounded-2xl border border-neutral-200 bg-gradient-to-b from-amber-50 to-white p-4 shadow-sm dark:border-neutral-800 dark:from-neutral-900 dark:to-neutral-950">
             <div className="flex flex-col gap-4 md:flex-row">

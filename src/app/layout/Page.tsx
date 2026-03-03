@@ -35,11 +35,6 @@ import { useMainAppSave } from "@/app/layout/page/save/useMainAppSave";
 // ✅ FAQ
 import FaqPage from "@/app/faq/FaqPage";
 
-// ✅ AdFit
-import { AdfitScriptManager } from "@/shared/ads/AdfitScriptManager";
-import { AdfitSlot } from "@/shared/ads/AdfitSlot";
-import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
-
 // ✅ Entitlements
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 import LoginNudgeModal from "@/auth/ui/LoginNudgeModal";
@@ -48,18 +43,6 @@ import LoginInlineNudge from "@/auth/ui/LoginInlineNudge";
 import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
 import { AdsenseBanner } from "@/shared/ads/AdsenseBanner";
 import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
-
-// =========================
-// ✅ 광고 유닛
-// =========================
-const AD_MID_MOBILE = "DAN-GW4jrUdfiXklZ12U"; // 320x50
-const AD_MID_DESKTOP = "DAN-CeRuC0yKzSAs5Gju"; // 728x90
-
-const AD_BOTTOM_MOBILE = "DAN-G16gewnPhZou1D9y"; // 320x50
-const AD_BOTTOM_DESKTOP = "DAN-rdKe9ZODmrZR4hho"; // 728x90
-
-const AD_SIDE = "DAN-INfSKh1pW2cEtWNu"; // 160x600
-// =========================
 
 const EMPTY_MS: MyeongSik = {
   id: "empty",
@@ -270,8 +253,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   return (
     <div className="min-h-screen pb-16">
-      <AdfitScriptManager enabled={showAds} />
-
       {showAds && showResult && ADSENSE_ENABLED && (
         <AdsenseSideDock
           enabled
@@ -286,19 +267,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           breakpointClassName="hidden desk:block"
         />
       )}
-
-      <div className="hidden desk:block">
-        <AdfitSideDock
-          enabled={showAds}
-          adUnit={AD_SIDE}
-          width={160}
-          height={600}
-          showAfterScrollY={0}
-          rightPx={16}
-          topPx={60}
-          breakpointClassName="hidden desk:block"
-        />
-      </div>
 
       <TopNav
         isLoggedIn={isLoggedIn}
@@ -344,7 +312,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
       {showLoginNot && (
         <div className="w-full mt-14 desk:mt-16 px-3">
-          <div className="max-w-[640px] mx-auto rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-3 py-2.5 flex items-center justify-between gap-3">
+          <div className="max-w-[640px] mx-auto rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-3 py-2.5 flex items-center justify-center gap-3">
             <p className="text-xs desk:text-sm text-amber-700 dark:text-amber-300">
               로그아웃 상태입니다.{!legacyDismissed && " 이전(myowoon96) 명식 가져오기도 가능합니다."}
             </p>
@@ -436,33 +404,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          {showAds && showResult && (
-            <div className="max-w-[760px] mx-auto px-3 pb-6">
-              <div className="hidden md:block">
-                <AdfitSlot enabled adUnit={AD_BOTTOM_DESKTOP} width={728} height={90} />
-              </div>
-              <div className="md:hidden">
-                <AdfitSlot enabled adUnit={AD_BOTTOM_MOBILE} width={320} height={50} />
-              </div>
-            </div>
-          )}
         </div>
       )}
 
       {input.showCouple && (
         <div className="pt-18 pb-4">
           <CoupleViewer people={list} />
-        </div>
-      )}
-
-      {showAds && !showResult && (
-        <div className="max-w-[760px] mx-auto px-3 mt-1 mb-2">
-          <div className="hidden md:block">
-            <AdfitSlot enabled adUnit={AD_MID_DESKTOP} width={728} height={90} />
-          </div>
-          <div className="md:hidden">
-            <AdfitSlot enabled adUnit={AD_MID_MOBILE} width={320} height={50} />
-          </div>
         </div>
       )}
 

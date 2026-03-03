@@ -11,12 +11,8 @@ import IChingSixYaoDrawer, { type SajuContext } from "@/iching/ui/IChingSixYaoDr
 import { useGlobalLuck } from "@/luck/calc/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import { AdfitScriptManager } from "@/shared/ads/AdfitScriptManager";
 import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
-import { AdfitSideDock } from "@/shared/ads/AdfitSideDock";
 import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
-
-const AD_SIDE = "DAN-INfSKh1pW2cEtWNu"; // 160x600
 
 // function isValidDate(d: unknown): d is Date {
 //   return d instanceof Date && !Number.isNaN(d.getTime());
@@ -204,8 +200,6 @@ export default function IChingSixYaoPage() {
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
-      <AdfitScriptManager enabled={showAds} />
-
       {showAds && ADSENSE_ENABLED && (
         <AdsenseSideDock
           enabled
@@ -220,19 +214,6 @@ export default function IChingSixYaoPage() {
           breakpointClassName="hidden desk:block"
         />
       )}
-
-      <div className="hidden desk:block">
-        <AdfitSideDock
-          enabled={showAds}
-          adUnit={AD_SIDE}
-          width={160}
-          height={600}
-          showAfterScrollY={0}
-          rightPx={16}
-          topPx={60}
-          breakpointClassName="hidden desk:block"
-        />
-      </div>
       <div className="w-full max-w-[768px] mx-auto px-4 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
