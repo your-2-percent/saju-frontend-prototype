@@ -174,7 +174,7 @@ export default function TodaySaju({ compactTop = false }: TodaySajuProps) {
   const dayStem: Stem10sin = toKoStemKeyStrict(day.charAt(0));
 
   const topSpacingClass = compactTop
-    ? "pt-14 desk:pt-0 desk:mt-0 desk:h-[calc(100dvh_-_362px)]"
+    ? "pt-8 desk:pt-0 desk:mt-0 desk:h-[calc(100dvh_-_362px)] min-h-[580px]"
     : "pt-20 desk:pt-16 desk:mt-12 desk:h-[calc(100dvh_-_212px)]";
 
   return (
