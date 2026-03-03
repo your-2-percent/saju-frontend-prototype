@@ -58,6 +58,23 @@ function selectAllPairs(posA: number[], posB: number[]): Array<[number, number]>
   return out;
 }
 
+function selectAllPosLabelPairs(posA: PosLabel[], posB: PosLabel[]): Array<[PosLabel, PosLabel]> {
+  const out: Array<[PosLabel, PosLabel]> = [];
+  const seen = new Set<string>();
+  for (const a of posA) {
+    for (const b of posB) {
+      if (a === b) continue;
+      const [p1, p2] =
+        POS_LABELS.indexOf(a) <= POS_LABELS.indexOf(b) ? [a, b] : [b, a];
+      const key = `${p1}-${p2}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push([p1, p2]);
+    }
+  }
+  return out;
+}
+
 export function buildAllRelationTags(
   input: {
     natal: Pillars4;
@@ -200,19 +217,25 @@ export function buildAllRelationTags(
       if (amhap) pushUnique(out.amhap, `#${kind}X${pos}_${amhap}`);
     }
 
-    // 운 포함 3자 완성(삼합/삼형) — 운 1개 + 원국 2개만 허용
+    // 운 포함 3자 완성(삼합/삼형) — 운 1개 + 원국 2개
     for (const g of SANHE_GROUPS) {
       if (!g.members.includes(lb as KoBranch)) continue;
       const others = g.members.filter((x) => x !== (lb as KoBranch));
-      const hits = natalBranches
-        .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
-        .filter((o) => o.b && others.includes(o.b));
+      const a = others[0];
+      const b = others[1];
+      if (!a || !b) continue;
 
-      if (new Set(hits.map((h) => h.b)).size === 2) {
-        const [p1, p2] = hits
-          .map((h) => h.pos)
-          .sort((a, b) => POS_LABELS.indexOf(a) - POS_LABELS.indexOf(b)) as [PosLabel, PosLabel];
+      const posA = natalBranches
+        .map((nb, i) => ({ nb, pos: POS_LABELS[i]! }))
+        .filter((o) => o.nb === a)
+        .map((o) => o.pos);
+      const posB = natalBranches
+        .map((nb, i) => ({ nb, pos: POS_LABELS[i]! }))
+        .filter((o) => o.nb === b)
+        .map((o) => o.pos);
 
+      const pairs = selectAllPosLabelPairs(posA, posB);
+      for (const [p1, p2] of pairs) {
         pushUnique(out.jijiSamhap, `#${kind}X${p1}X${p2}_삼합(${g.name})`);
       }
     }
@@ -220,36 +243,27 @@ export function buildAllRelationTags(
     for (const g of TRIAD_SHAPE_GROUPS) {
       if (!g.members.includes(lb as KoBranch)) continue;
       const others = g.members.filter((x) => x !== (lb as KoBranch));
-      const hits = natalBranches
-        .map((b, i) => ({ b, pos: POS_LABELS[i]! }))
-        .filter((o) => o.b && others.includes(o.b));
+      const a = others[0];
+      const b = others[1];
+      if (!a || !b) continue;
 
-      if (new Set(hits.map((h) => h.b)).size === 2) {
-        const [p1, p2] = hits
-          .map((h) => h.pos)
-          .sort((a, b) => POS_LABELS.indexOf(a) - POS_LABELS.indexOf(b)) as [PosLabel, PosLabel];
+      const posA = natalBranches
+        .map((nb, i) => ({ nb, pos: POS_LABELS[i]! }))
+        .filter((o) => o.nb === a)
+        .map((o) => o.pos);
+      const posB = natalBranches
+        .map((nb, i) => ({ nb, pos: POS_LABELS[i]! }))
+        .filter((o) => o.nb === b)
+        .map((o) => o.pos);
 
+      const pairs = selectAllPosLabelPairs(posA, posB);
+      for (const [p1, p2] of pairs) {
         pushUnique(out.jijiHyeong, `#${kind}X${p1}X${p2}_${g.name}삼형`);
         if (g.name === "인사신") hasTriadInsasin = true;
         if (g.name === "축술미") hasTriadChuksulmi = true;
       }
     }
 
-    // 방합은 원국 기준(운 포함하지 않음)
-    const allBranches: Array<{ b: KoBranch; pos: string }> = [
-      ...natalKo.map((gz, i) => ({
-        b: (BRANCH_H2K[gzBranch(gz)] ?? gzBranch(gz)) as KoBranch,
-        pos: POS_LABELS[i]!,
-      })),
-    ];
-
-    for (const g of BANGHAP_GROUPS) {
-      const hits = allBranches.filter((o) => g.members.includes(o.b));
-      if (new Set(hits.map((h) => h.b)).size === 3) {
-        const mask = hits.map((h) => h.pos).join("X");
-        pushUnique(out.jijiBanghap, `#${mask}_방합(${g.name})`);
-      }
-    }
   }
 
   // 운-운 2자 관계
@@ -305,7 +319,7 @@ export function buildAllRelationTags(
     }
   }
 
-  // 운 2개 + 원국 1개 삼형
+  // 방합/삼합/삼형의 3자 조합 (중첩 위치 포함)
   {
     const luckBranches: Array<{ kind: LuckKind; b: KoBranch }> = [];
     for (const [k, raw] of lucks) {
@@ -315,11 +329,64 @@ export function buildAllRelationTags(
       }
     }
 
+    const natalEntries = natalKo.map((gz, i) => ({
+      pos: POS_LABELS[i]!,
+      b: gzBranch(gz) as KoBranch,
+    }));
+
+    const allEntries: Array<{ pos: PosLabel | LuckKind; b: KoBranch }> = [
+      ...natalEntries,
+      ...luckBranches.map((l) => ({ pos: l.kind, b: l.b })),
+    ];
+
+    const tokenOrder = (token: PosLabel | LuckKind): number => {
+      const natalIdx = POS_LABELS.indexOf(token as PosLabel);
+      if (natalIdx >= 0) return natalIdx;
+      const luckIdx = LUCK_ORDER.indexOf(token as LuckKind);
+      if (luckIdx >= 0) return POS_LABELS.length + luckIdx;
+      return 999;
+    };
+
+    // 방합: 원국+운 조합 모두 허용 (원국만도 포함)
+    for (const g of BANGHAP_GROUPS) {
+      const [a, b, c] = g.members;
+      const posA = allEntries.filter((e) => e.b === a).map((e) => e.pos);
+      const posB = allEntries.filter((e) => e.b === b).map((e) => e.pos);
+      const posC = allEntries.filter((e) => e.b === c).map((e) => e.pos);
+      if (posA.length === 0 || posB.length === 0 || posC.length === 0) continue;
+
+      for (const p1 of posA) {
+        for (const p2 of posB) {
+          for (const p3 of posC) {
+            const uniq = Array.from(new Set<PosLabel | LuckKind>([p1, p2, p3]));
+            if (uniq.length !== 3) continue;
+            const mask = uniq.sort((x, y) => tokenOrder(x) - tokenOrder(y)).join("X");
+            pushUnique(out.jijiBanghap, `#${mask}_방합(${g.name})`);
+          }
+        }
+      }
+    }
+
+    // 운 2개 + 원국 1개 삼합/삼형
     if (luckBranches.length >= 2) {
-      const natalEntries = natalKo.map((gz, i) => ({
-        pos: POS_LABELS[i]!,
-        b: gzBranch(gz) as KoBranch,
-      }));
+      for (const g of SANHE_GROUPS) {
+        for (let x = 0; x < luckBranches.length; x++) {
+          for (let y = x + 1; y < luckBranches.length; y++) {
+            const L1 = luckBranches[x]!;
+            const L2 = luckBranches[y]!;
+            for (const n of natalEntries) {
+              const set3 = new Set<KoBranch>([n.b, L1.b, L2.b]);
+              if (set3.size === 3 && g.members.every((m) => set3.has(m))) {
+                const luckMask = [L1.kind, L2.kind]
+                  .sort((a, b) => LUCK_ORDER.indexOf(a) - LUCK_ORDER.indexOf(b))
+                  .join("X");
+                const mask = `${n.pos}X${luckMask}`;
+                pushUnique(out.jijiSamhap, `#${mask}_삼합(${g.name})`);
+              }
+            }
+          }
+        }
+      }
 
       for (const g of TRIAD_SHAPE_GROUPS) {
         for (let x = 0; x < luckBranches.length; x++) {
