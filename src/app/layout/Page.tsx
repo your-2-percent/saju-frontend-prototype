@@ -7,6 +7,7 @@ import TodaySaju from "@/saju/ui/TodaySajuPage";
 import InputWizard from "@/myeongsik/ui/InputAppPage";
 import SajuChart from "@/saju/ui/SajuChartPage";
 import UnMyounTabs from "@/app/components/tab";
+import type { TabKey } from "@/app/components/tab";
 import TopNav from "@/shared/ui/nav/TopNav";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import Sidebar from "@/sidebar/ui/Sidebar";
@@ -21,7 +22,6 @@ import {
   shouldAutoOpenLegacyMigrateModal,
   isLegacyMigrateDismissed,
 } from "@/app/pages/legacyMigrateUtils";
-import LuckGlobalPicker from "@/luck/ui/LuckGlobalPicker";
 import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
@@ -183,6 +183,13 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
 
   // ✅ 광고 노출 여부는 "플랜 문자열"이 아니라 "권한"으로 판단
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
+  const showMyoTab = useEntitlementsStore((s) => s.canUseMyoViewerNow());
+
+  const [activeTab, setActiveTab] = useState<TabKey>("un");
+
+  useEffect(() => {
+    if (activeTab === "myoun" && !showMyoTab) setActiveTab("un");
+  }, [activeTab, showMyoTab]);
 
   const showResult =
     calc.hasCurrent &&
@@ -366,14 +373,42 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           )}
 
-          <div className="pb-4">
-            <SajuChart data={calc.current as MyeongSik} hourTable={calc.current?.mingSikType ?? "조자시/야자시"} />
+          {/* 탭 버튼: 원국 위 */}
+          <div className="w-[calc(100%_-_16px)] max-w-[625px] desk:max-w-[640px] mx-auto flex border-b border-neutral-700 mb-0">
+            <button
+              onClick={() => setActiveTab("un")}
+              className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b font-bold hover:border-purple-500 hover:text-purple-500 ${activeTab === "un" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"}`}
+            >
+              기본운 뷰어
+            </button>
+            {showMyoTab && (
+              <button
+                onClick={() => setActiveTab("myoun")}
+                className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b font-bold hover:border-purple-500 hover:text-purple-500 ${activeTab === "myoun" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"}`}
+              >
+                묘운 뷰어
+              </button>
+            )}
+            <button
+              onClick={() => setActiveTab("report")}
+              className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b font-bold hover:border-purple-500 hover:text-purple-500 ${activeTab === "report" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"}`}
+            >
+              분석 레포트
+            </button>
+            <button
+              onClick={() => setActiveTab("shinsal")}
+              className={`px-2 desk:px-4 py-2 text-xs desk:text-sm cursor-pointer border-b font-bold hover:border-purple-500 hover:text-purple-500 ${activeTab === "shinsal" ? "border-purple-500 text-purple-500" : "border-transparent text-neutral-400"}`}
+            >
+              기타신살
+            </button>
           </div>
 
-          <LuckGlobalPicker ms={calc.current as MyeongSik} />
+          <div className="pb-4">
+            <SajuChart data={calc.current as MyeongSik} hourTable={calc.current?.mingSikType ?? "조자시/야자시"} activeTab={activeTab} />
+          </div>
 
           <div>
-            <UnMyounTabs data={calc.current as MyeongSik} />
+            <UnMyounTabs data={calc.current as MyeongSik} tab={activeTab} showMyoTab={showMyoTab} />
           </div>
 
           {showAds && showResult && settings.showPromptBox && ADSENSE_ENABLED && (

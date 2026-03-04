@@ -126,7 +126,7 @@ export function PillarCard({
             )}
           </>
         ) : (
-          <span className="text-xs text-neutral-500 dark:text-neutral-400">시간 미상</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 text-nowrap">시간 미상</span>
         )}
       </div>
 
