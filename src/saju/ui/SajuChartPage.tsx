@@ -35,10 +35,12 @@ import { LuckCardsPanel } from "@/saju/ui/LuckCardsPanel";
 import { SajuPillarsPanel } from "@/saju/ui/SajuPillarsPanel";
 import { HourPredictionPanel } from "@/saju/ui/HourPredictionPanel";
 import { SajuRelationPanels } from "@/saju/ui/SajuRelationPanels";
+//import LuckGlobalPicker from "@/luck/ui/LuckGlobalPicker";
 
 type Props = {
   data: MyeongSik;
   hourTable?: DayBoundaryRule;
+  activeTab?: string;
 };
 
 function pad2(n: number): string {
@@ -215,7 +217,7 @@ function RelationChipBar({
   );
 }
 
-export default function SajuChart({ data, hourTable }: Props) {
+export default function SajuChart({ data, hourTable, activeTab }: Props) {
   const { date, setDstOffsetMinutes } = useLuckPickerStore();
   const settings = useSettingsStore((s) => s.settings);
   const showNabeum = settings.showNabeum ?? true;
@@ -281,7 +283,9 @@ export default function SajuChart({ data, hourTable }: Props) {
   const [isDayMasterMode, setIsDayMasterMode] = useState(true);
   const [fateLabTarget, setFateLabTarget] = useState<string | null>(null);
   const [fateLabContext, setFateLabContext] = useState<"year" | "day" | "month" | "hour" | null>(null);
-  const [isDetailMode, setIsDetailMode] = useState(true);
+  const [isDetailMode, setIsDetailMode] = useState(false);
+  const [isRelationOpen, setIsRelationOpen] = useState(false);
+  const [isHourPredOpen, setIsHourPredOpen] = useState(false);
 
   useEffect(() => {
     setManualHour(null);
@@ -631,7 +635,8 @@ export default function SajuChart({ data, hourTable }: Props) {
 
   return (
     <div className="w-full max-w-[640px] mx-auto">
-      <div className="mb-1 gap-2 p-2">
+      
+      <div className="mb-1 gap-2 p-2 relative">
         <div>
           <div className="text-md desk:text-xl font-bold text-neutral-900 dark:text-neutral-100">
             {(data.name?.trim() || "이름없음") + " "}
@@ -664,20 +669,68 @@ export default function SajuChart({ data, hourTable }: Props) {
         <div className="text-xs text-neutral-500 dark:text-neutral-400">
           {data.birthPlace?.name ? `출생지: ${data.birthPlace.name}` : ""} / 기준 경도: {lon.toFixed(2)}° · {rule} 기준
         </div>
+        {/* <div className="absolute right-0 top-0"><LuckGlobalPicker ms={data} /></div> */}
       </div>
 
-      {showRelationBox && (
-        <RelationChipBar
-          chipGroups={mergedRelationChips}
-          activeTag={activeRelationTag}
-          onToggle={setActiveRelationTag}
-          relationApplyLevel={relationApplyLevel}
-          maxRelationApplyLevel={maxRelationApplyLevel}
-          onChangeLevel={setRelationApplyLevel}
-        />
-
+      {unknownTime && (
+        <div className="px-2 desk:px-0 my-2">
+          <button
+            type="button"
+            onClick={() => setIsHourPredOpen((prev) => !prev)}
+            className="flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer w-full"
+          >
+            <span className="font-medium">시주 후보</span>
+            {manualHour && !isHourPredOpen && (
+              <span className="text-[10px] text-indigo-500 font-bold">● {manualHour.stem}{manualHour.branch}</span>
+            )}
+            <span className="ml-auto text-[10px]">{isHourPredOpen ? "▲" : "▼"}</span>
+          </button>
+          {isHourPredOpen && (
+            <HourPredictionPanel
+              hourCandidates={hourCandidates}
+              useInsi={useInsi}
+              onToggleRule={() => setUseInsi((prev) => !prev)}
+              usePrevDay={usePrevDay}
+              onTogglePrevDay={() => setUsePrevDay(!usePrevDay)}
+              canSelectHourBranch={canSelectHourBranch}
+              manualHour={manualHour}
+              onSelectHour={handleManualHourSelect}
+            />
+          )}
+        </div>
       )}
 
+      {showRelationBox && (mergedRelationChips.length > 0 || maxRelationApplyLevel > 0) && (
+        <div className="px-2 desk:px-0 mb-2">
+          <button
+            type="button"
+            onClick={() => setIsRelationOpen((prev) => !prev)}
+            className="flex items-center gap-1.5 text-[11px] text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 cursor-pointer w-full"
+          >
+            <span className="font-medium">형충회합</span>
+            {mergedRelationChips.length > 0 && (
+              <span className="text-[10px] text-neutral-400">({mergedRelationChips.length})</span>
+            )}
+            {activeRelationTag && !isRelationOpen && (
+              <span className="text-[10px] text-indigo-500 font-bold">● 활성</span>
+            )}
+            <span className="ml-auto text-[10px]">{isRelationOpen ? "▲" : "▼"}</span>
+          </button>
+          {isRelationOpen && (
+            <div className="mt-1.5">
+              <RelationChipBar
+                chipGroups={mergedRelationChips}
+                activeTag={activeRelationTag}
+                onToggle={setActiveRelationTag}
+                relationApplyLevel={relationApplyLevel}
+                maxRelationApplyLevel={maxRelationApplyLevel}
+                onChangeLevel={setRelationApplyLevel}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    
       <div
         className={`grid gap-2 p-2 desk:p-0 ${
           filteredCards.length === 0
@@ -740,18 +793,7 @@ export default function SajuChart({ data, hourTable }: Props) {
         />
       </div>
 
-      {unknownTime && (
-        <HourPredictionPanel
-          hourCandidates={hourCandidates}
-          useInsi={useInsi}
-          onToggleRule={() => setUseInsi((prev) => !prev)}
-          usePrevDay={usePrevDay}
-          onTogglePrevDay={() => setUsePrevDay(!usePrevDay)}
-          canSelectHourBranch={canSelectHourBranch}
-          manualHour={manualHour}
-          onSelectHour={handleManualHourSelect}
-        />
-      )}
+      
 
       {isDetailMode && <div className="mt-2 mb-6 p-4 bg-neutral-50 dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800">
         <div className="flex items-center gap-2 mb-3">
@@ -877,20 +919,22 @@ export default function SajuChart({ data, hourTable }: Props) {
         )}
       </div>}
 
-      <SajuRelationPanels
-        isDesktop={isDesktop}
-        exposureLevel={exposureLevel}
-        relationApplyLevel={relationApplyLevel}
-        maxRelationApplyLevel={maxRelationApplyLevel}
-        onChangeRelationApplyLevel={setRelationApplyLevel}
-        relationChips={relationChips}
-        activeRelationTag={activeRelationTag}
-        onToggleRelationTag={setActiveRelationTag}
-        showRelationBox={false}
-        showEtcShinsalBox={showEtcShinsalBox}
-        etcShinsalGood={etcShinsal.good}
-        etcShinsalBad={etcShinsal.bad}
-      />
+      {activeTab === "shinsal" && (
+        <SajuRelationPanels
+          isDesktop={isDesktop}
+          exposureLevel={exposureLevel}
+          relationApplyLevel={relationApplyLevel}
+          maxRelationApplyLevel={maxRelationApplyLevel}
+          onChangeRelationApplyLevel={setRelationApplyLevel}
+          relationChips={relationChips}
+          activeRelationTag={activeRelationTag}
+          onToggleRelationTag={setActiveRelationTag}
+          showRelationBox={false}
+          showEtcShinsalBox={showEtcShinsalBox}
+          etcShinsalGood={etcShinsal.good}
+          etcShinsalBad={etcShinsal.bad}
+        />
+      )}
 
       
     </div>

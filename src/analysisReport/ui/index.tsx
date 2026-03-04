@@ -61,7 +61,7 @@ function parseYYYYMMDD(v: unknown): Date | null {
 }
 
 type BigTab = "격국 · 물상론" | "일간 · 오행 강약" | "용신추천" | "형충회합" | "신살";
-const BIG_TABS: readonly BigTab[] = ["격국 · 물상론", "일간 · 오행 강약", "용신추천", "형충회합", "신살"];
+const BIG_TABS: readonly BigTab[] = ["격국 · 물상론", "일간 · 오행 강약", "용신추천"];
 
 function isAdvancedLockedTab(t: BigTab): boolean {
   return t === "격국 · 물상론" || t === "용신추천";
@@ -150,7 +150,7 @@ export default function AnalysisReport({
         <div className="flex items-start gap-2 px-4 py-2 bg-amber-50/50 dark:bg-amber-900/10 rounded-xl border border-amber-100/50 dark:border-amber-900/20">
           <span className="text-amber-500 text-[12px] mt-0.5">💡</span>
           <p className="text-[10.5px] text-amber-700 dark:text-amber-400/80 leading-relaxed font-medium">
-            선택하신 운의 흐름을 바탕으로 <span className="font-bold underline decoration-amber-300/50 underline-offset-2 text-amber-800 dark:text-amber-300">형충회합 분석</span>과 <span className="font-bold underline decoration-amber-300/50 underline-offset-2 text-amber-800 dark:text-amber-300">신살 판정</span> 결과가 실시간으로 업데이트됩니다.
+            선택하신 운의 흐름을 바탕으로 분석 결과가 실시간으로 업데이트됩니다.
           </p>
         </div>
       </div>
