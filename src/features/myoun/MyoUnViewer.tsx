@@ -220,27 +220,28 @@ export default function MyoUnViewer({ data }: { data: MyeongSik }) {
 
   return (
     <div className="w-full max-w-[640px] mx-auto mb-4 px-2 py-4 desk:p-4 bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 rounded-xl shadow border border-neutral-200 dark:border-neutral-800">
-      <header className="flex flex-wrap items-center gap-3 justify-between mb-4">
-        <div className="font-semibold text-xs desk:text-sm">
+      <header className="flex items-center gap-3 justify-between mb-4">
+        <div className="font-semibold text-xs">
           묘운 + 실시간 운 뷰어{" "}
           <span className="text-neutral-500 dark:text-neutral-400">(출생: {formatDate24(birth)})</span>
         </div>
-      </header>
-
-      <div className="mb-3 flex items-center justify-end gap-2">
-        <label htmlFor="myoun-base-rule" className="text-xs text-neutral-600 dark:text-neutral-300">
+        <div className="flex items-center justify-end gap-2">
+        <label htmlFor="myoun-base-rule" className="text-nowrap text-xs text-neutral-600 dark:text-neutral-300">
           묘운 기준
         </label>
         <select
           id="myoun-base-rule"
           value={myounBaseRule}
           onChange={(e) => setMyounBaseRule(e.target.value as "인시" | "자시")}
-          className="h-9 desk:h-30 text-sm desk:text-xs rounded-md desk:rounded px-3 desk:px-2 py-1.5 desk:py-1 font-medium cursor-pointer bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
+          className="h-7! text-xs desk:text-xs rounded-md desk:rounded px-3 desk:px-2 py-1.5 desk:py-1 font-medium cursor-pointer bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 focus:outline-none focus:ring-2 focus:ring-amber-500/40"
         >
           <option value="인시">인시기준</option>
           <option value="자시">자시기준</option>
         </select>
       </div>
+      </header>
+
+      
 
       <div className="grid grid-cols-2 gap-2 desk:gap-4 mb-6">
         {/* 묘운뷰어 */}
