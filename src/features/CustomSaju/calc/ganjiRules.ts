@@ -52,13 +52,17 @@ export function buildHourMap(dayStem: Stem, rule: HourRule): Record<Branch, stri
     dayStem === "병" || dayStem === "신" ? 4 :
     dayStem === "정" || dayStem === "임" ? 6 : 8;
 
+  // 인시 rule에서는 인시가 일의 첫 시작이므로 baseIndex를 2 더해야
+  // 인시부터 올바른 천간이 배정됨 (자시·축시만 2 밀리고 나머지는 동일)
+  const startIndex = rule === "인시" ? (baseIndex + 2) % 10 : baseIndex;
+
   const map: Record<Branch, string> = GANJI_BRANCHES.reduce((acc, b) => {
     acc[b] = "";
     return acc;
   }, {} as Record<Branch, string>);
 
   for (let i = 0; i < 12; i++) {
-    const stem = GANJI_STEMS[(baseIndex + i) % 10]!;
+    const stem = GANJI_STEMS[(startIndex + i) % 10]!;
     const branch = order[i]!;
     map[branch] = `${stem}${branch}`;
   }
