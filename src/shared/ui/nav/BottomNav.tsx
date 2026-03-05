@@ -1,32 +1,13 @@
 // src/shared/ui/nav/BottomNav.tsx
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, HeartHandshake, Settings, HelpCircle, Sparkles } from "lucide-react";
+import { Home, HeartHandshake, Settings, HelpCircle, BookOpen } from "lucide-react";
 import SettingsDrawer from "@/settings/ui/SettingsDrawerPage";
-import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 
 export default function BottomNav() {
   const [openSettings, setOpenSettings] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const list = useMyeongSikStore((s) => s.list);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setLoading(useMyeongSikStore.getState().loading);
-    const unsub = useMyeongSikStore.subscribe((state) => {
-      setLoading(state.loading);
-    });
-    return () => unsub();
-  }, []);
-
-  const handleIChing = () => {
-    if (loading) return;
-    if (list.length === 0) {
-      alert("명식을 먼저 생성하시고 다시 클릭해주세요!");
-      return;
-    }
-    navigate("/iching");
-  };
 
   // dock 위치 이동(채팅바 있을 때만 아래로)
   // safe-area padding/높이 보정(바닥에 붙어 보이게)
@@ -50,7 +31,7 @@ export default function BottomNav() {
           <NavItem icon={<HeartHandshake size={22} />} label="궁합" onClick={() => navigate("/couple")} />
           <NavItem icon={<HelpCircle size={22} />} label="FAQ" onClick={() => navigate("/faq")} />
           <NavItem icon={<Settings size={22} />} label="설정" onClick={() => setOpenSettings(true)} />
-          <NavItem icon={<Sparkles size={22} />} label="주역·육효점" onClick={handleIChing} />
+          <NavItem icon={<BookOpen size={22} />} label="사주노트" onClick={() => navigate("/saju-note")} />
         </nav>
       </div>
 
