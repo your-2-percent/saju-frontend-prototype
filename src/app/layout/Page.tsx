@@ -468,6 +468,16 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
+      <div className="max-w-[640px] mx-auto px-3 mt-2 mb-3">
+        <button
+          type="button"
+          onClick={() => navigate("/iching")}
+          className="w-full rounded-xl border border-emerald-300/80 dark:border-emerald-700/70 bg-gradient-to-r from-emerald-50 via-teal-50 to-cyan-50 dark:from-emerald-900/30 dark:via-teal-900/30 dark:to-cyan-900/30 px-4 py-2.5 text-xs desk:text-sm font-semibold text-emerald-700 dark:text-emerald-300 shadow-sm hover:brightness-[0.98] dark:hover:brightness-110 transition cursor-pointer"
+        >
+          심심할땐 주역 · 육효점 어떠세요?
+        </button>
+      </div>
+
       <BottomNav />
 
       <Footer />

@@ -1,0 +1,176 @@
+export type SajuNoteItem = {
+  slug: string;
+  title: string;
+  description: string;
+  date: string;
+};
+
+export type SajuNoteCategory = {
+  key: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  badgeClass: string;
+  borderClass: string;
+  items: SajuNoteItem[];
+};
+
+export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
+  {
+    key: "yinyang",
+    title: "음양",
+    subtitle: "음양(陰陽)",
+    description: "음양의 기본 개념부터 주인장의 재해석·임상례까지.",
+    badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
+    borderClass: "border-blue-200 dark:border-blue-900/50",
+    items: [
+      {
+        slug: "yin-yang",
+        title: "음양의 기본 개념 정리",
+        description: "음양이란 무엇인가? 상대성·가변성·상호전화(相互轉化)를 중심으로 음양의 핵심을 정리했습니다.",
+        date: "2026.01.14",
+      },
+      {
+        slug: "yin-yang-clinical-practice",
+        title: "음양의 재해석과 임상모음",
+        description: "이론에서 그치지 않고, 실제 사주 해석에서 음양을 어떻게 적용하는지 임상례와 함께 풀었습니다.",
+        date: "2026.01.26",
+      },
+    ],
+  },
+  {
+    key: "five-elements",
+    title: "오행",
+    subtitle: "오행(五行)",
+    description: "목·화·토·금·수의 특성과 상생·상극 흐름 정리.",
+    badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+    borderClass: "border-emerald-200 dark:border-emerald-900/50",
+    items: [
+      {
+        slug: "five-elements",
+        title: "오행의 기본 개념 정리",
+        description: "오행 각각의 기운과 성질, 상생(相生)·상극(相剋)의 원리, 사주 해석에서의 활용 방법을 정리했습니다.",
+        date: "2026.01.14",
+      },
+    ],
+  },
+  {
+    key: "cheongan",
+    title: "천간",
+    subtitle: "천간(天干)",
+    description: "갑을병정무기경신임계, 10천간의 성격과 해석 포인트.",
+    badgeClass: "bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300",
+    borderClass: "border-amber-200 dark:border-amber-900/50",
+    items: [
+      {
+        slug: "cheongan",
+        title: "천간의 기본 개념 정리",
+        description: "10천간의 음양·오행 속성, 각 천간의 성격과 에너지, 사주에서 천간을 보는 방법을 정리했습니다.",
+        date: "2026.01.14",
+      },
+    ],
+  },
+  {
+    key: "jiji",
+    title: "지지",
+    subtitle: "지지(地支)",
+    description: "자축인묘진사오미신유술해, 12지지의 성격과 해석 포인트.",
+    badgeClass: "bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300",
+    borderClass: "border-violet-200 dark:border-violet-900/50",
+    items: [
+      {
+        slug: "jiji",
+        title: "지지의 기본 개념 정리",
+        description: "12지지의 음양·오행·계절·방향 속성, 각 지지의 성질과 지장간 구성, 지지를 읽는 방법을 정리했습니다.",
+        date: "2026.01.14",
+      },
+    ],
+  },
+  {
+    key: "sipsin",
+    title: "십신",
+    subtitle: "십신(十神)",
+    description: "비겁·식상·재성·관성·인성, 사주 해석의 핵심 프레임.",
+    badgeClass: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300",
+    borderClass: "border-cyan-200 dark:border-cyan-900/50",
+    items: [
+      {
+        slug: "sipsin",
+        title: "십신의 기본 개념 정리",
+        description: "십신(비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인)의 의미와 특징, 실전 해석에서 십신을 보는 방법을 정리했습니다.",
+        date: "2026.01.14",
+      },
+    ],
+  },
+  {
+    key: "tonggeun-tuchul",
+    title: "통근·투출",
+    subtitle: "통근(通根) 및 투출(透出)",
+    description: "뿌리가 있는가, 드러나 있는가 — 힘의 강약을 판단하는 핵심 개념.",
+    badgeClass: "bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300",
+    borderClass: "border-sky-200 dark:border-sky-900/50",
+    items: [
+      {
+        slug: "tonggeun-and-tuchul",
+        title: "통근 및 투출 기본 개념 정리",
+        description: "천간이 지지에 뿌리를 내리는 통근(通根)과, 지장간이 천간에 드러나는 투출(透出)의 원리와 통근율 계산법을 정리했습니다.",
+        date: "2026.01.15",
+      },
+    ],
+  },
+  {
+    key: "hyeongchunghoihap",
+    title: "형충회합",
+    subtitle: "형충회합(刑冲會合)",
+    description: "지지 간의 상호작용 — 형·충·회합·파·해·귀문·원진까지.",
+    badgeClass: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300",
+    borderClass: "border-indigo-200 dark:border-indigo-900/50",
+    items: [
+      {
+        slug: "hyeong-chung-hoi-hap",
+        title: "형충회합 기본 개념 정리",
+        description: "지지가 서로 만날 때 일어나는 변화 — 형(刑)·충(冲)·회(會)·합(合)·파(破)·해(害)·귀문(鬼門)·원진(怨嗔)의 종류와 작용을 정리했습니다.",
+        date: "2026.01.15",
+      },
+    ],
+  },
+  {
+    key: "eight-letters",
+    title: "자리의 의미",
+    subtitle: "팔자(八字) 자리의 의미",
+    description: "연·월·일·시주, 각 8자리가 가리키는 삶의 영역.",
+    badgeClass: "bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300",
+    borderClass: "border-teal-200 dark:border-teal-900/50",
+    items: [
+      {
+        slug: "eight-letters-meaning",
+        title: "팔자 자리의 기본 개념 정리",
+        description: "연주(조상·사회)·월주(부모·형제)·일주(나·배우자)·시주(자식·말년)로 대표되는 팔자 각 자리의 의미와 해석 관점을 정리했습니다.",
+        date: "2026.01.15",
+      },
+    ],
+  },
+  {
+    key: "terminology",
+    title: "사주용어",
+    subtitle: "사주 주요 용어 모음",
+    description: "공부할 때 자주 마주치는 사주 용어들을 한데 모아 정리.",
+    badgeClass: "bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300",
+    borderClass: "border-rose-200 dark:border-rose-900/50",
+    items: [
+      {
+        slug: "terminology",
+        title: "사주용어 기본 개념 정리",
+        description: "격국·용신·신강·신약·종격·화격 등 사주 공부에서 자주 등장하는 핵심 용어들을 한눈에 볼 수 있도록 정리했습니다.",
+        date: "2026.01.27",
+      },
+    ],
+  },
+];
+
+export const SAJU_NOTE_BY_SLUG = SAJU_NOTE_CATEGORIES.flatMap((category) => category.items).reduce<
+  Record<string, SajuNoteItem>
+>((acc, item) => {
+  acc[item.slug] = item;
+  return acc;
+}, {});

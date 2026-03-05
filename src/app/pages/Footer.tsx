@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuthUserId } from "@/auth/input/useAuthUserId";
 
@@ -9,6 +10,7 @@ export default function Footer() {
   const [openDelete, setOpenDelete] = useState(false);
   const userId = useAuthUserId();
   const isLoggedIn = !!userId;
+  const navigate = useNavigate();
 
   // 계정 탈퇴(소프트 삭제)
   const handleDeleteAccount = async () => {
@@ -44,6 +46,13 @@ export default function Footer() {
         </div>
 
         <div className="flex justify-center items-center gap-4 mt-3">
+          <button
+            onClick={() => navigate("/saju-note")}
+            className="text-[12px] text-neutral-500 dark:text-neutral-300 underline cursor-pointer hover:text-orange-500 transition"
+          >
+            사주노트
+          </button>
+
           <button
             onClick={() => setOpenPolicy(true)}
             className="text-[12px] text-neutral-500 dark:text-neutral-300 underline cursor-pointer hover:text-orange-500 transition"
