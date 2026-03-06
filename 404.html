@@ -2,6 +2,14 @@
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        var p = window.location.search.match(/[?&]p=([^&]*)/);
+        if (p) {
+          window.history.replaceState(null, null, decodeURIComponent(p[1]));
+        }
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <title>화림만세력 - 사주/만세력/궁합</title>
