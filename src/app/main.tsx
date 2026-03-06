@@ -6,8 +6,10 @@ import { BrowserRouter } from "react-router-dom";
 import AppShell from "@/app/AppShell";
 import "./main.css";
 
+const BASENAME = import.meta.env.PUBLIC_URL;
+
 createRoot(document.getElementById("root")!).render(
-  <BrowserRouter>
+  <BrowserRouter basename={BASENAME}>
     <AppShell />
   </BrowserRouter>
 );
