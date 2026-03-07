@@ -1,9 +1,10 @@
 type Props = {
   open: boolean;
   onDone: () => void;
+  onNeedMigrate: () => void;
 };
 
-export default function MigrateNoticeModal({ open, onDone }: Props) {
+export default function MigrateNoticeModal({ open, onDone, onNeedMigrate }: Props) {
   if (!open) return null;
 
   return (
@@ -17,8 +18,10 @@ export default function MigrateNoticeModal({ open, onDone }: Props) {
           현재는 수정이 완료되었습니다.
           <br />
           <br />
-          이미 이관을 끝내셨다면 <strong>이관을 완료하였습니다.</strong>를 눌러주시고, 이관 명식이 더 이상
-          필요 없으시면 <strong>이관 명식이 필요 없습니다.</strong>를 눌러주세요.
+          이미 이관을 끝내셨다면 <strong>이관을 완료하였습니다.</strong>를 눌러주시고, 아직 이관하지 않았고
+          이관이 필요하다면 <strong>이관을 아직 하지 않았고, 이관을 해야합니다.</strong>를 눌러주세요.
+          <br />
+          이관 명식이 더 이상 필요 없으시면 <strong>이관 명식이 필요 없습니다.</strong>를 눌러주세요.
         </p>
 
         <div className="mt-4 flex flex-col gap-2">
@@ -28,6 +31,13 @@ export default function MigrateNoticeModal({ open, onDone }: Props) {
             className="w-full cursor-pointer rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700"
           >
             이관을 완료하였습니다.
+          </button>
+          <button
+            type="button"
+            onClick={onNeedMigrate}
+            className="w-full cursor-pointer rounded-lg bg-amber-500 py-2.5 text-sm font-semibold text-white hover:bg-amber-600"
+          >
+            이관을 아직 하지 않았고, 이관을 해야합니다.
           </button>
           <button
             type="button"
