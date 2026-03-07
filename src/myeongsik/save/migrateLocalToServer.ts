@@ -2,6 +2,7 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import type { OldPersistRoot } from "@/myeongsik/calc/myeongsikStore/types";
 import type { MyeongSikRepo } from "@/myeongsik/saveInterface/ports";
 import { buildMyeongSik } from "@/myeongsik/calc";
+import { v5 as uuidv5 } from "uuid";
 import {
   loadGuestList,
   saveGuestList,
@@ -9,6 +10,8 @@ import {
 
 const LEGACY_KEY = "myeongsik-list";
 const LEGACY_MYOWOON_KEYS = ["myeongsikList", "savedMyeongSikList"] as const;
+export const MIGRATED_ID_PREFIX = "96c0ffee";
+const MIGRATED_ID_NAMESPACE = "f86d5f08-63f8-47c2-9cb4-15f0f74a3237";
 
 function safeJsonParse(raw: string): unknown {
   try {
@@ -35,12 +38,35 @@ function toDigits(v: unknown): string {
   return v.replace(/\D/g, "");
 }
 
-function hashIdSeed(seed: string): string {
-  let h = 5381;
-  for (let i = 0; i < seed.length; i++) {
-    h = (h * 33) ^ seed.charCodeAt(i);
-  }
-  return `legacy_${(h >>> 0).toString(36)}`;
+function buildMigratedUuid(seed: string): string {
+  const base = uuidv5(seed, MIGRATED_ID_NAMESPACE).replace(/-/g, "");
+  const seg2 = base.slice(8, 12);
+  const seg3 = `5${base.slice(13, 16)}`;
+  const seg4 = `a${base.slice(17, 20)}`;
+  const seg5 = base.slice(20, 32);
+  return `${MIGRATED_ID_PREFIX}-${seg2}-${seg3}-${seg4}-${seg5}`;
+}
+
+export function isMigratedLegacyId(id: string): boolean {
+  return typeof id === "string" && id.toLowerCase().startsWith(`${MIGRATED_ID_PREFIX}-`);
+}
+
+export function buildUserScopedMigratedId(
+  userId: string,
+  item: Pick<MyeongSik, "id" | "name" | "birthDay" | "birthTime" | "gender" | "folder">,
+  index = 0,
+): string {
+  const seed = [
+    userId,
+    item.id ?? "",
+    item.name ?? "",
+    item.birthDay ?? "",
+    item.birthTime ?? "",
+    item.gender ?? "",
+    item.folder ?? "",
+    String(index),
+  ].join("|");
+  return buildMigratedUuid(`myowoon96-migrate|${seed}`);
 }
 
 function toSignature(v: {
@@ -69,7 +95,7 @@ type LegacyMyowoonRow = {
   createdAt?: unknown;
 };
 
-function convertMyowoonRows(rawRows: unknown[]): MyeongSik[] {
+function convertMyowoonRows(rawRows: unknown[], opts?: { userId?: string }): MyeongSik[] {
   const out: MyeongSik[] = [];
 
   rawRows.forEach((raw, idx) => {
@@ -89,14 +115,17 @@ function convertMyowoonRows(rawRows: unknown[]): MyeongSik[] {
     const monthType = typeof row.monthType === "string" ? row.monthType : "";
     const calendarType = monthType.includes("음력") ? "lunar" : "solar";
     const mingSikType = normalizeLegacyMingSikType(row.selectedTime2);
-    const idSeed = [
-      birthDay,
-      birthTime,
-      name,
-      String(row.createdAt ?? ""),
-      String(idx),
-    ].join("|");
-    const id = hashIdSeed(idSeed);
+    const id = buildMigratedUuid(
+      [
+        "myowoon96",
+        opts?.userId ?? "guest",
+        birthDay,
+        birthTime,
+        name,
+        String(row.createdAt ?? ""),
+        String(idx),
+      ].join("|"),
+    );
 
     const built = buildMyeongSik(
       {
@@ -139,7 +168,7 @@ export function migrateMyowoonLocalListToGuest(): void {
   const parsed = safeJsonParse(raw);
   if (!Array.isArray(parsed)) return;
 
-  const converted = convertMyowoonRows(parsed);
+  const converted = convertMyowoonRows(parsed, { userId: "guest" });
   if (converted.length === 0) {
     for (const key of LEGACY_MYOWOON_KEYS) window.localStorage.removeItem(key);
     return;
@@ -199,14 +228,14 @@ export async function migrateMyowoonLocalListToServer(repo: MyeongSikRepo): Prom
   const parsed = safeJsonParse(raw);
   if (!Array.isArray(parsed)) return;
 
-  const converted = convertMyowoonRows(parsed);
+  const user = await repo.getUser();
+  if (!user) return;
+
+  const converted = convertMyowoonRows(parsed, { userId: user.id });
   if (converted.length === 0) {
     for (const key of LEGACY_MYOWOON_KEYS) window.localStorage.removeItem(key);
     return;
   }
-
-  const user = await repo.getUser();
-  if (!user) return;
 
   const existingIds = new Set<string>(await repo.fetchExistingIds(user.id));
   const serverRows = await repo.fetchRows(user.id);
@@ -264,15 +293,40 @@ export async function migrateLegacyLocalListToServer(repo: MyeongSikRepo): Promi
   if (!user) return;
 
   const existingIds = new Set<string>(await repo.fetchExistingIds(user.id));
+  const serverRows = await repo.fetchRows(user.id);
+  const existingSigs = new Set<string>(
+    serverRows.map((r) =>
+      toSignature({
+        name: r.name ?? "",
+        birthDay: r.birth_day ?? "",
+        birthTime: r.birth_time ?? "",
+        gender: r.gender ?? "",
+        folder: r.folder ?? "",
+      }),
+    ),
+  );
 
-  const toInsert = localList.filter((item): item is MyeongSik => {
-    return !!item && typeof item.id === "string" && item.id.trim() !== "" && !existingIds.has(item.id);
-  });
+  for (let idx = 0; idx < localList.length; idx += 1) {
+    const rawItem = localList[idx] as MyeongSik | null | undefined;
+    if (!rawItem) continue;
 
-  for (const item of toInsert) {
-    // legacy list에는 계산 필드가 없을 수 있어서 서버 write는 최소필드만 넣는다.
-    await repo.upsertOne(user.id, item);
+    const sig = toSignature({
+      name: rawItem.name ?? "",
+      birthDay: rawItem.birthDay ?? "",
+      birthTime: rawItem.birthTime ?? "",
+      gender: rawItem.gender ?? "",
+      folder: rawItem.folder ?? "",
+    });
+    if (existingSigs.has(sig)) continue;
+
+    const migratedId = buildUserScopedMigratedId(user.id, rawItem, idx);
+    if (existingIds.has(migratedId)) continue;
+
+    await repo.upsertOne(user.id, { ...rawItem, id: migratedId });
+    existingIds.add(migratedId);
+    existingSigs.add(sig);
   }
 
   window.localStorage.removeItem(LEGACY_KEY);
 }
+

@@ -10,6 +10,8 @@ import {
   shouldHardReloadBecauseStaleSession,
 } from "@/myeongsik/calc/myeongsikStore/staleSession";
 import {
+  buildUserScopedMigratedId,
+  isMigratedLegacyId,
   migrateLegacyLocalListToServer,
   migrateMyowoonLocalListToGuest,
   migrateMyowoonLocalListToServer,
@@ -110,6 +112,16 @@ async function migrateGuestListToServerIfAny(
 ): Promise<{ ok: boolean; remainingGuest: MyeongSikWithOrder[] }> {
   const guest = loadGuestList();
   if (!guest.length) return { ok: true, remainingGuest: [] };
+  const migrationReadyGuest = guest.map((item, idx) => {
+    if (!isMigratedLegacyId(item.id)) return item;
+    return {
+      ...item,
+      id: buildUserScopedMigratedId(userId, item, idx),
+    };
+  });
+  if (migrationReadyGuest.some((item, idx) => item.id !== guest[idx]?.id)) {
+    saveGuestList(migrationReadyGuest);
+  }
 
   // ✅ soft-deleted 포함 서버 전체 id를 먼저 확인
   // (이미 존재하는 항목은 upsert/merge 금지 → 삭제 복원 버그 방지)
@@ -123,7 +135,7 @@ async function migrateGuestListToServerIfAny(
   }
 
   try {
-    for (const item of guest) {
+    for (const item of migrationReadyGuest) {
       if (!existingIds.has(item.id)) {
         await repo.upsertOne(userId, item);
       }
@@ -144,7 +156,7 @@ async function migrateGuestListToServerIfAny(
       ),
     );
 
-    const remainingGuest = guest.filter((item) => {
+    const remainingGuest = migrationReadyGuest.filter((item) => {
       // 서버에 존재(soft-deleted 포함)하면 guest에서도 제거
       if (existingIds.has(item.id)) return false;
       if (serverIdSet.has(item.id)) return false;
@@ -165,14 +177,14 @@ async function migrateGuestListToServerIfAny(
 
     saveGuestList(remainingGuest);
     console.warn("[myeongsik] guest->server migration partial, keeping guest fallback", {
-      total: guest.length,
+      total: migrationReadyGuest.length,
       remaining: remainingGuest.length,
     });
     return { ok: false, remainingGuest };
   } catch (e) {
     console.warn("[myeongsik] migrateGuestListToServerIfAny failed:", e);
     // ✅ existingIds로 안전하게 필터링 (삭제된 항목 되살아남 방지)
-    const safeRemaining = guest.filter((item) => !existingIds.has(item.id));
+    const safeRemaining = migrationReadyGuest.filter((item) => !existingIds.has(item.id));
     return { ok: false, remainingGuest: safeRemaining };
   }
 }
@@ -323,10 +335,10 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
 
   migrateLocalToServer: async () => {
     try {
-      // 로그인 전에도 구(myowoon96) 로컬 키를 현재 게스트 저장소로 이관
-      migrateMyowoonLocalListToGuest();
+      // 로그인 상태면 먼저 서버로 이관하고, 실패/로그아웃 상태 대비로 guest에도 보존
       await migrateLegacyLocalListToServer(repo);
       await migrateMyowoonLocalListToServer(repo);
+      migrateMyowoonLocalListToGuest();
       // ✅ 게스트→서버 이관은 loadFromServer 내부에서만 수행 (중복 방지)
     } catch (e) {
       console.error("useMyeongSikStore.migrateLocalToServer exception:", e);
@@ -410,7 +422,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       }
     }
 
-    await repo.softDelete(id);
+    await repo.softDelete(user.id, id);
   },
 
   moveItemByDnD: async (args) => {

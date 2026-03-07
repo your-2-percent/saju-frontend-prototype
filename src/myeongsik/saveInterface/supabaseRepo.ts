@@ -94,13 +94,17 @@ export function makeSupabaseMyeongSikRepo(): MyeongSikRepo {
 
     async updateOne(userId: string, id: string, item: MyeongSikWithOrder) {
       const row = buildRowForUpsert(item, userId);
-      const { error } = await supabase.from("myeongsik").update(row).eq("id", id);
+      const { error } = await supabase.from("myeongsik").update(row).eq("id", id).eq("user_id", userId);
       if (error) console.error("myeongsik update error:", error);
     },
 
-    async softDelete(id: string) {
+    async softDelete(userId: string, id: string) {
       const deletedAt = new Date().toISOString();
-      const { error } = await supabase.from("myeongsik").update({ deleted_at: deletedAt }).eq("id", id);
+      const { error } = await supabase
+        .from("myeongsik")
+        .update({ deleted_at: deletedAt })
+        .eq("id", id)
+        .eq("user_id", userId);
       if (error) console.error("myeongsik softDelete error:", error);
     },
 

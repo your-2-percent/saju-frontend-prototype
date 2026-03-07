@@ -26,7 +26,7 @@ export interface MyeongSikRepo {
 
   updateOne(userId: string, id: string, item: MyeongSikWithOrder): Promise<void>;
 
-  softDelete(id: string): Promise<void>;
+  softDelete(userId: string, id: string): Promise<void>;
 
   upsertOrderPatch(userId: string, list: MyeongSikWithOrder[]): Promise<void>;
 
