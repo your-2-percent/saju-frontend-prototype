@@ -310,6 +310,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
           dismissMigrateNoticeForever(migrateNoticeUserId);
           setMigrateNoticeOpen(false);
         }}
+        onNeedMigrate={() => {
+          setMigrateNoticeOpen(false);
+          setLegacyMigrateOpen(true);
+        }}
       />
       {loginOpen && (
         <div className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center">
