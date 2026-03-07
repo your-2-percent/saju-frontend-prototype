@@ -1,5 +1,6 @@
 // src/app/admin/user/list/AdminUserListPage.tsx
 import { useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAdminUserInput } from "./input/useAdminUserInput";
 import { PAGE_SIZE, useAdminUserSave } from "./save/useAdminUserSave";
 import { PLAN_OPTIONS, isPlanTier, planLabel } from "./calc/planUtils";
@@ -143,6 +144,7 @@ function initDraftsFromRows(
 }
 
 export default function AdminUserListPage() {
+  const navigate = useNavigate();
   const input = useAdminUserInput();
   const { search, setSearch, tab, setTab, sort, setSort, page, setPage, draftByUser, setDraftByUser, setDraft } =
     input;
@@ -373,7 +375,7 @@ export default function AdminUserListPage() {
 
                   <button
                     type="button"
-                    onClick={() => (location.href = `/admin/user/${r.user_id}`)}
+                    onClick={() => navigate(`/admin/user/${r.user_id}`)}
                     className="px-3 py-1 rounded bg-neutral-700 hover:bg-neutral-600 cursor-pointer"
                   >
                     상세
