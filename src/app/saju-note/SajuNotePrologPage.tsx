@@ -1,7 +1,9 @@
 // src/app/saju-note/SajuNotePrologPage.tsx
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, PenLine } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
+import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
 
 const entries = [
   {
@@ -25,6 +27,10 @@ const entries = [
 
 export default function SajuNotePrologPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void incrementSajuNoteView("prolog");
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 pb-28">

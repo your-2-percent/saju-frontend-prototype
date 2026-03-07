@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, BookMarked, ArrowRight } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
+import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
 
 type BookEntry = {
   title: string;
@@ -103,6 +105,10 @@ const BOOK_SECTIONS: BookSection[] = [
 
 export default function SajuNoteHistory2Page() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void incrementSajuNoteView("history-2");
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 pb-28">

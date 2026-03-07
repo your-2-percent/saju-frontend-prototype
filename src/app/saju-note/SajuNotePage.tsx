@@ -1,16 +1,30 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, Search, Info, Layers, PenLine, Clock } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { SAJU_NOTE_CATEGORIES } from "@/app/saju-note/sajuNoteCatalog";
+import { fetchSajuNoteViewCounts } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
 }
 
-const STATIC_PAGES = [
+type StaticPage = {
+  section: "about" | "prolog" | "history";
+  slug: string;
+  path: string;
+  title: string;
+  description: string;
+  badge: string;
+  badgeClass: string;
+  borderClass: string;
+  hoverClass: string;
+};
+
+const STATIC_PAGES: StaticPage[] = [
   {
     section: "about",
+    slug: "about",
     path: "/saju-note/about",
     title: "사이트 소개 & 제작자",
     description: "묘운 만세력이 어떻게 만들어졌는지, 현묘의 관법과 제작자 이력 소개.",
@@ -21,6 +35,7 @@ const STATIC_PAGES = [
   },
   {
     section: "about",
+    slug: "myounlyeok",
     path: "/saju-note/myounlyeok",
     title: "묘운력(妙運曆) 상세설명",
     description: "기존 대운을 8자로 확장한 현묘의 관법 — 묘운력의 원리와 읽는 방법을 설명합니다.",
@@ -31,6 +46,7 @@ const STATIC_PAGES = [
   },
   {
     section: "prolog",
+    slug: "prolog",
     path: "/saju-note/prolog",
     title: "주인장 머릿속 끄적끄적",
     description: "사주를 공부하며 문득 스쳐가는 것들 — 이론도 임상도 아닌, 주인장이 심심해서 적는 글들",
@@ -41,6 +57,7 @@ const STATIC_PAGES = [
   },
   {
     section: "history",
+    slug: "history-1",
     path: "/saju-note/history-1",
     title: "사주 역사의 타임라인",
     description: "간지·주역·음양오행부터 조선의 관학까지 — 5000년 명리 역사를 다섯 장면으로 정리했습니다.",
@@ -51,6 +68,7 @@ const STATIC_PAGES = [
   },
   {
     section: "history",
+    slug: "history-2",
     path: "/saju-note/history-2",
     title: "명리를 완성한 위대한 고전들",
     description: "자평진전·궁통보감·적천수부터 사주첩경까지 — 현대 사주 공부의 뼈대가 되는 명리 고전을 소개합니다.",
@@ -64,6 +82,26 @@ const STATIC_PAGES = [
 export default function SajuNotePage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [viewCountBySlug, setViewCountBySlug] = useState<Record<string, number>>({});
+
+  const allNoteSlugs = useMemo(
+    () => [
+      ...SAJU_NOTE_CATEGORIES.flatMap((category) => category.items.map((item) => item.slug)),
+      ...STATIC_PAGES.map((page) => page.slug),
+    ],
+    [],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const counts = await fetchSajuNoteViewCounts(allNoteSlugs);
+      if (!cancelled) setViewCountBySlug(counts);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [allNoteSlugs]);
 
   const filteredCategories = useMemo(() => {
     const q = normalize(query);
@@ -86,20 +124,17 @@ export default function SajuNotePage() {
   const filteredStaticPages = useMemo(() => {
     const q = normalize(query);
     if (!q) return STATIC_PAGES;
-    return STATIC_PAGES.filter((p) =>
-      normalize(`${p.title} ${p.description} ${p.badge}`).includes(q)
-    );
+    return STATIC_PAGES.filter((p) => normalize(`${p.title} ${p.description} ${p.badge}`).includes(q));
   }, [query]);
 
   const aboutPages = filteredStaticPages.filter((p) => p.section === "about");
   const prologPages = filteredStaticPages.filter((p) => p.section === "prolog");
   const historyPages = filteredStaticPages.filter((p) => p.section === "history");
 
-  const isEmpty = filteredCategories.length === 0 && filteredStaticPages.length === 0 && historyPages.length === 0;
+  const isEmpty = filteredCategories.length === 0 && filteredStaticPages.length === 0;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 pb-28">
-      {/* 헤더 */}
       <header className="sticky top-0 z-50 bg-white/90 dark:bg-neutral-950/90 backdrop-blur border-b border-neutral-200 dark:border-neutral-800 px-4">
         <div className="max-w-[900px] mx-auto h-12 sm:h-14 flex items-center gap-3">
           <button
@@ -118,8 +153,6 @@ export default function SajuNotePage() {
       </header>
 
       <main className="max-w-[900px] mx-auto px-4 py-7 space-y-10">
-
-        {/* 검색 */}
         <div className="space-y-2">
           <p className="text-xs text-neutral-400 dark:text-neutral-500">
             myowoon-saju 블로그 — 사주 자료모음 / 관법소개 / 끄적끄적
@@ -135,7 +168,6 @@ export default function SajuNotePage() {
           </label>
         </div>
 
-        {/* ── about / 묘운 섹션 ── */}
         {aboutPages.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
@@ -157,7 +189,10 @@ export default function SajuNotePage() {
                   </span>
                   <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{page.title}</p>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">{page.description}</p>
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                      조회수 {(viewCountBySlug[page.slug] ?? 0).toLocaleString()}
+                    </span>
                     <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
                       보러가기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -168,7 +203,6 @@ export default function SajuNotePage() {
           </section>
         )}
 
-        {/* ── 자료모음 섹션 ── */}
         {filteredCategories.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
@@ -201,7 +235,9 @@ export default function SajuNotePage() {
                           <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>
                           <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">{item.description}</p>
                           <div className="mt-2 flex items-center justify-between">
-                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">{item.date}</span>
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                              {item.date} · 조회수 {(viewCountBySlug[item.slug] ?? 0).toLocaleString()}
+                            </span>
                             <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                               읽기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                             </span>
@@ -216,7 +252,6 @@ export default function SajuNotePage() {
           </section>
         )}
 
-        {/* ── 사주 역사 섹션 ── */}
         {historyPages.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
@@ -238,7 +273,10 @@ export default function SajuNotePage() {
                   </span>
                   <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{page.title}</p>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">{page.description}</p>
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                      조회수 {(viewCountBySlug[page.slug] ?? 0).toLocaleString()}
+                    </span>
                     <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
                       보러가기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -249,7 +287,6 @@ export default function SajuNotePage() {
           </section>
         )}
 
-        {/* ── 끄적끄적 섹션 ── */}
         {prologPages.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
@@ -271,7 +308,10 @@ export default function SajuNotePage() {
                   </span>
                   <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{page.title}</p>
                   <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed">{page.description}</p>
-                  <div className="flex justify-end">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                      조회수 {(viewCountBySlug[page.slug] ?? 0).toLocaleString()}
+                    </span>
                     <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                       읽어보기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                     </span>
@@ -282,7 +322,6 @@ export default function SajuNotePage() {
           </section>
         )}
 
-        {/* 검색 결과 없음 */}
         {isEmpty && (
           <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/40 p-5 text-sm text-neutral-500 dark:text-neutral-400 text-center">
             검색 결과가 없습니다.

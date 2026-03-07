@@ -1,9 +1,10 @@
 import { useCallback, useMemo, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, Calendar, AlertCircle, Home, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Calendar, AlertCircle, Home, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { SAJU_NOTE_BY_SLUG, SAJU_NOTE_CATEGORIES } from "@/app/saju-note/sajuNoteCatalog";
 import { SAJU_NOTE_ARTICLE_BY_SLUG } from "@/app/saju-note/sajuNoteArticles";
+import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
 import "@/app/saju-note/sajuNoteContent.css";
 
 type Theme = {
@@ -97,6 +98,25 @@ export default function SajuNoteReaderPage() {
   );
 
   const [showTitle, setShowTitle] = useState(false);
+  const [viewCount, setViewCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!slug || !note || !article) {
+      setViewCount(null);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      const next = await incrementSajuNoteView(slug);
+      if (!cancelled) setViewCount(next);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [slug, note, article]);
+
   useEffect(() => {
     const handleScroll = () => setShowTitle(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll);
@@ -187,6 +207,12 @@ export default function SajuNoteReaderPage() {
               <BookOpen size={10} />
               사주노트
             </span>
+            {viewCount != null ? (
+              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${theme.badgeBg} ${theme.badge}`}>
+                <Eye size={10} />
+                {viewCount.toLocaleString()}
+              </span>
+            ) : null}
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-neutral-900 dark:text-neutral-50 leading-tight break-keep">
