@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
 import type { MyeongsikRow, ProfileRow } from "@/app/admin/user/detail/model/types";
 import {
   createProfile,
@@ -10,6 +11,7 @@ import {
   setMyeongsikDeleted,
   updateProfile,
 } from "@/app/admin/user/detail/saveInterface/adminUserDetailRepo";
+import { supabase } from "@/lib/supabase";
 
 type UseAdminUserDetailSaveArgs = {
   userId: string;
@@ -25,16 +27,13 @@ export type AdminUserDetailSave = {
   toggleDisable: () => Promise<void>;
   handleRestoreAccount: () => Promise<void>;
   handleRestoreAllMyeongsik: () => Promise<void>;
-
   handleRestoreMyeongsik: (id: string) => Promise<void>;
-
   handleViewAsUser: (myeongsikId?: string) => void;
   toggleDeleteMyeongsik: (id: string, deleted: string | null | undefined) => Promise<void>;
   goTo: (url: string) => void;
 };
 
 function logRpcError(tag: string, error: unknown) {
-  // supabase-js error shape 대응(대충이라도 로그는 남김)
   if (error && typeof error === "object") {
     const e = error as { message?: string; details?: string; hint?: string; code?: string };
     console.error(tag, {
@@ -45,6 +44,7 @@ function logRpcError(tag: string, error: unknown) {
     });
     return;
   }
+
   console.error(tag, error);
 }
 
@@ -55,6 +55,8 @@ export function useAdminUserDetailSave({
   setMyeongsikList,
   setSaving,
 }: UseAdminUserDetailSaveArgs): AdminUserDetailSave {
+  const navigate = useNavigate();
+
   const refreshProfile = useCallback(async () => {
     const data = await fetchProfile(userId);
     setProfile(data);
@@ -101,7 +103,6 @@ export function useAdminUserDetailSave({
     }
   }, [userId, profile, setSaving, refreshProfile]);
 
-  // ✅ 운영형 RPC
   const toggleDisable = useCallback(async () => {
     if (!userId) return;
     if (!profile) return;
@@ -160,11 +161,9 @@ export function useAdminUserDetailSave({
     }
   }, [userId, setSaving, refreshMyeongsik]);
 
-  // ✅ 명식 1개 복구 (= deleted_at null)
   const handleRestoreMyeongsik = useCallback(
     async (id: string) => {
-      if (!userId) return;
-      if (!id) return;
+      if (!userId || !id) return;
 
       setSaving(true);
       try {
@@ -182,10 +181,15 @@ export function useAdminUserDetailSave({
 
   const handleViewAsUser = useCallback(
     (myeongsikId?: string) => {
-      const base = typeof window !== "undefined" ? window.location.origin : "";
-      const url = myeongsikId
-        ? `${base}/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
-        : `${base}/impersonate?userId=${userId}`;
+      if (typeof window === "undefined") return;
+
+      const route = myeongsikId
+        ? `/impersonate?userId=${userId}&myeongsikId=${myeongsikId}`
+        : `/impersonate?userId=${userId}`;
+      const basePath = window.location.pathname.endsWith("/")
+        ? window.location.pathname
+        : `${window.location.pathname}/`;
+      const url = `${window.location.origin}${basePath}#${route}`;
 
       window.open(url, "_blank");
     },
@@ -194,8 +198,7 @@ export function useAdminUserDetailSave({
 
   const toggleDeleteMyeongsik = useCallback(
     async (id: string, deleted: string | null | undefined) => {
-      if (!userId) return;
-      if (!id) return;
+      if (!userId || !id) return;
 
       const next = deleted ? null : new Date().toISOString();
 
@@ -213,9 +216,12 @@ export function useAdminUserDetailSave({
     [userId, setSaving, refreshMyeongsik]
   );
 
-  const goTo = useCallback((url: string) => {
-    window.location.href = url;
-  }, []);
+  const goTo = useCallback(
+    (url: string) => {
+      navigate(url);
+    },
+    [navigate]
+  );
 
   return {
     handleCreateProfile,

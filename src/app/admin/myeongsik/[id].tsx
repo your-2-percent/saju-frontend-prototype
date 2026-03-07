@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { logAudit } from "@/lib/audit";
 
@@ -21,6 +22,7 @@ type MyeongsikRow = {
 
 export default function MyeongsikEditPage({ params }: { params: { id: string } }) {
   const id = params.id;
+  const navigate = useNavigate();
 
   const [ms, setMs] = useState<MyeongsikRow | null>(null);
   const [saving, setSaving] = useState(false);
@@ -89,7 +91,7 @@ export default function MyeongsikEditPage({ params }: { params: { id: string } }
     <div className="p-6 text-white max-w-xl mx-auto">
       <button
         className="mb-4 underline"
-        onClick={() => (window.location.href = `/admin/user/${ms.user_id}`)}
+        onClick={() => navigate(`/admin/user/${ms.user_id}`)}
       >
         ← Back to user
       </button>
