@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, PenLine } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 
 const entries = [
   {
@@ -27,6 +30,7 @@ const entries = [
 
 export default function SajuNotePrologPage() {
   const navigate = useNavigate();
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   useEffect(() => {
     void incrementSajuNoteView("prolog");
@@ -103,8 +107,10 @@ export default function SajuNotePrologPage() {
         <div className="text-center">
           <p className="text-[11px] text-neutral-300 dark:text-neutral-600 italic">계속 업데이트될 예정입니다 :)</p>
         </div>
+        <AdsenseInlineSection enabled={showAds} containerClassName="pt-2" maxWidthPx={640} />
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

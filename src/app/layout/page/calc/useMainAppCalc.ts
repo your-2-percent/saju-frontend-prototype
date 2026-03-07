@@ -11,7 +11,7 @@ const isValidPillars = (arr: unknown): arr is [string, string, string, string] =
 
 type UseMainAppCalcArgs = {
   list: MyeongSik[];
-  currentId: string;
+  currentId: string | null;
   settings: { sinsalBase: string };
   emptyMs: MyeongSik;
 };

@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, Clock, ArrowRight } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 
 const TIMELINE = [
   {
@@ -49,6 +52,7 @@ const TIMELINE = [
 
 export default function SajuNoteHistory1Page() {
   const navigate = useNavigate();
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   useEffect(() => {
     void incrementSajuNoteView("history-1");
@@ -177,8 +181,10 @@ export default function SajuNoteHistory1Page() {
             </button>
           </div>
         </div>
+        <AdsenseInlineSection enabled={showAds} containerClassName="pt-2" maxWidthPx={760} />
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

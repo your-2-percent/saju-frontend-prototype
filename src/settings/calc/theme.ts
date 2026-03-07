@@ -1,8 +1,9 @@
-// src/shared/lib/theme.ts
 export type ThemeMode = "dark" | "light";
 
-const THEME_KEY = "harim.theme";        // ✅ 전용 키 (문자열)
-const SETTINGS_KEY = "harim.settings.v1"; // 기존 설정 객체 키
+const THEME_KEY = "harim.theme";
+const SETTINGS_KEY = "harim.settings.v1";
+const DARK_THEME_COLOR = "#0a0a0a";
+const LIGHT_THEME_COLOR = "#ffffff";
 
 export function getStoredTheme(): ThemeMode | null {
   try {
@@ -15,6 +16,7 @@ export function getStoredTheme(): ThemeMode | null {
       const tt = obj?.theme;
       if (tt === "dark" || tt === "light") return tt;
     }
+
     return null;
   } catch {
     return null;
@@ -23,9 +25,7 @@ export function getStoredTheme(): ThemeMode | null {
 
 export function setStoredTheme(theme: ThemeMode) {
   try {
-    // 전용 키에 문자열 저장
     localStorage.setItem(THEME_KEY, theme);
-    // 설정 객체에도 병행 저장(호환)
     const raw = localStorage.getItem(SETTINGS_KEY);
     const prev = raw ? JSON.parse(raw) : {};
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...prev, theme }));
@@ -34,8 +34,30 @@ export function setStoredTheme(theme: ThemeMode) {
   }
 }
 
+export function getSystemTheme(): ThemeMode {
+  if (
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  ) {
+    return "dark";
+  }
+
+  return "light";
+}
+
+export function resolveTheme(): ThemeMode {
+  return getStoredTheme() ?? getSystemTheme();
+}
+
 export function applyTheme(theme: ThemeMode) {
   const root = document.documentElement;
   root.classList.toggle("dark", theme === "dark");
-  root.style.setProperty("color-scheme", theme); // ✅ no any
+  root.dataset.theme = theme;
+  root.style.setProperty("color-scheme", theme);
+
+  const themeColor = theme === "dark" ? DARK_THEME_COLOR : LIGHT_THEME_COLOR;
+  document
+    .querySelectorAll('meta[name="theme-color"], meta[name="msapplication-navbutton-color"]')
+    .forEach((meta) => meta.setAttribute("content", themeColor));
 }

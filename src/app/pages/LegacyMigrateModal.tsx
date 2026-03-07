@@ -148,7 +148,7 @@ export default function LegacyMigrateModal({ open, onClose }: Props) {
 
   const handleNoMigration = () => {
     const confirmed = window.confirm(
-      "여기서 확인을 누르시면 이관이 불가하게 됩니다. 정말 창을 닫으시겠습니까?"
+      "이관을 하지 않고 창을 닫으시겠습니까?"
     );
     if (confirmed) {
       dismissForever();

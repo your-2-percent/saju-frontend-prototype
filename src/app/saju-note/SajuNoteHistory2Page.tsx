@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, BookMarked, ArrowRight } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 
 type BookEntry = {
   title: string;
@@ -105,6 +108,7 @@ const BOOK_SECTIONS: BookSection[] = [
 
 export default function SajuNoteHistory2Page() {
   const navigate = useNavigate();
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   useEffect(() => {
     void incrementSajuNoteView("history-2");
@@ -239,8 +243,10 @@ export default function SajuNoteHistory2Page() {
             </button>
           </div>
         </div>
+        <AdsenseInlineSection enabled={showAds} containerClassName="pt-2" maxWidthPx={760} />
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

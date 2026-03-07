@@ -5,6 +5,9 @@ import BottomNav from "@/shared/ui/nav/BottomNav";
 import { SAJU_NOTE_BY_SLUG, SAJU_NOTE_CATEGORIES } from "@/app/saju-note/sajuNoteCatalog";
 import { SAJU_NOTE_ARTICLE_BY_SLUG } from "@/app/saju-note/sajuNoteArticles";
 import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 import "@/app/saju-note/sajuNoteContent.css";
 
 type Theme = {
@@ -120,6 +123,7 @@ export default function SajuNoteReaderPage() {
 
   const [showTitle, setShowTitle] = useState(false);
   const [viewCount, setViewCount] = useState<number | null>(null);
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   useEffect(() => {
     if (!slug || !note || !article) {
@@ -189,6 +193,7 @@ export default function SajuNoteReaderPage() {
           </button>
         </main>
 
+        <Footer />
         <BottomNav />
       </div>
     );
@@ -263,6 +268,8 @@ export default function SajuNoteReaderPage() {
           dangerouslySetInnerHTML={{ __html: article.contentHtml }}
         />
 
+        <AdsenseInlineSection enabled={showAds} containerClassName="mt-6" maxWidthPx={760} />
+
         {/* 이전/다음 글 네비게이션 */}
         <div className="mt-10 space-y-4">
           <div className="h-px bg-gradient-to-r from-transparent via-neutral-200 dark:via-neutral-800 to-transparent" />
@@ -322,6 +329,7 @@ export default function SajuNoteReaderPage() {
         </div>
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

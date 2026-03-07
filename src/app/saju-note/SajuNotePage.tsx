@@ -4,6 +4,9 @@ import { ArrowLeft, ArrowRight, BookOpen, Search, Info, Layers, PenLine, Clock }
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { SAJU_NOTE_CATEGORIES } from "@/app/saju-note/sajuNoteCatalog";
 import { fetchSajuNoteViewCounts } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 
 function normalize(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
@@ -83,6 +86,7 @@ export default function SajuNotePage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [viewCountBySlug, setViewCountBySlug] = useState<Record<string, number>>({});
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   const allNoteSlugs = useMemo(
     () => [
@@ -167,6 +171,12 @@ export default function SajuNotePage() {
             />
           </label>
         </div>
+
+        <AdsenseInlineSection
+          enabled={showAds}
+          containerClassName="max-w-[780px] mx-auto"
+          maxWidthPx={780}
+        />
 
         {aboutPages.length > 0 && (
           <section className="space-y-4">
@@ -329,6 +339,7 @@ export default function SajuNotePage() {
         )}
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

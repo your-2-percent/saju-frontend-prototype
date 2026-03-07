@@ -1,9 +1,10 @@
-﻿import { useState, type Dispatch, type SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import type { MyeongSik } from "@/shared/lib/storage";
+import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 
 type MainAppInput = {
-  currentId: string;
-  setCurrentId: Dispatch<SetStateAction<string>>;
+  currentId: string | null;
+  setCurrentId: (next: string | null) => void;
   wizardOpen: boolean;
   setWizardOpen: Dispatch<SetStateAction<boolean>>;
   showSidebar: boolean;
@@ -18,8 +19,9 @@ type MainAppInput = {
   setOpenCustom: Dispatch<SetStateAction<boolean>>;
 };
 
-export function useMainAppInput(list: MyeongSik[]): MainAppInput {
-  const [currentId, setCurrentId] = useState<string>(() => (list.length > 0 ? list[0].id : ""));
+export function useMainAppInput(): MainAppInput {
+  const currentId = useMyeongSikStore((s) => s.currentId);
+  const setCurrentId = useMyeongSikStore((s) => s.setCurrentId);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
   const [editing, setEditing] = useState<MyeongSik | null>(null);

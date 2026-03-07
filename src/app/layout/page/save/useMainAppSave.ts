@@ -15,7 +15,7 @@ type UseMainAppSaveArgs = {
   setShowSidebar: (next: boolean) => void;
   setShowToday: (next: boolean) => void;
   setShowCouple: (next: boolean) => void;
-  setCurrentId: (next: string) => void;
+  setCurrentId: (next: string | null) => void;
   setEditing: (next: MyeongSik | null) => void;
 };
 
@@ -97,7 +97,7 @@ export function useMainAppSave({
   );
 
   const handleSidebarDeleteView = useCallback(() => {
-    const nextId = useMyeongSikStore.getState().list[0]?.id ?? "";
+    const nextId = useMyeongSikStore.getState().list[0]?.id ?? null;
     setCurrentId(nextId);
     setShowToday(true);
     setShowCouple(false);

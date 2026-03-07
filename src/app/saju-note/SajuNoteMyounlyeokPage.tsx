@@ -4,6 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, BookOpen } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
+import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
+import Footer from "@/app/pages/Footer";
 
 const pillars = ["작용시간", "연주", "월주", "일주", "시주", "현재시간"] as const;
 
@@ -113,6 +116,7 @@ function P({ children }: { children: React.ReactNode }) {
 
 export default function SajuNoteMyounlyeokPage() {
   const navigate = useNavigate();
+  const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
 
   useEffect(() => {
     void incrementSajuNoteView("myounlyeok");
@@ -319,8 +323,10 @@ export default function SajuNoteMyounlyeokPage() {
           <P>묘운만세력은 저렇게 만들어졌습니다.</P>
         </Section>
 
+        <AdsenseInlineSection enabled={showAds} containerClassName="pt-2" maxWidthPx={640} />
       </main>
 
+      <Footer />
       <BottomNav />
     </div>
   );

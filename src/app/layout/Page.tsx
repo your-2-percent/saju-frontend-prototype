@@ -46,9 +46,7 @@ import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
 import LoginNudgeModal from "@/auth/ui/LoginNudgeModal";
 import LoginPage from "@/auth/ui/LoginPage";
 import LoginInlineNudge from "@/auth/ui/LoginInlineNudge";
-import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
-import { AdsenseBanner } from "@/shared/ads/AdsenseBanner";
-import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
 
 const EMPTY_MS: MyeongSik = {
   id: "empty",
@@ -127,7 +125,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const { list } = useMyeongSikStore();
   const settings = useSettingsStore((s) => s.settings);
 
-  const input = useMainAppInput(list);
+  const input = useMainAppInput();
   const calc = useMainAppCalc({
     list,
     currentId: input.currentId,
@@ -274,24 +272,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     navigate("/result", { replace: false });
   };
 
+  const showInlineAds = showAds && !input.wizardOpen && !input.editing;
+  const showGeneralInlineAd = showInlineAds && !showResult;
+  const showResultInlineAd = showInlineAds && showResult;
 
   return (
     <div className="min-h-screen pb-16">
-      {showAds && showResult && ADSENSE_ENABLED && (
-        <AdsenseSideDock
-          enabled
-          clientId="ca-pub-4729618898154189"
-          slotId="1598573921"
-          width={160}
-          height={600}
-          showAfterScrollY={0}
-          side="left"
-          sidePx={16}
-          topPx={60}
-          breakpointClassName="hidden desk:block"
-        />
-      )}
-
       <TopNav
         isLoggedIn={isLoggedIn}
         onOpenSidebar={() => input.setShowSidebar(true)}
@@ -441,20 +427,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
             <UnMyounTabs data={calc.current as MyeongSik} tab={activeTab} showMyoTab={showMyoTab} />
           </div>
 
-          {showAds && showResult && settings.showPromptBox && ADSENSE_ENABLED && (
-            <div className="max-w-[760px] mx-auto px-3 mt-6 mb-2">
-              <AdsenseBanner
-                enabled={true}
-                clientId="ca-pub-4729618898154189"
-                slotId="3868873416"
-                heightPx={100}
-                maxWidthPx={750}
-                marginTopPx={10}
-                fullWidthResponsive={true}
-                testMode={false} // 배포에서는 false
-              />
-            </div>
-          )}
+          <AdsenseInlineSection
+            enabled={showResultInlineAd}
+            containerClassName="max-w-[780px] mx-auto px-3 mt-6 mb-2"
+          />
 
           {settings.showPromptBox && (
             <div className="max-w-[640px] mx-auto mb-8">
@@ -478,23 +454,16 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
+      <AdsenseInlineSection
+        enabled={showGeneralInlineAd}
+        containerClassName="max-w-[780px] mx-auto px-3 mt-4 mb-3"
+      />
+
       {input.editing && (
         <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/60">
           <div className="overflow-auto bg-white dark:bg-neutral-950 p-4 rounded-xl w-full max-h-[90dvh] max-w-xl shadow-lg">
             <MyeongSikEditor item={input.editing} onClose={() => input.setEditing(null)} />
           </div>
-        </div>
-      )}
-
-      {!input.wizardOpen && !input.editing && !legacyDismissed && !effectiveShowToday && (
-        <div className="max-w-[640px] mx-auto px-3 mb-3">
-          <button
-            type="button"
-            onClick={() => setLegacyMigrateOpen(true)}
-            className="w-full rounded-lg border border-indigo-300/70 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs py-2 font-semibold cursor-pointer"
-          >
-            myowoon96 명식 가져오기
-          </button>
         </div>
       )}
 
