@@ -4,6 +4,14 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 import { useAuthUserId } from "@/auth/input/useAuthUserId";
+import {
+  AUTO_SHOWN_SESSION_KEY as LEGACY_MIGRATE_AUTO_SHOWN_SESSION_KEY,
+  HIDE_FOREVER_KEY as LEGACY_MIGRATE_HIDE_FOREVER_KEY,
+  HIDE_UNTIL_KEY as LEGACY_MIGRATE_HIDE_UNTIL_KEY,
+} from "@/app/pages/legacyMigrateUtils";
+import {
+  clearMigrateNoticeDismissState,
+} from "@/app/pages/migrateNoticeUtils";
 
 export default function Footer() {
   const [openPolicy, setOpenPolicy] = useState(false);
@@ -38,6 +46,22 @@ export default function Footer() {
     }
   };
 
+  const handleResetMigration = async () => {
+    if (!window.confirm("이관 모달을 다시 띄우시겠습니까?")) return;
+    let noticeUserId = userId;
+    if (isLoggedIn && !noticeUserId) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      noticeUserId = user?.id ?? null;
+    }
+    window.localStorage.removeItem(LEGACY_MIGRATE_HIDE_FOREVER_KEY);
+    window.localStorage.removeItem(LEGACY_MIGRATE_HIDE_UNTIL_KEY);
+    window.sessionStorage.removeItem(LEGACY_MIGRATE_AUTO_SHOWN_SESSION_KEY);
+    clearMigrateNoticeDismissState(noticeUserId);
+    window.location.reload();
+  };
+
   return (
     <>
       <footer className="py-8 pb-[calc(64px+env(safe-area-inset-bottom,0px)+var(--bottom-dock,0px))] px-4 border-t border-neutral-200 dark:border-neutral-700">
@@ -68,6 +92,13 @@ export default function Footer() {
               회원탈퇴
             </button>
           )}
+
+          <button
+            onClick={handleResetMigration}
+            className="text-[12px] text-neutral-400 dark:text-neutral-500 underline cursor-pointer hover:text-indigo-500 transition"
+          >
+            이관 다시하기
+          </button>
         </div>
       </footer>
 
@@ -153,4 +184,3 @@ export default function Footer() {
     </>
   );
 }
-

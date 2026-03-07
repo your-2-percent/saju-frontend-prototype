@@ -4,6 +4,7 @@ import { supabase } from "@/lib/supabase";
 import type { Draft } from "../model/types";
 import type { PlanTier } from "@/shared/billing/entitlements";
 import type { AdminUserTab, AdminUserSort } from "../input/useAdminUserInput";
+import { isMigratedLegacyId } from "@/myeongsik/save/migrateLocalToServer";
 
 export const PAGE_SIZE = 20;
 
@@ -96,10 +97,82 @@ type MyeongsikCountRpcRow = {
   migrated_myeongsik_count?: number | string | null;
 };
 
+type ProfileMigratedCountRow = {
+  id?: string | null;
+  migrated_myeongsik_count?: number | string | null;
+};
+
+type MyeongsikIdRow = {
+  id?: string | null;
+  user_id?: string | null;
+};
+
+type UserMyeongsikCounts = {
+  total: number | null;
+  migrated: number | null;
+};
+
+async function fetchProfileMigratedCounts(userIds: string[]): Promise<Record<string, number | null> | null> {
+  if (!userIds.length) return {};
+
+  const { data, error } = (await supabase
+    .from("profiles")
+    .select("id, migrated_myeongsik_count")
+    .in("id", userIds)) as unknown as {
+    data: ProfileMigratedCountRow[] | null;
+    error: { message?: string } | null;
+  };
+
+  if (error) {
+    console.warn("[admin] profiles migrated count fallback failed:", error.message ?? error);
+    return null;
+  }
+
+  const out: Record<string, number | null> = {};
+  for (const row of Array.isArray(data) ? data : []) {
+    const uid = typeof row.id === "string" ? row.id : "";
+    if (!uid) continue;
+    out[uid] = toNum(row.migrated_myeongsik_count);
+  }
+  return out;
+}
+
+async function fetchMigratedCountsFromRows(userIds: string[]): Promise<Record<string, number | null> | null> {
+  if (!userIds.length) return {};
+
+  const { data, error } = (await supabase
+    .from("myeongsik")
+    .select("id, user_id")
+    .in("user_id", userIds)
+    .is("deleted_at", null)) as unknown as {
+    data: MyeongsikIdRow[] | null;
+    error: { message?: string } | null;
+  };
+
+  if (error) {
+    console.warn("[admin] myeongsik migrated count fallback failed:", error.message ?? error);
+    return null;
+  }
+
+  const out: Record<string, number> = {};
+  for (const row of Array.isArray(data) ? data : []) {
+    const uid = typeof row.user_id === "string" ? row.user_id : "";
+    const id = typeof row.id === "string" ? row.id : "";
+    if (!uid || !id) continue;
+    if (!isMigratedLegacyId(id)) continue;
+    out[uid] = (out[uid] ?? 0) + 1;
+  }
+  return out;
+}
+
 async function fetchMyeongsikCounts(
   userIds: string[]
-): Promise<Record<string, { total: number; migrated: number }> | null> {
+): Promise<Record<string, UserMyeongsikCounts> | null> {
   if (!userIds.length) return {};
+
+  const base: Record<string, UserMyeongsikCounts> = Object.fromEntries(
+    userIds.map((uid) => [uid, { total: null, migrated: null }]),
+  );
 
   // Prefer server-side admin RPC (stable with RLS).
   const { data: rpcData, error: rpcErr } = (await supabase.rpc("admin_myeongsik_counts_by_users", {
@@ -109,24 +182,45 @@ async function fetchMyeongsikCounts(
     error: { message?: string } | null;
   };
 
-  console.dir(rpcData, { depth: null });
-
   if (!rpcErr && Array.isArray(rpcData)) {
-    const out: Record<string, { total: number; migrated: number }> = {};
     for (const row of rpcData) {
       const uid = typeof row.user_id === "string" ? row.user_id : "";
       if (!uid) continue;
-      const total = toNum(row.myeongsik_count) ?? 0;
-      const migrated = toNum(row.migrated_myeongsik_count) ?? 0;
-      out[uid] = { total, migrated };
+      if (!(uid in base)) continue;
+      base[uid] = {
+        total: toNum(row.myeongsik_count),
+        migrated: toNum(row.migrated_myeongsik_count),
+      };
     }
-    return out;
-  }
-
-  if (rpcErr) {
+  } else if (rpcErr) {
     console.warn("[admin] admin_myeongsik_counts_by_users rpc failed:", rpcErr.message ?? rpcErr);
   }
-  return null;
+
+  const missingMigratedUserIds = userIds.filter((uid) => base[uid]?.migrated == null);
+  if (missingMigratedUserIds.length > 0) {
+    const profileCounts = await fetchProfileMigratedCounts(missingMigratedUserIds);
+    if (profileCounts) {
+      for (const uid of missingMigratedUserIds) {
+        const profileCount = profileCounts[uid];
+        if (profileCount != null) {
+          base[uid] = { ...base[uid], migrated: profileCount };
+        }
+      }
+    }
+  }
+
+  const stillMissingMigratedUserIds = userIds.filter((uid) => base[uid]?.migrated == null);
+  if (stillMissingMigratedUserIds.length > 0) {
+    const migratedCounts = await fetchMigratedCountsFromRows(stillMissingMigratedUserIds);
+    if (migratedCounts) {
+      for (const uid of stillMissingMigratedUserIds) {
+        const migratedCount = migratedCounts[uid] ?? 0;
+        base[uid] = { ...base[uid], migrated: migratedCount };
+      }
+    }
+  }
+
+  return base;
 }
 
 /** 빈 문자열이면 null */
@@ -253,11 +347,11 @@ export function useAdminUserSave() {
         const enriched = parsed.map((r) => ({
           ...r,
           myeongsik_count:
-            countByUser && countByUser[r.user_id]
+            countByUser && countByUser[r.user_id]?.total != null
               ? countByUser[r.user_id].total
               : (r.myeongsik_count ?? 0),
           migrated_myeongsik_count:
-            countByUser && countByUser[r.user_id]
+            countByUser && countByUser[r.user_id]?.migrated != null
               ? countByUser[r.user_id].migrated
               : null,
         }));

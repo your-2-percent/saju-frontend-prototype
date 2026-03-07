@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import { dismissForever, dismissForToday } from "@/app/pages/legacyMigrateUtils";
+import { supabase } from "@/lib/supabase";
 
 const BRIDGE_ORIGINS = new Set(["https://myowoon96.com", "https://www.myowoon96.com"]);
 const BRIDGE_TYPES = new Set(["MYOWOON_EXPORT_MYEONGSIK_V1", "MYOWOON_BRIDGE_EXPORT_V1"]);
@@ -83,6 +84,24 @@ export default function LegacyMigrateModal({ open, onClose }: Props) {
       window.localStorage.setItem("myeongsikList", JSON.stringify(rows));
       await migrateLocalToServer();
       await loadFromServer();
+
+      // 관리자 확인용: 이관된 명식 개수 저장
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { error } = await supabase
+          .from("profiles")
+          .update({
+            migrated_myeongsik_count: rows.length,
+          })
+          .eq("id", user.id);
+
+        if (error) {
+          console.warn("[legacy-migrate] failed to persist migrated count", error);
+        }
+      }
+
       setStatus(`명식 ${rows.length}건을 가져왔습니다. 닫기버튼을 눌러주세요.`);
       dismissForever();
     } catch (e) {

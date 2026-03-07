@@ -24,7 +24,6 @@ import {
   isLegacyMigrateDismissed,
 } from "@/app/pages/legacyMigrateUtils";
 import {
-  dismissMigrateNoticeForToday,
   dismissMigrateNoticeForever,
   shouldAutoOpenMigrateNoticeModal,
 } from "@/app/pages/migrateNoticeUtils";
@@ -37,6 +36,7 @@ import { usePageSave } from "@/app/layout/page/save/usePageSave";
 import { useMainAppInput } from "@/app/layout/page/input/useMainAppInput";
 import { useMainAppCalc } from "@/app/layout/page/calc/useMainAppCalc";
 import { useMainAppSave } from "@/app/layout/page/save/useMainAppSave";
+import { useAuthUserId } from "@/auth/input/useAuthUserId";
 
 // ✅ FAQ
 import FaqPage from "@/app/faq/FaqPage";
@@ -123,6 +123,7 @@ export default function Page() {
 function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const authUserId = useAuthUserId();
   const { list } = useMyeongSikStore();
   const settings = useSettingsStore((s) => s.settings);
 
@@ -218,6 +219,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [legacyMigrateOpen, setLegacyMigrateOpen] = useState(false);
   const [legacyDismissed, setLegacyDismissed] = useState(isLegacyMigrateDismissed);
   const [migrateNoticeOpen, setMigrateNoticeOpen] = useState(false);
+  const migrateNoticeUserId = isLoggedIn ? authUserId : null;
 
   // 모달이 닫힐 때마다 dismissed 여부 재확인 (가져오기 성공 or 영구 숨기기 클릭 이후)
   useEffect(() => {
@@ -241,10 +243,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   }, []);
 
   useEffect(() => {
-    if (shouldAutoOpenMigrateNoticeModal()) {
+    if (!isLoggedIn) return;
+    if (!migrateNoticeUserId) return;
+    if (shouldAutoOpenMigrateNoticeModal(migrateNoticeUserId)) {
       setMigrateNoticeOpen(true);
     }
-  }, []);
+  }, [isLoggedIn, migrateNoticeUserId]);
 
   const handleSidebarView: typeof save.handleSidebarView = (...args) => {
     setShowFaq(false);
@@ -302,16 +306,8 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       />
       <MigrateNoticeModal
         open={migrateNoticeOpen}
-        onMigrate={() => {
-          setMigrateNoticeOpen(false);
-          setLegacyMigrateOpen(true);
-        }}
-        onHideToday={() => {
-          dismissMigrateNoticeForToday();
-          setMigrateNoticeOpen(false);
-        }}
-        onHideForever={() => {
-          dismissMigrateNoticeForever();
+        onDone={() => {
+          dismissMigrateNoticeForever(migrateNoticeUserId);
           setMigrateNoticeOpen(false);
         }}
       />
