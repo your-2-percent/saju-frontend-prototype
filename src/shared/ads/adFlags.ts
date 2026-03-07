@@ -1,4 +1,4 @@
 // Ad network feature flags
-// Keep Adfit enabled, and temporarily disable Adsense until account approval.
+// Keep AdSense wired in, but hide placements until approval is complete.
 export const ADSENSE_ENABLED = false;
 

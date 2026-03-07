@@ -34,6 +34,42 @@ import { useLoginNudgeStore } from "@/auth/input/loginNudgeStore";
 
 const repo = makeSupabaseMyeongSikRepo();
 const reorderQueue = createReorderWriteQueue(repo);
+const CURRENT_ID_STORAGE_KEY = "myeongsik_current_id_v1";
+
+function isBrowser(): boolean {
+  return typeof window !== "undefined";
+}
+
+function getCurrentIdStorageKey(userId: string | null): string {
+  return userId ? `${CURRENT_ID_STORAGE_KEY}:user:${userId}` : `${CURRENT_ID_STORAGE_KEY}:guest`;
+}
+
+function readPersistedCurrentId(userId: string | null): string | null {
+  if (!isBrowser()) return null;
+
+  try {
+    const raw = window.localStorage.getItem(getCurrentIdStorageKey(userId));
+    return raw && raw.trim() !== "" ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedCurrentId(userId: string | null, id: string | null): void {
+  if (!isBrowser()) return;
+
+  const key = getCurrentIdStorageKey(userId);
+
+  try {
+    if (!id) {
+      window.localStorage.removeItem(key);
+      return;
+    }
+    window.localStorage.setItem(key, id);
+  } catch {
+    // ignore storage failures
+  }
+}
 
 function canManageNowOrWarn(): boolean {
   const ent = useEntitlementsStore.getState();
@@ -238,7 +274,10 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     return list.find((m) => m.id === currentId) ?? null;
   },
 
-  setCurrentId: (id) => set({ currentId: id }),
+  setCurrentId: (id) => {
+    writePersistedCurrentId(get().loadedUserId, id);
+    set({ currentId: id });
+  },
 
   startRealtime: async () => {
     if (typeof window === "undefined") return;
@@ -305,7 +344,12 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       // ✅ 게스트: 로컬에서 불러오기
       if (!user) {
         const guest = loadGuestList();
-        const firstId = guest[0]?.id ?? null;
+        const persistedCurrent = readPersistedCurrentId(null);
+        const firstId =
+          persistedCurrent && guest.some((m) => m.id === persistedCurrent)
+            ? persistedCurrent
+            : guest[0]?.id ?? null;
+        writePersistedCurrentId(null, firstId);
         set({ list: guest, currentId: firstId, loaded: true, loadedUserId: null });
         await get().stopRealtime();
         return;
@@ -319,11 +363,15 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
       const list = mergeServerAndGuestList(serverList, migrateResult.remainingGuest);
 
       const prevCurrent = get().currentId;
+      const persistedCurrent = readPersistedCurrentId(user.id);
       const firstId =
         prevCurrent && list.some((m) => m.id === prevCurrent)
           ? prevCurrent
+          : persistedCurrent && list.some((m) => m.id === persistedCurrent)
+            ? persistedCurrent
           : list[0]?.id ?? null;
 
+      writePersistedCurrentId(user.id, firstId);
       set({ list, currentId: firstId, loaded: true, loadedUserId: user.id });
       await get().startRealtime();
     } catch (e) {
@@ -406,6 +454,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
     const filtered = prev.filter((x) => x.id !== id);
     const newCurrentId = get().currentId === id ? filtered[0]?.id ?? null : get().currentId;
 
+    writePersistedCurrentId(user?.id ?? get().loadedUserId, newCurrentId);
     set({ list: filtered, currentId: newCurrentId });
 
     if (!user) {
@@ -551,6 +600,7 @@ export const useMyeongSikStore = create<MyeongSikStore>((set, get) => ({
   },
 
   clear: () => {
+    writePersistedCurrentId(get().loadedUserId, null);
     set({ currentId: null, list: [], loaded: false, loadedUserId: null });
     clearGuestList();
   },

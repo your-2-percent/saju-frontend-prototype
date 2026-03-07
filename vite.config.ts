@@ -6,7 +6,7 @@ import path from "path";
 export default defineConfig({
   plugins: [react(), mkcert()],
   resolve: { alias: { "@": path.resolve(__dirname, "src") } },
-  base: "/",
+  base: "./",
   server: {
     https: {},
     host: "0.0.0.0",

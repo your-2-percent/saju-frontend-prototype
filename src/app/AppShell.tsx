@@ -1,25 +1,26 @@
-// src/app/AppShell.tsx
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 
-import Page from "@/app/layout/Page";
 import AdminPage from "@/app/admin/AdminPage";
+import AccountDisabledGate from "@/app/AccountDisabledGate";
+import AppBootstrap from "@/app/AppBootstrap";
+import HeartbeatGate from "@/app/HeartbeatGate";
+import Page from "@/app/layout/Page";
+import PrivacyPolicyPage from "@/app/legal/PrivacyPolicyPage";
+import TermsPage from "@/app/legal/TermsPage";
+import AccountDisabledPage from "@/app/pages/AccountDisabled";
+import SajuNoteAboutPage from "@/app/saju-note/SajuNoteAboutPage";
+import SajuNoteHistory1Page from "@/app/saju-note/SajuNoteHistory1Page";
+import SajuNoteHistory2Page from "@/app/saju-note/SajuNoteHistory2Page";
+import SajuNoteMyounlyeokPage from "@/app/saju-note/SajuNoteMyounlyeokPage";
+import SajuNotePage from "@/app/saju-note/SajuNotePage";
+import SajuNotePrologPage from "@/app/saju-note/SajuNotePrologPage";
+import SajuNoteReaderPage from "@/app/saju-note/SajuNoteReaderPage";
 import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/auth/ui/AuthCallbackPage";
 import IChingSixYaoPage from "@/iching/ui/IChingSixYaoPage";
-import SajuNotePage from "@/app/saju-note/SajuNotePage";
-import SajuNoteReaderPage from "@/app/saju-note/SajuNoteReaderPage";
-import SajuNoteAboutPage from "@/app/saju-note/SajuNoteAboutPage";
-import SajuNoteMyounlyeokPage from "@/app/saju-note/SajuNoteMyounlyeokPage";
-import SajuNotePrologPage from "@/app/saju-note/SajuNotePrologPage";
-import SajuNoteHistory1Page from "@/app/saju-note/SajuNoteHistory1Page";
-import SajuNoteHistory2Page from "@/app/saju-note/SajuNoteHistory2Page";
-
 import UserActivityHeartbeatGate from "@/shared/activity/UserActivityHeartbeat";
-import AppBootstrap from "@/app/AppBootstrap";
-import HeartbeatGate from "@/app/HeartbeatGate";
-import AccountDisabledGate from "@/app/AccountDisabledGate";
-import AccountDisabledPage from "@/app/pages/AccountDisabled";
+import { PublicAds } from "@/shared/ads/PublicAds";
 
 export default function AppShell() {
   const location = useLocation();
@@ -32,11 +33,9 @@ export default function AppShell() {
     <>
       <AppBootstrap />
       <HeartbeatGate />
-
-      {/* ✅ 비활성화 강제 튕김 */}
       <AccountDisabledGate />
-
       <UserActivityHeartbeatGate />
+      <PublicAds />
 
       <Routes>
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -49,8 +48,9 @@ export default function AppShell() {
         <Route path="/saju-note/prolog/*" element={<SajuNotePrologPage />} />
         <Route path="/saju-note/history-1" element={<SajuNoteHistory1Page />} />
         <Route path="/saju-note/history-2" element={<SajuNoteHistory2Page />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/saju-note/*" element={<Navigate to="/saju-note" replace />} />
-        {/* legacy direct links */}
         <Route path="/about" element={<Navigate to="/saju-note/about" replace />} />
         <Route path="/myounlyeok" element={<Navigate to="/saju-note/myounlyeok" replace />} />
         <Route path="/prolog" element={<Navigate to="/saju-note/prolog" replace />} />

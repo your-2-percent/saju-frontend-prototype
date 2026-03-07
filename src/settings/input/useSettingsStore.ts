@@ -2,6 +2,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/lib/supabase";
+import { resolveTheme } from "@/settings/calc/theme";
 
 const LS_KEY = "settings_v1";
 
@@ -61,7 +62,7 @@ export const defaultSettings: Settings = {
   showEtcShinsal: true,
   showRelationBox: true,
   showPromptBox: true,
-  theme: "dark",
+  theme: resolveTheme(),
   difficultyMode: false,
   sidebarCardsCollapsed: false,
   sidebarCardCollapsedMap: {},

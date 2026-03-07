@@ -11,8 +11,7 @@ import IChingSixYaoDrawer, { type SajuContext } from "@/iching/ui/IChingSixYaoDr
 import { useGlobalLuck } from "@/luck/calc/useGlobalLuck";
 import type { MyeongSik } from "@/shared/lib/storage";
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
-import { AdsenseSideDock } from "@/shared/ads/AdsenseSideDock";
-import { ADSENSE_ENABLED } from "@/shared/ads/adFlags";
+import { AdsenseInlineSection } from "@/shared/ads/AdsenseInlineSection";
 
 // function isValidDate(d: unknown): d is Date {
 //   return d instanceof Date && !Number.isNaN(d.getTime());
@@ -200,20 +199,6 @@ export default function IChingSixYaoPage() {
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
-      {showAds && ADSENSE_ENABLED && (
-        <AdsenseSideDock
-          enabled
-          clientId="ca-pub-4729618898154189"
-          slotId="1598573921"
-          width={160}
-          height={600}
-          showAfterScrollY={0}
-          side="left"
-          sidePx={16}
-          topPx={60}
-          breakpointClassName="hidden desk:block"
-        />
-      )}
       <div className="w-full max-w-[768px] mx-auto px-4 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -254,6 +239,12 @@ export default function IChingSixYaoPage() {
           </div>
         )}
       </div>
+
+      <AdsenseInlineSection
+        enabled={showAds && list.length > 0}
+        containerClassName="w-full max-w-[780px] mx-auto px-4 pt-4"
+        maxWidthPx={768}
+      />
 
       {loading && list.length === 0 && (
         <div className="w-full max-w-[768px] mx-auto px-4 py-10">

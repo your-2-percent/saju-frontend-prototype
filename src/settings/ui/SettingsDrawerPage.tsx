@@ -25,10 +25,11 @@ export default function SettingsDrawer({ open, onClose }: Props) {
   const closeToast = () => input.setToastMessage(null);
 
   const currentTheme = getCurrentTheme(input.localSettings, settings);
-  useApplyTheme(currentTheme);
+  const appliedTheme = open ? currentTheme : (settings.theme as ThemeMode);
+  useApplyTheme(appliedTheme);
   useEffect(() => {
-    persistTheme(currentTheme);
-  }, [currentTheme]);
+    persistTheme(appliedTheme);
+  }, [appliedTheme]);
 
   const handleApply = () => {
     void save.applyChanges(input.localSettings, input.order, () => {
