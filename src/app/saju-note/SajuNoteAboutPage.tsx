@@ -1,10 +1,16 @@
 // src/app/saju-note/SajuNoteAboutPage.tsx
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, BookOpen, ExternalLink, Sparkles, Star } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
+import { incrementSajuNoteView } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
 
 export default function SajuNoteAboutPage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    void incrementSajuNoteView("about");
+  }, []);
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 pb-28">
