@@ -65,6 +65,38 @@ export default function SajuNoteReaderPage() {
       ? orderedNotes[currentNoteIndex + 1]
       : null;
 
+  const scrollToHashTarget = useCallback(
+    (hash: string, container?: ParentNode | null) => {
+      if (!hash.startsWith("#")) return false;
+
+      const contentRoot =
+        container ?? document.querySelector<HTMLElement>(".saju-note-content");
+      if (!contentRoot) return false;
+
+      if (slug === "sipsin" && hash.startsWith("#tg-")) {
+        const targetDetails = contentRoot.querySelector<HTMLDetailsElement>(hash);
+        if (!targetDetails) return false;
+
+        const detailsList = contentRoot.querySelectorAll<HTMLDetailsElement>('details[id^="tg-"]');
+        detailsList.forEach((details) => {
+          details.open = details === targetDetails;
+        });
+      }
+
+      const targetElement = contentRoot.querySelector<HTMLElement>(hash);
+      if (!targetElement) return false;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      targetElement.scrollIntoView({
+        behavior: prefersReducedMotion ? "auto" : "smooth",
+        block: "start",
+      });
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${hash}`);
+      return true;
+    },
+    [slug],
+  );
+
   const onContentClick = useCallback(
     (event: React.MouseEvent<HTMLElement>) => {
       const target = event.target as HTMLElement | null;
@@ -79,22 +111,11 @@ export default function SajuNoteReaderPage() {
       }
 
       // 십신 페이지 목차(#tg-*)는 해당 카드만 펼치고 나머지는 접는다.
-      if (slug === "sipsin" && href.startsWith("#tg-")) {
+      if (href.startsWith("#") && scrollToHashTarget(href, event.currentTarget)) {
         event.preventDefault();
-        const container = event.currentTarget;
-        const targetDetails = container.querySelector<HTMLDetailsElement>(href);
-        if (!targetDetails) return;
-
-        const detailsList = container.querySelectorAll<HTMLDetailsElement>('details[id^="tg-"]');
-        detailsList.forEach((details) => {
-          details.open = details === targetDetails;
-        });
-
-        targetDetails.scrollIntoView({ behavior: "smooth", block: "start" });
-        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}${href}`);
       }
     },
-    [navigate, slug],
+    [navigate, scrollToHashTarget],
   );
 
   const [showTitle, setShowTitle] = useState(false);
@@ -122,6 +143,17 @@ export default function SajuNoteReaderPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!article) return;
+    if (!window.location.hash) return;
+
+    const frameId = window.requestAnimationFrame(() => {
+      scrollToHashTarget(window.location.hash);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [article, scrollToHashTarget]);
 
   if (!note || !article) {
     return (

@@ -5,6 +5,7 @@ import type { Draft } from "../model/types";
 import type { PlanTier } from "@/shared/billing/entitlements";
 import type { AdminUserTab, AdminUserSort } from "../input/useAdminUserInput";
 import { isMigratedLegacyId } from "@/myeongsik/save/migrateLocalToServer";
+import type { AdminRole } from "@/app/admin/hooks/useAdminRole";
 
 export const PAGE_SIZE = 20;
 
@@ -31,6 +32,7 @@ export type AdminListUserRow = {
   online: boolean | null;
   total_count: number | null;
   migrated_myeongsik_count: number | null;
+  admin_role: AdminRole;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -88,6 +90,7 @@ function parseRow(v: unknown): AdminListUserRow | null {
     online: toBool(v.online),
     total_count: toNum(v.total_count),
     migrated_myeongsik_count: null,
+    admin_role: null,
   };
 }
 
@@ -111,6 +114,36 @@ type UserMyeongsikCounts = {
   total: number | null;
   migrated: number | null;
 };
+
+type AdminRoleRow = {
+  user_id?: string | null;
+  role?: AdminRole;
+};
+
+async function fetchAdminRoles(userIds: string[]): Promise<Record<string, AdminRole>> {
+  if (!userIds.length) return {};
+
+  const { data, error } = (await supabase
+    .from("admin_roles")
+    .select("user_id, role")
+    .in("user_id", userIds)) as unknown as {
+    data: AdminRoleRow[] | null;
+    error: { message?: string } | null;
+  };
+
+  if (error) {
+    console.warn("[admin] admin_roles fallback failed:", error.message ?? error);
+    return {};
+  }
+
+  const out: Record<string, AdminRole> = {};
+  for (const row of Array.isArray(data) ? data : []) {
+    const uid = typeof row.user_id === "string" ? row.user_id : "";
+    if (!uid) continue;
+    out[uid] = row.role ?? null;
+  }
+  return out;
+}
 
 async function fetchProfileMigratedCounts(userIds: string[]): Promise<Record<string, number | null> | null> {
   if (!userIds.length) return {};
@@ -344,6 +377,7 @@ export function useAdminUserSave() {
         const parsed = raw.map(parseRow).filter((x): x is AdminListUserRow => x !== null);
         const userIds = parsed.map((r) => r.user_id);
         const countByUser = await fetchMyeongsikCounts(userIds);
+        const roleByUser = await fetchAdminRoles(userIds);
         const enriched = parsed.map((r) => ({
           ...r,
           myeongsik_count:
@@ -354,6 +388,7 @@ export function useAdminUserSave() {
             countByUser && countByUser[r.user_id]?.migrated != null
               ? countByUser[r.user_id].migrated
               : null,
+          admin_role: roleByUser[r.user_id] ?? null,
         }));
 
         setRows(enriched);

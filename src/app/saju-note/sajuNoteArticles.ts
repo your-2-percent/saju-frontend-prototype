@@ -3461,7 +3461,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 대원칙 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-rule">
     <h3>현묘가 밝힌 합-충 해석의 대원칙</h3>
 
     <blockquote>
@@ -3481,7 +3481,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 종합 적용 지침 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-guide">
     <h3>종합 적용 지침 (현묘식)</h3>
 
     <h4>합으로 무대(도구) 확인</h4>
@@ -3512,7 +3512,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 천간합 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-stem-hap">
     <h3>천간합</h3>
 
     <section>
@@ -3584,7 +3584,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 천간충 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-stem-chung">
     <h3>천간충</h3>
 
     <p>강의에서는 언급되지 않음.</p>
@@ -3659,7 +3659,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 지지 삼합 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-jiji-samhap">
     <h3>지지 삼합</h3>
 
     <h4>설명</h4>
@@ -3696,7 +3696,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 지지 방합 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-jiji-banghap">
     <h3>지지 방합</h3>
 
     <h4>설명</h4>
@@ -3740,7 +3740,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 지지 육합 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-jiji-yukhap">
     <h3>지지 육합</h3>
 
     <h4>설명</h4>
@@ -3789,7 +3789,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 지지충 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-jiji-chung">
     <h3>지지충</h3>
 
     <h4>설명</h4>
@@ -3822,7 +3822,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 암합 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-amhap">
     <h3>암합</h3>
 
     <blockquote>
@@ -3869,7 +3869,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 형 파 해 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-sub">
     <h3>형(刑) ‧ 파(破) ‧ 해(害)</h3>
 
     <h4>형(刑)</h4>
@@ -3910,7 +3910,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   <!-- ===================== -->
   <!-- 기타 -->
   <!-- ===================== -->
-  <article>
+  <article id="hc-extra">
     <h3>현묘님의 관법에는 없는 내용이지만, 개인적으로 공부한 것들에 대해 정리.</h3>
 
     <h4>귀문</h4>
@@ -3964,7 +3964,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 요약 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-overview">
           <h3>여덟 자리 요약</h3>
 
           <table>
@@ -4029,7 +4029,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 시간 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-shigan">
           <h3>시간 (時干)</h3>
 
           <h4>의미</h4>
@@ -4045,7 +4045,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 시지 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-siji">
           <h3>시지 (時支)</h3>
 
           <h4>의미</h4>
@@ -4061,7 +4061,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 일간 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-ilgan">
           <h3>일간 (日干)</h3>
 
           <h4>의미</h4>
@@ -4077,7 +4077,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 일지 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-ilji">
           <h3>일지 (日支)</h3>
 
           <h4>의미</h4>
@@ -4093,7 +4093,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 월간 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-wolgan">
           <h3>월간 (月干)</h3>
 
           <h4>의미</h4>
@@ -4109,7 +4109,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 월지 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-wolji">
           <h3>월지 (月支)</h3>
 
           <h4>의미</h4>
@@ -4125,7 +4125,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 연간 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-yeongan">
           <h3>연간 (年干)</h3>
 
           <h4>의미</h4>
@@ -4141,7 +4141,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 연지 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-yeonji">
           <h3>연지 (年支)</h3>
 
           <h4>의미</h4>
@@ -4157,7 +4157,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
         <!-- ===================== -->
         <!-- 활용 순서 -->
         <!-- ===================== -->
-        <article>
+        <article id="pos-flow">
           <h3>활용 순서 – 현묘식 “거리 &gt; 관계” 접근</h3>
 
           <ol>

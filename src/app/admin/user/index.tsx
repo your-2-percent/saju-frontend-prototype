@@ -36,6 +36,55 @@ function formatTotalActiveMs(ms?: number | null): string {
   return `${min}분`;
 }
 
+function formatJoinedAt(createdAt?: string | null): string {
+  if (!createdAt) return "가입일 없음";
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return "가입일 없음";
+  return new Date(t).toLocaleString();
+}
+
+function formatJoinedAge(createdAt?: string | null): string {
+  if (!createdAt) return "가입일수 확인불가";
+  const t = Date.parse(createdAt);
+  if (!Number.isFinite(t)) return "가입일수 확인불가";
+
+  const joined = new Date(t);
+  const now = new Date();
+  const joinedDay = new Date(joined.getFullYear(), joined.getMonth(), joined.getDate()).getTime();
+  const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const diffDays = Math.max(0, Math.floor((todayDay - joinedDay) / 86400000));
+
+  if (diffDays === 0) return "오늘 가입";
+  return `가입 ${diffDays}일 경과`;
+}
+
+function getActivityBadge(lastSeenAt?: string | null, totalActiveMs?: number | null): {
+  label: string;
+  className: string;
+} | null {
+  const lastSeenTs = lastSeenAt ? Date.parse(lastSeenAt) : NaN;
+  const activeMs = typeof totalActiveMs === "number" ? totalActiveMs : 0;
+  const daysSinceLastSeen = Number.isFinite(lastSeenTs)
+    ? (Date.now() - lastSeenTs) / 86400000
+    : Number.POSITIVE_INFINITY;
+
+  if (daysSinceLastSeen <= 7 && activeMs >= 12 * 60 * 60 * 1000) {
+    return {
+      label: "헤비 유저",
+      className: "bg-fuchsia-900/40 border-fuchsia-700 text-fuchsia-200",
+    };
+  }
+
+  if (daysSinceLastSeen <= 3 && activeMs >= 3 * 60 * 60 * 1000) {
+    return {
+      label: "자주 방문",
+      className: "bg-sky-900/40 border-sky-700 text-sky-200",
+    };
+  }
+
+  return null;
+}
+
 function toYMDInput(iso?: string | null): string {
   if (!iso) return "";
   const t = Date.parse(iso);
@@ -207,6 +256,8 @@ export default function AdminUserListPage() {
           const lastSeenAt = r.last_seen_at ?? null;
           const online = r.online === true;
           const totalActiveMs = r.total_active_ms ?? null;
+          const joinedAt = r.created_at ?? null;
+          const activityBadge = getActivityBadge(lastSeenAt, totalActiveMs);
 
           return (
             <div key={r.user_id} className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg hover:bg-neutral-800">
@@ -214,6 +265,16 @@ export default function AdminUserListPage() {
                 <div className="min-w-0 flex flex-col desk:flex-row item-start desk:items-center gap-2">
                   <span className="text-nowrap mr-1">{displayName}</span>
                   {email ? <span className="text-sm text-neutral-400">({email})</span> : null}
+                  {r.admin_role === "admin" ? (
+                    <span className="text-[11px] px-2 py-0.5 rounded-full border bg-amber-900/40 border-amber-600 text-amber-200">
+                      관리자 ★
+                    </span>
+                  ) : null}
+                  {activityBadge ? (
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full border ${activityBadge.className}`}>
+                      {activityBadge.label}
+                    </span>
+                  ) : null}
 
                   <div className="flex items-center gap-1">
                     <span
@@ -249,6 +310,10 @@ export default function AdminUserListPage() {
               <div className="text-sm text-neutral-400 mt-1">
                 플랜 {planLabel(effectivePlan)} · {periodLabelFromRow(r.starts_at, r.expires_at)} · 묘운 뷰어 {viewerNow}
                 {!active && r.plan && r.plan !== "FREE" ? " (만료됨)" : ""}
+              </div>
+
+              <div className="text-sm text-neutral-400 mt-1">
+                가입 {formatJoinedAt(joinedAt)} | {formatJoinedAge(joinedAt)}
               </div>
 
               <div className="mt-3 flex flex-col gap-2">
