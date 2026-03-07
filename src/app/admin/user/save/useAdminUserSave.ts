@@ -29,6 +29,7 @@ export type AdminListUserRow = {
 
   online: boolean | null;
   total_count: number | null;
+  migrated_myeongsik_count: number | null;
 };
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -85,7 +86,47 @@ function parseRow(v: unknown): AdminListUserRow | null {
 
     online: toBool(v.online),
     total_count: toNum(v.total_count),
+    migrated_myeongsik_count: null,
   };
+}
+
+type MyeongsikCountRpcRow = {
+  user_id?: string | null;
+  myeongsik_count?: number | string | null;
+  migrated_myeongsik_count?: number | string | null;
+};
+
+async function fetchMyeongsikCounts(
+  userIds: string[]
+): Promise<Record<string, { total: number; migrated: number }> | null> {
+  if (!userIds.length) return {};
+
+  // Prefer server-side admin RPC (stable with RLS).
+  const { data: rpcData, error: rpcErr } = (await supabase.rpc("admin_myeongsik_counts_by_users", {
+    p_user_ids: userIds,
+  })) as unknown as {
+    data: MyeongsikCountRpcRow[] | null;
+    error: { message?: string } | null;
+  };
+
+  console.dir(rpcData, { depth: null });
+
+  if (!rpcErr && Array.isArray(rpcData)) {
+    const out: Record<string, { total: number; migrated: number }> = {};
+    for (const row of rpcData) {
+      const uid = typeof row.user_id === "string" ? row.user_id : "";
+      if (!uid) continue;
+      const total = toNum(row.myeongsik_count) ?? 0;
+      const migrated = toNum(row.migrated_myeongsik_count) ?? 0;
+      out[uid] = { total, migrated };
+    }
+    return out;
+  }
+
+  if (rpcErr) {
+    console.warn("[admin] admin_myeongsik_counts_by_users rpc failed:", rpcErr.message ?? rpcErr);
+  }
+  return null;
 }
 
 /** 빈 문자열이면 null */
@@ -207,9 +248,22 @@ export function useAdminUserSave() {
 
         const raw = Array.isArray(data) ? data : [];
         const parsed = raw.map(parseRow).filter((x): x is AdminListUserRow => x !== null);
+        const userIds = parsed.map((r) => r.user_id);
+        const countByUser = await fetchMyeongsikCounts(userIds);
+        const enriched = parsed.map((r) => ({
+          ...r,
+          myeongsik_count:
+            countByUser && countByUser[r.user_id]
+              ? countByUser[r.user_id].total
+              : (r.myeongsik_count ?? 0),
+          migrated_myeongsik_count:
+            countByUser && countByUser[r.user_id]
+              ? countByUser[r.user_id].migrated
+              : null,
+        }));
 
-        setRows(parsed);
-        setTotalCount(parsed[0]?.total_count ?? 0);
+        setRows(enriched);
+        setTotalCount(enriched[0]?.total_count ?? 0);
       } catch (e) {
         setRows([]);
         setTotalCount(0);

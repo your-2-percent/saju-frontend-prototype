@@ -241,6 +241,7 @@ export default function AdminUserListPage() {
 
               <div className="text-sm text-neutral-400 mt-1">
                 명식 {r.myeongsik_count ?? 0}개
+                <> ({r.migrated_myeongsik_count == null ? "이관 확인불가" : `이관 ${r.migrated_myeongsik_count}개`})</>
                 {lastSeenAt ? <> · 마지막 접속 {new Date(lastSeenAt).toLocaleString()}</> : <> · 마지막 접속 기록 없음</>}
                 <> · 누적 {formatTotalActiveMs(totalActiveMs)}</>
               </div>

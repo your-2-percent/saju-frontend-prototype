@@ -18,10 +18,16 @@ import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
 import Footer from "@/app/pages/Footer";
 import LegacyMigrateModal from "@/app/pages/LegacyMigrateModal";
+import MigrateNoticeModal from "@/app/pages/MigrateNoticeModal";
 import {
   shouldAutoOpenLegacyMigrateModal,
   isLegacyMigrateDismissed,
 } from "@/app/pages/legacyMigrateUtils";
+import {
+  dismissMigrateNoticeForToday,
+  dismissMigrateNoticeForever,
+  shouldAutoOpenMigrateNoticeModal,
+} from "@/app/pages/migrateNoticeUtils";
 import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
@@ -211,6 +217,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [legacyMigrateOpen, setLegacyMigrateOpen] = useState(false);
   const [legacyDismissed, setLegacyDismissed] = useState(isLegacyMigrateDismissed);
+  const [migrateNoticeOpen, setMigrateNoticeOpen] = useState(false);
 
   // 모달이 닫힐 때마다 dismissed 여부 재확인 (가져오기 성공 or 영구 숨기기 클릭 이후)
   useEffect(() => {
@@ -231,6 +238,12 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     return () => {
       alive = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (shouldAutoOpenMigrateNoticeModal()) {
+      setMigrateNoticeOpen(true);
+    }
   }, []);
 
   const handleSidebarView: typeof save.handleSidebarView = (...args) => {
@@ -287,6 +300,21 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         open={legacyMigrateOpen}
         onClose={() => setLegacyMigrateOpen(false)}
       />
+      <MigrateNoticeModal
+        open={migrateNoticeOpen}
+        onMigrate={() => {
+          setMigrateNoticeOpen(false);
+          setLegacyMigrateOpen(true);
+        }}
+        onHideToday={() => {
+          dismissMigrateNoticeForToday();
+          setMigrateNoticeOpen(false);
+        }}
+        onHideForever={() => {
+          dismissMigrateNoticeForever();
+          setMigrateNoticeOpen(false);
+        }}
+      />
       {loginOpen && (
         <div className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center">
           <div className="w-full max-w-[420px] max-h-[90dvh] overflow-auto rounded-2xl">
@@ -340,7 +368,20 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       {showFaq && <FaqPage />}
 
       {/* ✅ Today: 명식 없으면 기본으로 띄우기 */}
-      {effectiveShowToday && <TodaySaju compactTop={showLoginNot} />}
+      {effectiveShowToday && (
+        <>
+          <TodaySaju compactTop={showLoginNot} />
+          {/* <div className="max-w-[640px] mx-auto px-3 mt-2">
+              <button
+                type="button"
+                onClick={() => setLegacyMigrateOpen(true)}
+                className="w-full rounded-lg border border-indigo-300/70 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs py-2 font-semibold cursor-pointer"
+              >
+                myowoon96 명식 이관하기
+              </button>
+            </div> */}
+        </>
+      )}
 
       {input.wizardOpen && (
         <>
@@ -361,18 +402,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
               <LoginInlineNudge />
             </div>
           )}
-          {!isLoggedIn && !legacyDismissed && (
-            <div className="max-w-[640px] mx-auto px-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setLegacyMigrateOpen(true)}
-                className="w-full rounded-lg border border-indigo-300/70 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs py-2 font-semibold cursor-pointer"
-              >
-                myowoon96 명식 가져오기
-              </button>
-            </div>
-          )}
-
+          
           {/* 탭 버튼: 원국 위 */}
           <div className="w-[calc(100%_-_16px)] max-w-[625px] desk:max-w-[640px] mx-auto flex border-b border-neutral-700 mb-0">
             <button
@@ -456,7 +486,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      {!input.wizardOpen && !input.editing && !legacyDismissed && (
+      {!input.wizardOpen && !input.editing && !legacyDismissed && !effectiveShowToday && (
         <div className="max-w-[640px] mx-auto px-3 mb-3">
           <button
             type="button"
