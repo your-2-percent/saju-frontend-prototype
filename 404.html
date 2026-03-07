@@ -1,99 +1,40 @@
 <!doctype html>
 <html lang="ko">
   <head>
-    <meta charset="UTF-8" />
-      <!-- Start Single Page Apps for GitHub Pages -->
-  <script type="text/javascript">
-    // Single Page Apps for GitHub Pages
-    // https://github.com/rafrex/spa-github-pages
-    // Copyright (c) 2016 Rafael Pedicini, licensed under the MIT License
-    // ----------------------------------------------------------------------
-    // This script checks to see if a redirect is present in the query string
-    // and converts it back into the correct url and adds it to the
-    // browser's history using window.history.replaceState(...),
-    // which won't cause the browser to attempt to load the new url.
-    // When the single page app is loaded further down in this file,
-    // the correct url will be waiting in the browser's history for
-    // the single page app to route accordingly.
-    (function (l) {
-      if (l.search) {
-        var q = {};
-        l.search.slice(1).split('&').forEach(function (v) {
-          var a = v.split('=');
-          q[a[0]] = a.slice(1).join('=').replace(/~and~/g, '&');
-        });
-        if (q.p !== undefined) {
-          window.history.replaceState(null, null,
-            l.pathname.slice(0, -1) + (q.p || '') +
-            (q.q ? ('?' + q.q) : '') +
+    <meta charset="utf-8" />
+    <title>Hwarim Manse</title>
+    <script type="text/javascript">
+      // Support both the custom domain and the GitHub Pages project URL.
+      (function () {
+        var repoName = "saju-frontend-prototype";
+        var l = window.location;
+        var isGitHubPagesHost = /\.github\.io$/i.test(l.hostname);
+        var isProjectPath =
+          l.pathname === "/" + repoName ||
+          l.pathname.indexOf("/" + repoName + "/") === 0;
+        var segmentCount = isGitHubPagesHost && isProjectPath ? 1 : 0;
+        var repoBase = l.pathname.split("/").slice(0, 1 + segmentCount).join("/");
+        var routePath = l.pathname
+          .slice(1)
+          .split("/")
+          .slice(segmentCount)
+          .join("/")
+          .replace(/&/g, "~and~");
+        var search = l.search ? "&q=" + l.search.slice(1).replace(/&/g, "~and~") : "";
+
+        l.replace(
+          l.protocol +
+            "//" +
+            l.hostname +
+            (l.port ? ":" + l.port : "") +
+            repoBase +
+            "/?p=/" +
+            routePath +
+            search +
             l.hash
-          );
-        }
-      }
-    }(window.location))
-  </script>
-  <!-- End Single Page Apps for GitHub Pages -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <title>화림만세력 - 사주/만세력/궁합</title>
-    <meta
-      name="description"
-      content="화림만세력: 사주 명식, 대운·세운·월운 흐름과 궁합을 한 화면에서 확인하는 만세력 서비스."
-    />
-    <meta name="robots" content="index,follow" />
-    <meta name="google-site-verification" content="cotTfeqKlEYpo7ieeaPoQcqSh0I9W9dGhWUMwfn7Ngo" />
-		<meta name="google-site-verification" content="3i49wLD6kahjpyEqKNdwHsnNU_Q9bLC8a2Grau_Nywo" />
-    <!-- Open Graph -->
-    <meta property="og:type" content="article">
-		<meta property="og:title" content="화림만세력">
-		<meta property="og:url" content="">
-		<meta property="og:description" content="사주 · 만세력 · 무료 만세력 · 궁합 · 대운/세운 흐름">
-		<meta property="og:image" content="/assets/or_image-Bkqi5TAv.jpg">
-		<meta property="og:image:width" content="800">
-		<meta property="og:image:height" content="400">
-		<meta name="google" content="notranslate">
-		<meta name="title" content="화림만세력">
-		<meta name="description" content="사주 · 만세력 · 무료 만세력 · 궁합 · 대운/세운 흐름">
-
-		<!-- Chrome, Firefox OS and Opera -->
-		<meta name="theme-color" content="#252525">
-		<!-- Windows Phone -->
-		<meta name="msapplication-navbutton-color" content="#252525">
-		<!-- iOS Safari -->
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-		<meta name="apple-mobile-web-app-status-bar-style" content="">
-
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="ko_KR" />
-
-		<!-- favicon -->
-		<link rel="apple-touch-icon" sizes="57x57" href="/assets/apple-icon-57x57-D5pokbl5.png">
-		<link rel="apple-touch-icon" sizes="60x60" href="/assets/apple-icon-60x60-Dsmz-YzN.png">
-		<link rel="apple-touch-icon" sizes="72x72" href="/assets/apple-icon-72x72-BnXqhGLt.png">
-		<link rel="apple-touch-icon" sizes="76x76" href="/assets/apple-icon-76x76-DuTcX0BD.png">
-		<link rel="apple-touch-icon" sizes="114x114" href="/assets/apple-icon-114x114-CgLczp3H.png">
-		<link rel="apple-touch-icon" sizes="120x120" href="/assets/apple-icon-120x120-AbqMgH7F.png">
-		<link rel="apple-touch-icon" sizes="144x144" href="/assets/apple-icon-144x144-CcsiSXqA.png">
-		<link rel="apple-touch-icon" sizes="152x152" href="/assets/apple-icon-152x152-ByBVby5t.png">
-		<link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-icon-180x180-DpLzrXeB.png">
-		<link rel="icon" type="image/png" sizes="192x192" href="/assets/android-icon-192x192-BbQRXYvE.png">
-		<link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32-CTKul4g8.png">
-		<link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96-C24JJKtd.png">
-		<link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16-BBw-v4Tn.png">
-		<link rel="manifest" href="/assets/manifest-CO0q9IVi.json">
-		<meta name="msapplication-TileColor" content="#ffffff">
-		<meta name="msapplication-TileImage" content="/RROJECT_HTML/img/favicon/ms-icon-144x144.png">
-		<meta name="theme-color" content="#ffffff">
-
-    <!-- canonical: 너 배포 도메인으로 교체 -->
-    <link rel="canonical" href="https://hwarim.me/" />
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4729618898154189"
-     crossorigin="anonymous"></script>
-    <script type="module" crossorigin src="/assets/index-DdWuu6IJ.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BN4j7czP.css">
+        );
+      })();
+    </script>
   </head>
-  <body>
-    <div id="root"></div>
-  </body>
+  <body></body>
 </html>
