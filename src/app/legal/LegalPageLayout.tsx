@@ -7,6 +7,7 @@ type LegalPageLayoutProps = {
   title: string;
   description: string;
   children: ReactNode;
+  eyebrow?: string;
 };
 
 const navLinkClass =
@@ -16,6 +17,7 @@ export default function LegalPageLayout({
   title,
   description,
   children,
+  eyebrow = "Legal",
 }: LegalPageLayoutProps) {
   useEffect(() => {
     document.title = `${title} | 화림만세력`;
@@ -34,6 +36,9 @@ export default function LegalPageLayout({
             </Link>
 
             <div className="flex flex-wrap items-center gap-2">
+              <Link to="/guide" className={navLinkClass}>
+                사이트 가이드
+              </Link>
               <Link to="/terms" className={navLinkClass}>
                 서비스 이용약관
               </Link>
@@ -46,7 +51,7 @@ export default function LegalPageLayout({
           <article className="overflow-hidden rounded-[28px] border border-neutral-200/80 bg-white/90 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/90">
             <div className="border-b border-neutral-200/80 bg-white/70 px-6 py-6 dark:border-neutral-800 dark:bg-neutral-900/80 sm:px-8">
               <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-orange-500">
-                Legal
+                {eyebrow}
               </p>
               <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">{title}</h1>
               <p className="mt-3 text-sm leading-6 text-neutral-600 dark:text-neutral-300">
@@ -54,7 +59,7 @@ export default function LegalPageLayout({
               </p>
             </div>
 
-            <div className="px-6 py-6 sm:px-8 sm:py-8">{children}</div>
+            <div className="px-4 py-4 sm:px-8 sm:py-8">{children}</div>
           </article>
         </div>
       </main>

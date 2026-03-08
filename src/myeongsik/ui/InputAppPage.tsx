@@ -6,6 +6,20 @@ import { normalizeFolderValue } from "@/sidebar/calc/folderModel";
 import { useInputWizardModel } from "@/myeongsik/input/useInputWizardModel";
 import type { GenderType, InputWizardProps, MingType } from "@/myeongsik/calc/inputWizardConfig";
 
+function getJaOrChukSiLabel(birthTime?: string | null): "자시" | "축시" | null {
+  if (!birthTime || birthTime.length !== 4) return null;
+
+  const hour = Number(birthTime.slice(0, 2));
+  const minute = Number(birthTime.slice(2, 4));
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  const totalMinutes = hour * 60 + minute;
+  if (totalMinutes >= 23 * 60 || totalMinutes < 60) return "자시";
+  if (totalMinutes < 3 * 60) return "축시";
+  return null;
+}
+
 export default function InputWizard({ onSave, onClose }: InputWizardProps) {
   const model = useInputWizardModel({ onSave });
 
@@ -174,6 +188,11 @@ export default function InputWizard({ onSave, onClose }: InputWizardProps) {
                   모름
                 </label>
               </span>
+              {!model.unknownTime && getJaOrChukSiLabel(model.form.birthTime) && (
+                <div className="text-xs text-amber-600 dark:text-amber-400">
+                  {getJaOrChukSiLabel(model.form.birthTime)}입니다. 시간기준에 따라 일주가 바뀔 수 있습니다.
+                </div>
+              )}
             </div>
           )}
 
