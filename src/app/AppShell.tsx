@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import AdminPage from "@/app/admin/AdminPage";
 import AccountDisabledGate from "@/app/AccountDisabledGate";
 import AppBootstrap from "@/app/AppBootstrap";
+import SiteGuidePage from "@/app/guide/SiteGuidePage";
 import HeartbeatGate from "@/app/HeartbeatGate";
 import Page from "@/app/layout/Page";
 import PrivacyPolicyPage from "@/app/legal/PrivacyPolicyPage";
@@ -50,6 +51,7 @@ export default function AppShell() {
         <Route path="/saju-note/history-2" element={<SajuNoteHistory2Page />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/guide" element={<SiteGuidePage />} />
         <Route path="/saju-note/*" element={<Navigate to="/saju-note" replace />} />
         <Route path="/about" element={<Navigate to="/saju-note/about" replace />} />
         <Route path="/myounlyeok" element={<Navigate to="/saju-note/myounlyeok" replace />} />
