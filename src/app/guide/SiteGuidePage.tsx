@@ -373,7 +373,7 @@ export default function SiteGuidePage() {
             />
           </div>
 
-          <div className="">
+          <div className="space-y-4">
             <GuideShot
               src="/guide/29.PNG"
               title="분석 레포트 예시 1"
