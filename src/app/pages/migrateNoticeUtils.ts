@@ -1,6 +1,6 @@
-export const NOTICE_HIDE_UNTIL_KEY = "legacy_migrate_notice_hide_until_v4";
-export const NOTICE_HIDE_FOREVER_KEY = "legacy_migrate_notice_hide_forever_v4";
-export const NOTICE_AUTO_SHOWN_SESSION_KEY = "legacy_migrate_notice_auto_shown_session_v4";
+export const NOTICE_HIDE_UNTIL_KEY = "legacy_migrate_notice_hide_until_v5";
+export const NOTICE_HIDE_FOREVER_KEY = "legacy_migrate_notice_hide_forever_v5";
+export const NOTICE_AUTO_SHOWN_SESSION_KEY = "legacy_migrate_notice_auto_shown_session_v5";
 
 function getNoticeScope(userId?: string | null): string {
   return userId ? `user:${userId}` : "guest";

@@ -95,7 +95,7 @@ export default function LegacyMigrateModal({ open, onClose }: Props) {
           .update({
             migrated_myeongsik_count: rows.length,
           })
-          .eq("id", user.id);
+          .eq("user_id", user.id);
 
         if (error) {
           console.warn("[legacy-migrate] failed to persist migrated count", error);
