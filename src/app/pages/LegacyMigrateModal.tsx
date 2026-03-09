@@ -14,6 +14,7 @@ type BridgePayload =
 type Props = {
   open: boolean;
   onClose: () => void;
+  onImportSuccess?: () => void;
 };
 
 type Step = "ask" | "import";
@@ -27,7 +28,7 @@ function getBridgeList(data: BridgePayload): unknown[] {
   return [];
 }
 
-export default function LegacyMigrateModal({ open, onClose }: Props) {
+export default function LegacyMigrateModal({ open, onClose, onImportSuccess }: Props) {
   const migrateLocalToServer = useMyeongSikStore((s) => s.migrateLocalToServer);
   const loadFromServer = useMyeongSikStore((s) => s.loadFromServer);
 
@@ -104,6 +105,7 @@ export default function LegacyMigrateModal({ open, onClose }: Props) {
 
       setStatus(`명식 ${rows.length}건을 가져왔습니다. 닫기버튼을 눌러주세요.`);
       dismissForever();
+      onImportSuccess?.();
     } catch (e) {
       console.error("[legacy-migrate] import failed", e);
       setStatus("가져오기 중 오류가 발생했습니다.");

@@ -3,15 +3,21 @@ import { supabase } from "@/lib/supabase";
 
 export type AdminRole = "admin" | "operator" | "viewer" | null;
 
+type CacheEntry = { role: AdminRole; uid: string };
+let roleCache: CacheEntry | null = null;
+
 export function useAdminRole() {
-  const [role, setRole] = useState<AdminRole>(null);
-  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<AdminRole>(roleCache?.role ?? null);
+  const [loading, setLoading] = useState(roleCache === null);
 
   useEffect(() => {
+    if (roleCache !== null) return;
+
     const load = async () => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth.user?.id;
       if (!uid) {
+        roleCache = { role: null, uid: "" };
         setRole(null);
         setLoading(false);
         return;
@@ -25,7 +31,9 @@ export function useAdminRole() {
         data: { role: AdminRole } | null;
       };
 
-      setRole(data?.role ?? null);
+      const resolved = data?.role ?? null;
+      roleCache = { role: resolved, uid };
+      setRole(resolved);
       setLoading(false);
     };
 
