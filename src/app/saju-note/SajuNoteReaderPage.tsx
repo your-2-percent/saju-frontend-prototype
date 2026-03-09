@@ -20,6 +20,16 @@ type Theme = {
 };
 
 const getThemeBySlug = (slug: string = ""): Theme => {
+  if (slug.includes("solar-position") || slug.includes("time-correction")) {
+    return {
+      accent: "text-orange-600 dark:text-orange-400",
+      headerIcon: "text-orange-500 dark:text-orange-400",
+      glow: "from-orange-100/60 via-amber-50/30 to-transparent dark:from-orange-950/30 dark:via-amber-950/10 dark:to-transparent",
+      badge: "text-orange-700 dark:text-orange-300",
+      badgeBg: "bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800/50",
+      navHover: "hover:border-orange-300 dark:hover:border-orange-700 hover:text-orange-600 dark:hover:text-orange-400",
+    };
+  }
   if (slug.includes("prolog") || slug.includes("essay")) {
     return {
       accent: "text-rose-600 dark:text-rose-400",
