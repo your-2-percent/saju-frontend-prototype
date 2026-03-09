@@ -23,7 +23,6 @@ import {
   shouldAutoOpenLegacyMigrateModal,
   isLegacyMigrateDismissed,
 } from "@/app/pages/legacyMigrateUtils";
-import { isMigratedLegacyId } from "@/myeongsik/save/migrateLocalToServer";
 import {
   dismissMigrateNoticeForever,
   shouldAutoOpenMigrateNoticeModal,
@@ -290,28 +289,16 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       <LegacyMigrateModal
         open={legacyMigrateOpen}
         onClose={() => setLegacyMigrateOpen(false)}
+        onImportSuccess={() => {
+          dismissMigrateNoticeForever(migrateNoticeUserId);
+          setMigrateNoticeOpen(false);
+        }}
       />
       <MigrateNoticeModal
         open={migrateNoticeOpen}
-        onDone={async () => {
-          if (migrateNoticeUserId) {
-            const { data } = await supabase
-              .from("myeongsik")
-              .select("id")
-              .eq("user_id", migrateNoticeUserId)
-              .is("deleted_at", null);
-            if (data) {
-              const count = data.filter((r) => isMigratedLegacyId(String(r.id))).length;
-              if (count > 0) {
-                await supabase
-                  .from("profiles")
-                  .update({ migrated_myeongsik_count: count })
-                  .eq("user_id", migrateNoticeUserId);
-              }
-            }
-          }
-          dismissMigrateNoticeForever(migrateNoticeUserId);
+        onDone={() => {
           setMigrateNoticeOpen(false);
+          setLegacyMigrateOpen(true);
         }}
         onNeedMigrate={() => {
           setMigrateNoticeOpen(false);
