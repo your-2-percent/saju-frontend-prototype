@@ -181,10 +181,11 @@ export const useSettingsStore = create<SettingsState>()(
           const { data, error: userError } = await supabase.auth.getUser();
           const user = data?.user ?? null;
 
-          // ✅ 로그인 X면 기본값으로 “로드 완료”
+          // ✅ 로그인 X면 이미 로드된 설정은 유지, 첫 로드면 기본값
           if (userError || !user) {
+            const already = get();
             set({
-              settings: defaultSettings,
+              settings: already.loaded ? already.settings : defaultSettings,
               syncing: false,
               loaded: true,
             });
@@ -268,10 +269,9 @@ export const useSettingsStore = create<SettingsState>()(
           const { data, error: userError } = await supabase.auth.getUser();
           const user = data?.user ?? null;
 
-          // ✅ 게스트면 서버 저장 스킵, 대신 syncing만 종료
+          // ✅ 게스트면 서버 저장 스킵, 기존 설정 유지
           if (userError || !user) {
-            // ✅ 게스트도 기본 설정으로 "로드 완료" 처리해야 화면이 안 멈춤
-            set({ syncing: false, loaded: true, settings: defaultSettings });
+            set({ syncing: false, loaded: true });
             return;
           }
 
