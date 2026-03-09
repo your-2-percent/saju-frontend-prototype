@@ -6,16 +6,16 @@ const DETECT_SESSION_IN_URL = import.meta.env.DEV ? true : false;
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    // ✅ 핵심: HashRouter + OAuth면 PKCE로 고정해야 함
+    // Use PKCE so OAuth callbacks can exchange the auth code reliably.
     flowType: "pkce",
 
     persistSession: true,
     autoRefreshToken: true,
 
-    // ✅ PKCE에서 콜백 URL에 code 붙는 걸 처리하려면 true 유지
+    // Let Supabase read the callback code from the current URL in development.
     detectSessionInUrl: DETECT_SESSION_IN_URL,
 
-    // ✅ GitHub Pages 환경에서도 localStorage로 세션 유지
+    // Persist the session in localStorage across refreshes.
     storage: localStorage,
   },
 });
