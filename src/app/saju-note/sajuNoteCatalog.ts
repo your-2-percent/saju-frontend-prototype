@@ -166,6 +166,38 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
       },
     ],
   },
+  {
+    key: "saju-misc-time",
+    title: "균시차",
+    subtitle: "태양 위치와 지역별 시간 보정",
+    description: "태양의 위치, 경도 차이, 진태양시 보정처럼 실제 풀이에서 중요한 시간 보정 개념을 정리합니다.",
+    badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
+    borderClass: "border-orange-200 dark:border-orange-900/50",
+    items: [
+      {
+        slug: "solar-position-and-time-correction",
+        title: "태양의 위치와 균시차의 중요성 (지역별 보정)",
+        description: "사주에서 시간을 정하는 핵심 기준인 태양의 위치, 한국에서 +30분을 하는 이유, 지역별 진태양시 보정의 원리를 정리했습니다.",
+        date: "2026.03.09",
+      },
+    ],
+  },
+  {
+    key: "saju-misc-iljuron",
+    title: "일주론",
+    subtitle: "일주 해석의 한계와 활용",
+    description: "일주론이 잘 맞는 경우와 빗나가는 경우를 나누어 보고, 어디까지 참고해야 하는지 정리합니다.",
+    badgeClass: "bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300",
+    borderClass: "border-orange-200 dark:border-orange-900/50",
+    items: [
+      {
+        slug: "iljuron-why-not-always-correct",
+        title: "일주론, 재미있지만 무조건 맞지는 않는 이유",
+        description: "일주론이 잘 맞는 사람과 안 맞는 사람의 차이, 신약·중화·신강의 개념, 일주론을 올바르게 활용하는 방법을 정리했습니다.",
+        date: "2026.03.09",
+      },
+    ],
+  },
 ];
 
 export const SAJU_NOTE_BY_SLUG = SAJU_NOTE_CATEGORIES.flatMap((category) => category.items).reduce<

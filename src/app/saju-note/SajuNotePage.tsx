@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, ArrowRight, BookOpen, Search, Info, Layers, PenLine, Clock } from "lucide-react";
+import { ArrowLeft, ArrowRight, BookOpen, Search, Info, Layers, PenLine, Clock, Sun } from "lucide-react";
 import BottomNav from "@/shared/ui/nav/BottomNav";
 import { SAJU_NOTE_CATEGORIES } from "@/app/saju-note/sajuNoteCatalog";
 import { fetchSajuNoteViewCounts } from "@/app/saju-note/saveInterface/sajuNoteViewRepo";
@@ -134,8 +134,13 @@ export default function SajuNotePage() {
   const aboutPages = filteredStaticPages.filter((p) => p.section === "about");
   const prologPages = filteredStaticPages.filter((p) => p.section === "prolog");
   const historyPages = filteredStaticPages.filter((p) => p.section === "history");
+  const conceptCategories = filteredCategories.filter((category) => !category.key.startsWith("saju-misc"));
+  const miscCategories = filteredCategories.filter((category) => category.key.startsWith("saju-misc"));
 
-  const isEmpty = filteredCategories.length === 0 && filteredStaticPages.length === 0;
+  const isEmpty =
+    conceptCategories.length === 0 &&
+    miscCategories.length === 0 &&
+    filteredStaticPages.length === 0;
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 pb-28">
@@ -182,7 +187,7 @@ export default function SajuNotePage() {
           <section className="space-y-4">
             <div className="flex items-center gap-2">
               <Info size={15} className="text-purple-500 dark:text-purple-400" />
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">about / 묘운</h2>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">사이트 아이덴티티</h2>
               <span className="text-xs text-neutral-400 dark:text-neutral-500">— 사이트 소개 & 현묘 관법</span>
             </div>
 
@@ -213,16 +218,16 @@ export default function SajuNotePage() {
           </section>
         )}
 
-        {filteredCategories.length > 0 && (
+        {conceptCategories.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-center gap-2">
               <Layers size={15} className="text-indigo-500 dark:text-indigo-400" />
-              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">자료모음</h2>
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">사주에 대한 기본 개념들</h2>
               <span className="text-xs text-neutral-400 dark:text-neutral-500">— 사주 기초 개념 정리</span>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredCategories.map((category) => (
+              {conceptCategories.map((category) => (
                 <div
                   key={category.key}
                   className={`rounded-2xl border ${category.borderClass} bg-white dark:bg-neutral-900/50 p-4 space-y-3`}
@@ -249,6 +254,57 @@ export default function SajuNotePage() {
                               {item.date} · 조회수 {(viewCountBySlug[item.slug] ?? 0).toLocaleString()}
                             </span>
                             <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                              읽기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                            </span>
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {miscCategories.length > 0 && (
+          <section className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Sun size={15} className="text-orange-500 dark:text-orange-400" />
+              <h2 className="text-sm font-bold text-neutral-900 dark:text-neutral-100 tracking-tight">
+                기타 - 주인장이 생각하는 내용들
+              </h2>
+              <span className="text-xs text-neutral-400 dark:text-neutral-500">시간 보정과 배경 지식</span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {miscCategories.map((category) => (
+                <div
+                  key={category.key}
+                  className={`rounded-2xl border ${category.borderClass} bg-white dark:bg-neutral-900/50 p-4 space-y-3`}
+                >
+                  <div className="space-y-1">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${category.badgeClass}`}>
+                      {category.title}
+                    </span>
+                    <p className="text-[11px] text-neutral-400 dark:text-neutral-500 leading-relaxed">{category.description}</p>
+                  </div>
+
+                  <ul className="space-y-2">
+                    {category.items.map((item) => (
+                      <li key={item.slug}>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/saju-note/read/${item.slug}`)}
+                          className="group w-full text-left rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-3.5 py-3 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-orange-50/50 dark:hover:bg-orange-950/30 transition-all cursor-pointer"
+                        >
+                          <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>
+                          <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">{item.description}</p>
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
+                              {item.date} · 조회수 {(viewCountBySlug[item.slug] ?? 0).toLocaleString()}
+                            </span>
+                            <span className="inline-flex items-center gap-1 text-[11px] text-neutral-400 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors">
                               읽기 <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                             </span>
                           </div>
