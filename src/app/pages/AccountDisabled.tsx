@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { supabase } from "@/lib/supabase";
 import { useAccountStatusStore } from "@/shared/lib/hooks/useAccountStatusStore";
 
@@ -13,17 +15,17 @@ function fmt(dt?: string | null): string {
 
 export default function AccountDisabledPage() {
   const disabledAt = useAccountStatusStore((s) => s.disabledAt);
+  const navigate = useNavigate();
 
   const onLogout = useCallback(async () => {
     try {
       await supabase.auth.signOut();
-      // HashRouter라 새로고침이 제일 확실
-      window.location.href = "/";
+      navigate("/", { replace: true });
     } catch (e) {
       console.error("signOut error:", e);
-      window.location.href = "/";
+      navigate("/", { replace: true });
     }
-  }, []);
+  }, [navigate]);
 
   return (
     <main className="min-h-screen flex items-center justify-center p-6 text-white">

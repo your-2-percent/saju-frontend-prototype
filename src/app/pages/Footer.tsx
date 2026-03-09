@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import LegacyMigrateModal from "@/app/pages/LegacyMigrateModal";
 import { useAuthUserId } from "@/auth/input/useAuthUserId";
@@ -21,6 +21,7 @@ export default function Footer() {
   const [openMigrate, setOpenMigrate] = useState(false);
   const userId = useAuthUserId();
   const isLoggedIn = !!userId;
+  const navigate = useNavigate();
 
   const handleDeleteAccount = async () => {
     try {
@@ -40,7 +41,7 @@ export default function Footer() {
 
       await supabase.auth.signOut();
       alert("회원탈퇴 처리가 완료되었습니다. 복구가 필요하면 문의해 주세요.");
-      window.location.hash = "#/";
+      navigate("/", { replace: true });
     } catch (error) {
       console.error(error);
       alert("회원탈퇴 처리 중 문제가 발생했습니다.");

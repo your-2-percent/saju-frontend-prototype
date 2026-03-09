@@ -40,20 +40,12 @@
       var isGitHubPagesHost = /\.github\.io$/i.test(l.hostname);
       var pathParts = (l.pathname || "/").split("/");
       var repoBase = isGitHubPagesHost && pathParts[1] === repoName ? "/" + repoName : "";
-      var routePath = l.pathname.indexOf(repoBase) === 0 ? l.pathname.slice(repoBase.length) : l.pathname;
+      var hasLegacyHashRoute = /^#\//.test(l.hash);
 
-      if (!routePath || routePath === "") routePath = "/";
-      if (!routePath.startsWith("/")) routePath = "/" + routePath;
+      if (!hasLegacyHashRoute) return;
 
-      var hasHashRoute = /^#\//.test(l.hash);
-      var currentHashRoute = hasHashRoute ? l.hash.slice(1) : "";
-      var shouldNormalizeHashRoute = hasHashRoute && routePath !== "/";
-      var shouldConvertPathRoute = !hasHashRoute && routePath !== "/";
-
-      if (!shouldNormalizeHashRoute && !shouldConvertPathRoute) return;
-
-      var nextRoute = hasHashRoute ? currentHashRoute : routePath + l.search;
-      var nextUrl = l.origin + (repoBase || "") + "/#" + nextRoute;
+      var nextPath = l.hash.slice(1);
+      var nextUrl = l.origin + (repoBase || "") + nextPath;
 
       l.replace(nextUrl);
     })();

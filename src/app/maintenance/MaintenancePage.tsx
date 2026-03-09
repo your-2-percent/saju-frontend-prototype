@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 export default function MaintenancePage() {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center p-6 bg-white dark:bg-neutral-950">
@@ -23,15 +25,15 @@ export default function MaintenancePage() {
             새로고침
           </button>
 
-          <a
-            href="#/"
+          <Link
+            to="/"
             className="text-sm px-4 py-2 rounded-lg border border-neutral-200 dark:border-neutral-800
                        bg-white hover:bg-neutral-50
                        dark:bg-neutral-900 dark:hover:bg-neutral-800
                        text-neutral-900 dark:text-neutral-100"
           >
             홈으로
-          </a>
+          </Link>
         </div>
 
         <div className="mt-4 text-xs text-neutral-500 dark:text-neutral-400">
