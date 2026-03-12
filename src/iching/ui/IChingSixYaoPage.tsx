@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
+import BottomNav from "@/shared/ui/nav/BottomNav";
+import Footer from "@/app/pages/Footer";
 import { useDstStore } from "@/saju/input/useDstStore";
 import { useLuckPickerStore } from "@/luck/input/useLuckPickerStore";
 import { parseMyeongSik } from "@/saju/calc/sajuParse";
@@ -113,6 +115,7 @@ export default function IChingSixYaoPage() {
   const [hasBooted, setHasBooted] = useState(false);
   const hasRedirectedRef = useRef(false);
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
   // ✅ 본인 id
   const selfId = useMemo(() => {
@@ -171,17 +174,21 @@ export default function IChingSixYaoPage() {
     navigate("/", { replace: true });
   }, [hasBooted, list.length, loading, navigate]);
 
-  // ✅ 세션 종료 시 홈으로 이동
+  // ✅ 세션 확인 및 종료 시 홈으로 이동
   useEffect(() => {
     let alive = true;
 
     void supabase.auth.getSession().then(({ data }) => {
       if (!alive) return;
-      if (!data.session?.user) navigate("/", { replace: true });
+      setIsLoggedIn(!!data.session?.user);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_evt, session) => {
-      if (!session?.user) navigate("/", { replace: true });
+    const { data } = supabase.auth.onAuthStateChange((evt, session) => {
+      if (evt === "SIGNED_OUT") {
+        navigate("/", { replace: true });
+      } else {
+        setIsLoggedIn(!!session?.user);
+      }
     });
 
     return () => {
@@ -197,8 +204,26 @@ export default function IChingSixYaoPage() {
     return list[0]?.id ?? "";
   }, [currentId, selfId, list]);
 
+  if (isLoggedIn === false) {
+    return (
+      <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex flex-col items-center justify-center px-4">
+        <div className="w-full max-w-[480px] rounded-2xl border border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-900">
+          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">주역 · 육효 점</div>
+          <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">만세력 사주 데이터와 연결하여 효를 뽑는 서비스입니다.</p>
+          <p className="text-sm text-neutral-500 dark:text-neutral-500 mb-6">로그인 후 명식을 등록하면 이용하실 수 있습니다.</p>
+          <Link
+            to="/"
+            className="inline-block rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
+          >
+            홈으로 이동
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950">
+    <div className="min-h-screen pb-16 bg-neutral-100 dark:bg-neutral-950">
       <div className="w-full max-w-[768px] mx-auto px-4 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -255,6 +280,8 @@ export default function IChingSixYaoPage() {
       )}
 
       {currentFallback && <IChingSixYaoContent current={currentFallback} />}
+      <Footer />
+      <BottomNav />
     </div>
   );
 }
