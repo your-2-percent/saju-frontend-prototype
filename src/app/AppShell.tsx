@@ -20,6 +20,7 @@ import SajuNoteReaderPage from "@/app/saju-note/SajuNoteReaderPage";
 import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/auth/ui/AuthCallbackPage";
 import IChingSixYaoPage from "@/iching/ui/IChingSixYaoPage";
+import FaqStandalonePage from "@/app/faq/FaqStandalonePage";
 import UserActivityHeartbeatGate from "@/shared/activity/UserActivityHeartbeat";
 import { PublicAds } from "@/shared/ads/PublicAds";
 
@@ -57,7 +58,7 @@ export default function AppShell() {
         <Route path="/myounlyeok" element={<Navigate to="/saju-note/myounlyeok" replace />} />
         <Route path="/prolog" element={<Navigate to="/saju-note/prolog" replace />} />
         <Route path="/" element={<Page />} />
-        <Route path="/faq" element={<Page />} />
+        <Route path="/faq" element={<FaqStandalonePage />} />
         <Route path="/couple" element={<Page />} />
         <Route path="/result" element={<Page />} />
         <Route path="/admin/*" element={<AdminPage />} />

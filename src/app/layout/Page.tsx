@@ -18,15 +18,10 @@ import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
 import Footer from "@/app/pages/Footer";
 import LegacyMigrateModal from "@/app/pages/LegacyMigrateModal";
-import MigrateNoticeModal from "@/app/pages/MigrateNoticeModal";
 import {
   shouldAutoOpenLegacyMigrateModal,
   isLegacyMigrateDismissed,
 } from "@/app/pages/legacyMigrateUtils";
-import {
-  dismissMigrateNoticeForever,
-  shouldAutoOpenMigrateNoticeModal,
-} from "@/app/pages/migrateNoticeUtils";
 import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
@@ -36,10 +31,9 @@ import { usePageSave } from "@/app/layout/page/save/usePageSave";
 import { useMainAppInput } from "@/app/layout/page/input/useMainAppInput";
 import { useMainAppCalc } from "@/app/layout/page/calc/useMainAppCalc";
 import { useMainAppSave } from "@/app/layout/page/save/useMainAppSave";
-import { useAuthUserId } from "@/auth/input/useAuthUserId";
 
 // ✅ FAQ
-import FaqPage from "@/app/faq/FaqPage";
+
 
 // ✅ Entitlements
 import { useEntitlementsStore } from "@/shared/lib/hooks/useEntitlementsStore";
@@ -121,7 +115,6 @@ export default function Page() {
 function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const authUserId = useAuthUserId();
   const { list } = useMyeongSikStore();
   const settings = useSettingsStore((s) => s.settings);
 
@@ -147,41 +140,23 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     setEditing: input.setEditing,
   });
 
-  // ✅ FAQ: 라우트 없이 Page에 붙이기
-
-  const [showFaq, setShowFaq] = useState(false);
   const [customModalKey, setCustomModalKey] = useState(0);
-
-  // wizard / 편집 열리면 FAQ는 닫아버림(꼬임 방지)
-
-  useEffect(() => {
-    if (input.editing) setShowFaq(false);
-  }, [input.editing]);
 
   // ✅ 라우트 기준으로 탭 상태 동기화
   useEffect(() => {
     const path = location.pathname;
-    if (path === "/faq") {
-      setShowFaq(true);
-      input.setShowCouple(false);
-      input.setShowToday(false);
-      return;
-    }
     if (path === "/couple") {
-      setShowFaq(false);
       input.setShowCouple(true);
       input.setShowToday(false);
       return;
     }
     if (path === "/result") {
-      setShowFaq(false);
       input.setShowCouple(false);
       input.setShowToday(false);
       return;
     }
 
     // default: 홈
-    setShowFaq(false);
     input.setShowCouple(false);
     input.setShowToday(true);
   }, [input, location.pathname, input.setShowCouple, input.setShowToday]);
@@ -200,14 +175,13 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     calc.hasCurrent &&
     !input.showToday &&
     !input.showCouple &&
-    !showFaq &&
     !input.wizardOpen &&
     !input.editing;
 
   // ✅ 핵심: 명식이 하나도 없으면(=hasCurrent=false) Today를 기본 화면으로 보여주기
   const effectiveShowToday =
     input.showToday ||
-    (!calc.hasCurrent && !input.showCouple && !showFaq && !input.wizardOpen && !input.editing);
+    (!calc.hasCurrent && !input.showCouple && !input.wizardOpen && !input.editing);
 
   const showLoginNudge = !isLoggedIn && calc.hasCurrent && showResult;
 
@@ -216,9 +190,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [legacyMigrateOpen, setLegacyMigrateOpen] = useState(false);
   const [legacyDismissed, setLegacyDismissed] = useState(isLegacyMigrateDismissed);
-  const [migrateNoticeOpen, setMigrateNoticeOpen] = useState(false);
-  const migrateNoticeUserId = isLoggedIn ? authUserId : null;
-
   // 모달이 닫힐 때마다 dismissed 여부 재확인 (가져오기 성공 or 영구 숨기기 클릭 이후)
   useEffect(() => {
     if (!legacyMigrateOpen) {
@@ -240,16 +211,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
     };
   }, []);
 
-  useEffect(() => {
-    if (!isLoggedIn) return;
-    if (!migrateNoticeUserId) return;
-    if (shouldAutoOpenMigrateNoticeModal(migrateNoticeUserId)) {
-      setMigrateNoticeOpen(true);
-    }
-  }, [isLoggedIn, migrateNoticeUserId]);
-
   const handleSidebarView: typeof save.handleSidebarView = (...args) => {
-    setShowFaq(false);
     input.setShowToday(false);
     input.setShowCouple(false);
     navigate("/result", { replace: false });
@@ -262,12 +224,10 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   };
 
   const handleCustomSave = (m: MyeongSik) => {
-    setShowFaq(false);
     save.handleCustomSave(m);
   };
 
   const handleWizardSave = (m: MyeongSik) => {
-    setShowFaq(false);
     save.handleWizardSave(m);
     navigate("/result", { replace: false });
   };
@@ -289,21 +249,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       <LegacyMigrateModal
         open={legacyMigrateOpen}
         onClose={() => setLegacyMigrateOpen(false)}
-        onImportSuccess={() => {
-          dismissMigrateNoticeForever(migrateNoticeUserId);
-          setMigrateNoticeOpen(false);
-        }}
-      />
-      <MigrateNoticeModal
-        open={migrateNoticeOpen}
-        onDone={() => {
-          setMigrateNoticeOpen(false);
-          setLegacyMigrateOpen(true);
-        }}
-        onNeedMigrate={() => {
-          setMigrateNoticeOpen(false);
-          setLegacyMigrateOpen(true);
-        }}
+        onImportSuccess={() => setLegacyMigrateOpen(false)}
       />
       {loginOpen && (
         <div className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center">
@@ -354,9 +300,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </div>
       )}
 
-      {/* ✅ FAQ */}
-      {showFaq && <FaqPage />}
-
       {/* ✅ Today: 명식 없으면 기본으로 띄우기 */}
       {effectiveShowToday && (
         <>
@@ -384,7 +327,7 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         </>
       )}
 
-      {calc.hasCurrent && !input.showToday && !input.showCouple && !showFaq && (
+      {calc.hasCurrent && !input.showToday && !input.showCouple && (
         <div className="pt-16">
           {/* ✅ 게스트 + 첫 명식 생성 이후 계속 노출 */}
           {showLoginNudge && (
