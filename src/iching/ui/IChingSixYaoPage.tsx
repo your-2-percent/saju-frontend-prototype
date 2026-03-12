@@ -112,8 +112,6 @@ export default function IChingSixYaoPage() {
   const setCurrentId = useMyeongSikStore((s) => s.setCurrentId);
   const navigate = useNavigate();
   const hasAutoSelectedRef = useRef(false);
-  const [hasBooted, setHasBooted] = useState(false);
-  const hasRedirectedRef = useRef(false);
   const showAds = useEntitlementsStore((s) => s.shouldShowAdsNow());
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
 
@@ -144,12 +142,6 @@ export default function IChingSixYaoPage() {
     }
   }, [loading, list, currentId, selfId, setCurrentId]);
 
-  useEffect(() => {
-    if (loading) {
-      setHasBooted(true);
-    }
-  }, [loading]);
-
   const current = useMemo(() => list.find((item) => item.id === currentId) ?? null, [list, currentId]);
   const currentFallback = useMemo(() => {
     if (current) return current;
@@ -164,15 +156,6 @@ export default function IChingSixYaoPage() {
     return list;
   }, [list]);
 
-  useEffect(() => {
-    if (!hasBooted) return;
-    if (loading) return;
-    if (list.length > 0) return;
-    if (hasRedirectedRef.current) return;
-    hasRedirectedRef.current = true;
-    alert("명식을 생성한 뒤에 접속해주세요. 메인으로 돌아갑니다.");
-    navigate("/", { replace: true });
-  }, [hasBooted, list.length, loading, navigate]);
 
   // ✅ 세션 확인 및 종료 시 홈으로 이동
   useEffect(() => {
@@ -204,23 +187,7 @@ export default function IChingSixYaoPage() {
     return list[0]?.id ?? "";
   }, [currentId, selfId, list]);
 
-  if (isLoggedIn === false) {
-    return (
-      <div className="min-h-screen bg-neutral-100 dark:bg-neutral-950 flex flex-col items-center justify-center px-4">
-        <div className="w-full max-w-[480px] rounded-2xl border border-neutral-200 bg-white p-8 text-center dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="text-2xl font-bold text-neutral-900 dark:text-neutral-100 mb-2">주역 · 육효 점</div>
-          <p className="text-sm text-neutral-600 dark:text-neutral-400 mb-1">만세력 사주 데이터와 연결하여 효를 뽑는 서비스입니다.</p>
-          <p className="text-sm text-neutral-500 dark:text-neutral-500 mb-6">로그인 후 명식을 등록하면 이용하실 수 있습니다.</p>
-          <Link
-            to="/"
-            className="inline-block rounded-xl bg-neutral-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-neutral-700 dark:bg-neutral-100 dark:text-neutral-900 dark:hover:bg-neutral-300"
-          >
-            홈으로 이동
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const showLoginBanner = isLoggedIn === false || (isLoggedIn === true && !loading && list.length === 0);
 
   return (
     <div className="min-h-screen pb-16 bg-neutral-100 dark:bg-neutral-950">
@@ -279,7 +246,36 @@ export default function IChingSixYaoPage() {
         </div>
       )}
 
-      {currentFallback && <IChingSixYaoContent current={currentFallback} />}
+      {showLoginBanner && (
+        <div className="w-full max-w-[768px] mx-auto px-4 pt-4">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 dark:border-amber-800 dark:bg-amber-950/40">
+            <div>
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                로그인 후 명식을 연결하면 사주 데이터를 반영해 더 정확하고 디테일한 해석을 받을 수 있어요.
+              </p>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
+                명식 없이도 기본 육효 점은 이용하실 수 있습니다.
+              </p>
+            </div>
+            <Link
+              to="/"
+              className="shrink-0 rounded-xl bg-amber-700 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-800 dark:bg-amber-600 dark:hover:bg-amber-500 text-center"
+            >
+              로그인하기
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {currentFallback ? (
+        <IChingSixYaoContent current={currentFallback} />
+      ) : (
+        !loading && (
+          <div className="py-2">
+            <IChingSixYaoDrawer saju={null} />
+          </div>
+        )
+      )}
       <Footer />
       <BottomNav />
     </div>
