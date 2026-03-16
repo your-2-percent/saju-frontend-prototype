@@ -1,77 +1,31 @@
 /* ================================================================
-   sajuNoteContent.css  —  사주노트 리더 전용 스타일
+   sajuNoteContent.css  —  사주노트 전용 컴포넌트 레이아웃
+   (sajuNoteBase.css 와 함께 사용)
    ================================================================ */
 
-/* ─── 기본 타이포 ─── */
+
+/* ================================================================
+   SECTION — 최상위 컨테이너
+   ================================================================ */
 .saju-note-content {
-  line-height: 1.8;
-  font-size: 15.5px;
-  word-break: keep-all;
-  overflow-wrap: break-word;
-  color: #374151;        /* gray-700 */
-}
-.dark .saju-note-content {
-  color: #d1d5db;        /* gray-300 */
-}
-
-/* 목차 앵커 이동 시 sticky header에 가리지 않게 보정 */
-.saju-note-content [id] {
-  scroll-margin-top: 5.5rem;
-  font-size: 14px;
-}
-
-/* 최상위 래퍼 h2 (섹션 대제목 — 리더 페이지 제목과 중복되어 숨김) */
-.saju-note-content > div > h2:first-child,
-.saju-note-content > article > h2:first-child {
-  display: none;
+  --note-header-from: #eef2ff;
+  --note-header-via: #f0f9ff;
+  --note-header-to: #f8fafc;
+  --note-header-border: #e0e7ff;
+  --note-header-title: #1e1b4b;
+  --note-chip-bg: rgba(99, 102, 241, 0.12);
+  --note-chip-fg: #4f46e5;
+  --note-chip-border: rgba(99, 102, 241, 0.2);
+  --note-dark-header-from: rgba(49, 46, 129, 0.25);
+  --note-dark-header-via: rgba(30, 58, 138, 0.15);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(99, 102, 241, 0.25);
+  --note-dark-header-title: #e0e7ff;
+  --note-dark-chip-bg: rgba(99, 102, 241, 0.2);
+  --note-dark-chip-fg: #a5b4fc;
+  --note-dark-chip-border: rgba(99, 102, 241, 0.3);
 }
 
-
-/* ================================================================
-   HEADINGS
-   ================================================================ */
-.saju-note-content h1,
-.saju-note-content h2,
-.saju-note-content h3,
-.saju-note-content h4,
-.saju-note-content h5 {
-  font-weight: 700;
-  line-height: 1.35;
-  letter-spacing: -0.015em;
-  color: #111827;
-  margin-top: 1.75rem;
-  margin-bottom: 0.6rem;
-}
-.dark .saju-note-content h1,
-.dark .saju-note-content h2,
-.dark .saju-note-content h3,
-.dark .saju-note-content h4,
-.dark .saju-note-content h5 { color: #f3f4f6; }
-
-.saju-note-content h2 { font-size: 1.3rem; }
-.saju-note-content h3 {
-  font-size: 1.05rem;
-  color: #1e293b;
-  margin-top: 1.4rem;
-}
-.dark .saju-note-content h3 { color: #e2e8f0; }
-.saju-note-content h4 {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #4b5563;
-  margin-top: 1.1rem;
-  margin-bottom: 0.35rem;
-}
-.dark .saju-note-content h4 { color: #9ca3af; }
-
-/* 카드 내부 첫/마지막 여백 정리 */
-.saju-note-content :is(section, article) > :first-child { margin-top: 0; }
-.saju-note-content :is(section, article) > :last-child  { margin-bottom: 0; }
-
-
-/* ================================================================
-   SECTION  —  최상위 컨테이너 (투명, 스페이싱만)
-   ================================================================ */
 .saju-note-content section {
   margin: 2rem 0;
   padding: 0;
@@ -81,21 +35,26 @@
 
 
 /* ================================================================
-   SECTION > HEADER  —  히어로 헤더
+   SECTION > HEADER — 히어로 헤더
    ================================================================ */
 .saju-note-content section > header {
-  background: linear-gradient(135deg, #eef2ff 0%, #f0f9ff 60%, #f8fafc 100%);
-  border: 1px solid #e0e7ff;
-  border-radius: 1.25rem;
+  background: linear-gradient(135deg, var(--note-header-from) 0%, var(--note-header-via) 60%, var(--note-header-to) 100%);
+  border: 1px solid var(--note-header-border);
+  border-radius: 1rem;
   padding: 1.5rem 1.75rem;
   margin-bottom: 1.5rem;
 }
 .dark .saju-note-content section > header {
-  background: linear-gradient(135deg, rgba(49,46,129,0.25) 0%, rgba(30,58,138,0.15) 60%, rgba(15,23,42,0.3) 100%);
-  border-color: rgba(99,102,241,0.25);
+  background: linear-gradient(
+    135deg,
+    var(--note-dark-header-from) 0%,
+    var(--note-dark-header-via) 60%,
+    var(--note-dark-header-to) 100%
+  );
+  border-color: var(--note-dark-header-border);
 }
 
-/* 헤더 내부 카테고리 배지 (첫 번째 span) */
+/* 헤더 내 카테고리 배지 */
 .saju-note-content section > header > span:first-child {
   display: inline-flex;
   align-items: center;
@@ -105,25 +64,25 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  background: rgba(99,102,241,0.12);
-  color: #4f46e5;
-  border: 1px solid rgba(99,102,241,0.2);
+  background: var(--note-chip-bg);
+  color: var(--note-chip-fg);
+  border: 1px solid var(--note-chip-border);
   margin-bottom: 0.75rem;
 }
 .dark .saju-note-content section > header > span:first-child {
-  background: rgba(99,102,241,0.2);
-  color: #a5b4fc;
-  border-color: rgba(99,102,241,0.3);
+  background: var(--note-dark-chip-bg);
+  color: var(--note-dark-chip-fg);
+  border-color: var(--note-dark-chip-border);
 }
 
 .saju-note-content section > header > h2 {
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   font-weight: 800;
   margin-top: 0;
   margin-bottom: 0.5rem;
-  color: #1e1b4b;
+  color: var(--note-header-title);
 }
-.dark .saju-note-content section > header > h2 { color: #e0e7ff; }
+.dark .saju-note-content section > header > h2 { color: var(--note-dark-header-title); }
 
 .saju-note-content section > header > p {
   font-size: 0.875rem;
@@ -132,6 +91,190 @@
   margin: 0;
 }
 .dark .saju-note-content section > header > p { color: #9ca3af; }
+
+/* ================================================================
+   PAGE THEMES — 기본 개념 페이지별 헤더 색상
+   ================================================================ */
+.saju-note-content[data-slug="yin-yang"] {
+  --note-header-from: #eff6ff;
+  --note-header-via: #dbeafe;
+  --note-header-to: #f8fbff;
+  --note-header-border: #bfdbfe;
+  --note-header-title: #1e3a8a;
+  --note-chip-bg: rgba(59, 130, 246, 0.12);
+  --note-chip-fg: #1d4ed8;
+  --note-chip-border: rgba(59, 130, 246, 0.22);
+  --note-dark-header-from: rgba(30, 64, 175, 0.24);
+  --note-dark-header-via: rgba(30, 58, 138, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(59, 130, 246, 0.25);
+  --note-dark-chip-bg: rgba(59, 130, 246, 0.2);
+  --note-dark-chip-fg: #93c5fd;
+  --note-dark-chip-border: rgba(59, 130, 246, 0.3);
+}
+
+.saju-note-content[data-slug="five-elements"] {
+  --note-header-from: #ecfdf5;
+  --note-header-via: #d1fae5;
+  --note-header-to: #f7fffb;
+  --note-header-border: #a7f3d0;
+  --note-header-title: #065f46;
+  --note-chip-bg: rgba(16, 185, 129, 0.12);
+  --note-chip-fg: #047857;
+  --note-chip-border: rgba(16, 185, 129, 0.22);
+  --note-dark-header-from: rgba(6, 95, 70, 0.24);
+  --note-dark-header-via: rgba(6, 78, 59, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(16, 185, 129, 0.24);
+  --note-dark-chip-bg: rgba(16, 185, 129, 0.18);
+  --note-dark-chip-fg: #6ee7b7;
+  --note-dark-chip-border: rgba(16, 185, 129, 0.28);
+}
+
+.saju-note-content[data-slug="cheongan"] {
+  --note-header-from: #fffbeb;
+  --note-header-via: #fef3c7;
+  --note-header-to: #fffdf7;
+  --note-header-border: #fde68a;
+  --note-header-title: #92400e;
+  --note-chip-bg: rgba(245, 158, 11, 0.14);
+  --note-chip-fg: #b45309;
+  --note-chip-border: rgba(245, 158, 11, 0.24);
+  --note-dark-header-from: rgba(146, 64, 14, 0.24);
+  --note-dark-header-via: rgba(120, 53, 15, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(245, 158, 11, 0.24);
+  --note-dark-chip-bg: rgba(245, 158, 11, 0.18);
+  --note-dark-chip-fg: #fcd34d;
+  --note-dark-chip-border: rgba(245, 158, 11, 0.28);
+}
+
+.saju-note-content[data-slug="jiji"] {
+  --note-header-from: #f5f3ff;
+  --note-header-via: #ede9fe;
+  --note-header-to: #fbfaff;
+  --note-header-border: #ddd6fe;
+  --note-header-title: #5b21b6;
+  --note-chip-bg: rgba(139, 92, 246, 0.12);
+  --note-chip-fg: #6d28d9;
+  --note-chip-border: rgba(139, 92, 246, 0.22);
+  --note-dark-header-from: rgba(91, 33, 182, 0.24);
+  --note-dark-header-via: rgba(76, 29, 149, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(139, 92, 246, 0.24);
+  --note-dark-chip-bg: rgba(139, 92, 246, 0.18);
+  --note-dark-chip-fg: #c4b5fd;
+  --note-dark-chip-border: rgba(139, 92, 246, 0.28);
+}
+
+.saju-note-content[data-slug="sipsin"] {
+  --note-header-from: #ecfeff;
+  --note-header-via: #cffafe;
+  --note-header-to: #f7feff;
+  --note-header-border: #a5f3fc;
+  --note-header-title: #155e75;
+  --note-chip-bg: rgba(6, 182, 212, 0.12);
+  --note-chip-fg: #0e7490;
+  --note-chip-border: rgba(6, 182, 212, 0.22);
+  --note-dark-header-from: rgba(21, 94, 117, 0.24);
+  --note-dark-header-via: rgba(22, 78, 99, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(6, 182, 212, 0.24);
+  --note-dark-chip-bg: rgba(6, 182, 212, 0.18);
+  --note-dark-chip-fg: #67e8f9;
+  --note-dark-chip-border: rgba(6, 182, 212, 0.28);
+}
+
+.saju-note-content[data-slug="tonggeun-and-tuchul"] {
+  --note-header-from: #f0f9ff;
+  --note-header-via: #e0f2fe;
+  --note-header-to: #f8fcff;
+  --note-header-border: #bae6fd;
+  --note-header-title: #0c4a6e;
+  --note-chip-bg: rgba(14, 165, 233, 0.12);
+  --note-chip-fg: #0369a1;
+  --note-chip-border: rgba(14, 165, 233, 0.22);
+  --note-dark-header-from: rgba(12, 74, 110, 0.24);
+  --note-dark-header-via: rgba(7, 89, 133, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(14, 165, 233, 0.24);
+  --note-dark-chip-bg: rgba(14, 165, 233, 0.18);
+  --note-dark-chip-fg: #7dd3fc;
+  --note-dark-chip-border: rgba(14, 165, 233, 0.28);
+}
+
+.saju-note-content[data-slug="hyeong-chung-hoi-hap"] {
+  --note-header-from: #eef2ff;
+  --note-header-via: #e0e7ff;
+  --note-header-to: #fafbff;
+  --note-header-border: #c7d2fe;
+  --note-header-title: #3730a3;
+  --note-chip-bg: rgba(99, 102, 241, 0.12);
+  --note-chip-fg: #4338ca;
+  --note-chip-border: rgba(99, 102, 241, 0.22);
+  --note-dark-header-from: rgba(67, 56, 202, 0.22);
+  --note-dark-header-via: rgba(49, 46, 129, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(99, 102, 241, 0.24);
+  --note-dark-chip-bg: rgba(99, 102, 241, 0.18);
+  --note-dark-chip-fg: #a5b4fc;
+  --note-dark-chip-border: rgba(99, 102, 241, 0.28);
+}
+
+.saju-note-content[data-slug="eight-letters-meaning"] {
+  --note-header-from: #f0fdfa;
+  --note-header-via: #ccfbf1;
+  --note-header-to: #f8fffd;
+  --note-header-border: #99f6e4;
+  --note-header-title: #115e59;
+  --note-chip-bg: rgba(20, 184, 166, 0.12);
+  --note-chip-fg: #0f766e;
+  --note-chip-border: rgba(20, 184, 166, 0.22);
+  --note-dark-header-from: rgba(17, 94, 89, 0.24);
+  --note-dark-header-via: rgba(19, 78, 74, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(20, 184, 166, 0.24);
+  --note-dark-chip-bg: rgba(20, 184, 166, 0.18);
+  --note-dark-chip-fg: #99f6e4;
+  --note-dark-chip-border: rgba(20, 184, 166, 0.28);
+}
+
+.saju-note-content[data-slug="terminology"],
+.saju-note-content[data-slug="ohang-mulssang"] {
+  --note-header-from: #fff1f2;
+  --note-header-via: #ffe4e6;
+  --note-header-to: #fff8f8;
+  --note-header-border: #fecdd3;
+  --note-header-title: #9f1239;
+  --note-chip-bg: rgba(244, 63, 94, 0.12);
+  --note-chip-fg: #be123c;
+  --note-chip-border: rgba(244, 63, 94, 0.22);
+  --note-dark-header-from: rgba(159, 18, 57, 0.24);
+  --note-dark-header-via: rgba(136, 19, 55, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(244, 63, 94, 0.24);
+  --note-dark-chip-bg: rgba(244, 63, 94, 0.18);
+  --note-dark-chip-fg: #fda4af;
+  --note-dark-chip-border: rgba(244, 63, 94, 0.28);
+}
+
+.saju-note-content[data-slug="gyeokguk"] {
+  --note-header-from: #fdf4ff;
+  --note-header-via: #fae8ff;
+  --note-header-to: #fff9fe;
+  --note-header-border: #f5d0fe;
+  --note-header-title: #a21caf;
+  --note-chip-bg: rgba(217, 70, 239, 0.12);
+  --note-chip-fg: #c026d3;
+  --note-chip-border: rgba(217, 70, 239, 0.22);
+  --note-dark-header-from: rgba(162, 28, 175, 0.24);
+  --note-dark-header-via: rgba(134, 25, 143, 0.14);
+  --note-dark-header-to: rgba(15, 23, 42, 0.3);
+  --note-dark-header-border: rgba(217, 70, 239, 0.24);
+  --note-dark-chip-bg: rgba(217, 70, 239, 0.18);
+  --note-dark-chip-fg: #f0abfc;
+  --note-dark-chip-border: rgba(217, 70, 239, 0.28);
+}
 
 
 /* ================================================================
@@ -146,20 +289,20 @@
   transition: box-shadow 0.2s;
 }
 .dark .saju-note-content article {
-  background: rgba(17,24,39,0.5);
-  border-color: rgba(55,65,81,0.7);
+  background: rgba(17, 24, 39, 0.5);
+  border-color: rgba(55, 65, 81, 0.7);
 }
 .saju-note-content article:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 .dark .saju-note-content article:hover {
-  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-/* 제목(h2)이 숨겨진 상위 래퍼(article > h2 + section)는 껍데기만 제거해서 테두리 1겹 유지 */
+/* 상위 래퍼 article (h2 + section 구조) — 이중 박스 방지 */
 .saju-note-content > article:has(> h2:first-child):has(> section) {
   background: transparent;
-  border: 0;
+  border: none;
   box-shadow: none;
   padding: 0;
   margin: 0;
@@ -170,7 +313,7 @@
 
 
 /* ================================================================
-   GRID  —  div:has(> article)
+   GRID — div:has(> article)
    ================================================================ */
 .saju-note-content div:has(> article) {
   display: grid;
@@ -182,41 +325,94 @@
   margin: 0;
 }
 
+/* 형충회합/용어사전처럼 하위 카드가 반복되는 블록은
+   데스크탑 2열, 모바일 1열로 명확하게 고정 */
+.saju-note-content section > article > div:has(> article),
+.saju-note-content section > div:has(> article) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.saju-note-content section > article > div:has(> article) > article,
+.saju-note-content section > div:has(> article) > article {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+
+/* 용어사전/지지 페이지는 카드 목록을 한 줄씩 보여줌 */
+.saju-note-content[data-slug="terminology"] div:has(> article),
+.saju-note-content[data-slug="terminology"] section > article > div:has(> article),
+.saju-note-content[data-slug="terminology"] section > div:has(> article),
+.saju-note-content[data-slug="gyeokguk"] div:has(> article),
+.saju-note-content[data-slug="gyeokguk"] section > article > div:has(> article),
+.saju-note-content[data-slug="gyeokguk"] section > div:has(> article),
+.saju-note-content[data-slug="jiji"] div:has(> article),
+.saju-note-content[data-slug="jiji"] section > article > div:has(> article),
+.saju-note-content[data-slug="jiji"] section > div:has(> article) {
+  grid-template-columns: 1fr;
+}
+
+@media (max-width: 640px) {
+  .saju-note-content div:has(> article) {
+    grid-template-columns: 1fr;
+  }
+  .saju-note-content article {
+    padding: 1rem;
+  }
+  .saju-note-content section > header {
+    padding: 1.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .saju-note-content section > article > div:has(> article),
+  .saju-note-content section > div:has(> article) {
+    grid-template-columns: 1fr;
+  }
+
+  .saju-note-content #hc-sub-new > div > div {
+    grid-template-columns: 1fr;
+  }
+}
+
 
 /* ================================================================
-   ARTICLE INNER HEADER  —  article > div:has(> h3)
-   (지지·천간 카드의 이름 + 배지 행)
+   ARTICLE INNER HEADER — article > div:has(> h3)
+   (천간·지지 카드의 이름 + 배지 헤더 행)
    ================================================================ */
-.saju-note-content article > div:has(> h3) {
+.saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.4rem;
   margin-bottom: 0.75rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid #f3f4f6;
 }
-.dark .saju-note-content article > div:has(> h3) {
-  border-bottom-color: rgba(55,65,81,0.5);
+.dark .saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) {
+  border-bottom-color: rgba(55, 65, 81, 0.5);
 }
 
-.saju-note-content article > div:has(> h3) > h3 {
+.saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > h3 {
   margin: 0;
   font-size: 0.975rem;
   font-weight: 700;
   color: #1e293b;
 }
-.dark .saju-note-content article > div:has(> h3) > h3 { color: #e2e8f0; }
+.dark .saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > h3 {
+  color: #e2e8f0;
+}
 
-/* 배지 행 (h3 아래 span들) */
-.saju-note-content article > div:has(> h3) > div {
+/* 배지 행 */
+.saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > div:has(> span) {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
   align-items: center;
 }
-.saju-note-content article > div:has(> h3) > div > span,
-.saju-note-content article > div:has(> h3) > span {
+.saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > div:has(> span) > span,
+.saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > span {
   display: inline-flex;
   padding: 0.15rem 0.55rem;
   border-radius: 9999px;
@@ -226,17 +422,109 @@
   color: #2563eb;
   border: 1px solid #dbeafe;
 }
-.dark .saju-note-content article > div:has(> h3) > div > span,
-.dark .saju-note-content article > div:has(> h3) > span {
-  background: rgba(37,99,235,0.12);
+.dark .saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > div:has(> span) > span,
+.dark .saju-note-content article > div:has(> h3):has(:is(> span, > div > span)) > span {
+  background: rgba(37, 99, 235, 0.12);
   color: #93c5fd;
-  border-color: rgba(37,99,235,0.2);
+  border-color: rgba(37, 99, 235, 0.2);
+}
+
+/* 형충회합 하위 카드 그룹은 구조 기준으로 직접 2열/1열을 고정 */
+.saju-note-content #hc-sub-new > div > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.875rem;
+  margin: 1rem 0 0;
+}
+
+.saju-note-content #hc-sub-new > div > div > article {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  margin: 0;
 }
 
 
 /* ================================================================
-   PILL TAG CLOUD  —  div:has(> span) (자식이 span만 있는 div)
-   details 내부, article 내부 직속 div 중 span만 있는 것
+   ORDERED LIST — 커스텀 넘버링
+   ================================================================ */
+.saju-note-content ol {
+  list-style: none;
+  padding: 0;
+  margin: 0.75rem 0 1.25rem;
+  counter-reset: olist;
+}
+.saju-note-content ol > li {
+  counter-increment: olist;
+  display: flow-root;
+  padding: 0.625rem 0.875rem;
+  border-radius: 0.625rem;
+  margin-bottom: 0.4rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.dark .saju-note-content ol > li {
+  background: rgba(30, 41, 59, 0.4);
+  border-color: rgba(51, 65, 85, 0.5);
+}
+.saju-note-content ol > li::before {
+  content: counter(olist);
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: #6366f1;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  float: left;
+  margin: 0.1rem 0.9rem 0 0;
+}
+.dark .saju-note-content ol > li::before { background: #4f46e5; }
+
+.saju-note-content ol > li > strong:first-child {
+  display: block;
+  overflow: hidden;
+  margin: 0 0 0.2rem;
+}
+
+/* 두 칸 구조 li (상생/상극 등) */
+.saju-note-content ol > li:has(> div + div) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.saju-note-content ol > li:has(> div + div)::before {
+  float: none;
+  margin: 0 0.9rem 0 0;
+}
+.saju-note-content ol > li:has(> div + div) > div:first-child {
+  flex-shrink: 0;
+  min-width: 4.5rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  color: #1e293b;
+}
+.dark .saju-note-content ol > li:has(> div + div) > div:first-child { color: #e2e8f0; }
+.saju-note-content ol > li:has(> div + div) > div:last-child {
+  color: #4b5563;
+  font-size: 0.8rem;
+}
+.dark .saju-note-content ol > li:has(> div + div) > div:last-child { color: #9ca3af; }
+
+@media (max-width: 640px) {
+  .saju-note-content ol > li:has(> div + div) > div:first-child {
+    min-width: 3.5rem;
+  }
+}
+
+
+/* ================================================================
+   PILL TAG CLOUD — span만 있는 div
    ================================================================ */
 .saju-note-content article > div:not(:has(:is(h2,h3,h4,p,ul,ol,article,section,nav,details,div))):has(> span),
 .saju-note-content details > div:not(:has(:is(h2,h3,h4,p,ul,ol,article,section,nav,details,div))):has(> span) {
@@ -258,15 +546,14 @@
 }
 .dark .saju-note-content article > div:not(:has(:is(h2,h3,h4,p,ul,ol,article,section,nav,details,div))):has(> span) > span,
 .dark .saju-note-content details > div:not(:has(:is(h2,h3,h4,p,ul,ol,article,section,nav,details,div))):has(> span) > span {
-  background: rgba(51,65,85,0.6);
+  background: rgba(51, 65, 85, 0.6);
   color: #94a3b8;
-  border-color: rgba(71,85,105,0.5);
+  border-color: rgba(71, 85, 105, 0.5);
 }
 
 
 /* ================================================================
-   KEY-VALUE ROWS  —  article > div > div:has(> span + span)
-   (지지 지장간·계절 등 프로퍼티 행)
+   KEY-VALUE ROWS — 지장간·계절 등 프로퍼티 행
    ================================================================ */
 .saju-note-content article > div:has(> div:has(> span:first-child + span)) {
   border: 1px solid #e5e7eb;
@@ -276,7 +563,7 @@
   font-size: 0.825rem;
 }
 .dark .saju-note-content article > div:has(> div:has(> span:first-child + span)) {
-  border-color: rgba(55,65,81,0.6);
+  border-color: rgba(55, 65, 81, 0.6);
 }
 
 .saju-note-content article > div:has(> div:has(> span:first-child + span)) > div {
@@ -287,7 +574,7 @@
   border-bottom: 1px solid #f3f4f6;
 }
 .dark .saju-note-content article > div:has(> div:has(> span:first-child + span)) > div {
-  border-bottom-color: rgba(55,65,81,0.4);
+  border-bottom-color: rgba(55, 65, 81, 0.4);
 }
 .saju-note-content article > div:has(> div:has(> span:first-child + span)) > div:last-child {
   border-bottom: none;
@@ -313,8 +600,7 @@
 
 
 /* ================================================================
-   CALLOUT / BLOCKQUOTE  —  article > div:not(:has(*))
-   (텍스트만 있는 div — 순수 텍스트 인용/결론)
+   CALLOUT — 텍스트만 있는 div (순수 텍스트 인용/결론)
    ================================================================ */
 .saju-note-content article > div:not(:has(*)),
 .saju-note-content section > article > div:not(:has(*)) {
@@ -330,20 +616,19 @@
 }
 .dark .saju-note-content article > div:not(:has(*)),
 .dark .saju-note-content section > article > div:not(:has(*)) {
-  background: rgba(79,70,229,0.1);
+  background: rgba(79, 70, 229, 0.1);
   border-left-color: #818cf8;
   color: #a5b4fc;
 }
 
 
 /* ================================================================
-   ADVICE BOX  —  article > div:has(> h4)  또는  div:has(> b)
-   (명리학적 조언, 심층 질문 등)
+   ADVICE BOX — article > div:has(> h4) / details > div:has(> b)
    ================================================================ */
 .saju-note-content article > div:has(> h4),
 .saju-note-content details > div:has(> b) {
-  margin: 1rem 0;
-  padding: 0.875rem 1.1rem;
+  margin: 0.75rem 0;
+  padding: 1rem 1.25rem;
   border-radius: 0.75rem;
   background: #fefce8;
   border: 1px solid #fde68a;
@@ -351,25 +636,39 @@
 }
 .dark .saju-note-content article > div:has(> h4),
 .dark .saju-note-content details > div:has(> b) {
-  background: rgba(120,53,15,0.12);
-  border-color: rgba(217,119,6,0.3);
+  background: rgba(120, 53, 15, 0.12);
+  border-color: rgba(217, 119, 6, 0.3);
+}
+
+/* details 안에서 여러 박스가 나열될 때:
+   details > :not(summary) 의 border-top·padding 을 덮어쓰고
+   좌우 여백을 줘서 details 테두리와 간격 확보 */
+.saju-note-content details > div:has(> b) {
+  border-top: none;
+  margin: 0.5rem 1rem;
+  padding: 1rem 1.25rem;
+}
+.saju-note-content details > div:has(> b):first-of-type {
+  margin-top: 0.875rem;
+}
+.saju-note-content details > div:has(> b):last-of-type {
+  margin-bottom: 0.875rem;
 }
 
 .saju-note-content article > div:has(> h4) > h4 {
-  margin: 0 0 0.4rem;
+  margin: 0 0 0.5rem;
   font-size: 0.8rem;
   font-weight: 700;
   color: #92400e;
-  text-transform: none;
 }
 .dark .saju-note-content article > div:has(> h4) > h4 { color: #fbbf24; }
 
 .saju-note-content article > div:has(> h4) > p,
 .saju-note-content details > div:has(> b) > * {
-  margin: 0.2rem 0;
+  margin: 0.25rem 0;
   color: #78350f;
   font-size: 0.875rem;
-  line-height: 1.6;
+  line-height: 1.65;
 }
 .dark .saju-note-content article > div:has(> h4) > p,
 .dark .saju-note-content details > div:has(> b) > * {
@@ -381,22 +680,15 @@
   font-size: 0.75rem;
   font-weight: 700;
   color: #92400e;
-  margin-bottom: 0.35rem;
+  margin-bottom: 0.4rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 .dark .saju-note-content details > div:has(> b) > b { color: #fbbf24; }
 
-/* 지지(12지지) 심층 질문 박스는 부모 경계와 붙지 않게 여백 추가 */
-.saju-note-content article[id^="jiji-"] details > div:has(> b) {
-  margin: 1rem;
-}
-
-
 
 /* ================================================================
-   PARAGRAPH QUOTE  —  article > div:has(> p):not(:has(> h4, > ul, > ol, > article, > div))
-   (인용구/철학적 문장들)
+   PARAGRAPH QUOTE BOX — article > div:has(> p) (인용/철학적 문장)
    ================================================================ */
 .saju-note-content article > div:has(> p):not(:has(:is(h3,h4,h5,ul,ol,article,section,div,nav,details))) {
   margin: 1rem 0;
@@ -410,8 +702,8 @@
   line-height: 1.75;
 }
 .dark .saju-note-content article > div:has(> p):not(:has(:is(h3,h4,h5,ul,ol,article,section,div,nav,details))) {
-  background: rgba(29,78,216,0.1);
-  border-color: rgba(59,130,246,0.2);
+  background: rgba(29, 78, 216, 0.1);
+  border-color: rgba(59, 130, 246, 0.2);
   color: #93c5fd;
 }
 .saju-note-content article > div:has(> p):not(:has(:is(h3,h4,h5,ul,ol,article,section,div,nav,details))) > p {
@@ -426,181 +718,7 @@
 
 
 /* ================================================================
-   ORDERED LIST  —  상생/상극 등 구조적 li (li > div + div)
-   ================================================================ */
-.saju-note-content ol {
-  list-style: none;
-  padding: 0;
-  margin: 0.75rem 0 1.25rem;
-  counter-reset: olist;
-}
-.saju-note-content ol > li {
-  counter-increment: olist;
-  display: flex;
-  align-items: baseline;
-  gap: 0.875rem;
-  padding: 0.625rem 0.875rem;
-  border-radius: 0.625rem;
-  margin-bottom: 0.4rem;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-.dark .saju-note-content ol > li {
-  background: rgba(30,41,59,0.4);
-  border-color: rgba(51,65,85,0.5);
-}
-.saju-note-content ol > li::before {
-  content: counter(olist);
-  flex-shrink: 0;
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  background: #6366f1;
-  color: white;
-  font-size: 0.65rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 0.1rem;
-}
-.dark .saju-note-content ol > li::before {
-  background: #4f46e5;
-}
-
-/* 상생/상극 두 칸 구조 li */
-.saju-note-content ol > li:has(> div + div) {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.2rem;
-}
-.saju-note-content ol > li:has(> div + div)::before {
-  align-self: flex-start;
-  margin-top: 0;
-}
-.saju-note-content ol > li:has(> div + div) {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: center;
-}
-.saju-note-content ol > li:has(> div + div) > div:first-child {
-  flex-shrink: 0;
-  min-width: 4.5rem;
-  font-weight: 700;
-  font-size: 0.875rem;
-  color: #1e293b;
-}
-.dark .saju-note-content ol > li:has(> div + div) > div:first-child { color: #e2e8f0; }
-
-.saju-note-content ol > li:has(> div + div) > div:last-child {
-  color: #4b5563;
-  font-size: 0.8rem;
-}
-.dark .saju-note-content ol > li:has(> div + div) > div:last-child { color: #9ca3af; }
-
-
-/* ================================================================
-   UNORDERED LIST
-   ================================================================ */
-.saju-note-content ul {
-  list-style: none;
-  padding: 0;
-  margin: 0.5rem 0 1rem;
-}
-.saju-note-content ul > li {
-  position: relative;
-  padding-left: 1.1rem;
-  margin-bottom: 0.35rem;
-  font-size: 0.875rem;
-  line-height: 1.65;
-  color: #374151;
-}
-.dark .saju-note-content ul > li { color: #d1d5db; }
-.saju-note-content ul > li::before {
-  content: "·";
-  position: absolute;
-  left: 0;
-  color: #6366f1;
-  font-weight: 700;
-  font-size: 1.1rem;
-  line-height: 1.4;
-}
-.dark .saju-note-content ul > li::before { color: #818cf8; }
-
-
-/* ================================================================
-   DETAILS / SUMMARY  —  아코디언
-   ================================================================ */
-.saju-note-content details {
-  margin: 0.75rem 0;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.875rem;
-  overflow: hidden;
-}
-.dark .saju-note-content details {
-  border-color: rgba(55,65,81,0.6);
-}
-
-.saju-note-content details > summary {
-  list-style: none;
-  padding: 0.75rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: #374151;
-  background: #f9fafb;
-  cursor: pointer;
-  user-select: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background 0.15s;
-}
-.dark .saju-note-content details > summary {
-  background: rgba(31,41,55,0.5);
-  color: #d1d5db;
-}
-.saju-note-content details > summary:hover {
-  background: #f3f4f6;
-}
-.dark .saju-note-content details > summary:hover {
-  background: rgba(55,65,81,0.5);
-}
-.saju-note-content details > summary::before {
-  content: "▶";
-  font-size: 0.6rem;
-  color: #6366f1;
-  transition: transform 0.2s;
-  flex-shrink: 0;
-}
-.dark .saju-note-content details > summary::before { color: #818cf8; }
-.saju-note-content details[open] > summary::before { transform: rotate(90deg); }
-.saju-note-content details > summary::-webkit-details-marker { display: none; }
-
-.saju-note-content details > :not(summary) {
-  padding: 0.875rem 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-.dark .saju-note-content details > :not(summary) {
-  border-top-color: rgba(55,65,81,0.6);
-}
-
-/* details 내부 h4 */
-.saju-note-content details > h4 {
-  padding: 0.5rem 1rem 0;
-  margin: 0;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: #4b5563;
-  border-top: none;
-}
-.dark .saju-note-content details > h4 { color: #9ca3af; }
-
-
-/* ================================================================
-   NAV  —  빠른 이동 링크 (지지 페이지 등)
+   NAV — 빠른 이동 링크
    ================================================================ */
 .saju-note-content nav {
   display: flex;
@@ -611,8 +729,26 @@
   background: transparent;
   border: none;
 }
-.saju-note-content nav > a {
+.saju-note-content nav > ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saju-note-content nav > ul > li {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saju-note-content nav > a,
+.saju-note-content nav > ul > li > a {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
   font-size: 0.75rem;
@@ -623,187 +759,18 @@
   text-decoration: none;
   transition: background 0.15s, border-color 0.15s;
 }
-.dark .saju-note-content nav > a {
-  background: rgba(37,99,235,0.1);
+.dark .saju-note-content nav > a,
+.dark .saju-note-content nav > ul > li > a {
+  background: rgba(37, 99, 235, 0.1);
   color: #93c5fd;
-  border-color: rgba(37,99,235,0.2);
+  border-color: rgba(37, 99, 235, 0.2);
 }
-.saju-note-content nav > a:hover {
+.saju-note-content nav > a:hover,
+.saju-note-content nav > ul > li > a:hover {
   background: #dbeafe;
   border-color: #93c5fd;
 }
-.dark .saju-note-content nav > a:hover {
-  background: rgba(37,99,235,0.2);
-}
-
-
-/* ================================================================
-   PARAGRAPHS
-   ================================================================ */
-.saju-note-content p {
-  margin-bottom: 0.875rem;
-  font-size: 0.9rem;
-  line-height: 1.8;
-  color: #374151;
-}
-.dark .saju-note-content p { color: #d1d5db; }
-.saju-note-content p:last-child { margin-bottom: 0; }
-
-.saju-note-content strong {
-  font-weight: 700;
-  color: #1f2937;
-}
-.dark .saju-note-content strong { color: #f9fafb; }
-
-
-/* ================================================================
-   DIVIDER
-   ================================================================ */
-.saju-note-content hr {
-  border: 0;
-  height: 1px;
-  background: linear-gradient(to right, transparent, rgba(148,163,184,0.35), transparent);
-  margin: 2rem 0;
-}
-
-
-/* ================================================================
-   TABLES
-   ================================================================ */
-.saju-note-content div:has(> table) {
-  overflow-x: auto;
-  border-radius: 0.75rem;
-  border: 1px solid #e5e7eb;
-  margin: 0.75rem 0;
-}
-.dark .saju-note-content div:has(> table) {
-  border-color: rgba(55,65,81,0.6);
-}
-
-.saju-note-content table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.825rem;
-  background: white;
-}
-.dark .saju-note-content table { background: rgba(15,23,42,0.3); }
-
-.saju-note-content th,
-.saju-note-content td {
-  border: 1px solid #e5e7eb;
-  padding: 0.6rem 0.875rem;
-  text-align: left;
-  vertical-align: top;
-  line-height: 1.5;
-}
-.dark .saju-note-content th,
-.dark .saju-note-content td { border-color: rgba(55,65,81,0.5); }
-
-.saju-note-content th {
-  background: #f8fafc;
-  font-weight: 700;
-  font-size: 0.775rem;
-  color: #475569;
-  white-space: nowrap;
-  text-transform: none;
-}
-.dark .saju-note-content th {
-  background: rgba(30,41,59,0.6);
-  color: #94a3b8;
-}
-
-.saju-note-content tr:hover td { background: #fafafa; }
-.dark .saju-note-content tr:hover td { background: rgba(255,255,255,0.02); }
-
-
-/* ================================================================
-   LINKS
-   ================================================================ */
-.saju-note-content a {
-  color: #4f46e5;
-  font-weight: 500;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(79,70,229,0.25);
-  transition: all 0.15s;
-}
-.dark .saju-note-content a {
-  color: #818cf8;
-  border-bottom-color: rgba(129,140,248,0.3);
-}
-.saju-note-content a:hover {
-  background: rgba(79,70,229,0.07);
-  border-bottom-color: #4f46e5;
-  border-radius: 2px;
-}
-.dark .saju-note-content a:hover {
-  background: rgba(129,140,248,0.12);
-  border-bottom-color: #818cf8;
-}
-
-.saju-note-content a,
-.saju-note-content summary,
-.saju-note-content button,
-.saju-note-content [role="button"] { cursor: pointer; }
-
-
-/* ================================================================
-   BLOCKQUOTES (기존 blockquote 태그)
-   ================================================================ */
-.saju-note-content blockquote {
-  margin: 1.25rem 0;
-  padding: 0.875rem 1.25rem;
-  border-left: 3px solid #6366f1;
-  background: #f5f3ff;
-  border-radius: 0 0.625rem 0.625rem 0;
-  font-style: italic;
-  color: #4338ca;
-  font-size: 0.9rem;
-  line-height: 1.75;
-}
-.dark .saju-note-content blockquote {
-  background: rgba(79,70,229,0.1);
-  border-left-color: #818cf8;
-  color: #a5b4fc;
-}
-
-
-/* ================================================================
-   IMAGES
-   ================================================================ */
-.saju-note-content img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 0.75rem;
-  margin: 1.25rem auto;
-  display: block;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-
-/* ================================================================
-   MOBILE
-   ================================================================ */
-@media (max-width: 640px) {
-  .saju-note-content { font-size: 14.5px; }
-  .saju-note-content h2 { font-size: 1.15rem; }
-  .saju-note-content h3 { font-size: 0.975rem; }
-  .saju-note-content article { padding: 1rem; }
-  .saju-note-content section > header { padding: 1.25rem; }
-  .saju-note-content div:has(> article) {
-    grid-template-columns: 1fr;
-  }
-  .saju-note-content ol > li:has(> div + div) > div:first-child {
-    min-width: 3.5rem;
-  }
-}
-
-
-/* ================================================================
-   MOTION REDUCTION
-   ================================================================ */
-@media (prefers-reduced-motion: reduce) {
-  .saju-note-content * {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
-  }
+.dark .saju-note-content nav > a:hover,
+.dark .saju-note-content nav > ul > li > a:hover {
+  background: rgba(37, 99, 235, 0.2);
 }

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
 
 import AdminPage from "@/app/admin/AdminPage";
 import AccountDisabledGate from "@/app/AccountDisabledGate";
@@ -16,13 +16,18 @@ import SajuNoteHistory2Page from "@/app/saju-note/SajuNoteHistory2Page";
 import SajuNoteMyounlyeokPage from "@/app/saju-note/SajuNoteMyounlyeokPage";
 import SajuNotePage from "@/app/saju-note/SajuNotePage";
 import SajuNotePrologPage from "@/app/saju-note/SajuNotePrologPage";
-import SajuNoteReaderPage from "@/app/saju-note/SajuNoteReaderPage";
+import { SAJU_NOTE_ARTICLE_ROUTES } from "@/app/saju-note/sajuNoteArticleRoutes";
 import ImpersonateView from "@/app/impersonate/page";
 import AuthCallback from "@/auth/ui/AuthCallbackPage";
 import IChingSixYaoPage from "@/iching/ui/IChingSixYaoPage";
 import FaqStandalonePage from "@/app/faq/FaqStandalonePage";
 import UserActivityHeartbeatGate from "@/shared/activity/UserActivityHeartbeat";
 import { PublicAds } from "@/shared/ads/PublicAds";
+
+function LegacySajuNoteReadRedirect() {
+  const { slug } = useParams();
+  return <Navigate to={slug ? `/saju-note/${slug}` : "/saju-note"} replace />;
+}
 
 export default function AppShell() {
   const location = useLocation();
@@ -44,7 +49,10 @@ export default function AppShell() {
         <Route path="/disabled" element={<AccountDisabledPage />} />
         <Route path="/iching" element={<IChingSixYaoPage />} />
         <Route path="/saju-note" element={<SajuNotePage />} />
-        <Route path="/saju-note/read/:slug/*" element={<SajuNoteReaderPage />} />
+        {SAJU_NOTE_ARTICLE_ROUTES.map(({ path, Component }) => (
+          <Route key={path} path={path} element={<Component />} />
+        ))}
+        <Route path="/saju-note/read/:slug/*" element={<LegacySajuNoteReadRedirect />} />
         <Route path="/saju-note/about/*" element={<SajuNoteAboutPage />} />
         <Route path="/saju-note/myounlyeok/*" element={<SajuNoteMyounlyeokPage />} />
         <Route path="/saju-note/prolog/*" element={<SajuNotePrologPage />} />

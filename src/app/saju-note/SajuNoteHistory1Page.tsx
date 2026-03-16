@@ -115,15 +115,17 @@ export default function SajuNoteHistory1Page() {
         {/* 타임라인 */}
         <div className="relative">
           {/* 세로선 */}
-          <div className="absolute left-[22px] sm:left-[26px] top-0 bottom-0 w-px bg-gradient-to-b from-amber-300 via-amber-200 to-transparent dark:from-amber-700 dark:via-amber-800/50 dark:to-transparent" />
+          <div className="absolute z-0 left-[22px] sm:left-[26px] top-0 bottom-0 w-px bg-gradient-to-b from-amber-300 via-amber-200 to-transparent dark:from-amber-700 dark:via-amber-800/50 dark:to-transparent" />
 
           <div className="space-y-8">
             {TIMELINE.map((item, idx) => (
               <div key={idx} className="relative flex gap-5 sm:gap-7">
                 {/* 타임라인 닷 */}
-                <div className="shrink-0 flex flex-col items-center">
-                  <div className="w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-full bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-center">
-                    <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300">{item.num}</span>
+                <div className="relative z-10 shrink-0 flex flex-col items-center">
+                  <div className="rounded-full bg-neutral-50 dark:bg-neutral-950 p-1">
+                    <div className="w-11 h-11 sm:w-[52px] sm:h-[52px] rounded-full bg-amber-100 dark:bg-amber-900/40 border-2 border-amber-300 dark:border-amber-700 flex items-center justify-center shadow-sm">
+                      <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-300">{item.num}</span>
+                    </div>
                   </div>
                 </div>
 

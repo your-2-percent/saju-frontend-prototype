@@ -50,7 +50,7 @@
   </url>
   <url>
     <loc>https://hwarim.me/saju-note</loc>
-    <lastmod>2026-03-05</lastmod>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
@@ -73,68 +73,80 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/yin-yang</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/yin-yang</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/five-elements</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/five-elements</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/cheongan</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/cheongan</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/jiji</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/jiji</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/sipsin</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/sipsin</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/tonggeun-and-tuchul</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/tonggeun-and-tuchul</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/hyeong-chung-hoi-hap</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/hyeong-chung-hoi-hap</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/eight-letters-meaning</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/eight-letters-meaning</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/terminology</loc>
-    <lastmod>2026-03-05</lastmod>
+    <loc>https://hwarim.me/saju-note/terminology</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/iljuron-why-not-always-correct</loc>
-    <lastmod>2026-03-10</lastmod>
+    <loc>https://hwarim.me/saju-note/ohang-mulssang</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://hwarim.me/saju-note/read/solar-position-and-time-correction</loc>
-    <lastmod>2026-03-10</lastmod>
+    <loc>https://hwarim.me/saju-note/gyeokguk</loc>
+    <lastmod>2026-03-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://hwarim.me/saju-note/iljuron-why-not-always-correct</loc>
+    <lastmod>2026-03-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://hwarim.me/saju-note/solar-position-and-time-correction</loc>
+    <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
