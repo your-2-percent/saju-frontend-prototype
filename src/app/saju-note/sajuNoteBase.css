@@ -1,0 +1,351 @@
+/* ================================================================
+   sajuNoteBase.css  —  사주노트 공통 타이포 & 기본 요소
+   (다른 콘텐츠 페이지에서도 재사용 가능한 스타일)
+   ================================================================ */
+
+/* ─── Root ─── */
+.saju-note-content {
+  line-height: 1.8;
+  font-size: 15.5px;
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  color: #374151;
+}
+.dark .saju-note-content {
+  color: #d1d5db;
+}
+
+/* 목차 앵커 이동 시 sticky header에 가리지 않게 */
+.saju-note-content [id] {
+  scroll-margin-top: 5.5rem;
+}
+
+/* 최상위 래퍼 h2 — 리더 페이지 제목과 중복되어 숨김 */
+.saju-note-content > div > h2:first-child,
+.saju-note-content > article > h2:first-child {
+  display: none;
+}
+
+/* 카드 내부 첫/마지막 여백 정리 */
+.saju-note-content :is(section, article) > :first-child { margin-top: 0; }
+.saju-note-content :is(section, article) > :last-child  { margin-bottom: 0; }
+
+
+/* ================================================================
+   HEADINGS
+   ================================================================ */
+.saju-note-content h1,
+.saju-note-content h2,
+.saju-note-content h3,
+.saju-note-content h4,
+.saju-note-content h5 {
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  color: #111827;
+  margin-top: 1.75rem;
+  margin-bottom: 0.6rem;
+}
+.dark .saju-note-content h1,
+.dark .saju-note-content h2,
+.dark .saju-note-content h3,
+.dark .saju-note-content h4,
+.dark .saju-note-content h5 {
+  color: #f3f4f6;
+}
+
+.saju-note-content h2 {
+  font-size: 1.3rem;
+}
+.saju-note-content h3 {
+  font-size: 1.05rem;
+  color: #1e293b;
+  margin-top: 1.4rem;
+}
+.dark .saju-note-content h3 { color: #e2e8f0; }
+
+.saju-note-content h4 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4b5563;
+  margin-top: 1.1rem;
+  margin-bottom: 0.35rem;
+}
+.dark .saju-note-content h4 { color: #9ca3af; }
+
+.saju-note-content h5 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin-top: 0.875rem;
+  margin-bottom: 0.25rem;
+}
+.dark .saju-note-content h5 { color: #9ca3af; }
+
+
+/* ================================================================
+   PARAGRAPHS
+   ================================================================ */
+.saju-note-content p {
+  margin-bottom: 0.875rem;
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: #374151;
+}
+.dark .saju-note-content p { color: #d1d5db; }
+.saju-note-content p:last-child { margin-bottom: 0; }
+
+.saju-note-content strong {
+  font-weight: 700;
+  color: #1f2937;
+}
+.dark .saju-note-content strong { color: #f9fafb; }
+
+.saju-note-content em {
+  font-style: italic;
+  color: #4b5563;
+}
+.dark .saju-note-content em { color: #9ca3af; }
+
+
+/* ================================================================
+   UNORDERED LIST
+   ================================================================ */
+.saju-note-content ul {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 1rem;
+}
+.saju-note-content ul > li {
+  position: relative;
+  padding-left: 1.1rem;
+  margin-bottom: 0.35rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  color: #374151;
+}
+.dark .saju-note-content ul > li { color: #d1d5db; }
+.saju-note-content ul > li::before {
+  content: "·";
+  position: absolute;
+  left: 0;
+  color: #6366f1;
+  font-weight: 700;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+.dark .saju-note-content ul > li::before { color: #818cf8; }
+
+
+/* ================================================================
+   LINKS
+   ================================================================ */
+.saju-note-content a {
+  color: #4f46e5;
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(79, 70, 229, 0.25);
+  transition: all 0.15s;
+}
+.dark .saju-note-content a {
+  color: #818cf8;
+  border-bottom-color: rgba(129, 140, 248, 0.3);
+}
+.saju-note-content a:hover {
+  background: rgba(79, 70, 229, 0.07);
+  border-bottom-color: #4f46e5;
+  border-radius: 2px;
+}
+.dark .saju-note-content a:hover {
+  background: rgba(129, 140, 248, 0.12);
+  border-bottom-color: #818cf8;
+}
+
+.saju-note-content a,
+.saju-note-content summary,
+.saju-note-content button,
+.saju-note-content [role="button"] {
+  cursor: pointer;
+}
+
+
+/* ================================================================
+   BLOCKQUOTE
+   ================================================================ */
+.saju-note-content blockquote {
+  margin: 1.25rem 0;
+  padding: 0.875rem 1.25rem;
+  border-left: 3px solid #6366f1;
+  background: #f5f3ff;
+  border-radius: 0 0.625rem 0.625rem 0;
+  font-style: italic;
+  color: #4338ca;
+  font-size: 0.9rem;
+  line-height: 1.75;
+}
+.dark .saju-note-content blockquote {
+  background: rgba(79, 70, 229, 0.1);
+  border-left-color: #818cf8;
+  color: #a5b4fc;
+}
+
+
+/* ================================================================
+   DIVIDER
+   ================================================================ */
+.saju-note-content hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(148, 163, 184, 0.35), transparent);
+  margin: 2rem 0;
+}
+
+
+/* ================================================================
+   DETAILS / SUMMARY — 아코디언
+   ================================================================ */
+.saju-note-content details {
+  margin: 0.75rem 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.875rem;
+  overflow: hidden;
+}
+.dark .saju-note-content details {
+  border-color: rgba(55, 65, 81, 0.6);
+}
+
+.saju-note-content details > summary {
+  list-style: none;
+  padding: 0.75rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+.dark .saju-note-content details > summary {
+  background: rgba(31, 41, 55, 0.5);
+  color: #d1d5db;
+}
+.saju-note-content details > summary:hover { background: #f3f4f6; }
+.dark .saju-note-content details > summary:hover { background: rgba(55, 65, 81, 0.5); }
+
+.saju-note-content details > summary::before {
+  content: "▶";
+  font-size: 0.6rem;
+  color: #6366f1;
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+.dark .saju-note-content details > summary::before { color: #818cf8; }
+.saju-note-content details[open] > summary::before { transform: rotate(90deg); }
+.saju-note-content details > summary::-webkit-details-marker { display: none; }
+
+.saju-note-content details > :not(summary) {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+.dark .saju-note-content details > :not(summary) {
+  border-top-color: rgba(55, 65, 81, 0.6);
+}
+
+.saju-note-content details > h4 {
+  padding: 0.5rem 1rem 0;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4b5563;
+  border-top: none;
+}
+.dark .saju-note-content details > h4 { color: #9ca3af; }
+
+
+/* ================================================================
+   TABLES
+   ================================================================ */
+.saju-note-content div:has(> table) {
+  overflow-x: auto;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  margin: 0.75rem 0;
+}
+.dark .saju-note-content div:has(> table) {
+  border-color: rgba(55, 65, 81, 0.6);
+}
+
+.saju-note-content table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  background: white;
+}
+.dark .saju-note-content table { background: rgba(15, 23, 42, 0.3); }
+
+.saju-note-content th,
+.saju-note-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.6rem 0.875rem;
+  text-align: left;
+  vertical-align: top;
+  line-height: 1.5;
+}
+.dark .saju-note-content th,
+.dark .saju-note-content td {
+  border-color: rgba(55, 65, 81, 0.5);
+}
+
+.saju-note-content th {
+  background: #f8fafc;
+  font-weight: 700;
+  font-size: 0.775rem;
+  color: #475569;
+  white-space: nowrap;
+}
+.dark .saju-note-content th {
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+}
+
+.saju-note-content tr:hover td { background: #fafafa; }
+.dark .saju-note-content tr:hover td { background: rgba(255, 255, 255, 0.02); }
+
+
+/* ================================================================
+   IMAGES
+   ================================================================ */
+.saju-note-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.75rem;
+  margin: 1.25rem auto;
+  display: block;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+
+/* ================================================================
+   MOBILE
+   ================================================================ */
+@media (max-width: 640px) {
+  .saju-note-content {
+    font-size: 14.5px;
+  }
+  .saju-note-content h2 { font-size: 1.15rem; }
+  .saju-note-content h3 { font-size: 0.975rem; }
+}
+
+
+/* ================================================================
+   MOTION REDUCTION
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .saju-note-content * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

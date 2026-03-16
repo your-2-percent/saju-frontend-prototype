@@ -161,6 +161,38 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
     ],
   },
   {
+    key: "ohang-mulssang",
+    title: "오행 물상론",
+    subtitle: "오행 물상론(五行 物象論)",
+    description: "오행이 과다하거나 특정 조합을 이룰 때 나타나는 상호작용을 물상으로 풀어낸 용어들.",
+    badgeClass: "bg-rose-100 text-rose-700 dark:bg-rose-900/50 dark:text-rose-300",
+    borderClass: "border-rose-200 dark:border-rose-900/50",
+    items: [
+      {
+        slug: "ohang-mulssang",
+        title: "오행 물상론 용어",
+        description: "오행 과다 용어(목다화식·화다목분 등)와 갑목·을목 병존부터 계수 병존까지 10천간 병존 물상 용어를 정리했습니다.",
+        date: "2026.03.16",
+      },
+    ],
+  },
+  {
+    key: "gyeokguk",
+    title: "격국",
+    subtitle: "격국(格局)",
+    description: "내격과 외격, 화합·귀록·종격·전왕격까지 격국 구조를 한눈에 정리.",
+    badgeClass: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/50 dark:text-fuchsia-300",
+    borderClass: "border-fuchsia-200 dark:border-fuchsia-900/50",
+    items: [
+      {
+        slug: "gyeokguk",
+        title: "격국의 기본 개념 정리",
+        description: "월지를 중심으로 잡는 내격과, 특수 구조를 따로 보는 외격을 나누어 대표 격국들을 정리했습니다.",
+        date: "2026.03.17",
+      },
+    ],
+  },
+  {
     key: "saju-misc-time",
     title: "균시차",
     subtitle: "태양 위치와 지역별 시간 보정",

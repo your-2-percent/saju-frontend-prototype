@@ -244,7 +244,7 @@ export default function SajuNotePage() {
                       <li key={item.slug}>
                         <button
                           type="button"
-                          onClick={() => navigate(`/saju-note/read/${item.slug}`)}
+                          onClick={() => navigate(`/saju-note/${item.slug}`)}
                           className="group w-full text-left rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-3.5 py-3 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30 transition-all cursor-pointer"
                         >
                           <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>
@@ -295,7 +295,7 @@ export default function SajuNotePage() {
                       <li key={item.slug}>
                         <button
                           type="button"
-                          onClick={() => navigate(`/saju-note/read/${item.slug}`)}
+                          onClick={() => navigate(`/saju-note/${item.slug}`)}
                           className="group w-full text-left rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-3.5 py-3 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-orange-50/50 dark:hover:bg-orange-950/30 transition-all cursor-pointer"
                         >
                           <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>

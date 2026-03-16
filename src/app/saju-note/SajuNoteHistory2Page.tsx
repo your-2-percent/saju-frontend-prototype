@@ -174,9 +174,11 @@ export default function SajuNoteHistory2Page() {
             <div key={section.sectionNum} className="space-y-4">
               {/* 섹션 헤더 */}
               <div className="flex items-center gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 dark:bg-amber-600 text-white text-[11px] font-extrabold flex items-center justify-center">
-                  {section.sectionNum}
-                </span>
+                <div className="rounded-full bg-neutral-50 dark:bg-neutral-950 p-0.5">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500 dark:bg-amber-600 text-white text-[11px] font-extrabold flex items-center justify-center shadow-sm">
+                    {section.sectionNum}
+                  </span>
+                </div>
                 <h2 className="text-sm sm:text-base font-extrabold text-neutral-900 dark:text-neutral-100 break-keep">
                   {section.sectionTitle}
                 </h2>
