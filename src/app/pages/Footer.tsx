@@ -9,9 +9,6 @@ import { supabase } from "@/lib/supabase";
 const footerLinkClass =
   "text-[12px] text-neutral-500 transition hover:text-orange-500 dark:text-neutral-400 dark:hover:text-orange-300";
 
-const subtleButtonClass =
-  "inline-flex items-center rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-medium text-neutral-600 transition hover:border-orange-300 hover:text-orange-600 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-orange-500/50 dark:hover:text-orange-300";
-
 const guideButtonClass =
   "inline-flex items-center rounded-full bg-orange-500 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-orange-600";
 
