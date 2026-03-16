@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import { supabase } from "@/lib/supabase";
 import TodaySaju from "@/saju/ui/TodaySajuPage";
 import InputWizard from "@/myeongsik/ui/InputAppPage";
 import SajuChart from "@/saju/ui/SajuChartPage";
@@ -17,11 +16,6 @@ import type { MyeongSik } from "@/shared/lib/storage";
 import { useMyeongSikStore } from "@/myeongsik/input/useMyeongSikStore";
 import CoupleViewer from "@/app/pages/CoupleViewer";
 import Footer from "@/app/pages/Footer";
-import LegacyMigrateModal from "@/app/pages/LegacyMigrateModal";
-import {
-  shouldAutoOpenLegacyMigrateModal,
-  isLegacyMigrateDismissed,
-} from "@/app/pages/legacyMigrateUtils";
 import { useSettingsStore } from "@/settings/input/useSettingsStore";
 import CustomSajuModal from "@/features/CustomSaju/CustomSajuModal";
 import PromptCopyCard from "@/app/components/PromptCopyCard";
@@ -188,28 +182,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
   const showLoginNot = !isLoggedIn && !showResult;
 
   const [loginOpen, setLoginOpen] = useState(false);
-  const [legacyMigrateOpen, setLegacyMigrateOpen] = useState(false);
-  const [legacyDismissed, setLegacyDismissed] = useState(isLegacyMigrateDismissed);
-  // 모달이 닫힐 때마다 dismissed 여부 재확인 (가져오기 성공 or 영구 숨기기 클릭 이후)
-  useEffect(() => {
-    if (!legacyMigrateOpen) {
-      setLegacyDismissed(isLegacyMigrateDismissed());
-    }
-  }, [legacyMigrateOpen]);
-
-  useEffect(() => {
-    let alive = true;
-    void supabase.auth.getSession().then(({ data }) => {
-      if (!alive) return;
-      const loggedInNow = !!data.session?.user;
-      if (shouldAutoOpenLegacyMigrateModal(loggedInNow)) {
-        setLegacyMigrateOpen(true);
-      }
-    });
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   const handleSidebarView: typeof save.handleSidebarView = (...args) => {
     input.setShowToday(false);
@@ -246,11 +218,6 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
       />
 
       <LoginNudgeModal />
-      <LegacyMigrateModal
-        open={legacyMigrateOpen}
-        onClose={() => setLegacyMigrateOpen(false)}
-        onImportSuccess={() => setLegacyMigrateOpen(false)}
-      />
       {loginOpen && (
         <div className="fixed inset-0 z-[210] bg-black/70 flex items-center justify-center">
           <div className="w-full max-w-[420px] max-h-[90dvh] overflow-auto rounded-2xl">
@@ -285,35 +252,15 @@ function MainApp({ isLoggedIn }: { isLoggedIn: boolean }) {
         <div className="w-full mt-14 desk:mt-16 px-3">
           <div className="max-w-[640px] mx-auto rounded-xl border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-3 py-2.5 flex items-center justify-center gap-3">
             <p className="text-xs desk:text-sm text-amber-700 dark:text-amber-300">
-              로그아웃 상태입니다.{!legacyDismissed && " 이전(myowoon96) 명식 가져오기도 가능합니다."}
+              로그아웃 상태입니다.
             </p>
-            {!legacyDismissed && (
-              <button
-                type="button"
-                onClick={() => setLegacyMigrateOpen(true)}
-                className="shrink-0 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold bg-amber-500 hover:bg-amber-600 text-white cursor-pointer"
-              >
-                명식 가져오기
-              </button>
-            )}
           </div>
         </div>
       )}
 
       {/* ✅ Today: 명식 없으면 기본으로 띄우기 */}
       {effectiveShowToday && (
-        <>
-          <TodaySaju compactTop={showLoginNot} />
-          {/* <div className="max-w-[640px] mx-auto px-3 mt-2">
-              <button
-                type="button"
-                onClick={() => setLegacyMigrateOpen(true)}
-                className="w-full rounded-lg border border-indigo-300/70 dark:border-indigo-700/60 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs py-2 font-semibold cursor-pointer"
-              >
-                myowoon96 명식 이관하기
-              </button>
-            </div> */}
-        </>
+        <TodaySaju compactTop={showLoginNot} />
       )}
 
       {input.wizardOpen && (

@@ -3,22 +3,17 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import LegacyMigrateModal from "@/app/pages/LegacyMigrateModal";
 import { useAuthUserId } from "@/auth/input/useAuthUserId";
 import { supabase } from "@/lib/supabase";
 
 const footerLinkClass =
   "text-[12px] text-neutral-500 transition hover:text-orange-500 dark:text-neutral-400 dark:hover:text-orange-300";
 
-const subtleButtonClass =
-  "inline-flex items-center rounded-full border border-neutral-200 px-3 py-1.5 text-[12px] font-medium text-neutral-600 transition hover:border-orange-300 hover:text-orange-600 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-orange-500/50 dark:hover:text-orange-300";
-
 const guideButtonClass =
   "inline-flex items-center rounded-full bg-orange-500 px-3 py-1.5 text-[12px] font-semibold text-white transition hover:bg-orange-600";
 
 export default function Footer() {
   const [openDelete, setOpenDelete] = useState(false);
-  const [openMigrate, setOpenMigrate] = useState(false);
   const userId = useAuthUserId();
   const isLoggedIn = !!userId;
   const navigate = useNavigate();
@@ -66,13 +61,6 @@ export default function Footer() {
               <Link to="/guide" className={guideButtonClass}>
                 사이트 가이드
               </Link>
-              <button
-                type="button"
-                onClick={() => setOpenMigrate(true)}
-                className={`${subtleButtonClass} cursor-pointer`}
-              >
-                명식 이관하기
-              </button>
             </div>
           </div>
 
@@ -109,8 +97,6 @@ export default function Footer() {
           </div>
         </div>
       </footer>
-
-      <LegacyMigrateModal open={openMigrate} onClose={() => setOpenMigrate(false)} />
 
       {isLoggedIn && openDelete && (
         <div
