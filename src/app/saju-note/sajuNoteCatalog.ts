@@ -20,21 +20,15 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
     key: "yinyang",
     title: "음양",
     subtitle: "음양(陰陽)",
-    description: "음양의 기본 개념부터 주인장의 재해석·임상례까지.",
+    description: "음양의 기본 개념부터 천간·지지 음양 구분, 양팔통·음팔통 실전 해석까지.",
     badgeClass: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",
     borderClass: "border-blue-200 dark:border-blue-900/50",
     items: [
       {
         slug: "yin-yang",
         title: "음양의 기본 개념 정리",
-        description: "음양이란 무엇인가? 상대성·가변성·상호전화(相互轉化)를 중심으로 음양의 핵심을 정리했습니다.",
+        description: "음양의 기본 원리부터 천간·지지 음양 구분, 양팔통·음팔통의 성향과 실전 활용법까지 정리했습니다.",
         date: "2026.01.14",
-      },
-      {
-        slug: "yin-yang-clinical-practice",
-        title: "음양의 재해석과 임상모음",
-        description: "이론에서 그치지 않고, 실제 사주 해석에서 음양을 어떻게 적용하는지 임상례와 함께 풀었습니다.",
-        date: "2026.01.26",
       },
     ],
   },

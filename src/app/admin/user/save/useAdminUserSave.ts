@@ -101,7 +101,7 @@ type MyeongsikCountRpcRow = {
 };
 
 type ProfileMigratedCountRow = {
-  id?: string | null;
+  user_id?: string | null;
   migrated_myeongsik_count?: number | string | null;
 };
 
@@ -150,8 +150,8 @@ async function fetchProfileMigratedCounts(userIds: string[]): Promise<Record<str
 
   const { data, error } = (await supabase
     .from("profiles")
-    .select("id, migrated_myeongsik_count")
-    .in("id", userIds)) as unknown as {
+    .select("user_id, migrated_myeongsik_count")
+    .in("user_id", userIds)) as unknown as {
     data: ProfileMigratedCountRow[] | null;
     error: { message?: string } | null;
   };
@@ -163,7 +163,7 @@ async function fetchProfileMigratedCounts(userIds: string[]): Promise<Record<str
 
   const out: Record<string, number | null> = {};
   for (const row of Array.isArray(data) ? data : []) {
-    const uid = typeof row.id === "string" ? row.id : "";
+    const uid = typeof row.user_id === "string" ? row.user_id : "";
     if (!uid) continue;
     out[uid] = toNum(row.migrated_myeongsik_count);
   }
