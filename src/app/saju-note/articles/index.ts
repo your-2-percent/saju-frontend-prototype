@@ -11,6 +11,8 @@ import { IljuronWhyNotAlwaysCorrectArticle } from "@/app/saju-note/articles/ilju
 import { SolarPositionAndTimeCorrectionArticle } from "@/app/saju-note/articles/solar-position-and-time-correction";
 import { OhangMulssangArticle } from "@/app/saju-note/articles/ohang-mulssang";
 import { GyeokgukArticle } from "@/app/saju-note/articles/gyeokguk";
+import { JijangganArticle } from "@/app/saju-note/articles/jijanggan";
+import { ManseryeokArticle } from "@/app/saju-note/articles/manseryeok";
 import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
@@ -20,6 +22,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   FiveElementsArticle,
   CheonganArticle,
   JijiArticle,
+  JijangganArticle,
   SipsinArticle,
   TonggeunAndTuchulArticle,
   HyeongChungHoiHapArticle,
@@ -29,6 +32,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   SolarPositionAndTimeCorrectionArticle,
   OhangMulssangArticle,
   GyeokgukArticle,
+  ManseryeokArticle,
 ];
 
 export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
@@ -36,6 +40,7 @@ export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
   "five-elements": FiveElementsArticle,
   "cheongan": CheonganArticle,
   "jiji": JijiArticle,
+  "jijanggan": JijangganArticle,
   "sipsin": SipsinArticle,
   "tonggeun-and-tuchul": TonggeunAndTuchulArticle,
   "hyeong-chung-hoi-hap": HyeongChungHoiHapArticle,
@@ -45,4 +50,5 @@ export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
   "solar-position-and-time-correction": SolarPositionAndTimeCorrectionArticle,
   "ohang-mulssang": OhangMulssangArticle,
   "gyeokguk": GyeokgukArticle,
+  "manseryeok": ManseryeokArticle,
 };

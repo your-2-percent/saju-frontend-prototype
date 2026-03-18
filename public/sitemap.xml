@@ -97,6 +97,18 @@
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://hwarim.me/saju-note/jijanggan</loc>
+    <lastmod>2026-03-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://hwarim.me/saju-note/manseryeok</loc>
+    <lastmod>2026-03-19</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://hwarim.me/saju-note/sipsin</loc>
     <lastmod>2026-03-17</lastmod>
     <changefreq>monthly</changefreq>
