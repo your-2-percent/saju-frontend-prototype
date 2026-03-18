@@ -48,6 +48,17 @@ const STATIC_PAGES: StaticPage[] = [
     hoverClass: "hover:border-indigo-300 dark:hover:border-indigo-700",
   },
   {
+    section: "about",
+    slug: "manseryeok",
+    path: "/saju-note/manseryeok",
+    title: "만세력 보는 법",
+    description: "만세력 화면에 보이는 것들을 처음 보는 사람 기준으로 하나씩 정리 — 사주팔자 구조부터 대운·세운·형충회합까지.",
+    badge: "만세력",
+    badgeClass: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
+    borderClass: "border-yellow-200 dark:border-yellow-800/60",
+    hoverClass: "hover:border-yellow-300 dark:hover:border-yellow-700",
+  },
+  {
     section: "prolog",
     slug: "prolog",
     path: "/saju-note/prolog",
@@ -134,7 +145,7 @@ export default function SajuNotePage() {
   const aboutPages = filteredStaticPages.filter((p) => p.section === "about");
   const prologPages = filteredStaticPages.filter((p) => p.section === "prolog");
   const historyPages = filteredStaticPages.filter((p) => p.section === "history");
-  const conceptCategories = filteredCategories.filter((category) => !category.key.startsWith("saju-misc"));
+  const conceptCategories = filteredCategories.filter((category) => !category.key.startsWith("saju-misc") && !category.key.startsWith("saju-about"));
   const miscCategories = filteredCategories.filter((category) => category.key.startsWith("saju-misc"));
 
   const isEmpty =

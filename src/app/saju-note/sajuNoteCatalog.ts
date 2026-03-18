@@ -78,6 +78,12 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
         description: "12지지의 음양·오행·계절·방향 속성, 각 지지의 성질과 지장간 구성, 지지를 읽는 방법을 정리했습니다.",
         date: "2026.01.14",
       },
+      {
+        slug: "jijanggan",
+        title: "지장간의 기본 개념 정리",
+        description: "지지 속에 숨은 천간인 지장간의 구조와 여기·중기·정기의 의미, 12지지별 지장간 구성과 통근·격국 해석에서의 활용을 정리했습니다.",
+        date: "2026.03.19",
+      },
     ],
   },
   {
@@ -189,6 +195,22 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
         title: "격국의 기본 개념 정리",
         description: "월지를 중심으로 잡는 내격과, 특수 구조를 따로 보는 외격을 나누어 대표 격국들을 정리했습니다.",
         date: "2026.03.17",
+      },
+    ],
+  },
+  {
+    key: "saju-about-manseryeok",
+    title: "만세력",
+    subtitle: "만세력에 대해",
+    description: "만세력 화면에 보이는 것들을 처음 보는 사람 기준으로 하나씩 정리.",
+    badgeClass: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300",
+    borderClass: "border-yellow-200 dark:border-yellow-900/50",
+    items: [
+      {
+        slug: "manseryeok",
+        title: "만세력 보는 법",
+        description: "사주팔자의 구조, 천간·지지·지장간, 십신·십이운성·신살, 대운·세운·월운, 형충회합까지 만세력 화면에 보이는 요소들을 초보자 기준으로 정리했습니다.",
+        date: "2026.03.19",
       },
     ],
   },

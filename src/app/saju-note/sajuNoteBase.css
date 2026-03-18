@@ -125,7 +125,7 @@
   color: #374151;
 }
 .dark .saju-note-content ul > li { color: #d1d5db; }
-.saju-note-content ul > li::before {
+/* .saju-note-content ul > li::before {
   content: "·";
   position: absolute;
   left: 0;
@@ -134,7 +134,7 @@
   font-size: 1.1rem;
   line-height: 1.4;
 }
-.dark .saju-note-content ul > li::before { color: #818cf8; }
+.dark .saju-note-content ul > li::before { color: #818cf8; } */
 
 
 /* ================================================================

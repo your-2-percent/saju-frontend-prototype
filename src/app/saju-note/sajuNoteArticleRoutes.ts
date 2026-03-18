@@ -12,6 +12,8 @@ import SajuNoteIljuronWhyNotAlwaysCorrectPage from "@/app/saju-note/SajuNoteIlju
 import SajuNoteSolarPositionAndTimeCorrectionPage from "@/app/saju-note/SajuNoteSolarPositionAndTimeCorrectionPage";
 import SajuNoteOhangMulssangPage from "@/app/saju-note/SajuNoteOhangMulssangPage";
 import SajuNoteGyeokgukPage from "@/app/saju-note/SajuNoteGyeokgukPage";
+import SajuNoteJijangganPage from "@/app/saju-note/SajuNoteJijangganPage";
+import SajuNoteManseryeokPage from "@/app/saju-note/SajuNoteManseryeokPage";
 
 export type SajuNoteArticleRoute = {
   slug: string;
@@ -33,4 +35,6 @@ export const SAJU_NOTE_ARTICLE_ROUTES: SajuNoteArticleRoute[] = [
   { slug: "solar-position-and-time-correction", path: "/saju-note/solar-position-and-time-correction/*", Component: SajuNoteSolarPositionAndTimeCorrectionPage },
   { slug: "ohang-mulssang", path: "/saju-note/ohang-mulssang/*", Component: SajuNoteOhangMulssangPage },
   { slug: "gyeokguk", path: "/saju-note/gyeokguk/*", Component: SajuNoteGyeokgukPage },
+  { slug: "jijanggan", path: "/saju-note/jijanggan/*", Component: SajuNoteJijangganPage },
+  { slug: "manseryeok", path: "/saju-note/manseryeok/*", Component: SajuNoteManseryeokPage },
 ];
