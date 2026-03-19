@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const FiveElementsArticle: SajuNoteArticle = {
   slug: "five-elements",
+  seoTitle: "오행(五行) 완전 정리 — 목화토금수 상생 상극 사주 해석",
+  seoDescription: "목·화·토·금·수 각 오행의 기운과 성질, 상생(相生)·상극(相剋)의 원리, 사주 해석에서의 활용법까지 정리.",
+  seoKeywords: "오행, 목화토금수, 상생 상극, 오행 상생, 오행 상극, 사주 오행, 오행 성질, 오행 기초, 명리 오행",
   contentHtml: String.raw`<div>
       <h2>오행(五行)</h2>
 

@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const ManseryeokArticle: SajuNoteArticle = {
   slug: "manseryeok",
+  seoTitle: "만세력 보는 법 완전 정리 — 처음 봐도 이해되는 만세력 설명",
+  seoDescription: "사주팔자 구조, 천간·지지·지장간, 십신·십이운성·신살, 대운·세운·월운, 형충회합까지 만세력 화면에 보이는 요소 초보자 기준으로 정리.",
+  seoKeywords: "만세력 보는법, 만세력 사용법, 만세력 설명, 사주팔자, 대운 세운, 십신, 지장간, 형충회합, 무료 만세력, 사주 초보",
   contentHtml: String.raw`<div>
     <h2>만세력 보는 법</h2>
     <section>

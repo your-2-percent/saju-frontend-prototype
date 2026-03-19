@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const YinYangArticle: SajuNoteArticle = {
   slug: "yin-yang",
+  seoTitle: "사주 음양(陰陽) 완전 정리 — 양팔통·음팔통 성향과 실전 해석",
+  seoDescription: "사주 음양의 기본 원리, 천간·지지 음양 구분, 양팔통과 음팔통의 성향 차이와 실전 해석법까지 한 번에 정리.",
+  seoKeywords: "음양, 음양오행, 사주 음양, 양팔통, 음팔통, 천간 음양, 지지 음양, 사주 기초, 명리 음양",
   contentHtml: String.raw`<div>
       <h2>음양(陰陽)</h2>
 

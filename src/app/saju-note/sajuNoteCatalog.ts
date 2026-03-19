@@ -199,6 +199,22 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
     ],
   },
   {
+    key: "saju-case",
+    title: "사주사례집",
+    subtitle: "주인장이 모은 사례집들",
+    description: "실제 명식을 기반으로 원국 성격부터 운의 흐름까지 직접 풀어본 사례 모음.",
+    badgeClass: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300",
+    borderClass: "border-emerald-200 dark:border-emerald-900/50",
+    items: [
+      {
+        slug: "saju-case-1",
+        title: "주인장 사주 직접 해석해봤어요. — 경자일주 복음명식 자수삼존",
+        description: "병자년 경자월 경자일 갑신시. 금수 강세에 복음명식·자수삼존까지 — 원국 성격부터 연애 시작, 혼인신고 타이밍까지 실제 명식을 직접 분석함.",
+        date: "2026.03.19",
+      },
+    ],
+  },
+  {
     key: "saju-about-manseryeok",
     title: "만세력",
     subtitle: "만세력에 대해",

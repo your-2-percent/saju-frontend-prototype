@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const GyeokgukArticle: SajuNoteArticle = {
   slug: "gyeokguk",
+  seoTitle: "격국(格局) 완전 정리 — 내격 외격 종격 화합격 귀록격",
+  seoDescription: "월지를 중심으로 잡는 내격과 특수 구조를 따로 보는 외격, 화합격·귀록격·종격·전왕격까지 대표 격국 구조 정리.",
+  seoKeywords: "격국, 내격, 외격, 종격, 화합격, 귀록격, 전왕격, 월지 격국, 사주 격국, 격국 판단, 격국 종류",
   contentHtml: String.raw`<div>
   <h2>격국(格局)</h2>
 

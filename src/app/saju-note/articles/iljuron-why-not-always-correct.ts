@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const IljuronWhyNotAlwaysCorrectArticle: SajuNoteArticle = {
   slug: "iljuron-why-not-always-correct",
+  seoTitle: "일주론이 항상 맞지는 않는 이유 — 신강·신약에 따라 달라지는 해석",
+  seoDescription: "일주론이 잘 맞는 사람과 안 맞는 사람의 차이, 신약·중화·신강의 개념, 일주론을 올바르게 활용하는 방법 정리.",
+  seoKeywords: "일주론, 일주 해석, 일주 한계, 신강 신약, 일주론 맞는 이유, 일주 성격, 사주 일주, 일주론 적용",
   contentHtml: String.raw`<div>
       <h2>일주론, 재미있지만 무조건 맞지는 않는 이유</h2>
 

@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const JijangganArticle: SajuNoteArticle = {
   slug: "jijanggan",
+  seoTitle: "지장간(地藏干) 완전 정리 — 지지 속에 숨은 천간 12지지별 구성",
+  seoDescription: "지지 속에 숨어 있는 천간인 지장간의 구조, 여기·중기·정기의 의미, 12지지별 지장간 구성과 통근·격국 해석 활용법 정리.",
+  seoKeywords: "지장간, 지장간 표, 여기 중기 정기, 본기, 지지 지장간, 통근 지장간, 월지 지장간, 12지지 지장간, 지장간 구성",
   contentHtml: String.raw`<div>
     <h2>지장간</h2>
     <section>

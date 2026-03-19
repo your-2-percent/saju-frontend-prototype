@@ -280,6 +280,31 @@ export default function SajuNoteReaderPage({ forcedSlug }: SajuNoteReaderPagePro
   }, [slug, note, article]);
 
   useEffect(() => {
+    if (!note || !article) return;
+    const title = article.seoTitle ?? note.title;
+    const prevTitle = document.title;
+    document.title = `${title} | 화림 사주노트`;
+
+    const setMeta = (name: string, content: string) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.name = name; document.head.appendChild(el); }
+      el.content = content;
+    };
+    const setProp = (prop: string, content: string) => {
+      let el = document.querySelector<HTMLMetaElement>(`meta[property="${prop}"]`);
+      if (!el) { el = document.createElement("meta"); el.setAttribute("property", prop); document.head.appendChild(el); }
+      el.content = content;
+    };
+
+    const desc = article.seoDescription ?? note.description;
+    if (desc) { setMeta("description", desc); setProp("og:description", desc); }
+    if (article.seoKeywords) setMeta("keywords", article.seoKeywords);
+    setProp("og:title", title);
+
+    return () => { document.title = prevTitle; };
+  }, [note, article]);
+
+  useEffect(() => {
     const onScroll = () => setShowTitle(window.scrollY > 120);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);

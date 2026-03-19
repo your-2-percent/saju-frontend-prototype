@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const EightLettersMeaningArticle: SajuNoteArticle = {
   slug: "eight-letters-meaning",
+  seoTitle: "사주 팔자 각 자리 의미 완전 정리 — 연월일시주가 뜻하는 것",
+  seoDescription: "연주(조상·사회)·월주(부모·형제)·일주(나·배우자)·시주(자식·말년), 팔자 8자리가 가리키는 삶의 영역과 해석 관점 정리.",
+  seoKeywords: "사주 자리, 연주, 월주, 일주, 시주, 팔자 의미, 사주 배우자궁, 사주 자식, 사주 부모, 일간, 일지, 팔자 자리",
   contentHtml: String.raw`<div>
       <h2>팔자, 자리의 의미</h2>
       <section>
