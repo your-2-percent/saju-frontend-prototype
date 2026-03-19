@@ -13,6 +13,7 @@ import { OhangMulssangArticle } from "@/app/saju-note/articles/ohang-mulssang";
 import { GyeokgukArticle } from "@/app/saju-note/articles/gyeokguk";
 import { JijangganArticle } from "@/app/saju-note/articles/jijanggan";
 import { ManseryeokArticle } from "@/app/saju-note/articles/manseryeok";
+import { SajuCase1Article } from "@/app/saju-note/articles/saju-case-1";
 import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
@@ -33,6 +34,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   OhangMulssangArticle,
   GyeokgukArticle,
   ManseryeokArticle,
+  SajuCase1Article,
 ];
 
 export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
@@ -51,4 +53,5 @@ export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
   "ohang-mulssang": OhangMulssangArticle,
   "gyeokguk": GyeokgukArticle,
   "manseryeok": ManseryeokArticle,
+  "saju-case-1": SajuCase1Article,
 };

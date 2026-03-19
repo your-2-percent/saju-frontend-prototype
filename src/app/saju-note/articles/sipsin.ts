@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const SipsinArticle: SajuNoteArticle = {
   slug: "sipsin",
+  seoTitle: "십신(十神) 완전 정리 — 비겁 식상 재성 관성 인성 해석법",
+  seoDescription: "비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인, 10개 십신의 의미와 특징, 일간 기준 관계 해석법 정리.",
+  seoKeywords: "십신, 십성, 육친, 비견, 겁재, 식신, 상관, 편재, 정재, 편관, 정관, 편인, 정인, 사주 십신, 십신 해석, 일간",
   contentHtml: String.raw`<div>
       <h2>십신</h2>
       <section>

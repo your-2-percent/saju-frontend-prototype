@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const OhangMulssangArticle: SajuNoteArticle = {
   slug: "ohang-mulssang",
+  seoTitle: "오행 물상론 용어 총정리 — 목다화식 화다목분 천간 병존",
+  seoDescription: "오행 과다 용어(목다화식·화다목분·토다금매 등)와 갑목부터 계수까지 10천간 병존 물상 용어 정리.",
+  seoKeywords: "물상론, 오행 물상, 목다화식, 화다목분, 토다금매, 금다수탁, 수다목부, 천간 병존, 사주 물상론, 오행 과다",
   contentHtml: String.raw`<div>
   <h2>오행 물상론</h2>
 

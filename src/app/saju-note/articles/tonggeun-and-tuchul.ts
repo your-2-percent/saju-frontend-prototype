@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const TonggeunAndTuchulArticle: SajuNoteArticle = {
   slug: "tonggeun-and-tuchul",
+  seoTitle: "통근·투출(通根透出) 완전 정리 — 사주 뿌리 판단하는 법",
+  seoDescription: "천간이 지지에 뿌리를 내리는 통근(通根), 지장간이 천간에 드러나는 투출(透出)의 원리와 차이, 실무 판단 순서 정리.",
+  seoKeywords: "통근, 투출, 투간, 사주 통근, 통근율, 지장간 통근, 사주 뿌리, 천간 지지 통근, 명리 통근",
   contentHtml: String.raw`<div>
       <h2>통근 · 투간 · 투출</h2>
       <section>

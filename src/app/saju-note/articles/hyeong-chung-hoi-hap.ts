@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const HyeongChungHoiHapArticle: SajuNoteArticle = {
   slug: "hyeong-chung-hoi-hap",
+  seoTitle: "형충회합(刑冲會合) 완전 정리 — 지지 관계 총정리",
+  seoDescription: "형(刑)·충(冲)·회(會)·합(合)·파(破)·해(害)·귀문(鬼門)·원진(怨嗔)까지 지지 간 상호작용과 실전 해석법 총정리.",
+  seoKeywords: "형충회합, 형충, 지지 합, 삼합, 방합, 지지 충, 지지 형, 귀문관살, 원진살, 파, 해, 사주 형충회합, 형충회합 종류",
   contentHtml: String.raw`<div>
       <h2>형충회합</h2>
       <section>

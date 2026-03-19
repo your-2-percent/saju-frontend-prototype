@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const SolarPositionAndTimeCorrectionArticle: SajuNoteArticle = {
   slug: "solar-position-and-time-correction",
+  seoTitle: "사주 시간 보정 완전 정리 — 균시차·진태양시·한국 경도 차이",
+  seoDescription: "사주에서 시간을 정하는 핵심 기준인 태양의 위치, 한국에서 +30분을 하는 이유, 지역별 진태양시 보정 원리 정리.",
+  seoKeywords: "균시차, 진태양시, 사주 시간 보정, 경도 차이, 한국 사주 시간, 사주 출생시간, 서울 사주 시간, 사주 시간",
   contentHtml: String.raw`<div>
       <h2>태양의 위치와 균시차의 중요성 (지역별 보정)</h2>
 

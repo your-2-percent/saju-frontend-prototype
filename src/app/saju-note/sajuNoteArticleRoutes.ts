@@ -14,6 +14,7 @@ import SajuNoteOhangMulssangPage from "@/app/saju-note/SajuNoteOhangMulssangPage
 import SajuNoteGyeokgukPage from "@/app/saju-note/SajuNoteGyeokgukPage";
 import SajuNoteJijangganPage from "@/app/saju-note/SajuNoteJijangganPage";
 import SajuNoteManseryeokPage from "@/app/saju-note/SajuNoteManseryeokPage";
+import SajuNoteSajuCase1Page from "@/app/saju-note/SajuNoteSajuCase1Page";
 
 export type SajuNoteArticleRoute = {
   slug: string;
@@ -37,4 +38,5 @@ export const SAJU_NOTE_ARTICLE_ROUTES: SajuNoteArticleRoute[] = [
   { slug: "gyeokguk", path: "/saju-note/gyeokguk/*", Component: SajuNoteGyeokgukPage },
   { slug: "jijanggan", path: "/saju-note/jijanggan/*", Component: SajuNoteJijangganPage },
   { slug: "manseryeok", path: "/saju-note/manseryeok/*", Component: SajuNoteManseryeokPage },
+  { slug: "saju-case-1", path: "/saju-note/saju-case-1/*", Component: SajuNoteSajuCase1Page },
 ];

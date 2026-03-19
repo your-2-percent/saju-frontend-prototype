@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const CheonganArticle: SajuNoteArticle = {
   slug: "cheongan",
+  seoTitle: "10천간(天干) 완전 정리 — 갑을병정무기경신임계 성격과 특징",
+  seoDescription: "갑·을·병·정·무·기·경·신·임·계 10천간의 음양·오행 속성, 각 천간의 에너지와 성격, 사주 해석 포인트 정리.",
+  seoKeywords: "천간, 10천간, 갑목, 을목, 병화, 정화, 무토, 기토, 경금, 신금, 임수, 계수, 천간 성격, 사주 천간, 천간 해석",
   contentHtml: String.raw`<div>
   <h2>천간(天干)</h2>
 

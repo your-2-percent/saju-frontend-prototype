@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const TerminologyArticle: SajuNoteArticle = {
   slug: "terminology",
+  seoTitle: "사주 용어 총정리 — 격국 용신 신강 신약 종격 화격 조후",
+  seoDescription: "격국·용신·신강·신약·종격·화격·조후 등 사주 공부에서 자주 등장하는 핵심 용어를 한눈에 정리.",
+  seoKeywords: "사주 용어, 격국, 용신, 신강, 신약, 종격, 화격, 조후, 사주 용어 정리, 명리 용어, 사주 단어",
   contentHtml: String.raw`<div>
       <h2>사주용어</h2>
 

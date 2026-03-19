@@ -2,6 +2,9 @@ import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export const JijiArticle: SajuNoteArticle = {
   slug: "jiji",
+  seoTitle: "12지지(地支) 완전 정리 — 자축인묘진사오미신유술해 성격과 특징",
+  seoDescription: "자·축·인·묘·진·사·오·미·신·유·술·해 12지지의 음양·오행·계절, 각 지지의 성질과 지장간 구성까지 정리.",
+  seoKeywords: "지지, 12지지, 자수, 축토, 인목, 묘목, 진토, 사화, 오화, 미토, 신금, 유금, 술토, 해수, 생지 왕지 고지, 사주 지지",
   contentHtml: String.raw`<div>
       <h2>지지</h2>
       <section>
