@@ -301,8 +301,47 @@ export default function SajuNoteReaderPage({ forcedSlug }: SajuNoteReaderPagePro
     if (article.seoKeywords) setMeta("keywords", article.seoKeywords);
     setProp("og:title", title);
 
-    return () => { document.title = prevTitle; };
-  }, [note, article]);
+    // JSON-LD Article schema (GEO)
+    const ldId = "saju-note-article-jsonld";
+    let ldEl = document.getElementById(ldId) as HTMLScriptElement | null;
+    if (!ldEl) {
+      ldEl = document.createElement("script");
+      ldEl.id = ldId;
+      ldEl.type = "application/ld+json";
+      document.head.appendChild(ldEl);
+    }
+    const canonicalUrl = `https://hwarim.me/saju-note/${slug}`;
+    ldEl.textContent = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Article",
+      "headline": title,
+      "description": desc ?? "",
+      "url": canonicalUrl,
+      "inLanguage": "ko",
+      "datePublished": note.date,
+      "dateModified": note.date,
+      "author": {
+        "@type": "Person",
+        "name": "화림",
+        "url": "https://hwarim.me"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "화림만세력",
+        "url": "https://hwarim.me"
+      },
+      "isPartOf": {
+        "@type": "Blog",
+        "name": "화림 사주노트",
+        "url": "https://hwarim.me/saju-note"
+      }
+    });
+
+    return () => {
+      document.title = prevTitle;
+      ldEl?.remove();
+    };
+  }, [note, article, slug]);
 
   useEffect(() => {
     const onScroll = () => setShowTitle(window.scrollY > 120);

@@ -1,0 +1,44 @@
+# 화림만세력 (Hwarim Saju)
+
+> 한국 명리(사주) 정보 서비스. 무료 만세력, 대운·세운 흐름, 궁합, 그리고 사주 개념 해설 블로그 '사주노트'를 제공합니다.
+
+화림만세력(hwarim.me)은 사주팔자(四柱八字) 기반의 한국 명리 서비스입니다.
+무료 만세력 계산, 대운·세운·월운 흐름 분석, 궁합, 역경(주역) 점, 그리고
+사주 기초 개념부터 실전 풀이까지 다루는 사주노트 콘텐츠를 제공합니다.
+모든 콘텐츠는 한국어로 작성되어 있습니다.
+
+## 주요 서비스
+
+- [메인 만세력](https://hwarim.me/): 생년월일시 입력으로 사주팔자·대운·세운·월운 계산
+- [궁합](https://hwarim.me/couple): 두 사람의 사주 궁합 분석
+- [역경(주역)](https://hwarim.me/iching): 64괘 기반 점
+- [사주노트](https://hwarim.me/saju-note): 사주 기초 개념부터 실전 사례까지 해설 블로그
+
+## 사주노트 — 기초 개념 정리
+
+- [음양 기본 개념](https://hwarim.me/saju-note/yin-yang): 음양의 원리, 양팔통·음팔통 성향, 천간·지지 음양 구분
+- [오행 기본 개념](https://hwarim.me/saju-note/five-elements): 목화토금수 각 오행의 성질, 상생(相生)·상극(相剋) 원리
+- [천간 기본 개념](https://hwarim.me/saju-note/cheongan): 갑을병정무기경신임계 10천간의 성격과 사주 해석 포인트
+- [지지 기본 개념](https://hwarim.me/saju-note/jiji): 자축인묘진사오미신유술해 12지지의 성질, 계절·방향·오행 속성
+- [지장간 기본 개념](https://hwarim.me/saju-note/jijanggan): 지지 속에 숨은 천간(지장간)의 구조, 여기·중기·정기, 12지지별 구성
+- [십신 기본 개념](https://hwarim.me/saju-note/sipsin): 비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인의 의미와 해석
+- [통근·투출 개념](https://hwarim.me/saju-note/tonggeun-and-tuchul): 천간이 지지에 뿌리내리는 통근, 지장간이 드러나는 투출의 원리
+- [형충회합 개념](https://hwarim.me/saju-note/hyeong-chung-hoi-hap): 지지 간 형·충·회·합·파·해·귀문·원진 상호작용 총정리
+- [팔자 자리 의미](https://hwarim.me/saju-note/eight-letters-meaning): 연주·월주·일주·시주 각 자리가 가리키는 삶의 영역
+- [격국 개념](https://hwarim.me/saju-note/gyeokguk): 내격과 외격, 종격·화합격·귀록격·전왕격 구조 정리
+- [오행 물상론 용어](https://hwarim.me/saju-note/ohang-mulssang): 오행 과다 용어(목다화식·화다목분 등)와 10천간 병존 물상
+- [사주 용어 정리](https://hwarim.me/saju-note/terminology): 격국·용신·신강·신약·종격·화격·조후 등 핵심 용어 모음
+- [일주론 한계와 활용](https://hwarim.me/saju-note/iljuron-why-not-always-correct): 일주론이 안 맞는 이유, 신강·신약 개념, 올바른 활용법
+- [사주 시간 보정·균시차](https://hwarim.me/saju-note/solar-position-and-time-correction): 진태양시·경도 차이·한국 +30분 보정의 원리
+
+## 사주노트 — 만세력 입문
+
+- [만세력 보는 법](https://hwarim.me/saju-note/manseryeok): 사주팔자 구조, 천간·지지·지장간, 대운·세운·월운, 형충회합 초보자 설명
+
+## 사주노트 — 사주 사례집
+
+- [주인장 사주 직접 풀이](https://hwarim.me/saju-note/saju-case-1): 경자일주 복음명식 자수삼존 — 원국 성격·연애운·혼인신고 타이밍 실제 분석
+
+## 사주노트 — 관법 소개
+
+- [묘운력 상세 설명](https://hwarim.me/saju-note/myounlyeok): 기존 대운을 8자로 확장한 현묘의 관법 원리
