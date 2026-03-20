@@ -169,6 +169,25 @@ export default function AdminDashboardPage() {
     return series.reduce((acc, p) => acc + (p.total_active_ms || 0), 0);
   }, [series]);
 
+  const totalDauSum = useMemo(() => {
+    return series.reduce((acc, p) => acc + (p.dau || 0), 0);
+  }, [series]);
+
+  // 1인당 평균 체류 ms (기간 합계 기준)
+  const avgMsPerUser = useMemo(() => {
+    return totalDauSum > 0 ? totalMsSum / totalDauSum : 0;
+  }, [totalMsSum, totalDauSum]);
+
+  // 일별 평균 체류시간 (분 단위, 그래프용)
+  const avgDailySeries = useMemo(() => {
+    return series
+      .filter((p) => p.dau > 0)
+      .map((p) => ({
+        day: p.day,
+        avg_min: Math.round(p.total_active_ms / p.dau / 60_000),
+      }));
+  }, [series]);
+
   return (
     <RequireRole allow={["admin", "operator", "viewer"]}>
       <div className="p-6 text-white">
@@ -222,14 +241,40 @@ export default function AdminDashboardPage() {
           <Graph data={series} />
         </section>
 
-        {/* Total active time (sum) */}
-        <section className="mt-6">
-          <h3 className="text-lg font-semibold mb-2">최근 기간 총 이용시간(합계)</h3>
+        {/* 체류시간 KPI */}
+        <section className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg">
-            <div className="text-sm text-neutral-400">
-              series.total_active_ms 합 (day별 증분일 때만 의미 있음)
-            </div>
+            <div className="text-neutral-400 text-sm">1인당 평균 체류시간 (기간 합계 기준)</div>
+            <div className="text-2xl font-bold mt-1">{formatTotalActiveMs(avgMsPerUser)}</div>
+          </div>
+          <div className="p-4 bg-neutral-900 border border-neutral-700 rounded-lg">
+            <div className="text-neutral-400 text-sm">총 이용시간 합계</div>
             <div className="text-2xl font-bold mt-1">{formatTotalActiveMs(totalMsSum)}</div>
+          </div>
+        </section>
+
+        {/* 일별 평균 체류시간 그래프 */}
+        <section className="mt-8">
+          <h2 className="text-xl font-semibold mb-3">일별 평균 체류시간 (분)</h2>
+          <div className="w-full h-52 bg-neutral-900 border border-neutral-700 rounded-lg p-2 text-xs">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={avgDailySeries}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#404040" />
+                <XAxis dataKey="day" tick={{ fill: "#9ca3af", fontSize: 11 }} />
+                <YAxis tick={{ fill: "#9ca3af", fontSize: 11 }} unit="분" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#1c1c1c", border: "1px solid #404040" }}
+                  formatter={(value: unknown) => [`${value as number}분`, "평균 체류"]}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="avg_min"
+                  stroke="#a78bfa"
+                  fill="#a78bfa20"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
         </section>
       </div>

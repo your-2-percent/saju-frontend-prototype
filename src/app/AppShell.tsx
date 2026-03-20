@@ -23,6 +23,7 @@ import IChingSixYaoPage from "@/iching/ui/IChingSixYaoPage";
 import FaqStandalonePage from "@/app/faq/FaqStandalonePage";
 import UserActivityHeartbeatGate from "@/shared/activity/UserActivityHeartbeat";
 import { PublicAds } from "@/shared/ads/PublicAds";
+import { usePageViewTracker } from "@/shared/analytics/usePageViewTracker";
 
 function LegacySajuNoteReadRedirect() {
   const { slug } = useParams();
@@ -31,6 +32,8 @@ function LegacySajuNoteReadRedirect() {
 
 export default function AppShell() {
   const location = useLocation();
+
+  usePageViewTracker();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
