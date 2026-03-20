@@ -9,7 +9,7 @@ export function RequireRole({
 }) {
   const { role, loading } = useAdminRole();
 
-  if (loading) return <div className="text-white p-6">Checking permission...</div>;
+  if (loading) return null;
   if (!role || !allow.includes(role))
     return <div className="text-red-400 p-6">권한이 없습니다.</div>;
 
