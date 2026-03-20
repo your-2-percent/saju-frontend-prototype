@@ -10,6 +10,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const menu = [
     { label: "대시보드", href: "/admin/dashboard" },
+    { label: "방문자 로그", href: "/admin/pageviews" },
     { label: "유저 목록", href: "/admin/user" },
     { label: "감사 로그", href: "/admin/logs" },
   ];

@@ -9,6 +9,7 @@ import AdminDashboard from "./dashboard/page";
 import AdminLogs from "./log";
 import AdminUserDetail from "./user/[userId]";
 import AdminUserList from "./user";
+import AdminPageViewsPage from "./pageviews/AdminPageViewsPage";
 
 function AdminStatusScreen({
   title,
@@ -59,6 +60,8 @@ export default function AdminPage() {
     content = <AdminUserList />;
   } else if (pathname.startsWith("/admin/logs")) {
     content = <AdminLogs />;
+  } else if (pathname.startsWith("/admin/pageviews")) {
+    content = <AdminPageViewsPage />;
   } else if (pathname.startsWith("/admin/dashboard") || pathname === "/admin") {
     content = <AdminDashboard />;
   }
