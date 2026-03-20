@@ -15,9 +15,9 @@ export default function AppBootstrap() {
 
   useApplyTheme(theme);
 
-  const loadAll = useCallback(async () => {
+  const loadAll = useCallback(async (force = false) => {
     await migrateLocalToServer();
-    await Promise.all([loadEnt(), loadSettings(), loadMyeongSik()]);
+    await Promise.all([loadEnt(), loadSettings(force ? { force: true } : undefined), loadMyeongSik()]);
   }, [migrateLocalToServer, loadEnt, loadSettings, loadMyeongSik]);
 
   useEffect(() => {
@@ -27,7 +27,8 @@ export default function AppBootstrap() {
     // ✅ 로그인/로그아웃/토큰 갱신 등 auth 변화 때마다 재로드
     const { data } = supabase.auth.onAuthStateChange((event) => {
       if (event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") return;
-      void loadAll();
+      // SIGNED_IN 시 다른 기기에서 변경된 설정을 반드시 DB에서 다시 로드
+      void loadAll(event === "SIGNED_IN");
     });
 
     return () => {
