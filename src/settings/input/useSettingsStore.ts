@@ -142,7 +142,7 @@ type SettingsState = {
   setSettings: (next: Settings) => void;
   setKey: <K extends keyof Settings>(key: K, value: Settings[K]) => void;
   reset: () => void;
-  loadFromServer: () => Promise<void>;
+  loadFromServer: (opts?: { force?: boolean }) => Promise<void>;
   saveToServer: (force?: boolean) => Promise<void>;
   syncing: boolean;
   loaded: boolean;
