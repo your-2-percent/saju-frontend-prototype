@@ -76,7 +76,7 @@ function formatTotalActiveMs(ms?: number | null): string {
 }
 
 export default function AdminDashboardPage() {
-  const [days, setDays] = useState<30 | 60 | 90>(30);
+  const [days, setDays] = useState<1 | 3 | 7 | 30 | 60 | 90>(7);
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [onlineNow, setOnlineNow] = useState(0);
@@ -199,11 +199,14 @@ export default function AdminDashboardPage() {
               value={days}
               onChange={(e) => {
                 const v = Number(e.target.value);
-                if (v === 30 || v === 60 || v === 90) setDays(v);
+                if (v === 1 || v === 3 || v === 7 || v === 30 || v === 60 || v === 90) setDays(v);
               }}
               className="px-2 py-1 bg-neutral-800 border border-neutral-700 rounded text-sm"
               title="DAU 그래프 기간"
             >
+              <option value={1}>최근 1일</option>
+              <option value={3}>최근 3일</option>
+              <option value={7}>최근 7일</option>
               <option value={30}>최근 30일</option>
               <option value={60}>최근 60일</option>
               <option value={90}>최근 90일</option>
