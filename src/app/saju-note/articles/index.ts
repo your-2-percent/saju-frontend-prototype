@@ -3,6 +3,9 @@ import { FiveElementsArticle } from "@/app/saju-note/articles/five-elements";
 import { CheonganArticle } from "@/app/saju-note/articles/cheongan";
 import { JijiArticle } from "@/app/saju-note/articles/jiji";
 import { SipsinArticle } from "@/app/saju-note/articles/sipsin";
+import { SibiUnseongArticle } from "@/app/saju-note/articles/sibi-unseong";
+import { SibiSinsalArticle } from "@/app/saju-note/articles/sibi-sinsal";
+import { SibiUnseong2Article } from "@/app/saju-note/articles/sibi-unseong-2";
 import { TonggeunAndTuchulArticle } from "@/app/saju-note/articles/tonggeun-and-tuchul";
 import { HyeongChungHoiHapArticle } from "@/app/saju-note/articles/hyeong-chung-hoi-hap";
 import { EightLettersMeaningArticle } from "@/app/saju-note/articles/eight-letters-meaning";
@@ -14,6 +17,7 @@ import { GyeokgukArticle } from "@/app/saju-note/articles/gyeokguk";
 import { JijangganArticle } from "@/app/saju-note/articles/jijanggan";
 import { ManseryeokArticle } from "@/app/saju-note/articles/manseryeok";
 import { SajuCase1Article } from "@/app/saju-note/articles/saju-case-1";
+import { SajuCase2Article } from "@/app/saju-note/articles/saju-case-2";
 import type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
 
 export type { SajuNoteArticle } from "@/app/saju-note/articles/articleTypes";
@@ -25,6 +29,9 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   JijiArticle,
   JijangganArticle,
   SipsinArticle,
+  SibiUnseongArticle,
+  SibiUnseong2Article,
+  SibiSinsalArticle,
   TonggeunAndTuchulArticle,
   HyeongChungHoiHapArticle,
   EightLettersMeaningArticle,
@@ -35,6 +42,7 @@ export const SAJU_NOTE_ARTICLES: SajuNoteArticle[] = [
   GyeokgukArticle,
   ManseryeokArticle,
   SajuCase1Article,
+  SajuCase2Article,
 ];
 
 export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
@@ -44,6 +52,9 @@ export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
   "jiji": JijiArticle,
   "jijanggan": JijangganArticle,
   "sipsin": SipsinArticle,
+  "sibi-unseong": SibiUnseongArticle,
+  "sibi-unseong-2": SibiUnseong2Article,
+  "sibi-sinsal": SibiSinsalArticle,
   "tonggeun-and-tuchul": TonggeunAndTuchulArticle,
   "hyeong-chung-hoi-hap": HyeongChungHoiHapArticle,
   "eight-letters-meaning": EightLettersMeaningArticle,
@@ -54,4 +65,5 @@ export const SAJU_NOTE_ARTICLE_BY_SLUG: Record<string, SajuNoteArticle> = {
   "gyeokguk": GyeokgukArticle,
   "manseryeok": ManseryeokArticle,
   "saju-case-1": SajuCase1Article,
+  "saju-case-2": SajuCase2Article,
 };

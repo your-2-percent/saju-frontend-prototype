@@ -99,6 +99,20 @@ const getThemeBySlug = (slug: string = ""): Theme => {
       badgeBg: "bg-fuchsia-50 dark:bg-fuchsia-900/30 border-fuchsia-200 dark:border-fuchsia-800/50",
       navActive: "border-fuchsia-200 dark:border-fuchsia-800/60 hover:border-fuchsia-400 dark:hover:border-fuchsia-600 hover:bg-fuchsia-50/50 dark:hover:bg-fuchsia-900/20",
     },
+    "sibi-sinsal": {
+      accent: "text-lime-600 dark:text-lime-400",
+      glow: "from-lime-100/70 via-green-50/30 to-transparent dark:from-lime-600/18 dark:via-green-500/8 dark:to-transparent",
+      badge: "text-lime-700 dark:text-lime-300",
+      badgeBg: "bg-lime-50 dark:bg-lime-900/30 border-lime-200 dark:border-lime-800/50",
+      navActive: "border-lime-200 dark:border-lime-800/60 hover:border-lime-400 dark:hover:border-lime-600 hover:bg-lime-50/50 dark:hover:bg-lime-900/20",
+    },
+    "sibi-unseong": {
+      accent: "text-purple-600 dark:text-purple-400",
+      glow: "from-purple-100/70 via-violet-50/30 to-transparent dark:from-purple-600/18 dark:via-violet-500/8 dark:to-transparent",
+      badge: "text-purple-700 dark:text-purple-300",
+      badgeBg: "bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800/50",
+      navActive: "border-purple-200 dark:border-purple-800/60 hover:border-purple-400 dark:hover:border-purple-600 hover:bg-purple-50/50 dark:hover:bg-purple-900/20",
+    },
   };
 
   if (conceptThemeBySlug[slug]) {

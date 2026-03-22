@@ -345,6 +345,20 @@ export default function SiteGuidePage() {
             }
           />
 
+          <div className="grid gap-4 lg:grid-cols-2">
+            <GuideShot
+              src="/guide/38.PNG"
+              title="십이운성 봉법·거법·좌법·인종법 선택"
+              caption="십이운성 관법(봉법·거법·좌법·인종법)을 체크박스로 개별 켜고 끌 수 있습니다."
+            />
+
+            <GuideShot
+              src="/guide/39.PNG"
+              title="형충회합 칩 뷰어"
+              caption="형충회합은 칩 형태로 표시되며, 클릭해서 접었다 펼칠 수 있습니다."
+            />
+          </div>
+
           <GuideShot
             id="hour-prediction"
             src="/guide/26.PNG"
