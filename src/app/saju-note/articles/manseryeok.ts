@@ -69,6 +69,33 @@ export const ManseryeokArticle: SajuNoteArticle = {
             <img src="/base/A.png" alt="사주팔자 구조 — 연간·연지·월간·월지·일간·일지·시간·시지 배치" />
           </figure>
           <p>
+            만세력 화면에서 원국(오른쪽)과 운(왼쪽)에 표시되는 번호별 위치는 다음과 같습니다.
+          </p>
+          <div>
+            <h4>원국 — 내가 타고난 사주팔자</h4>
+            <ul>
+              <li><strong>① 연주 천간</strong> — 태어난 해의 하늘 기운. 위쪽 동그란 글자.</li>
+              <li><strong>② 연주 지지</strong> — 태어난 해의 땅 기운. 아래쪽 네모 글자.</li>
+              <li><strong>③ 월주 천간</strong> — 태어난 달의 하늘 기운.</li>
+              <li><strong>④ 월주 지지</strong> — 태어난 달의 땅 기운.</li>
+              <li><strong>⑤ 일주 천간 (일간)</strong> — 태어난 날의 하늘 기운. <strong>나 자신을 나타내는 핵심 글자.</strong> 모든 십신 해석의 기준이 됨.</li>
+              <li><strong>⑥ 일주 지지</strong> — 태어난 날의 땅 기운. 내 몸과 배우자 자리로 보기도 함.</li>
+              <li><strong>⑦ 시주 천간</strong> — 태어난 시의 하늘 기운.</li>
+              <li><strong>⑧ 시주 지지</strong> — 태어난 시의 땅 기운.</li>
+            </ul>
+          </div>
+          <div>
+            <h4>운 — 시간에 따라 들어오는 흐름</h4>
+            <ul>
+              <li><strong>A 대운 천간</strong> — 약 10년 단위 큰 운의 하늘 기운.</li>
+              <li><strong>B 대운 지지</strong> — 대운의 땅 기운.</li>
+              <li><strong>C 세운 천간</strong> — 올해 연도의 하늘 기운.</li>
+              <li><strong>D 세운 지지</strong> — 올해 연도의 땅 기운.</li>
+              <li><strong>E 월운 천간</strong> — 이번 달의 하늘 기운.</li>
+              <li><strong>F 월운 지지</strong> — 이번 달의 땅 기운.</li>
+            </ul>
+          </div>
+          <p>
             쉽게 말하면 이렇습니다.
           </p>
           <ul>
@@ -203,7 +230,7 @@ export const ManseryeokArticle: SajuNoteArticle = {
         </figure>
         <div>
           <p>
-            십이운성은 기운이 태어나고, 자라고, 강해지고, 약해지고, 사라지고, 다시 준비되는 흐름을
+            <a href="/saju-note/sibi-unseong">십이운성</a>은 기운이 태어나고, 자라고, 강해지고, 약해지고, 사라지고, 다시 준비되는 흐름을
             12단계로 나눈 개념입니다.
           </p>
           <ul>
@@ -221,6 +248,8 @@ export const ManseryeokArticle: SajuNoteArticle = {
             초보자는 지금 단계에서
             "기운의 성장 곡선을 12단계로 나눈 것"
             정도로만 알아두면 충분합니다.
+            더 자세한 내용은 <a href="/saju-note/sibi-unseong">십이운성 개념 정리</a>와
+            <a href="/saju-note/sibi-unseong-2">십이운성 보는 방법(봉법·거법·좌법·인종법)</a>에서 볼 수 있습니다.
           </p>
         </div>
       </article>
@@ -232,7 +261,7 @@ export const ManseryeokArticle: SajuNoteArticle = {
         </figure>
         <div>
           <p>
-            십이신살은 기운이 밖으로 드러날 때 나타나는 사건성, 분위기, 성격적 특징을 상징적으로 표현한 것입니다.
+            <a href="/saju-note/sibi-sinsal">십이신살</a>은 기운이 밖으로 드러날 때 나타나는 사건성, 분위기, 성격적 특징을 상징적으로 표현한 것입니다.
           </p>
           <p>
             대표적으로 장성·반안·역마·월살·망신·도화·겁살·재살·천살·지살·년살·화개가 있습니다.
@@ -242,6 +271,7 @@ export const ManseryeokArticle: SajuNoteArticle = {
             다만 초보자 입장에서는 이걸 너무 무섭게 받아들이기보다,
             "특정 성향이나 사건의 방향성을 상징하는 보조 요소" 정도로 이해하는 게 좋습니다.
             신살은 십이신살 외에도 종류가 아주 많습니다.
+            각 신살의 의미와 올바른 해석 방법은 <a href="/saju-note/sibi-sinsal">십이신살 정리</a>에서 볼 수 있습니다.
           </p>
         </div>
       </article>
@@ -354,7 +384,7 @@ export const ManseryeokArticle: SajuNoteArticle = {
             <li><strong>맨 위 숫자</strong> — 그 대운이 시작되는 나이</li>
             <li><strong>큰 한자 두 글자</strong> — 그 10년 동안 들어오는 간지</li>
             <li><strong>아래에 적힌 십신</strong> — 그 운이 나에게 어떤 성격으로 작용하는지. 예: 비견, 정재, 편관 등</li>
-            <li><strong>아래쪽 보조 정보</strong> — 십이운성, 신살 등 추가 정보</li>
+            <li><strong>아래쪽 보조 정보</strong> — <a href="/saju-note/sibi-unseong">십이운성</a>, <a href="/saju-note/sibi-sinsal">신살</a> 등 추가 정보</li>
           </ol>
         </div>
 
