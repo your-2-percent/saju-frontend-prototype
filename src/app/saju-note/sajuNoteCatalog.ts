@@ -3,6 +3,7 @@ export type SajuNoteItem = {
   title: string;
   description: string;
   date: string;
+  tag?: string;
 };
 
 export type SajuNoteCategory = {
@@ -99,6 +100,44 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
         title: "십신의 기본 개념 정리",
         description: "십신(비견·겁재·식신·상관·편재·정재·편관·정관·편인·정인)의 의미와 특징, 실전 해석에서 십신을 보는 방법을 정리했습니다.",
         date: "2026.01.14",
+      },
+    ],
+  },
+  {
+    key: "sibi-unseong",
+    title: "십이운성",
+    subtitle: "십이운성(十二運星)",
+    description: "장생·목욕·관대·건록·제왕·쇠·병·사·묘·절·태·양, 기운의 생장쇠멸 12단계.",
+    badgeClass: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",
+    borderClass: "border-purple-200 dark:border-purple-900/50",
+    items: [
+      {
+        slug: "sibi-unseong",
+        title: "십이운성의 기본 개념 정리",
+        description: "십이운성이란 무엇인가, 12단계 생장쇠멸 흐름, 장생·건록·제왕과 병·사·절의 올바른 해석, 원국과 운에서 보는 차이, 십신과 함께 봐야 하는 이유를 정리했습니다.",
+        date: "2026.03.22",
+      },
+      {
+        slug: "sibi-unseong-2",
+        title: "십이운성 보는 방법 총정리 — 봉법·거법·좌법·인종법",
+        description: "십이운성을 보는 네 가지 관법인 봉법·거법·좌법·인종법의 차이와 각 관법의 용도, 실전에서 사용하는 순서를 한 번에 정리했습니다.",
+        date: "2026.03.22",
+      },
+    ],
+  },
+  {
+    key: "sibi-sinsal",
+    title: "십이신살",
+    subtitle: "십이신살(十二神殺)",
+    description: "겁살·재살·천살·지살·년살·월살·망신살·장성살·반안살·역마살·육해살·화개살, 사건의 분위기를 읽는 체계.",
+    badgeClass: "bg-lime-100 text-lime-700 dark:bg-lime-900/50 dark:text-lime-300",
+    borderClass: "border-lime-200 dark:border-lime-900/50",
+    items: [
+      {
+        slug: "sibi-sinsal",
+        title: "십이신살의 기본 개념 정리",
+        description: "십이신살이란 무엇인가, 12가지 신살의 의미와 올바른 해석법, 도화살·역마살·화개살만 알면 아쉬운 이유, 무조건 좋고 나쁜 것으로 나눌 수 없는 이유를 정리했습니다.",
+        date: "2026.03.22",
       },
     ],
   },
@@ -211,6 +250,14 @@ export const SAJU_NOTE_CATEGORIES: SajuNoteCategory[] = [
         title: "주인장 사주 직접 해석해봤어요. — 경자일주 복음명식 자수삼존",
         description: "병자년 경자월 경자일 갑신시. 금수 강세에 복음명식·자수삼존까지 — 원국 성격부터 연애 시작, 혼인신고 타이밍까지 실제 명식을 직접 분석함.",
         date: "2026.03.19",
+        tag: "연애·결혼",
+      },
+      {
+        slug: "saju-case-2",
+        title: "주인장 사주 풀이 2. — 취업·이직·직업운",
+        description: "경자일주 복음명식 자수삼존. 웹 퍼블리싱 입문, 첫회사 반복 입퇴사, 프리랜서 전환, 재입사까지 — 이 명식의 직업 패턴을 직접 풀어봄.",
+        date: "2026.03.22",
+        tag: "취업·이직",
       },
     ],
   },

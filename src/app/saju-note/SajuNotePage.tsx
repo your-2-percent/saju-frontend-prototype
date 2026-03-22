@@ -360,7 +360,14 @@ export default function SajuNotePage() {
                           onClick={() => navigate(`/saju-note/${item.slug}`)}
                           className="group w-full text-left rounded-xl border border-neutral-100 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 px-3.5 py-3 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
                         >
-                          <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-sm font-semibold text-neutral-800 dark:text-neutral-100 leading-snug">{item.title}</p>
+                            {item.tag && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 shrink-0">
+                                {item.tag}
+                              </span>
+                            )}
+                          </div>
                           <p className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">{item.description}</p>
                           <div className="mt-2 flex items-center justify-between">
                             <span className="text-[10px] text-neutral-400 dark:text-neutral-500">
